@@ -1,0 +1,221 @@
+<div class="container-fluid" style="padding-top: 0px">
+  <div
+    class="row justify-content-between text-end"
+    style="background-color: #ff8e36; margin-bottom: 3px"
+  >
+    <div class="col-md-2 justify-content-start text-start">
+      <button mat-raised-button class="small-button" (click)="back()">Retour</button>
+    </div>
+    <div class="col-md-2 justify-content-end text-end">
+      <mat-icon style="color: #fff; cursor: pointer" matTooltip="Télécharger" (click)="download()"
+        >get_app</mat-icon
+      >
+    </div>
+  </div>
+  <div class="row p-0">
+    <!-- Zone principale pour l'affichage du document -->
+    <div class="col-md-6 left p-3">
+      <div class="row justify-content-between align-items-center">
+        <div class="col-md-6 col-sm-3">
+          <h6 style="font-size: 12px">Titre: {{ infos_fiche.titre }}</h6>
+        </div>
+        <div class="col-md-6 col-sm-3 text-end">
+          <mat-icon
+            class="icon_edit"
+            style="color: #ff8e36; font-size: 20px"
+            matTooltip="Modifer"
+            matTooltipPosition="above"
+            (click)="openDialog(infos_fiche.id)"
+            >edit</mat-icon
+          >
+          <mat-icon
+            (click)="
+              deleteSomething('Êtes vous sûr de vouloir archiver cette fiche ?', 'archivage')
+            "
+            style="color: #ff8e36; margin-left: 15px; font-size: 20px"
+            matTooltip="archiver"
+            matTooltipPosition="above"
+            >archive</mat-icon
+          >
+          <mat-icon
+            (click)="
+              deleteSomething('Êtes vous sûr de vouloir supprimer cette fiche ?', 'suppression')
+            "
+            style="color: #ff8e36; margin-left: 15px; font-size: 20px"
+            matTooltip="supprimer"
+            matTooltipPosition="above"
+            >delete_forever</mat-icon
+          >
+        </div>
+      </div>
+      @if (infos_fiche.extention === '.pdf') {
+        <iframe allow-downloads="" [src]="url"></iframe>
+      } @else {
+        <div class="excel-container">
+          <div class="excel-viewer">
+            <hot-table
+              [data]="data"
+              [colHeaders]="true"
+              [rowHeaders]="true"
+              [settings]="hotSettings"
+              licenseKey="non-commercial-and-evaluation"
+            >
+            </hot-table>
+          </div>
+        </div>
+      }
+
+      <div class="row p-0 mt-md-2">
+        <div class="col-md-5 p-0 m-auto">
+          <ul class="p-0">
+            <li class="my-1">
+              <span class="title"> {{ 'titre :' | titlecase }} </span>
+              <span class="sub_title">{{ infos_fiche.titre }}</span>
+            </li>
+            <li class="my-1">
+              <span class="title"> {{ 'Catégorie :' | titlecase }} </span>
+              <span class="sub_title">{{ infos_fiche.categorie }}</span>
+            </li>
+            <li class="my-1">
+              <span class="title"> {{ 'type :' | titlecase }} </span>
+              <span class="sub_title">{{ infos_fiche.type }}</span>
+            </li>
+          </ul>
+        </div>
+        <div class="col-md-7 p-0 m-auto">
+          <ul>
+            <li>
+              <span class="title">
+                {{ 'date reception :' | titlecase }}
+              </span>
+              <span class="sub_title">{{
+                infos_fiche.dateReception | date: 'dd/MM/yyy à HH:mm'
+              }}</span>
+            </li>
+            <li>
+              <span class="title">
+                {{ 'date de debut :' | titlecase }}
+              </span>
+              <span class="sub_title">
+                {{ infos_fiche.dateDebut | date: 'dd/MM/yyyy à HH:mm' }}</span
+              >
+            </li>
+            <li>
+              <span class="title">
+                {{ 'date de visibilité :' | titlecase }}
+              </span>
+              <span class="sub_title">{{
+                infos_fiche.dateVisibilite | date: 'dd/MM/yyyy à HH:mm'
+              }}</span>
+            </li>
+            <li>
+              <span class="title">
+                {{ 'date fin :' | titlecase }}
+              </span>
+              <span class="sub_title"> {{ infos_fiche.dateFin | date: 'dd/MM/yyyy à HH:mm' }}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zone de vérification et commentaires -->
+    <div class="col-md-6 righ">
+      <mat-tab-group>
+        <!-- Onglet Utilité -->
+        <mat-tab>
+          <ng-template mat-tab-label> Interactions </ng-template>
+          <div class="example-table-container">
+            <table
+              mat-table
+              [dataSource]="dataSource"
+              class="example-table"
+              matSort
+              matSortActive="created"
+              matSortDisableClear
+              matSortDirection="desc"
+            >
+              <!-- Created Column -->
+              <ng-container matColumnDef="consultation">
+                <th mat-header-cell *matHeaderCellDef mat-sort-header disableClear>
+                  <div class="container">
+                    <div class="row justify-content-center align-items-center">
+                      <div class="col-sm-6 text-start p-0">
+                        <input matInput (keyup)="applyFilter($event)" placeholder="Login" />
+                      </div>
+                    </div>
+                  </div>
+                </th>
+                <td mat-cell *matCellDef="let row">
+                  <mat-icon class="icon_person">person</mat-icon>
+                  <span class="login_label"> {{ row.nom_utilisateur }}</span> a consulté cette fiche
+                  @if (row.nb_consultation >= 2) {
+                    <span class="number_consultation"> {{ row.nb_consultation }} fois</span>
+                  }
+                  ; la dernière date de consultation:
+                  {{ row.date_consultation | date: 'dd/MM/yyy à HH:mm' }}
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+            </table>
+          </div>
+
+          <mat-paginator
+            [length]="resultsLength"
+            [pageSize]="10"
+            aria-label="Select page of GitHub search results"
+          ></mat-paginator>
+        </mat-tab>
+
+        <!-- Onglet Commentaires -->
+        <mat-tab>
+          <ng-template mat-tab-label> Commentaires </ng-template>
+          <div class="example-table-container">
+            <table
+              mat-table
+              [dataSource]="dataSource_message"
+              class="example-table"
+              matSort
+              matSortActive="created"
+              matSortDisableClear
+              matSortDirection="desc"
+            >
+              <!-- Created Column -->
+              <ng-container matColumnDef="nom_utilisateur">
+                <th mat-header-cell *matHeaderCellDef mat-sort-header disableClear>Login</th>
+                <td mat-cell *matCellDef="let row">
+                  <span class="login_label">{{ row.nom_utilisateur }}</span>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="message">
+                <th mat-header-cell *matHeaderCellDef mat-sort-header disableClear>Message</th>
+                <td mat-cell *matCellDef="let row">
+                  {{ row.message }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="dateCommentaire">
+                <th mat-header-cell *matHeaderCellDef mat-sort-header disableClear>
+                  Date Commentaire
+                </th>
+                <td mat-cell *matCellDef="let row">
+                  {{ row.dateCommentaire | date: 'dd/MM/yyyy à HH:mm' }}
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns_message"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns_message"></tr>
+            </table>
+          </div>
+
+          <mat-paginator
+            [length]="resultsLength"
+            [pageSize]="10"
+            aria-label="Select page of GitHub search results"
+          ></mat-paginator>
+        </mat-tab>
+      </mat-tab-group>
+    </div>
+  </div>
+</div>

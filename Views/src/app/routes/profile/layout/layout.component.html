@@ -1,0 +1,35 @@
+<page-header class="bg-dark text-light" title="{{ 'profile' }}" />
+<div class="row">
+  <div class="col-sm-4 col-md-4 col-lg-3">
+    <mat-card>
+      <mat-card-content>
+        <div class="text-center">
+          <img class="m-b-8 r-full" [src]="imageUrl" alt="" width="80" />
+          <h4 class="m-t-0 m-b-8 f-w-400">
+            {{ user.name | titlecase }}
+          </h4>
+          <h6 class="m-t-0 m-b-8">{{ user.fonction | uppercase }}</h6>
+        </div>
+
+        <mat-divider class="m-t-16 m-b-8" />
+
+        <mat-nav-list>
+          <a mat-list-item routerLink="/mon-espace/profile/overview">
+            <mat-icon matListItemIcon style="color: #ff8e36">account_circle</mat-icon>
+            {{ 'profile' }}
+          </a>
+          <a mat-list-item routerLink="/mon-espace/profile/settings">
+            <mat-icon matListItemIcon style="color: #ff8e36">edit</mat-icon> {{ 'Editer' }}
+          </a>
+          <a mat-list-item (click)="logout()" (keydown.enter)="logout()" tabindex="0">
+            <mat-icon matListItemIcon style="color: #ff8e36">exit_to_app</mat-icon>
+            {{ 'Deconnexion' }}
+          </a>
+        </mat-nav-list>
+      </mat-card-content>
+    </mat-card>
+  </div>
+  <div class="col-sm-8 col-md-8 col-lg-9">
+    <router-outlet />
+  </div>
+</div>

@@ -1,0 +1,111 @@
+* {
+    font-family: poppins, sans-serif;
+  }
+  mat-card {
+    height: 100vh;
+    margin: auto;
+    background: #ffffff9a;
+  }
+  mat-card-header {
+    display: flex;
+    background-color: #ff8e36;
+    justify-content: space-between;
+    padding: 10px 10px 0;
+  }
+  .container > input:focus {
+    border: 1px solid #ff8e36;
+  }
+  .add_icon {
+    color: #fff;
+    background-color: #ff8e36;
+    cursor: pointer;
+    margin-right: 25px;
+  }
+  .download_icon {
+    color: #fff;
+    background-color: #ff8e36;
+    cursor: pointer;
+  }
+  .title-banner {
+    display: flex;
+    justify-content: end;
+    flex-wrap: wrap;
+    margin-bottom: 5px;
+  }
+  .example-button-container {
+    margin-right: 10px;
+  }
+  
+ 
+  table {
+    width: 100%;
+  }
+  .mat_icon_on {
+    text-align: center;
+    font-size: 20px;
+    color: green;
+  }
+  .mat_icon_off {
+    text-align: center;
+    font-size: 20px;
+    color: red;
+  }
+  .ACTIONS {
+    width: 80px;
+  }
+  
+  
+  .text_etat {
+    color: rgb(18, 110, 18);
+  }
+  td:hover {
+    color: #ff8e36;
+    cursor: pointer;
+  }
+  td {
+    font-size: 12px;
+  }
+  
+  img {
+    height: 80%;
+    width: 100%;
+  }
+  @media (max-width: 768px) {
+  }
+  
+  #inputs {
+    box-shadow: none;
+    outline: none;
+    height: 100px;
+  }
+  label {
+    font-family: myfon2;
+    color: #ff7900;
+  }
+  
+  .bouton {
+    background-color: #ff7900;
+  
+    border: none;
+    font-weight: bold;
+    margin-bottom: 10%;
+    border-radius: 5px;
+    width: 100%;
+    color: #fff;
+    margin-left: auto;
+    margin-right: auto;
+    letter-spacing: 0.03em;
+    font-family: myfon2;
+  }
+
+
+
+
+  .example-card {
+    max-width: 400px;
+  }
+  
+  .example-header-image {
+    background-image: url('https://material.angular.io/assets/img/examples/shiba1.jpg');
+    background-size: cover;
+  }

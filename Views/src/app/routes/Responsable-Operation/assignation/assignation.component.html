@@ -1,0 +1,56 @@
+<mat-card>
+  <mat-card-header></mat-card-header>
+  <mat-card-content>
+    <div class="container">
+      <div>
+        <form>
+          <div class="login-agent-group">
+            <mat-label for="fname">Login Agent</mat-label>
+            <mat-chip-grid #chipGrid aria-label="Fruit selection">
+              @for (fruit of fruits(); track $index) {
+                <mat-chip-row (removed)="remove(fruit)">
+                  {{ fruit }}
+                  <button matChipRemove [attr.aria-label]="'remove ' + fruit">
+                    <mat-icon>cancel</mat-icon>
+                  </button>
+                </mat-chip-row>
+              }
+            </mat-chip-grid>
+            <input
+              name="currentFruit"
+              placeholder="New Fruit..."
+              #fruitInput
+              [(ngModel)]="currentFruit"
+              [matChipInputFor]="chipGrid"
+              [matAutocomplete]="auto"
+              [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+              (matChipInputTokenEnd)="add($event)"
+              type="text"
+              id="fname"
+              placeholder="Login.."
+            />
+            <mat-autocomplete
+              #auto="matAutocomplete"
+              (optionSelected)="selected($event); fruitInput.value = ''"
+            >
+              @for (fruit of filteredFruits(); track fruit) {
+                <mat-option [value]="fruit">{{ fruit }}</mat-option>
+              }
+            </mat-autocomplete>
+          </div>
+
+          <div class="login-sup-group">
+            <label for="country">Login Sup</label>
+            <select id="country" name="country" [(ngModel)]="id_SUPERVISEUR" name="id_SUPERVISEUR">
+              <option *ngFor="let item of allSuperviseur" [ngValue]="item.id">
+                {{ item.nom_utilisateur }}
+              </option>
+            </select>
+          </div>
+
+          <button mat-button (click)="onSubmit()">Assigner</button>
+        </form>
+      </div>
+    </div>
+  </mat-card-content>
+</mat-card>

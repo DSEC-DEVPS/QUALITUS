@@ -1,0 +1,59 @@
+<div class="container-fluid container_wrapper py-2">
+  <div class="row justify-content-center">
+    <div class="col-md-10">
+      <div
+        *ngIf="fiche?.extention === '.pdf'"
+        class="row justify-content-between mt-3 align-items-center"
+      >
+        <div
+          class="row justify-content-between mt-3 align-items-center"
+          style="margin-bottom: -25px"
+        >
+          <div class="col-md-4 col-sm-2"></div>
+          <div class="col-md-4 col-sm-2" style="font-size: small">
+            {{ fiche.titre | titlecase }}
+          </div>
+
+          <div class="col-md-4 col-sm-2 text-end"></div>
+        </div>
+
+        <div class="embed-responsive embed-responsive-16by9">
+          <iframe class="embed-responsive-item" [src]="url" allowfullscreen></iframe>
+        </div>
+      </div>
+
+      <!-- excel-viewer.component.html -->
+      <div *ngIf="fiche?.extention === '.xlsx'" class="excel-container">
+        <div class="controls-row">
+          <div></div>
+
+          <div style="font-size: small">
+            <span style="font-weight: bold">Titre: </span>{{ fiche.titre | titlecase }}
+          </div>
+
+          <div class="actions d-flex align-items-center">
+            <button mat-raised-button color="primary" (click)="downloadExcel()">
+              <mat-icon>download</mat-icon> Télécharger
+            </button>
+          </div>
+        </div>
+
+        <div class="excel-viewer">
+          <hot-table
+            [data]="data_hot_table"
+            [colHeaders]="true"
+            [rowHeaders]="true"
+            [height]="600"
+            [width]="'100%'"
+            [settings]="hotSettings"
+            licenseKey="non-commercial-and-evaluation"
+          >
+          </hot-table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<mat-dialog-actions style="position: fixed">
+  <button mat-button mat-dialog-close>Retour</button>
+</mat-dialog-actions>

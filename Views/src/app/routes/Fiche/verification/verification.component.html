@@ -1,0 +1,299 @@
+<mat-card class="md-pt-5">
+  <mat-card-header> </mat-card-header>
+  <mat-card-content>
+    <mat-tab-group animationDuration="0ms">
+      <mat-tab label="Contrôle de contenu Actif">
+        <div class="col-md-1 align-items-center">
+          <button mat-button (click)="display_echantillon_actif()">Échantillon</button>
+        </div>
+        <div *ngIf="show_echantillonnage_template" class="example-container mat-elevation-z8 py-2">
+          <form [formGroup]="form">
+            <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
+              <ng-container matColumnDef="id">
+                <th mat-header-cell *matHeaderCellDef>ID</th>
+                <td
+                  mat-cell
+                  *matCellDef="let element; let i = index"
+                  style="cursor: pointer"
+                  (click)="openDialog(element.id)"
+                >
+                  {{ element.id }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="titre">
+                <th mat-header-cell *matHeaderCellDef>Description</th>
+                <td
+                  mat-cell
+                  *matCellDef="let element"
+                  style="cursor: pointer"
+                  (click)="openDialog(element.id)"
+                >
+                  {{ element.titre }}
+                </td>
+              </ng-container>
+
+              <!-- Name Column -->
+              <ng-container matColumnDef="type">
+                <th mat-header-cell *matHeaderCellDef>Type</th>
+                <td mat-cell *matCellDef="let element" (click)="openDialog(element.id)">
+                  {{ element.type }}
+                </td>
+              </ng-container>
+
+              <!-- Weight Column -->
+              <ng-container matColumnDef="ETAT">
+                <th mat-header-cell *matHeaderCellDef>ETAT</th>
+                <td mat-cell *matCellDef="let element" (click)="openDialog(element.id)">
+                  {{ element.ETAT }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="Gestionnaire">
+                <th mat-header-cell *matHeaderCellDef>Gestionnaire</th>
+                <td mat-cell *matCellDef="let element">
+                  {{ element.Gestionnaire }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="exactitude">
+                <th mat-header-cell *matHeaderCellDef style="text-align: center">Exactitude</th>
+                <td
+                  mat-cell
+                  *matCellDef="let element; let i = index"
+                  [formGroup]="getFormGroupAt(i)"
+                  class="text-center"
+                >
+                  <mat-radio-group aria-label="Select an option" formControlName="response">
+                    <mat-radio-button value="1">Oui</mat-radio-button>
+                    <mat-radio-button value="0">Non</mat-radio-button>
+                  </mat-radio-group>
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr
+                mat-row
+                *matRowDef="let row; columns: displayedColumns"
+                style="padding-top: 2px"
+              ></tr>
+            </table>
+          </form>
+          <div class="text-end py-2">
+            <button
+              mat-button
+              class=""
+              [disabled]="!form.valid || !allResponsesSelected()"
+              (click)="submitResponses()"
+            >
+              Valider
+            </button>
+          </div>
+        </div>
+      </mat-tab>
+      <mat-tab label="Contrôle M-1">
+        <div>
+          <button mat-button (click)="display_echantillon_M_1()">Échantillon</button>
+        </div>
+        <div
+          *ngIf="show_echantillonnage_template_M_1"
+          class="example-container mat-elevation-z8 py-2"
+        >
+          <form [formGroup]="form">
+            <table mat-table [dataSource]="dataSource_M_1" class="mat-elevation-z8">
+              <ng-container matColumnDef="id">
+                <th mat-header-cell *matHeaderCellDef>ID</th>
+                <td
+                  mat-cell
+                  *matCellDef="let element; let i = index"
+                  style="cursor: pointer"
+                  (click)="openDialog(element.id)"
+                >
+                  {{ element.id }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="titre">
+                <th mat-header-cell *matHeaderCellDef>Description</th>
+                <td
+                  mat-cell
+                  *matCellDef="let element"
+                  style="cursor: pointer"
+                  (click)="openDialog(element.id)"
+                >
+                  {{ element.titre }}
+                </td>
+              </ng-container>
+
+              <!-- Name Column -->
+              <ng-container matColumnDef="type">
+                <th mat-header-cell *matHeaderCellDef>Type</th>
+                <td mat-cell *matCellDef="let element" (click)="openDialog(element.id)">
+                  {{ element.type }}
+                </td>
+              </ng-container>
+
+              <!-- Weight Column -->
+              <ng-container matColumnDef="ETAT">
+                <th mat-header-cell *matHeaderCellDef>ETAT</th>
+                <td mat-cell *matCellDef="let element" (click)="openDialog(element.id)">
+                  {{ element.ETAT }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="Gestionnaire">
+                <th mat-header-cell *matHeaderCellDef>Gestionnaire</th>
+                <td mat-cell *matCellDef="let element">
+                  {{ element.Gestionnaire }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="exactitude">
+                <th mat-header-cell *matHeaderCellDef style="text-align: center">Exactitude</th>
+                <td
+                  mat-cell
+                  *matCellDef="let element; let i = index"
+                  [formGroup]="getFormGroupAt_M_1(i)"
+                  class="text-center"
+                >
+                  <mat-radio-group aria-label="Select an option" formControlName="response">
+                    <mat-radio-button value="1">Oui</mat-radio-button>
+                    <mat-radio-button value="0">Non</mat-radio-button>
+                  </mat-radio-group>
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr
+                mat-row
+                *matRowDef="let row; columns: displayedColumns"
+                style="padding-top: 2px"
+              ></tr>
+            </table>
+          </form>
+          <div class="text-end py-2">
+            <button
+              mat-button
+              class=""
+              [disabled]="!form_M_1.valid || !allResponsesSelected_M_1()"
+              (click)="submitResponses_M_1()"
+            >
+              Valider
+            </button>
+          </div>
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Reporting des Contrôles">
+        <div class="example-container">
+          <form [formGroup]="dateForm">
+            <div class="example-form-fields">
+              <mat-form-field>
+                <mat-select formControlName="typeControle" required>
+                  <mat-option value="controle_actif">CONTROLE ACTIF</mat-option>
+                  <mat-option value="controle_m1">CONTROLE M-1</mat-option>
+                </mat-select>
+                <mat-label><mat-icon>favorite</mat-icon> <em> Selectionnez</em></mat-label>
+              </mat-form-field>
+              <mat-form-field>
+                <mat-label>Date de début</mat-label>
+                <input matInput [matDatepicker]="picker1" formControlName="dateDebut" />
+                <mat-datepicker-toggle matSuffix [for]="picker1"></mat-datepicker-toggle>
+                <mat-datepicker #picker1></mat-datepicker>
+              </mat-form-field>
+
+              <mat-form-field>
+                <mat-label>Date de fin</mat-label>
+                <input matInput [matDatepicker]="picker2" formControlName="dateFin" />
+                <mat-datepicker-toggle matSuffix [for]="picker2"></mat-datepicker-toggle>
+                <mat-datepicker #picker2></mat-datepicker>
+              </mat-form-field>
+
+              <button mat-button [disabled]="dateForm.invalid" (click)="chargement_reporting()">
+                Charger
+              </button>
+            </div>
+          </form>
+        </div>
+        <div *ngIf="show_reporting_template" class="d-flex justify-content-between">
+          <div class="col-md-1">
+            <mat-icon
+              style="color: #ff8e36; cursor: pointer"
+              (click)="download()"
+              matTooltip="Télécharger le reporting"
+              matTooltipPosition="above"
+            >
+              get_app</mat-icon
+            >
+          </div>
+          <div class="col-md-3 text-end">
+            <strong>Résultat :</strong>
+            <span
+              style="
+                font-size: 20px;
+                font-weight: 600;
+                background-color: #ff8d365b;
+                border: 1px solid #ff8e36;
+                border-radius: 10px;
+                padding: 10px;
+              "
+            >
+              {{ score }}%
+            </span>
+          </div>
+        </div>
+        <div *ngIf="show_reporting_template" class="example-container mat-elevation-z8 py-2">
+          <form>
+            <table mat-table [dataSource]="dataSource_reporting" class="mat-elevation-z8">
+              <ng-container matColumnDef="id">
+                <th mat-header-cell *matHeaderCellDef>ID</th>
+                <td mat-cell *matCellDef="let element" style="cursor: pointer">
+                  {{ element.id }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="id_CONTROLE">
+                <th mat-header-cell *matHeaderCellDef>ID_CONTROLE</th>
+                <td mat-cell *matCellDef="let element" style="cursor: pointer">
+                  {{ element.id_CONTROLE }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="titre">
+                <th mat-header-cell *matHeaderCellDef>Description</th>
+                <td mat-cell *matCellDef="let element" style="cursor: pointer">
+                  {{ element.titre }}
+                </td>
+              </ng-container>
+
+              <!-- Weight Column -->
+              <ng-container matColumnDef="ETAT">
+                <th mat-header-cell *matHeaderCellDef>ETAT</th>
+                <td mat-cell *matCellDef="let element">
+                  {{ element.ETAT }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="nom_utilisateur">
+                <th mat-header-cell *matHeaderCellDef>nom_utilisateur</th>
+                <td mat-cell *matCellDef="let element">
+                  {{ element.nom_utilisateur }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="exactitude">
+                <th mat-header-cell *matHeaderCellDef>Exactitude</th>
+                <td mat-cell *matCellDef="let element" class="text-center">
+                  {{ element.exactitude }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="dateControle">
+                <th mat-header-cell *matHeaderCellDef style="text-align: center">
+                  Date de Contrôle
+                </th>
+                <td mat-cell *matCellDef="let element" class="text-center">
+                  {{ element.dateControle }}
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="displayedColumns_reporting"></tr>
+              <tr
+                mat-row
+                *matRowDef="let row; columns: displayedColumns_reporting"
+                (click)="openDialog(row.id)"
+                style="padding-top: 2px"
+              ></tr>
+            </table>
+          </form>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </mat-card-content>
+</mat-card>

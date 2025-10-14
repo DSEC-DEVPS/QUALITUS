@@ -1,0 +1,67 @@
+<mat-card>
+  <mat-card-header></mat-card-header>
+  <mat-card-content>
+    <div class="export-container" [formGroup]="exportForm">
+      <mat-card class="export-card">
+        <mat-card-title style="font-size: medium">Exporter des Données</mat-card-title>
+        <mat-card-subtitle style="font-size: small; color: #ff8e36"
+          >Sélectionnez vos filtres, visualisez un aperçu, puis exportez.</mat-card-subtitle
+        >
+
+        <mat-divider></mat-divider>
+
+        <div class="export-form-fields">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Type de données</mat-label>
+            <mat-select formControlName="dataType">
+              <ng-template *ngFor="let item of type_donnes" [ngxPermissionsOnly]="item.permissions">
+                <mat-option [value]="item.label">{{ item.label }}</mat-option>
+              </ng-template>
+            </mat-select>
+          </mat-form-field>
+
+          <div class="date-range-fields">
+            <mat-form-field appearance="outline">
+              <mat-label>Début</mat-label>
+              <input matInput [matDatepicker]="startPicker" formControlName="dateDebut" />
+              <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+              <mat-datepicker #startPicker></mat-datepicker>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Fin</mat-label>
+              <input matInput [matDatepicker]="endPicker" formControlName="dateFin" />
+              <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+              <mat-datepicker #endPicker></mat-datepicker>
+            </mat-form-field>
+          </div>
+
+          <mat-slide-toggle formControlName="isActive" color="orange"
+            >Utilisateurs actifs</mat-slide-toggle
+          >
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Format d'export</mat-label>
+            <mat-select formControlName="format">
+              <mat-option *ngFor="let f of formats" [value]="f">{{ f }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div class="export-buttons">
+          <button mat-raised-button color="primary" (click)="onPreview()">
+            <mat-icon>visibility</mat-icon> Aperçu
+          </button>
+          <button
+            mat-raised-button
+            [disabled]="exportForm.invalid"
+            color="accent"
+            (click)="onExport()"
+          >
+            <mat-icon>download</mat-icon> Exporter
+          </button>
+        </div>
+      </mat-card>
+    </div>
+  </mat-card-content>
+</mat-card>

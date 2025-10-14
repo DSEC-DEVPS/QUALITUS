@@ -1,0 +1,218 @@
+.card {
+  background-color: rgb(238, 233, 233);
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+/** * Styles pour le date picker */
+.custom-datepicker {
+  // Bordures orange et border-radius
+  width: 150px !important;
+  max-width: 150px !important;
+
+  .mdc-text-field--outlined {
+    border-color: #000 !important;
+    font-weight: bold;
+    border-radius: 10px !important;
+  }
+
+  .mat-mdc-form-field-infix {
+    min-height: 33px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  // Réduction de la taille du placeholder
+  .mat-mdc-form-field-hint,
+  .mat-mdc-form-field-label {
+    color: #ff8e36 !important;
+    font-size: 10px !important;
+  }
+
+  // Réduction de la hauteur
+  .mat-mdc-text-field-wrapper {
+    height: 33px !important;
+
+    .mat-mdc-form-field-flex {
+      height: 33px !important;
+    }
+  }
+
+  .mat-mdc-floating-label,
+  .mat-mdc-input-element {
+    font-size: 10px !important;
+    color: rgba(255, 165, 0, 0.6) !important;
+    position: absolute !important;
+    inset: 0 !important;
+    margin: auto !important;
+    height: fit-content !important;
+    transform: none !important;
+  }
+
+  // Style de l'icône du calendrier
+  .mat-datepicker-toggle {
+    color: orange;
+    font-size: 10px;
+  }
+}
+
+// Styles pour le popup calendrier
+.mat-calendar {
+  .mat-calendar-body-selected {
+    background-color: orange !important; // Date sélectionnée en orange
+    color: white !important;
+  }
+
+  .mat-calendar-body-today:not(.mat-calendar-body-selected) {
+    border-color: orange !important; // Contour de la date du jour en orange
+  }
+
+  .mat-calendar-body-cell:hover:not(.mat-calendar-body-disabled):not(.mat-calendar-body-selected)
+    .mat-calendar-body-cell-content {
+    background-color: rgba(255, 165, 0, 0.3) !important; // Effet hover en orange clair
+  }
+
+  .mat-calendar-arrow {
+    border-top-color: orange !important; // Flèche du sélecteur d'année en orange
+  }
+
+  .mat-calendar-table-header,
+  .mat-calendar-body-label {
+    color: rgba(255, 165, 0, 0.8) !important; // En-têtes en orange
+  }
+
+  .mat-calendar-body-cell-content {
+    font-size: 12px; // Taille de police des dates
+  }
+
+  .mat-calendar-period-button {
+    color: orange !important; // Bouton de période en orange
+  }
+}
+
+.container {
+  background-color: rgba(253, 237, 237, 0.9);
+}
+
+.card-category {
+  font-size: 10px;
+  font-weight: 600;
+}
+.card-title {
+  color: #ff8e36;
+  font-size: 12px;
+}
+.image_profile {
+  display: block;
+  margin: auto;
+  width: 130px;
+  height: 130px;
+  border: 2px solid #ff8e36;
+  border-radius: 50%;
+}
+ul li {
+  list-style: none;
+}
+.title {
+  font-family: poppins, sans-serif;
+  font-size: small;
+  font-weight: bold;
+  color: rgba(35, 34, 34, 0.808);
+}
+.sub_title {
+  font-family: poppins, sans-serif;
+  font-size: small;
+  font-weight: 400;
+  color: #ff8e36;
+}
+.mat-tab-group {
+  margin-bottom: 48px;
+}
+.left,
+.right {
+  background-color: var(--header-background-color);
+  height: 100vh;
+}
+.left {
+  border: 1px solid #ff8e36;
+  border-radius: 5px;
+}
+table,
+mat-paginator {
+  background-color: transparent;
+}
+tr,
+td,
+th {
+  cursor: pointer;
+}
+td:hover {
+  color: #ff8e36;
+}
+mat-icon {
+  cursor: pointer;
+}
+::ng-deep .mat-mdc-tab.mdc-tab.mdc-tab.mdc-tab--active {
+  background-color: #ff8e36;
+  font-weight: 900;
+}
+tr > th {
+  font-family: poppins, sans-serif;
+  font-size: 10px;
+}
+
+.mat-mdc-row,
+.mat-mdc-header-row {
+  height: 25px !important;
+  min-height: 25px !important;
+}
+
+.mat-mdc-cell,
+.mat-mdc-header-cell {
+  padding: 0 4px !important;
+}
+
+.mat-mdc-row:nth-child(odd) {
+  background-color: #ddd3c89a;
+}
+
+.mat-mdc-row:nth-child(even) {
+  background-color: #c7dccc4e;
+}
+
+.mat-mdc-header-row {
+  background-color: #f0f0f0 !important;
+}
+
+.mat-mdc-header-cell {
+  font-weight: bold !important;
+  color: #333 !important;
+  font-size: 10px !important;
+}
+
+.mat-mdc-row:hover {
+  background-color: #e8f0fe !important;
+}
+/* Augmenter la hauteur des lignes */
+.mat-mdc-row {
+  height: 15px !important; /* Ajustez selon vos besoins */
+}
+
+.mat-mdc-header-row {
+  height: 20px !important; /* Pour les en-têtes */
+}
+
+/* Alternative: utiliser min-height pour plus de flexibilité */
+.mat-mdc-row {
+  min-height: 10px !important;
+}
+
+/* Pour ajuster le padding des cellules */
+.mat-mdc-cell,
+.mat-mdc-header-cell {
+  padding: 10px 20px !important; /* top/bottom left/right */
+}
+.mat-mdc-cell {
+  font-size: 10px !important; /* Ajustez selon vos besoins (défaut: 14px) */
+}

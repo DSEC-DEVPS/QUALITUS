@@ -1,0 +1,62 @@
+<!-- -->
+<mat-card>
+  <mat-card-header>
+    <div class="container pb-3">
+      <div
+        class="row justify-content-between align-items-center"
+        justify-content-space-between
+        bg-red
+      >
+        <div class="col-sm-4 text-start p-0">
+          <input matInput (keyup)="applyFilter($event)" placeholder="Login" />
+        </div>
+        <div class="col-sm-4 text-end p-0">
+          <mat-icon
+            (click)="download()"
+            class="download_icon"
+            matTooltip="Télécharger"
+            matTooltipPosition="above"
+          >
+            cloud_download</mat-icon
+          >
+        </div>
+      </div>
+    </div>
+  </mat-card-header>
+  <mat-card-content>
+    <div class="mat-elevation-z8">
+      <div class="container pt-3">
+        <div class="row">
+          <div class="col-sm-2" style="" *ngFor="let agent of downloadData">
+            <div class="card">
+              <img
+                [src]="LogoUser"
+                alt="Avatar"
+                style="width: 60%; border-radius: 60%; margin: auto"
+              />
+              <div class="container text-center">
+                <h4 class="text-center">
+                  <b>{{ agent.nom }}</b>
+                </h4>
+                <p class="text-center">{{ agent.Fonction }}</p>
+                <button
+                  type="button"
+                  class="text-center"
+                  (click)="NavigeOnSinglePageUtilisateur(agent.id)"
+                  class="btn btn-warning"
+                >
+                  voir plus
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <mat-paginator
+        [pageSizeOptions]="[5, 10, 25, 100, 200]"
+        aria-label="Select page of users"
+      ></mat-paginator>
+    </div>
+  </mat-card-content>
+</mat-card>

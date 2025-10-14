@@ -1,0 +1,443 @@
+{
+  "menu": [
+    {
+      "route": "mon-espace/dashboard",
+      "name": "Dashboard",
+      "type": "link",
+      "icon": "dashboard",
+      "permissions": {
+        "only": ["R_ADMI", "R_GB"]
+      }
+    },
+
+    {
+      "route": "mon-espace/Utilisateurs/Liste",
+      "name": "Utilisateurs",
+      "type": "link",
+      "icon": "people",
+      "permissions": {
+        "only": ["R_ADMI"]
+      }
+    },
+    {
+      "route": "mon-espace/mes-agents/Liste",
+      "name": "Mes Agents",
+      "type": "link",
+      "icon": "people",
+      "permissions": {
+        "only": ["R_SUP"]
+      }
+    },
+    {
+      "route": "mon-espace/quiz",
+      "name": "Quiz",
+      "type": "sub",
+      "icon": "widgets",
+      "children": [
+        {
+          "route": "quiz-en-echecs",
+          "name": "Quiz en echecs",
+          "type": "link",
+          "icon": "colorize"
+        },
+        {
+          "route": "Quiz-en-reset",
+          "name": "Quiz en retest",
+          "type": "link",
+          "icon": "flag"
+        }
+      ],
+      "permissions": {
+        "only": ["R_SUP"]
+      }
+    },
+    {
+      "route": "mon-espace/Fonction/Liste",
+      "name": "Gestion Fonction",
+      "type": "link",
+      "icon": "widgets",
+      "permissions": {
+        "only": ["R_ADMI"]
+      }
+    },
+    {
+      "route": "mon-espace/RO/renitialisation-password",
+      "name": "Gérer les comptes",
+      "type": "link",
+      "icon": "settings_backup_restore",
+      "permissions": {
+        "only": ["R_RO"]
+      }
+    },
+    {
+      "route": "mon-espace/RO/assignation-agents",
+      "name": "Assignation",
+      "type": "link",
+      "icon": "edit_attributes",
+      "permissions": {
+        "only": ["R_RO"]
+      }
+    },
+    {
+      "route": "mon-espace/Site/Liste",
+      "name": "Gestion Site",
+      "type": "link",
+      "icon": "location_on",
+      "permissions": {
+        "only": ["R_ADMI"]
+      }
+    },
+    {
+      "route": "mon-espace/Programme/Liste",
+      "name": "Gestion Programme",
+      "type": "link",
+      "icon": "subtitles",
+      "permissions": {
+        "only": ["R_ADMI"]
+      }
+    },
+
+    {
+      "route": "mon-espace/Fiche",
+      "name": "Gestion Contenu",
+      "type": "sub",
+      "icon": "insert_drive_file",
+      "children": [
+        {
+          "route": "Ajouter",
+          "name": "Nouveau",
+          "type": "link",
+          "icon": "colorize",
+          "permissions": {
+            "only": ["R_ADMI", "R_GB"]
+          }
+        },
+        {
+          "route": "Liste",
+          "name": "Les Chargements",
+          "type": "link",
+          "icon": "colorize",
+          "permissions": {
+            "only": ["R_GB"]
+          }
+        },
+
+        {
+          "route": "Liste",
+          "name": "Liste Fiche",
+          "type": "link",
+          "icon": "flag",
+          "permissions": {
+            "only": ["R_ADMI"]
+          }
+        },
+        {
+          "route": "ListeSla",
+          "name": "SLA",
+          "type": "link",
+          "icon": "flag",
+          "permissions": {
+            "only": ["R_ADMI"]
+          }
+        },
+        {
+          "route": "ListeCategorie",
+          "name": "Catégories",
+          "type": "link",
+          "icon": "flag",
+          "permissions": {
+            "only": ["R_ADMI"]
+          }
+        },
+        {
+          "route": "archives",
+          "name": "Archives",
+          "type": "link",
+          "icon": "flag",
+          "permissions": {
+            "only": ["R_ADMI", "R_GB"]
+          }
+        }
+      ],
+      "permissions": {
+        "only": ["R_ADMI", "R_GB"]
+      }
+    },
+
+    {
+      "route": "mon-espace/MaVoixCompte/",
+      "name": "Ma Voix",
+      "type": "sub",
+      "icon": "record_voice_over",
+      "children": [
+        {
+          "route": "motif",
+          "name": "Liste Motif",
+          "type": "link",
+          "permissions": {
+            "only": ["R_ADMI"]
+          }
+        },
+        {
+          "route": "ajouter",
+          "name": "Ajouter",
+          "type": "link",
+          "permissions": {
+            "only": ["R_TÉLÉ"]
+          }
+        }
+      ],
+      "permissions": {
+        "only": ["R_TÉLÉ", "R_ADMI"]
+      }
+    },
+    {
+      "route": "mon-espace/Fiche/ge-chargement",
+      "name": "Gestion Chargements",
+      "type": "link",
+      "icon": "insert_drive_file",
+      "permissions": {
+        "only": ["R_GE"]
+      }
+    },
+    {
+      "route": "mon-espace/export",
+      "name": "Exportations",
+      "type": "link",
+      "icon": "import_export",
+      "permissions": {
+        "only": ["R_ADMI", "R_GB", "R_SUP", "R_GE"]
+      }
+    },
+
+    {
+      "route": "mon-espace/ecoutes",
+      "name": "ECOUTES",
+      "type": "sub",
+      "icon": "insert_drive_file",
+      "children": [
+        {
+          "route": "evaluation",
+          "name": "Evaluation",
+          "type": "sub",
+          "icon": "colorize",
+          "children": [
+            {
+              "route": "evaluation-en-cours",
+              "name": "Evaluation En cours",
+              "type": "link",
+              "permissions": {
+                "only": ["R_AQ", "R_ADMI"]
+              }
+            },
+            {
+              "route": "mes-evaluation",
+              "name": "Mes évaluations",
+              "type": "link",
+              "permissions": {
+                "only": ["R_AQ", "R_ADMI"]
+              }
+            }
+          ]
+        },
+        {
+          "route": "contre-evaluation",
+          "name": "Contre évaluation",
+          "type": "sub",
+          "icon": "colorize",
+          "children": [
+            {
+              "route": "mes-evaluation",
+              "name": "Mes évaluations",
+              "type": "link",
+              "permissions": {
+                "only": ["R_AQ", "R_ADMI"]
+              }
+            }
+          ]
+        },
+
+        {
+          "route": "calibrage",
+          "name": "Calibrage",
+          "type": "sub",
+          "icon": "flag",
+          "children": [
+            {
+              "route": "participer",
+              "name": "Participer",
+              "type": "link",
+              "permissions": {
+                "only": ["R_AQ", "R_ADMI"]
+              }
+            },
+            {
+              "route": "mes-calibrages",
+              "name": "Mes calibrages",
+              "type": "link",
+              "permissions": {
+                "only": ["R_AQ", "R_ADMI"]
+              }
+            }
+          ]
+        }
+      ],
+      "permissions": {
+        "only": ["R_AQ"]
+      }
+    },
+
+    {
+      "route": "mon-espace/quiz",
+      "name": "GESTION QUIZ",
+      "type": "sub",
+      "icon": "insert_drive_file",
+      "children": [
+        {
+          "route": "creer-un-quiz",
+          "name": "Créer un Quiz",
+          "type": "link",
+          "permissions": {
+            "only": ["R_ADMI", "R_AQ"]
+          }
+        },
+        {
+          "route": "liste-des-quiz",
+          "name": "Liste des Quiz",
+          "type": "link",
+          "permissions": {
+            "only": ["R_ADMI", "R_AQ"]
+          }
+        },
+        {
+          "route": "participer-au-quiz",
+          "name": "Parcitipez au Quiz",
+          "type": "link",
+          "permissions": {
+            "only": ["R_ADMI", "R_AQ"]
+          }
+        }
+      ],
+      "permissions": {
+        "only": ["R_AQ"]
+      }
+    },
+    {
+      "route": "mon-espace/jauger",
+      "name": "JAUGER",
+      "type": "sub",
+      "icon": "insert_drive_file",
+      "children": [
+        {
+          "route": "contre-evaluation",
+          "name": "Contre évaluation",
+          "type": "sub",
+          "children": [
+            {
+              "route": "faire-contre-evaluation",
+              "name": "Faire une contre Eval",
+              "type": "link",
+              "permissions": {
+                "only": ["R_ADMI", "R_AQ"]
+              }
+            },
+            {
+              "route": "gestions",
+              "name": "Gestions",
+              "type": "link",
+              "permissions": {
+                "only": ["R_ADMI", "R_AQ"]
+              }
+            },
+            {
+              "route": "ecoutes-validations",
+              "name": "Ecoutes Validations",
+              "type": "link",
+              "permissions": { "only": ["R_ADMI", "R_AQ"] }
+            }
+          ]
+        },
+        {
+          "route": "calibrage",
+          "name": "Calibrage",
+          "type": "link",
+          "permissions": { "only": ["R_ADMI", "R_AQ"] }
+        }
+      ],
+      "permissions": {
+        "only": ["R_AQ"]
+      }
+    },
+    {
+      "route": "mon-espace/reporting",
+      "name": "Reporting",
+      "type": "sub",
+      "icon": "insert_drive_file",
+      "children": [
+        {
+          "route": "ecoutes",
+          "name": "Ecoutes",
+          "type": "link",
+          "permissions": {
+            "only": ["R_ADMI", "R_AQ"]
+          }
+        },
+        {
+          "route": "contre-evaluation",
+          "name": "Contre Evalutation",
+          "type": "link",
+          "permissions": {
+            "only": ["R_ADMI", "R_AQ"]
+          }
+        },
+        {
+          "route": "analyse",
+          "name": "Analyse",
+          "type": "link",
+          "permissions": {
+            "only": ["R_ADMI", "R_AQ"]
+          }
+        }
+      ],
+      "permissions": {
+        "only": ["R_AQ"]
+      }
+    },
+    {
+      "route": "mon-espace/grille",
+      "name": "Grille",
+      "type": "link",
+      "icon": "flag",
+      "permissions": {
+        "only": ["R_ADMI"]
+      }
+    },
+    {
+      "route": "mon-espace/export",
+      "name": "Export",
+      "type": "sub",
+      "icon": "insert_drive_file",
+      "children": [
+        {
+          "route": "ecoutes",
+          "name": "Export",
+          "type": "link",
+          "permissions": {
+            "only": ["R_ADMI", "R_AQ"]
+          }
+        },
+        {
+          "route": "sondage",
+          "name": "Sondage",
+          "type": "link",
+          "permissions": {
+            "only": ["R_ADMI", "R_AQ"]
+          }
+        }
+      ],
+      "permissions": {
+        "only": ["R_AQ"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+<mat-card class="md-pt-5">
+  <mat-card-header> </mat-card-header>
+  <mat-card-content>
+    <div class="container 100vh">
+      <div class="row">
+        <div class="col- col-sm- col-md-6 col-lg-6 col-xl-6">
+          <img [src]="voiceUrl" alt="" />
+        </div>
+
+        <div class="col- col-sm- col-md-6 col-lg-6 col-xl-6">
+          <form [formGroup]="MavoixFormGroup" class="form-field-full">
+            <div class="input mb-3">
+              <label for="select" class="form-label">Motif *</label>
+              <select
+                name="libelleListe"
+                id="select"
+                class="form-select"
+                aria-label="Default select example"
+                formControlName="motif_ma_voix_compte"
+              >
+                <option selected>Choisisez le motif</option>
+                <option *ngFor="let item of motifMaVoix" [value]="item.id">
+                  {{ item.nomMotif }}
+                </option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="exampleFormControlTextarea1" class="form-label">Contenu*</label>
+              <textarea
+                class="form-control"
+                id="exampleFormControlTextarea1"
+                rows="3"
+                formControlName="message"
+              ></textarea>
+            </div>
+            <button
+              [style.backgroundColor]="'#FF7900'"
+              mat-button
+              class="btn btn-outline-dark bouton"
+              [disabled]="MavoixFormGroup.invalid"
+              (click)="add_ma_voix_compte()"
+            >
+              Envoyer
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </mat-card-content>
+</mat-card>

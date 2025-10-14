@@ -1,0 +1,199 @@
+/* Styles généraux */
+.container-fluid {
+  background-color: #f8f9fa;
+  //padding: 20px;
+}
+.small-button {
+  line-height: 28px;
+  height: 28px;
+  font-size: 12px;
+  padding: 0 10px;
+  min-width: 70px;
+}
+
+/* Titre de la section Vérifications */
+.verification-title {
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 15px;
+}
+
+/* Style de l'iframe */
+iframe {
+  border: 2px solid #ddd;
+  border-radius: 8px;
+}
+
+/* Style des onglets */
+.mat-tab-group {
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.mat-tab-label {
+  font-weight: bold;
+  color: #333;
+}
+
+/* Style des boutons */
+button {
+  width: 100px;
+  margin: 25px;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.btn-success {
+  background-color: #28a745;
+  border: none;
+  color: white;
+}
+
+.btn-danger {
+  background-color: #ff8e36;
+  border: none;
+  color: white;
+}
+
+.btn-primary {
+  background-color: #ff8e36;
+  border: none;
+  color: white;
+}
+
+/* Style du champ commentaire */
+.commentaire-box {
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 8px;
+}
+
+/* Style du bouton RETOUR */
+.btn-retour {
+  display: block;
+  margin: 20px auto; /* Centre horizontalement */
+  background-color: #ff8e36;
+  border: none;
+  color: white;
+  font-size: 18px;
+  padding: 10px 20px;
+  border-radius: 5px;
+  width: 150px; /* Ajuste la largeur pour un bon rendu */
+  text-align: center;
+}
+
+/* Centrage du bouton RETOUR */
+.row.mt-3 {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.left,
+.right {
+  width: 100%;
+  height: 100vh;
+}
+.left {
+  border: 1.5px solid #ff8e36;
+  border-radius: 2%;
+}
+iframe {
+  height: 65%;
+  width: 100%;
+}
+ul li {
+  list-style: none;
+}
+.title {
+  font-size: small;
+  color: #000;
+  font-weight: 500;
+}
+.sub_title {
+  font-size: 12px;
+  font-family: poppins, sans-serif;
+  color: #ff8e36;
+}
+td {
+  align-items: center;
+}
+.icon_person {
+  padding: 0px;
+  margin-bottom: -5px;
+  color: #ff8e36;
+}
+.login_label,
+.number_consultation {
+  font-weight: bold;
+  &:hover {
+    color: #ff8e36;
+    cursor: pointer;
+  }
+}
+.number_consultation {
+  font-weight: bold;
+  color: #ff8e36;
+}
+.icon_edit:hover {
+  cursor: pointer;
+}
+::ng-deep .mat-mdc-tab.mdc-tab.mdc-tab.mdc-tab--active {
+  background-color: #ff8e36;
+  font-weight: 900;
+}
+
+.excel-container {
+  padding: 20px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin: 20px 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.sheet-selector {
+  width: 200px;
+}
+
+.excel-viewer {
+  width: 100%;
+  height: 50vh;
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+}
+
+/* Style personnalisé pour les en-têtes */
+:host ::ng-deep .header-cell {
+  font-weight: bold !important;
+  background-color: #f5f5f5 !important;
+}
+
+/* Styles supplémentaires pour Handsontable */
+:host ::ng-deep .handsontable th {
+  font-weight: bold !important;
+  background-color: #f0f0f0 !important;
+  text-align: center !important;
+}
+
+:host ::ng-deep .handsontable td {
+  padding: 4px 8px !important;
+}
+
+/* Assurer que le conteneur est bien positionné */
+:host ::ng-deep .handsontable-container {
+  margin: 0 !important;
+  width: 100% !important;
+  overflow: hidden !important;
+}

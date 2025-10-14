@@ -1,0 +1,23 @@
+.customizer-handle {
+  position: fixed;
+  right: 0.5rem;
+  bottom: 5rem;
+  z-index: 1;
+
+  [dir='rtl'] & {
+    right: auto;
+    left: 2rem;
+  }
+}
+.customizer-handle > button:hover {
+  background-color: #ff8e36;
+}
+mat-radio-button {
+  color: #ff8e36;
+}
+mat-slide-toggle {
+  font-size: 10px;
+}
+.title {
+  font-size: 20px;
+}

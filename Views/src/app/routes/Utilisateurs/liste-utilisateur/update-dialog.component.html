@@ -1,0 +1,17 @@
+<div style="background-color: #ff8d36a6">
+  <h6 mat-dialog-title style="font-size: small; text-align: center; font-weight: 600">
+    Choisissez une action
+  </h6>
+  <mat-dialog-content>
+    <div class="row d-flex">
+      <button mat-button mat-dialog-close (click)="update('ACTIF')">
+        <mat-icon style="color: green">done_outline</mat-icon>
+        Activer
+      </button>
+      <button mat-button mat-dialog-close (click)="update('INACTIF')">
+        <mat-icon style="color: red">highlight_off</mat-icon>
+        Désactiver
+      </button>
+    </div>
+  </mat-dialog-content>
+</div>

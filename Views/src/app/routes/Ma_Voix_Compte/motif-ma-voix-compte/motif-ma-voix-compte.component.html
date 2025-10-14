@@ -1,0 +1,77 @@
+<mat-card>
+  <mat-card-header>
+    <div class="container pb-3">
+      <div class="row justify-content-space-between align-items-center">
+        <div class="col-sm-6 text-start p-0">
+          <input matInput (keyup)="applyFilter($event)" placeholder="Motif" #input />
+        </div>
+        <div class="col-sm-6 text-end p-0">
+          <mat-icon (click)="openDialog()" class="add_icon">add_circle </mat-icon>
+          <mat-icon
+            (click)="download()"
+            class="download_icon"
+            matTooltip="Télécharger"
+            matTooltipPosition="above"
+          >
+            cloud_download</mat-icon
+          >
+        </div>
+      </div>
+    </div>
+  </mat-card-header>
+  <mat-card-content>
+    <div class="mat-elevation-z8">
+      <table mat-table [dataSource]="tableau_motifs">
+        <!-- Position Column -->
+        <ng-container matColumnDef="id">
+          <th mat-header-cell *matHeaderCellDef>ID</th>
+          <td mat-cell *matCellDef="let element">{{ element.id }}</td>
+        </ng-container>
+
+        <!-- Name Column -->
+        <ng-container matColumnDef="nomMotif">
+          <th mat-header-cell *matHeaderCellDef>Nom du Motif</th>
+          <td mat-cell *matCellDef="let element">
+            {{ element.nomMotif }}
+          </td>
+        </ng-container>
+        <!-- Name Column -->
+        <ng-container matColumnDef="dateCreation">
+          <th mat-header-cell *matHeaderCellDef>Date de Création</th>
+          <td mat-cell *matCellDef="let element">{{ element.dateCreation }}</td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let element">
+            <div class="ACTIONS">
+              <mat-icon
+                class="mat_icon_edit"
+                matTooltip="supprimer"
+                matTooltipPosition="above"
+                (click)="openDialog_update(element.id)"
+                >edit</mat-icon
+              >
+              <mat-icon
+                class="delete_icon"
+                matTooltip="supprimer"
+                matTooltipPosition="above"
+                (click)="delete_motif(element.id)"
+                >delete_forever</mat-icon
+              >
+            </div>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      </table>
+
+      <mat-paginator
+        [pageSizeOptions]="[5, 10, 20]"
+        showFirstLastButtons
+        aria-label="Select page of periodic elements"
+      >
+      </mat-paginator>
+    </div>
+  </mat-card-content>
+</mat-card>

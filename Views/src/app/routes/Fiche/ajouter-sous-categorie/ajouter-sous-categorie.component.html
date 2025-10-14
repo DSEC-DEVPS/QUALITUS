@@ -1,0 +1,49 @@
+<div class="container">
+  <h6>Nouvelle Sous Catégorie</h6>
+  <div class="row m-auto justify-content-center register-template">
+    <div class="col-sm-8">
+      <mat-card>
+        <mat-card-content>
+          <form [formGroup]="formSousCategorie" class="form-field-full">
+            <div class="row">
+              <div class="col-sm-6 m-auto">
+                <mat-form-field appearance="fill">
+                  <mat-label>Nom</mat-label>
+                  <input matInput formControlName="nom" required />
+                  @if (formSousCategorie.get('source')?.invalid) {
+                    <mat-error>{{ 'Ce champ est obligatoire' }}</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+              <div class="col-sm-6">
+                <mat-form-field appearance="fill">
+                  <mat-label>Catégorie</mat-label>
+                  <mat-select required formControlName="id_Categorie" required>
+                    <mat-option *ngFor="let item of table_categorie" [value]="item.id"
+                      >{{ item.nom }}
+                    </mat-option>
+                  </mat-select>
+                  @if (formSousCategorie.get('id_Categorie')?.invalid) {
+                    <mat-error>{{ 'Ce champ est obligatoire' }}</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="m-t-8 text-center">
+              <button
+                mat-flat-button
+                (click)="handleOnSumit()"
+                [loading]="isSubmitting"
+                [disabled]="formSousCategorie.invalid"
+              >
+                Ajouter
+              </button>
+              <button mat-button mat-dialog-close>Annuler</button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

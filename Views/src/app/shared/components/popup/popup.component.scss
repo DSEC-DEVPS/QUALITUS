@@ -1,0 +1,53 @@
+.score-notification-container {
+  display: flex;
+  align-items: center;
+  background-color: white;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 12px #ff8e36;
+  overflow: hidden;
+
+  .avatar-container {
+    margin-right: 16px;
+
+    .avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background-color: #f0f8ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+    }
+  }
+
+  .content {
+    flex: 1;
+
+    .score {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #5c6bc0;
+      margin-bottom: 4px;
+    }
+
+    .message {
+      font-size: 1rem;
+      color: #424242;
+    }
+  }
+}
+
+// Global style to add to your styles.scss
+::ng-deep .score-notification-panel {
+  max-width: 400px !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}

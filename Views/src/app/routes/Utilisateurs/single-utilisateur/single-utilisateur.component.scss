@@ -1,0 +1,89 @@
+.container {
+  background-color: #f8f9fa;
+}
+.image_profile {
+  display: block;
+  margin: auto;
+  width: 130px;
+  height: 130px;
+  border: 2px solid #ff8e36;
+  border-radius: 50%;
+}
+ul li {
+  list-style: none;
+}
+.title {
+  font-family: poppins, sans-serif;
+  font-size: small;
+  font-weight: bold;
+  color: rgba(35, 34, 34, 0.808);
+}
+.sub_title {
+  font-family: poppins, sans-serif;
+  font-size: small;
+  font-weight: 400;
+  color: #ff8e36;
+}
+.mat-tab-group {
+  margin-bottom: 48px;
+}
+.left,
+.right {
+  height: 100vh;
+}
+.left {
+  border: 1px solid #ff8e36;
+  border-radius: 5px;
+}
+table,
+mat-paginator {
+  background-color: transparent;
+}
+tr,
+td,
+th {
+  cursor: pointer;
+}
+td:hover {
+  color: #ff8e36;
+}
+mat-icon {
+  cursor: pointer;
+}
+::ng-deep .mat-mdc-tab.mdc-tab.mdc-tab.mdc-tab--active {
+  background-color: #ff8e36;
+  font-weight: 900;
+}
+
+.mat-mdc-row,
+.mat-mdc-header-row {
+  height: 32px !important;
+  min-height: 32px !important;
+}
+
+.mat-mdc-cell,
+.mat-mdc-header-cell {
+  padding: 0 6px !important;
+}
+
+.mat-mdc-row:nth-child(odd) {
+  background-color: #ddd3c854;
+}
+
+.mat-mdc-row:nth-child(even) {
+  background-color: #c7dccc27;
+}
+
+.mat-mdc-header-row {
+  background-color: #f0f0f0 !important;
+}
+
+.mat-mdc-header-cell {
+  font-weight: bold !important;
+  color: #333 !important;
+  font-size: 12px !important;
+}
+
+.mat-mdc-row:hover {
+  background-color: #e8f0fe !important;
+}

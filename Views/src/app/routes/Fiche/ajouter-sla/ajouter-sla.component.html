@@ -1,0 +1,63 @@
+<div class="container">
+  <h6>Nouveau SLA</h6>
+  <div class="row m-auto justify-content-center register-template">
+    <div class="col-sm-8">
+      <mat-card>
+        <mat-card-content>
+          <form [formGroup]="formSla" class="form-field-full">
+            <div class="row">
+              <div class="col-sm-6 m-auto">
+                <mat-form-field appearance="fill">
+                  <mat-label>Source</mat-label>
+                  <input matInput formControlName="source" required />
+                  @if (formSla.get('source')?.invalid) {
+                    <mat-error>{{ 'Ce champ est obligatoire' }}</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+              <div class="col-sm-6">
+                <mat-form-field appearance="fill">
+                  <mat-label>Type</mat-label>
+                  <input matInput formControlName="type" required />
+                  @if (formSla.get('type')?.invalid) {
+                    <mat-error>{{ 'Ce champ est obligatoire' }}</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+              <div class="col-sm-6">
+                <mat-form-field appearance="fill">
+                  <mat-label>Delai</mat-label>
+                  <input matInput formControlName="delai" required />
+                  @if (formSla.get('delai')?.invalid) {
+                    <mat-error>{{ 'Ce champ est obligatoire' }}</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+              <div class="col-sm-6">
+                <mat-form-field appearance="fill">
+                  <mat-label>priorite</mat-label>
+                  <input matInput formControlName="priorite" required />
+                  @if (formSla.get('priorite')?.invalid) {
+                    <mat-error>{{ 'Ce champ est obligatoire' }}</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="m-t-8 text-center">
+              <button
+                mat-flat-button
+                (click)="handleOnSumit()"
+                [loading]="isSubmitting"
+                [disabled]="formSla.invalid"
+              >
+                Ajouter
+              </button>
+              <button mat-button mat-dialog-close>Annuler</button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

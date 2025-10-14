@@ -1,0 +1,93 @@
+<mat-card>
+  <mat-card-header>
+    <div class="container pb-3">
+      <div class="row justify-content-space-between">
+        <div class="col-sm-6 text-start p-0">
+          <input matInput (keyup)="applyFilter($event)" placeholder="grille" #input />
+        </div>
+        <div class="col-sm-6 text-end p-0">
+          <mat-icon
+            (click)="openDialog()"
+            class="add_icon"
+            matTooltip="Ajouter"
+            matTooltipPosition="above"
+            >add_circle
+          </mat-icon>
+          <mat-icon
+            (click)="download()"
+            class="download_icon"
+            matTooltip="Ajouter"
+            matTooltipPosition="above"
+            >cloud_download
+          </mat-icon>
+        </div>
+      </div>
+    </div>
+  </mat-card-header>
+  <mat-card-content>
+    <div class="mat-elevation-z6">
+      <table mat-table [dataSource]="dataSource" matSort>
+        <ng-container matColumnDef="id">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="">N°</th>
+          <td mat-cell *matCellDef="let element">
+            {{ element.id }}
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="nom">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="">Nom</th>
+          <td mat-cell *matCellDef="let element">
+            {{ element.nom }}
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="Etat">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="">ETAT</th>
+          <td mat-cell *matCellDef="let element">
+            <span class="text_etat"> {{ element.Etat }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="dateCreation">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header="">Date Création</th>
+          <td mat-cell *matCellDef="let element">
+            {{ element.dateCreation | date: 'dd-MM-yyyy' }}
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="Actions">
+          <th mat-header-cell *matHeaderCellDef>ACTIONS</th>
+          <td mat-cell *matCellDef="let element">
+            <div class="ACTIONS">
+              <mat-icon class="eye_icon" matTooltip="Details" matTooltipPosition="above"
+                >remove_red_eye</mat-icon
+              >
+              <mat-icon
+                class="mat_icon_edit"
+                matTooltip="modifier"
+                matTooltipPosition="above"
+                (click)="openDialog_update(element.id)"
+                >edit</mat-icon
+              >
+              <mat-icon
+                class="delete_icon"
+                matTooltip="supprimer"
+                matTooltipPosition="above"
+                (click)="delete(element.id)"
+                >delete_forever</mat-icon
+              >
+            </div>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColums"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColums"></tr>
+        <tr class="mat-row" *matNoDataRow>
+          <td class="mat-cell" colspan="4">No data matching the filter "{{ input.value }}"</td>
+        </tr>
+      </table>
+
+      <mat-paginator
+        [pageSizeOptions]="[5, 10, 25, 100]"
+        aria-label="Select page of users"
+      ></mat-paginator>
+    </div>
+  </mat-card-content>
+</mat-card>

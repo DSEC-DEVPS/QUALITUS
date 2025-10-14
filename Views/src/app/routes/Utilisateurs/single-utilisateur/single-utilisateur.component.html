@@ -1,0 +1,155 @@
+<div class="container">
+  <div class="row justify-content-end" style="background-color: #ff8e36; margin-bottom: 3px">
+    <div class="col-md-2 justify-content-end text-end">
+      <mat-icon
+        style="color: #fff"
+        (click)="download()"
+        matTooltip="Télécharger"
+        matTooltipPosition="above"
+        >get_app</mat-icon
+      >
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-5 col-sm-12 left p-3">
+      <div class="row justify-content-center pt-md-4">
+        <div class="col-12 profile m-0">
+          <img [src]="imageUrl" class="image_profile" alt="profile" />
+        </div>
+        <div class="col-12 details_profile mt-3 pt-3">
+          <div class="row">
+            <div class="col-6">
+              <ul class="p-0">
+                <li class="mb-2">
+                  <span class="title">Nom :</span>
+                  <span class="sub_title"> {{ details_utilisateur.nom | titlecase }}</span>
+                </li>
+                <li class="mb-2">
+                  <span class="title">Prenom :</span
+                  ><span class="sub_title"> {{ details_utilisateur.prenom | titlecase }}</span>
+                </li>
+                <li class="mb-2">
+                  <span class="title">Telephone :</span
+                  ><span class="sub_title"> {{ details_utilisateur.telephone }}</span>
+                </li>
+                <li class="mb-2">
+                  <span class="title">email :</span
+                  ><span class="sub_title"> {{ details_utilisateur.email }}</span>
+                </li>
+              </ul>
+            </div>
+            <div class="col-6">
+              <ul class="p-0">
+                <li class="mb-2">
+                  <span class="title">Fonction :</span
+                  ><span class="sub_title"> {{ details_utilisateur.Fonction | titlecase }}</span>
+                </li>
+                <li class="mb-2">
+                  <span class="title">Site :</span
+                  ><span class="sub_title"> {{ details_utilisateur.Site | titlecase }}</span>
+                </li>
+                <li class="mb-2">
+                  <span class="title">Programme :</span
+                  ><span class="sub_title"> {{ details_utilisateur.Programme | titlecase }}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-7 col-sm-12 right">
+      <mat-tab-group animationDuration="0.5ms">
+        <mat-tab label="Consultation">
+          <div class="mat-elevation-z8">
+            <table mat-table [dataSource]="dataSource">
+              <!-- Position Column -->
+              <ng-container matColumnDef="nb_consultation">
+                <th mat-header-cell *matHeaderCellDef>Nb_Consult</th>
+                <td mat-cell *matCellDef="let element">{{ element.nb_consultation }}</td>
+              </ng-container>
+
+              <!-- Name Column -->
+              <ng-container matColumnDef="titre">
+                <th mat-header-cell *matHeaderCellDef>Titre</th>
+                <td
+                  mat-cell
+                  *matCellDef="let element"
+                  (click)="lire_fiche(element.id)"
+                  matTooltip="lire"
+                  matTooltipPosition="above"
+                >
+                  {{ element.titre }}
+                </td>
+              </ng-container>
+              <!-- Name Column -->
+              <ng-container matColumnDef="Gestionnaire">
+                <th mat-header-cell *matHeaderCellDef>Gestionnaire</th>
+                <td mat-cell *matCellDef="let element">{{ element.Gestionnaire }}</td>
+              </ng-container>
+              <!-- Weight Column -->
+              <ng-container matColumnDef="dateConsultation">
+                <th mat-header-cell *matHeaderCellDef>Date_Consultation</th>
+                <td mat-cell *matCellDef="let element">
+                  {{ element.dateConsultation | date: 'dd/MM/yyyy à HH:mm:ss' }}
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+            </table>
+
+            <mat-paginator
+              [pageSizeOptions]="[8, 16, 32]"
+              showFirstLastButtons
+              aria-label="Select page of periodic elements"
+            >
+            </mat-paginator>
+          </div>
+        </mat-tab>
+        <mat-tab label="Messages">
+          <div class="mat-elevation-z8">
+            <table mat-table [dataSource]="dataSource_messages">
+              <!-- Name Column -->
+              <ng-container matColumnDef="titre">
+                <th mat-header-cell *matHeaderCellDef>Fiche</th>
+                <td
+                  mat-cell
+                  *matCellDef="let element"
+                  (click)="lire_fiche(element.id)"
+                  matTooltip="lire"
+                  matTooltipPosition="above"
+                >
+                  {{ element.titre }}
+                </td>
+              </ng-container>
+              <!-- Name Column -->
+              <ng-container matColumnDef="message">
+                <th mat-header-cell *matHeaderCellDef>Messages</th>
+                <td mat-cell *matCellDef="let element">{{ element.message }}</td>
+              </ng-container>
+              <!-- Weight Column -->
+              <ng-container matColumnDef="dateCommentaire">
+                <th mat-header-cell *matHeaderCellDef>Date_Commentaire</th>
+                <td mat-cell *matCellDef="let element">
+                  {{ element.dateCommentaire | date: 'dd/MM/yyyy à HH:mm:ss' }}
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns_messages"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns_messages"></tr>
+            </table>
+
+            <mat-paginator
+              [pageSizeOptions]="[5, 10, 20]"
+              showFirstLastButtons
+              aria-label="Select page of periodic elements"
+            >
+            </mat-paginator>
+          </div>
+        </mat-tab>
+        <mat-tab label="Quiz"></mat-tab>
+      </mat-tab-group>
+    </div>
+  </div>
+</div>

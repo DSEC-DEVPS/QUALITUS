@@ -1,0 +1,157 @@
+<div class="container">
+  <div class="row m-auto justify-content-center register-template">
+    <div class="col-sm-8">
+      <mat-card>
+        <mat-card-content>
+          <form [formGroup]="snapForm" class="form-field-full">
+            <div class="row">
+              <div class="col-sm-6 m-auto">
+                <mat-form-field appearance="fill">
+                  <mat-label>Nom</mat-label>
+                  <input matInput formControlName="nom" required />
+                  @if (snapForm.get('nom')?.invalid) {
+                    <mat-error>{{ 'Ce champ est obligatoire' }}</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+              <div class="col-sm-6">
+                <mat-form-field appearance="fill">
+                  <mat-label>Prénom</mat-label>
+                  <input matInput formControlName="prenom" required />
+                  @if (snapForm.get('prenom')?.invalid) {
+                    <mat-error>{{ 'Ce champ est obligatoire' }}</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+              <div class="col-sm-6">
+                <mat-form-field appearance="fill">
+                  <mat-label>Login</mat-label>
+                  <input matInput formControlName="nom_utilisateur" required />
+                  @if (snapForm.get('nom_utilisateur')?.invalid) {
+                    <mat-error>{{ 'Ce champ est obligatoire' }}</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+              <div class="col-sm-6">
+                <mat-form-field appearance="fill">
+                  <mat-label>Genre</mat-label>
+                  <mat-select required formControlName="genre" required>
+                    <mat-option value="Femme">Femme</mat-option>
+                    <mat-option value="Homme">Homme</mat-option>
+                  </mat-select>
+                  @if (snapForm.get('genre')?.invalid) {
+                    <mat-error>{{ 'Ce champ est obligatoire' }}</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+              <div class="col-sm-6">
+                <mat-form-field appearance="fill">
+                  <mat-label>Email</mat-label>
+                  <input matInput formControlName="email" required />
+                  @if (snapForm.get('email')?.invalid) {
+                    <!--  
+                    <mat-error>{{ getErrorMessage(snapForm)   }}</mat-error>
+                  -->
+                  }
+                </mat-form-field>
+              </div>
+              <div class="col-sm-6">
+                <mat-form-field appearance="fill">
+                  <mat-label>Télephone</mat-label>
+                  <input matInput type="number" formControlName="telephone" required />
+                  <mat-icon matSuffix>smartphone</mat-icon>
+                  @if (snapForm.get('telephone')?.invalid) {
+                    <mat-error>{{ 'Ce champ est obligatoire' }}</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+              <div class="col-sm-6">
+                <mat-form-field appearance="fill">
+                  <mat-label>Quatier</mat-label>
+                  <input matInput formControlName="ville" />
+                </mat-form-field>
+              </div>
+
+              <div class="col-sm-6">
+                <mat-form-field appearance="fill">
+                  <mat-label>Adresse</mat-label>
+                  <input matInput formControlName="adresse" />
+                </mat-form-field>
+              </div>
+              <div class="col-sm-6">
+                <mat-form-field appearance="fill">
+                  <mat-label>Fonction</mat-label>
+                  <mat-select
+                    required
+                    formControlName="id_Fonction"
+                    required
+                    (selectionChange)="onSelectionChanged($event)"
+                  >
+                    <mat-option *ngFor="let item of table_fonction" [value]="item.id">{{
+                      item.nom
+                    }}</mat-option>
+                  </mat-select>
+                  @if (snapForm.get('id_Fonction')?.invalid) {
+                    <mat-error>{{ 'Ce champ est obligatoire' }}</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+              <div class="col-sm-6">
+                <mat-form-field appearance="fill">
+                  <mat-label>Site</mat-label>
+                  <mat-select required formControlName="id_Site" required>
+                    <mat-option *ngFor="let item of table_site" [value]="item.id">{{
+                      item.nom
+                    }}</mat-option>
+                  </mat-select>
+                  @if (snapForm.get('id_Site')?.invalid) {
+                    <mat-error>{{ 'Ce champ est obligatoire' }}</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+              <div class="col-sm-6">
+                <mat-form-field appearance="fill">
+                  <mat-label>Programme</mat-label>
+                  <mat-select required formControlName="id_Programme" required>
+                    <mat-option *ngFor="let item of table_programme" [value]="item.id">{{
+                      item.nom | titlecase
+                    }}</mat-option>
+                  </mat-select>
+                  @if (snapForm.get('id_Programme')?.invalid) {
+                    <mat-error>{{ 'Ce champ est obligatoire' }}</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+              <div class="col-sm-6">
+                <mat-form-field appearance="fill">
+                  <mat-label>Grille Evaluation</mat-label>
+                  <mat-select required formControlName="id_Grille" required>
+                    <mat-option *ngFor="let item of table_grille" [value]="item.id">{{
+                      item.nom | titlecase
+                    }}</mat-option>
+                  </mat-select>
+
+                  @if (snapForm.get('id_Grille')?.invalid) {
+                    <mat-error>{{ 'Ce champ est obligatoire' }}</mat-error>
+                  }
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="m-t-8 text-center">
+              <button
+                mat-flat-button
+                (click)="handleOnSumit()"
+                [loading]="isSubmitting"
+                [disabled]="snapForm.invalid"
+              >
+                Ajouter
+              </button>
+              <button mat-button mat-dialog-close>Annuler</button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

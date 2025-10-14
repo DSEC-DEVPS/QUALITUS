@@ -1,0 +1,112 @@
+/* Conteneur général */
+.export-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+}
+
+/* Cartes */
+.export-card,
+.preview-card {
+  padding: 20px;
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+  background-color: #fff;
+}
+
+/* Champs de formulaire */
+.export-form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 10px;
+}
+
+.date-range-fields {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.export-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+table {
+  width: 100%;
+  margin-top: 16px;
+}
+
+/* === Thème personnalisé avec couleur #ff8e36 === */
+
+/* Boutons Angular Material */
+.mat-raised-button.mat-primary,
+.mat-raised-button.mat-accent {
+  background-color: #ff8e36 !important;
+  color: white;
+  box-shadow: 0 2px 6px rgba(255, 142, 54, 0.4);
+}
+
+.mat-raised-button:hover {
+  filter: brightness(0.95);
+}
+
+/* Champs de formulaire : bordures et texte */
+.mat-form-field-appearance-outline .mat-form-field-outline {
+  border-color: #ff8e36 !important;
+}
+
+.mat-form-field.mat-focused .mat-form-field-outline-thick {
+  border-color: #ff8e36 !important;
+}
+
+.mat-form-field.mat-focused .mat-form-field-label {
+  color: #ff8e36 !important;
+}
+
+.mat-select-value-text {
+  color: #ff8e36;
+}
+
+/* Toggle switch (mat-slide-toggle) */
+.mat-slide-toggle.mat-checked .mat-slide-toggle-bar {
+  background-color: #ff8e36 !important;
+}
+
+.mat-slide-toggle.mat-checked .mat-slide-toggle-thumb {
+  background-color: #ff8e36 !important;
+}
+
+/* Progress bar */
+.mat-progress-bar-fill::after {
+  background-color: #ff8e36 !important;
+}
+::ng-deep .mat-mdc-form-field {
+  //--mdc-outlined-text-field-outline-width: 1.5px !important;
+  // --mdc-outlined-text-field-focus-outline-width: 1.5px !important;
+  --mdc-outlined-text-field-label-text-size: 13px;
+  --mdc-outlined-text-field-input-text-size: 8px;
+  --mdc-outlined-text-field-focus-active-indicator-color: #ff8e36;
+  --mdc-outlined-text-field-focus-active-indicator-size: 10px;
+  --mdc-outlined-text-field-hover-active-indicator-color: #ff8e36;
+  --mdc-outlined-text-field-focus-label-text-color: #ff8e36;
+  --mdc-outlined-text-field-outline-color: #ff8e36;
+  --mdc-outlined-text-field-focus-outline-color: #ff8e36;
+  //--mdc-outlined-text-field-container-shape: 15px !important;
+}
+mat-card {
+  background: #ffffff9a;
+}
+mat-card-header {
+  display: flex;
+  background-color: #ff8e36;
+  justify-content: space-between;
+}

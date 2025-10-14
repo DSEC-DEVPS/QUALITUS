@@ -1,0 +1,64 @@
+services:
+  db:
+    image: mysql:8
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: QUALITUS
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/0_init.sql
+      - db-data:/var/lib/mysql
+    # Ne pas exposer le port en production sauf si nécessaire
+    ports:
+      - "3306:3306"
+    networks:
+      - internalnet
+
+  # Adminer optionnel en production, à activer uniquement si nécessaire
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+    depends_on:
+      - db
+    networks:
+      - internalnet
+
+  server:
+    image: diack500/qualitus-backend:v1
+    restart: always
+    environment:
+      DB_HOST: db
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: QUALITUS
+    # Ne pas exposer le port en production, il sera accessible via le frontend nginx
+    ports:
+      - "3000:3000"
+    volumes:
+      - chargements:/app/chargements
+    depends_on:
+      - db
+    networks:
+      - internalnet
+
+  view:
+    image: diack500/qualitus-frontend:v1
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+    networks:
+      - internalnet
+
+volumes:
+  db-data:
+  chargements:
+
+networks:
+  internalnet:
+    driver: bridge

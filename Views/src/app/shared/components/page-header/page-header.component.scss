@@ -1,0 +1,19 @@
+.matero-page-header-inner {
+  display: block;
+  padding: 0.3rem;
+  margin-bottom: 0.5rem;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #e97c00;
+  border-radius: var(--mdc-elevated-card-container-shape);
+
+  .matero-breadcrumb {
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+  }
+}
+
+.matero-page-title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 400;
+}

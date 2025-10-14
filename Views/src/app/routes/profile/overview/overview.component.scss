@@ -1,0 +1,21 @@
+.profile ul li {
+  list-style: none;
+  padding: 10px;
+}
+.title_label {
+  font-weight: 600;
+  font-family: poppins, sans-serif;
+  color: darkorange;
+}
+/*
+::ng-deep .mdc-tab.mdc-tab--active {
+  //background-color: green !important;
+  font-weight: 900;
+}
+::ng-deep .mdc-tab {
+  border: 1px solid red;
+}*/
+::ng-deep .mat-mdc-tab.mdc-tab.mdc-tab.mdc-tab--active {
+  background-color: #ff8e36;
+  font-weight: 900;
+}

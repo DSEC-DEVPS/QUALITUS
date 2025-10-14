@@ -1,0 +1,134 @@
+<!-- -->
+<mat-card>
+  <mat-card-header>
+    <div class="container pb-3">
+      <div class="row justify-content-space-between align-items-center">
+        <div class="col-sm-6 text-start p-0">
+          <input matInput (keyup)="applyFilter($event)" placeholder="Titre,Type...." />
+        </div>
+        <div class="col-sm-6 text-end p-0">
+          <mat-icon
+            class="download_icon"
+            matTooltip="Télécharger mes chargements"
+            (click)="download()"
+            matTooltipPosition="above"
+          >
+            get_app</mat-icon
+          >
+        </div>
+      </div>
+    </div>
+  </mat-card-header>
+  <mat-card-content>
+    <div class="mat-elevation-z8">
+      <table mat-table [dataSource]="dataSource">
+        <!-- Position Column -->
+        <ng-container matColumnDef="titre">
+          <th mat-header-cell *matHeaderCellDef>Titre</th>
+          <td
+            mat-cell
+            *matCellDef="let element"
+            (click)="lire_fiche(element.id)"
+            matTooltip="cliquez pour lire"
+            matTooltipPosition="above"
+          >
+            {{ element.titre }}
+          </td>
+        </ng-container>
+
+        <!-- Name Column -->
+        <ng-container matColumnDef="type">
+          <th mat-header-cell *matHeaderCellDef>Type</th>
+          <td
+            mat-cell
+            *matCellDef="let element"
+            (click)="lire_fiche(element.id)"
+            matTooltip="cliquez pour lire"
+            matTooltipPosition="above"
+          >
+            {{ element.type }}
+          </td>
+        </ng-container>
+        <!-- Name Column -->
+        <ng-container matColumnDef="dateDebut">
+          <th mat-header-cell *matHeaderCellDef>Date Debut</th>
+          <td
+            mat-cell
+            *matCellDef="let element"
+            (click)="lire_fiche(element.id)"
+            matTooltip="cliquez pour lire"
+            matTooltipPosition="above"
+          >
+            {{ element.dateDebut | date: 'dd/MM/yyyy à HH:mm:ss' }}
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="dateFin">
+          <th mat-header-cell *matHeaderCellDef>Date Fin</th>
+          <td
+            mat-cell
+            *matCellDef="let element"
+            (click)="lire_fiche(element.id)"
+            matTooltip="cliquez pour lire"
+            matTooltipPosition="above"
+          >
+            {{ element.dateFin | date: 'dd/MM/yyyy à HH:mm:ss' }}
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="ETAT">
+          <th mat-header-cell *matHeaderCellDef>ETAT</th>
+          <td
+            mat-cell
+            *matCellDef="let element"
+            (click)="lire_fiche(element.id)"
+            matTooltip="cliquez pour lire"
+            matTooltipPosition="above"
+          >
+            @if (element.ETAT === 'ACTIF') {
+              <span style="color: green !important"> {{ element.ETAT }} </span>
+            } @else {
+              <span style="color: rgba(207, 13, 13, 0.897)"> {{ element.ETAT }} </span>
+            }
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="on_time">
+          <th mat-header-cell *matHeaderCellDef>on_time</th>
+          <td
+            mat-cell
+            *matCellDef="let element"
+            (click)="lire_fiche(element.id)"
+            matTooltip="cliquez pour lire"
+            matTooltipPosition="above"
+          >
+            @if (element.on_time === 'OUI') {
+              <span style="color: green; font-weight: 600"> {{ element.on_time }}</span>
+            } @else {
+              <span style="color: red; font-weight: 600"> {{ element.on_time }}</span>
+            }
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="action">
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let element" class="text-center">
+            <mat-icon
+              class="eye_icon"
+              matTooltip="cliquez pour les details"
+              matTooltipPosition="above"
+              (click)="router_on_details_user(element.id)"
+              >visibility</mat-icon
+            >
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      </table>
+
+      <mat-paginator
+        [pageSizeOptions]="[5, 10, 20]"
+        showFirstLastButtons
+        aria-label="Select page of periodic elements"
+      >
+      </mat-paginator>
+    </div>
+  </mat-card-content>
+</mat-card>

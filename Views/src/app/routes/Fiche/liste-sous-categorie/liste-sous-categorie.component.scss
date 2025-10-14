@@ -1,0 +1,21 @@
+.title-banner {
+  display: flex;
+  justify-content: end;
+  flex-wrap: wrap;
+}
+.example-button-container {
+  margin-right: 10px;
+}
+.add_icon {
+  margin-right: 3px;
+  color: #ff8e36;
+  font-size: 25px;
+  font-weight: bold;
+  cursor: pointer;
+}
+button {
+  height: 40px;
+  padding: 10px;
+  color: #ff8e36;
+  font-size: 12px;
+}

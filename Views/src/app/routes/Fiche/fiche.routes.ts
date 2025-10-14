@@ -1,0 +1,23 @@
+import { Routes } from '@angular/router';
+import { AjouterFicheComponent } from './ajouter-fiche/ajouter-fiche.component';
+import { ListeCategorieComponent } from './liste-categorie/liste-categorie.component';
+import { ListeSlaComponent } from './liste-sla/liste-sla.component';
+import { ListeSousCategorieComponent } from './liste-sous-categorie/liste-sous-categorie.component';
+import { LectureFicheComponent } from './lecture-fiche/lecture-fiche.component';
+import { ListeArchiveComponent } from './liste-archive/liste-archive.component';
+import { ChargementsComponent } from './chargements/chargements.component';
+import { DetailFicheComponent } from './detail-fiche/detail-fiche.component';
+import { UpdateFicheComponent } from './update-fiche/update-fiche.component';
+import { VerificationComponent } from './verification/verification.component';
+export const routes: Routes = [
+  { path: 'Liste', component: ChargementsComponent },
+  { path: 'ListeCategorie', component: ListeCategorieComponent },
+  { path: 'ListeSla', component: ListeSlaComponent },
+  { path: 'ListeSousCategorie', component: ListeSousCategorieComponent },
+  { path: 'lecture-fiche/:id', component: LectureFicheComponent },
+  { path: 'archives', component: ListeArchiveComponent },
+  { path: 'Ajouter', component: AjouterFicheComponent },
+  { path: 'details/:id', component: DetailFicheComponent },
+  { path: 'update/:id', component: UpdateFicheComponent },
+  { path: 'ge-chargement', component: VerificationComponent },
+];
