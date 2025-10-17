@@ -138,12 +138,20 @@
                       </table>
                     </div>
                     <div class="row">
-                      <select class="form-select" aria-label="Default select example">
-                        <option selected>Niveau</option>
+                      <select
+                        formControlName="niveau"
+                        class="form-select"
+                        aria-label="Sélection du niveau"
+                      >
+                        <option value="">Niveau</option>
+                        <!-- Valeur vide par défaut -->
                         <option value="1">N1</option>
                         <option value="2">N2</option>
                       </select>
                     </div>
+                    <p class="mt-2">
+                      Valeur sélectionnée : {{ snapForm.get('niveau')?.value || 'Aucun' }}
+                    </p>
                   </div>
                   <!-- Titre -->
                 </div>

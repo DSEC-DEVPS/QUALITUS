@@ -97,6 +97,7 @@ export class AjouterFicheComponent implements OnInit {
       id_Categorie: [null, [Validators.required]],
       id_SousCategorie: [null, [Validators.required]],
       isChecked: [false],
+      niveau: [null, [Validators.required]],
       Quiz1: this.fb.group({
         Question1: [null],
         Reponse1: [null],
@@ -155,6 +156,10 @@ export class AjouterFicheComponent implements OnInit {
       error: error => {
         console.log(error);
       },
+    });
+
+    this.snapForm.get('niveau')?.valueChanges.subscribe(value => {
+      console.log('Niveau sélectionné :', value);
     });
   }
   onQuizCheckboxChange(event: any, profileId: number): void {

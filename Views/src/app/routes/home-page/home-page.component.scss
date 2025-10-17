@@ -46,7 +46,7 @@
   .Categorie {
     margin: 0;
     text-align: center;
-    font-size: 0.5rem;
+    font-size: 0.6rem;
     word-wrap: break-word;
   }
 
@@ -119,8 +119,13 @@
 }
 .Logo {
   position: relative;
-  width: 70px;
+  width: 50px;
   height: 50px;
+  object-fit: scale-down;
+  border: 1px solid #fff;
+}
+.niveauPolice {
+  font-size: 16px;
 }
 
 .bg-body-tertiary {
@@ -242,8 +247,8 @@ img {
   margin: 3px;
 }
 .img_sous_categeory {
-  width: 35px;
-  height: 35px;
+  width: 70px;
+  height: 70px;
 }
 .label_sous_categorie {
   font-size: 10px;
@@ -313,7 +318,12 @@ ul li {
   background: #ff8e36;
   color: white;
 }
-.card_categorie:focus {
+// .card_categorie:focus {
+//   background: #ff8d3688;
+//   color: white;
+//   transition: 0.1s ease-in-out;
+// }
+.card_categorie.active {
   background: #ff8d3688;
   color: white;
   transition: 0.1s ease-in-out;

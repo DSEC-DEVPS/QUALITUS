@@ -2022,6 +2022,7 @@ const addFiche = async (req, res, next) => {
     id_Categorie,
     id_SousCategorie,
     id_Sla,
+    niveau,
     utiliteAutorisation,
     quizAutorisation,
     accesAutorisation,
@@ -2030,7 +2031,7 @@ const addFiche = async (req, res, next) => {
   } = data;
   try {
     const Query = `INSERT INTO B_FICHE (id_gestionnaire,titre,dateReception,dateDebut,dateVisibilite,dateFin,dateEnregistrement,id_Categorie
-    ,id_SousCategorie,id_Sla,ETAT,AccesSite,AccesProfil,AccesUtilite,AccesQuiz,AccesCommentaire,url,extention) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
+    ,id_SousCategorie,id_Sla,Niveau,ETAT,AccesSite,AccesProfil,AccesUtilite,AccesQuiz,AccesCommentaire,url,extention) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
     const QueryInsertOnTime = `INSERT INTO B_ON_TIME (id_Fiche,temps,date_effective,id_Sla,delai,on_time) VALUES (?,?,?,?,?,?)`;
     const Query1 = `INSERT INTO B_QUIZ (libelleQuestion,reponseQuestion,dateCreation,id_Fiche) VALUES (?,?,?,?) `;
     const QyeryInsertNotification = `INSERT INTO B_NOTIFICATION (titre,message,type,dateReception,id_UTILISATEUR,id_FICHE,url) VALUES (?,?,?,?,?,?,?)`;
@@ -2053,6 +2054,7 @@ const addFiche = async (req, res, next) => {
       id_Categorie,
       id_SousCategorie,
       id_Sla,
+      niveau,
       ETAT,
       siteAutorisation,
       accesAutorisation,
@@ -2126,7 +2128,7 @@ const getAllFiche = async (req, res, next) => {
   const userId = req.auth.userId;
   try {
     Auto_archivage();
-    const Query = ` SELECT FH.id,FH.titre,SL.type,SL.priorite,FH.ETAT,DATE_FORMAT(FH.dateEnregistrement,'%Y-%m-%d %H:%i:%s') as dateEnregistrement,DATE_FORMAT(FH.dateDebut,'%Y-%m-%d %H:%i:%s') as dateDebut,DATE_FORMAT(FH.dateFin,'%Y-%m-%d %H:%i:%s') as dateFin,CT.nom as Categorie,SCT.nom as Sous_Categorie, UT.nom_utilisateur as Gestionnaire ,FH.url,FH.extention from
+    const Query = ` SELECT FH.id,FH.titre,SL.type,SL.priorite,FH.ETAT,FH.Niveau,DATE_FORMAT(FH.dateEnregistrement,'%Y-%m-%d %H:%i:%s') as dateEnregistrement,DATE_FORMAT(FH.dateDebut,'%Y-%m-%d %H:%i:%s') as dateDebut,DATE_FORMAT(FH.dateFin,'%Y-%m-%d %H:%i:%s') as dateFin,CT.nom as Categorie,SCT.nom as Sous_Categorie, UT.nom_utilisateur as Gestionnaire ,FH.url,FH.extention from
     B_FICHE FH 
     LEFT JOIN B_UTILISATEUR UT
     on FH.id_gestionnaire=UT.id
@@ -2148,6 +2150,8 @@ const getAllFiche = async (req, res, next) => {
     console.log(resutat);
     return res.status(200).send(resutat);
   } catch (error) {
+    console.error("Erreur getAllFiche:", error);
+
     res.status(500).json({ message: "Error request" });
   }
 };
@@ -2386,7 +2390,7 @@ const getAllFicheByIdCategorieAndIdSousCategorie = async (req, res, next) => {
   const userId = req.auth.userId;
   const { id_Categorie, id_SousCategorie } = req.body;
   try {
-    const Query = `select FH.id, FH.titre,sla.type from B_FICHE FH INNER JOIN B_SLA sla on FH.id_Sla=sla.id where FH.AccesSite like ? and FH.AccesProfil like ? and  FH.ETAT=?  and FH.id_Categorie=? and FH.id_SousCategorie=?`;
+    const Query = `select FH.id, FH.titre,FH.Niveau,sla.type from B_FICHE FH INNER JOIN B_SLA sla on FH.id_Sla=sla.id where FH.AccesSite like ? and FH.AccesProfil like ? and  FH.ETAT=?  and FH.id_Categorie=? and FH.id_SousCategorie=?`;
     const Query2 = `SELECT UT.id,ST.id as id_Site,F.id as id_Fonction from B_UTILISATEUR UT,B_SITE ST, B_FONCTION F where UT.id_Site=ST.id and UT.id_Fonction=F.id  and UT.id=?`;
     const [resultat2] = await db.query(Query2, [userId]);
     const id_Site = `%${resultat2[0].id_Site}%`;

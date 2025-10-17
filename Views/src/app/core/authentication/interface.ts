@@ -40,6 +40,7 @@ export interface QuestionnaireItem {
   response?: boolean | null; // n
 }
 export interface Fiche {
+  Niveau: string;
   id: number;
   titre?: string;
   source?: string;
@@ -321,6 +322,7 @@ export interface fiche_id_categorie_and_id_sous_cateogorie {
   id: number;
   titre: string;
   type: string;
+  Niveau: string;
 }
 export interface profile_assignation {
   id: number;

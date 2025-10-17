@@ -8,7 +8,7 @@
       <ng-container matColumnDef="titre">
         <mat-header-cell *matHeaderCellDef> Description </mat-header-cell>
         <mat-cell *matCellDef="let element" style="font-size: 10px">
-          {{ element.titre }}
+          {{ element.titre | uppercaseAll}}
         </mat-cell>
       </ng-container>
 
@@ -16,7 +16,7 @@
       <ng-container matColumnDef="type">
         <mat-header-cell *matHeaderCellDef> Type </mat-header-cell>
         <mat-cell *matCellDef="let element" style="font-size: 10px">
-          {{ element.type }}
+          {{ element.type | uppercaseAll }}
         </mat-cell>
       </ng-container>
 

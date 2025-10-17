@@ -21,6 +21,7 @@ import {
   CategorieInterface,
   Fiche,
   fiche_id_categorie_and_id_sous_cateogorie,
+  LoginService,
   SettingsService,
   statistic,
   statistic_TC,
@@ -40,12 +41,18 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { UserComponent } from '@theme/widgets/user.component';
-import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import {
+  MAT_DIALOG_DATA,
+  MatDialog,
+  MatDialogModule,
+  MatDialogRef,
+} from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatRadioModule } from '@angular/material/radio';
+import { UppercaseAllPipe } from '../../shared/pipes/UppercaseAllPipe';
 
 @Component({
   selector: 'app-home-page',
@@ -73,14 +80,16 @@ import { MatRadioModule } from '@angular/material/radio';
     MatDatepickerModule,
     MatNativeDateModule,
     ReactiveFormsModule,
-    MatRadioModule,
     FormsModule,
+    MatRadioModule,
+    UppercaseAllPipe,
   ],
   templateUrl: './home-page.component.html',
   styleUrl: './home-page.component.scss',
 })
 export class HomePageComponent implements AfterViewInit, OnInit {
-  dataSource!: MatTableDataSource<Fiche>;
+  dataSource: MatTableDataSource<Fiche> = new MatTableDataSource<Fiche>([]);
+
   dataSource_Archive!: MatTableDataSource<Fiche>;
   private subscription: Subscription = new Subscription();
   displayedColumns: string[] = ['titre', 'type', 'dateDebut', 'dateFin', 'Gestionnaire'];
@@ -108,7 +117,9 @@ export class HomePageComponent implements AfterViewInit, OnInit {
   private readonly settings = inject(SettingsService);
   private readonly auth = inject(AuthService);
   private readonly userService = inject(UserService);
+  private readonly userInfoService = inject(LoginService);
   private readonly datePipe = inject(DatePipe);
+  private readonly cdr = inject(ChangeDetectorRef);
   readonly dialog = inject(MatDialog);
   dateForm!: FormGroup;
   options = this.settings.options;
@@ -119,6 +130,8 @@ export class HomePageComponent implements AfterViewInit, OnInit {
   isShowValueSousCategorieDiv!: boolean;
   isShowTableValueVariable!: boolean;
   isShowCategorie!: boolean;
+  stateTransition = false;
+  activeCategorieId: number | null = null;
   div_table = 'col-md-10 p-3';
   div_cat_nb_col = 'col-md-8';
   div_cat_img_col = 'col-md-2 col-sm-4';
@@ -135,10 +148,18 @@ export class HomePageComponent implements AfterViewInit, OnInit {
   nb_fiche_non_lu = 0;
   nb_sondage_encours = 0;
   nb_quiz_encours = 0;
-  statistic_TC!: statistic_TC;
+  statistic_TC!: statistic_TC | null;
   todayDate!: string | null;
   fiches$!: Observable<Fiche[]>;
+  selectedNiveau: string | null = null;
+  user_info: any;
+  showDefaut: boolean = false;
+  currentStateOfIdSubCatAndCat = {
+    id: 0,
+    id_categorie: 0,
+  };
   ngOnInit(): void {
+    console.log('Selected niveau', this.selectedNiveau);
     this.initObservable();
     this.userService.getFicheFromServer();
     this.isShowValue = false;
@@ -187,14 +208,6 @@ export class HomePageComponent implements AfterViewInit, OnInit {
       },
     });
 
-    this.userService.getAllFiche().subscribe({
-      next: resultat => {
-        this.dataSource = new MatTableDataSource(resultat);
-      },
-      error: error => {
-        console.log(error);
-      },
-    });
     this.userService.getAllFiche_Archive().subscribe({
       next: resultat => {
         this.dataSource_Archive = new MatTableDataSource(resultat);
@@ -217,6 +230,22 @@ export class HomePageComponent implements AfterViewInit, OnInit {
       },
       error: error => {
         console.log(error);
+      },
+    });
+    this.userInfoService.me().subscribe({
+      next: resultat => {
+        this.user_info = resultat;
+        console.log(this.user_info);
+        if (this.user_info?.roles === 'R_TC') {
+          this.selectedNiveau = '1';
+        } else if (this.user_info?.roles === 'R_BO') {
+          this.selectedNiveau = '2';
+        } else {
+          this.selectedNiveau = null;
+          this.showDefaut = true;
+        }
+
+        this.getAllFiche();
       },
     });
   }
@@ -262,17 +291,23 @@ export class HomePageComponent implements AfterViewInit, OnInit {
     }
   }
   openDialog_Lire_toutes_les_fiche() {
+    console.log('Selected niveau before entering dialog:', this.selectedNiveau);
+
     const dialogRef = this.dialog.open(LiretouteficheComponent, {
       height: 'calc(100% - 30px)',
       width: 'calc(100% - 30px)',
       maxWidth: '100%',
       maxHeight: '100%',
+      data: {
+        selectedNiveau: this.selectedNiveau, // Passer la valeur actuelle
+      },
     });
 
     dialogRef.afterClosed().subscribe(result => {
       console.log(`Dialog result: ${result}`);
     });
   }
+
   openDialog_Sondages_encours() {
     if (this.nb_sondage_encours === 0) {
       console.log('rien');
@@ -342,18 +377,76 @@ export class HomePageComponent implements AfterViewInit, OnInit {
     this.settings.setDirection();
     this.settings.setTheme();
   }
+  onNiveauChange(selected: string) {
+    this.selectedNiveau = selected;
+    console.log('Niveau sélectionné:', this.selectedNiveau);
+    if (
+      this.currentStateOfIdSubCatAndCat.id !== 0 &&
+      this.currentStateOfIdSubCatAndCat.id_categorie !== 0 &&
+      this.isShowTableValueVariable
+    ) {
+      this.isShowTableValue(
+        this.currentStateOfIdSubCatAndCat.id,
+        this.currentStateOfIdSubCatAndCat.id_categorie
+      );
+    }
+    this.getAllFiche();
+  }
+
+  getAllFiche() {
+    this.userService.getAllFiche().subscribe({
+      next: resultat => {
+        const result = new MatTableDataSource(resultat);
+        let filteredData: any = [];
+        if (this.selectedNiveau) {
+          if (this.selectedNiveau === '1') {
+            filteredData = result.data.filter(fiche => fiche?.Niveau === '1');
+            console.log('Step 1', filteredData);
+          } else if (this.selectedNiveau === '2') {
+            filteredData = result.data.filter(fiche => fiche?.Niveau === '2');
+            console.log('Step 2', filteredData);
+          } else if (this.selectedNiveau === 'reset') {
+            filteredData = result.data;
+            console.log('Step 3', filteredData);
+          }
+        } else {
+          filteredData = result.data;
+        }
+
+        this.dataSource = new MatTableDataSource(filteredData);
+        this.cdr.detectChanges();
+      },
+      error: error => console.error(error),
+    });
+  }
+
   isShow(type: string) {
     if (type === 'SearchByCategory') {
       this.isShowValueSearchAvance = true;
       this.isShowValueSearchArchive = false;
       this.isShowValue = !this.isShowValue;
-      this.isShowCategorie = !this.isShowCategorie;
+      this.activeCategorieId = null;
+      if (this.stateTransition) {
+        this.isShowValueSousCategorieDiv = false;
+        this.stateTransition = false;
+        this.isShowCategorie = false;
+        this.isShowValue = false;
+        console.log('if testtttttt', this.isShowCategorie);
+        console.log('if testtttttt isShowValue', this.isShowValue);
+      } else {
+        this.isShowCategorie = !this.isShowCategorie;
+        console.log('else testtttttt', this.isShowCategorie);
+        console.log('esle testtttttt isShowValue', this.isShowValue);
+      }
+      // console.log(' search categorie this.isShowCategorie', this.isShowCategorie);
     } else {
       if (type === 'SearchAvance') {
         this.isShowValueSearchArchive = false;
+        this.isShowCategorie = false;
         this.isShowValue = false;
         this.isShowValueSousCategorieDiv = false;
         this.isShowValueSearchAvance = true;
+        this.activeCategorieId = null;
       } else {
         if (type === 'SearchArchive') {
           this.isShowValueSearchAvance = false;
@@ -361,17 +454,24 @@ export class HomePageComponent implements AfterViewInit, OnInit {
           this.isShowValueSousCategorieDiv = false;
           this.isShowCategorie = false;
           this.isShowValueSearchArchive = true;
+          this.activeCategorieId = null;
         }
       }
     }
   }
   isShowSousCategorie(id: number) {
     this.isShowCategorie = false;
+    this.stateTransition = true;
     this.isShowValueSousCategorieDiv = true;
     this.isShowValueSousCategorie = true;
+    this.isShowTableValueVariable = false;
     this.sous_categorie = this.categorieAndSousCategorie.filter(cat => cat.id === id);
+    this.activeCategorieId = id;
+    console.log(' sous categorie this.isShowCategorie', this.isShowCategorie);
   }
   isShowTableValue(id: number, id_categorie: number) {
+    this.currentStateOfIdSubCatAndCat.id = id;
+    this.currentStateOfIdSubCatAndCat.id_categorie = id_categorie;
     this.userService
       .getAllFicheByIdCategorieAndIdSousCategorie({
         id_SousCategorie: id,
@@ -379,13 +479,28 @@ export class HomePageComponent implements AfterViewInit, OnInit {
       })
       .subscribe({
         next: resultat => {
-          this.data_table = new MatTableDataSource(resultat);
-          this.resultsLength_table = resultat.length;
+          let filteredData: any = [];
+          if (this.selectedNiveau) {
+            if (this.selectedNiveau === '1') {
+              filteredData = resultat.filter(fiche => fiche?.Niveau === '1');
+              console.log('Step 1', filteredData);
+            } else if (this.selectedNiveau === '2') {
+              filteredData = resultat.filter(fiche => fiche?.Niveau === '2');
+              console.log('Step 2', filteredData);
+            } else if (this.selectedNiveau === 'reset') {
+              filteredData = resultat;
+              console.log('Step 3', filteredData);
+            }
+          } else {
+            filteredData = resultat;
+          }
+          this.data_table = new MatTableDataSource(filteredData);
           this.data_table.paginator = this.paginator_table;
           this.data_table.sort = this.sort_table;
           this.div_cat_nb_col = 'col-md-6';
           this.div_cat_img_col = 'col-md-3 col-sm-4';
           this.isShowTableValueVariable = true;
+          this.cdr.detectChanges();
         },
       });
   }
@@ -567,29 +682,82 @@ export class Fiche_non_lu_DialogComponent {
     MatTableModule,
     MatSortModule,
     MatPaginatorModule,
-  ],
+    UppercaseAllPipe
+],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LiretouteficheComponent implements OnInit {
   private readonly userService = inject(UserService);
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly userInfoService = inject(LoginService);
   readonly dialogRef = inject(MatDialogRef<LiretouteficheComponent>);
+
   table_toutes_fiche!: MatTableDataSource<Fiche>;
   displayedColumns: string[] = ['titre', 'type', 'dateDebut', 'dateFin', 'Gestionnaire'];
   lenghtFiche = 0;
+  selectedNiveau: string | null = null;
+  user_info: any;
+  constructor(
+    // ...
+    @Inject(MAT_DIALOG_DATA) public data: any
+  ) {}
   ngOnInit() {
+    // this.userService.getAllFiche().subscribe({
+    //   next: resultat => {
+    //     console.log(resultat);
+    //     this.lenghtFiche = resultat.length;
+    //     this.table_toutes_fiche = new MatTableDataSource(resultat);
+    //     this.cdr.detectChanges();
+    //   },
+    //   error: error => {
+    //     console.log(error);
+    //     this.cdr.detectChanges();
+    //   },
+    // });
+    this.userInfoService.me().subscribe({
+      next: resultat => {
+        this.user_info = resultat;
+        console.log(this.user_info);
+        if (this.user_info?.roles === 'R_TC') {
+          this.selectedNiveau = this.data?.selectedNiveau || '1';
+        } else if (this.user_info?.roles === 'R_BO') {
+          this.selectedNiveau = this.data?.selectedNiveau || '2';
+        } else {
+          this.selectedNiveau = this.data?.selectedNiveau || 'reset';
+        }
+        console.log('Selected niveau', this.selectedNiveau);
+        this.getAllFiche();
+      },
+    });
+  }
+
+  getAllFiche() {
     this.userService.getAllFiche().subscribe({
       next: resultat => {
-        console.log(resultat);
-        this.lenghtFiche = resultat.length;
-        this.table_toutes_fiche = new MatTableDataSource(resultat);
+        const result = new MatTableDataSource(resultat);
+        let filteredData: any = [];
+
+        if (this.selectedNiveau) {
+          if (this.selectedNiveau === '1') {
+            filteredData = result.data.filter(fiche => fiche?.Niveau === '1');
+            console.log('Step 1', filteredData);
+          } else if (this.selectedNiveau === '2') {
+            filteredData = result.data.filter(fiche => fiche?.Niveau === '2');
+            console.log('Step 2', filteredData);
+          } else if (this.selectedNiveau === 'reset') {
+            filteredData = result.data;
+            console.log('Step 3', filteredData);
+          }
+        } else {
+          filteredData = result.data;
+        }
+
+        this.table_toutes_fiche = new MatTableDataSource(filteredData);
+        this.lenghtFiche = filteredData.length;
         this.cdr.detectChanges();
       },
-      error: error => {
-        console.log(error);
-        this.cdr.detectChanges();
-      },
+      error: error => console.error(error),
     });
   }
   lire(id: number) {
