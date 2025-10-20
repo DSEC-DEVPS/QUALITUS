@@ -7,7 +7,6 @@ import {
   ViewEncapsulation,
   OnInit,
   ChangeDetectorRef,
-  Inject,
 } from '@angular/core';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
@@ -15,6 +14,7 @@ import { debounceTime, Observable, Subscription } from 'rxjs';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CommonModule, DatePipe } from '@angular/common';
+
 import {
   AppSettings,
   AuthService,
@@ -46,6 +46,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatRadioModule } from '@angular/material/radio';
+import { DxCheckBoxModule } from 'devextreme-angular';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 
 @Component({
@@ -306,16 +307,6 @@ export class HomePageComponent implements AfterViewInit, OnInit {
       dialogRef.afterClosed().subscribe(result => {
         console.log(`Dialog result: ${result}`);
       });
-    }
-  }
-  checked_N1(event: any) {
-    if (event.checked) {
-      console.log('N1 checked');
-    }
-  }
-  checked_N2(event: any) {
-    if (event.checked) {
-      console.log('N2 checked');
     }
   }
   RouterOnWorkSpace() {

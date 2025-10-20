@@ -308,16 +308,6 @@ export class HomePageComponent implements AfterViewInit, OnInit {
       });
     }
   }
-  checked_N1(event: any) {
-    if (event.checked) {
-      console.log('N1 checked');
-    }
-  }
-  checked_N2(event: any) {
-    if (event.checked) {
-      console.log('N2 checked');
-    }
-  }
   RouterOnWorkSpace() {
     if (this.user.roles === 'R_TC') {
       this.router.navigateByUrl('mon-espace/MaVoixCompte/ajouter');

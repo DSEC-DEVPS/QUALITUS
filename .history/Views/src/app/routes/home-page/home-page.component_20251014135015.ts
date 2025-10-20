@@ -46,7 +46,6 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatRadioModule } from '@angular/material/radio';
-import { MatCheckboxModule } from '@angular/material/checkbox';
 
 @Component({
   selector: 'app-home-page',
@@ -76,7 +75,6 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
     ReactiveFormsModule,
     MatRadioModule,
     FormsModule,
-    MatCheckboxModule,
   ],
   templateUrl: './home-page.component.html',
   styleUrl: './home-page.component.scss',
@@ -306,16 +304,6 @@ export class HomePageComponent implements AfterViewInit, OnInit {
       dialogRef.afterClosed().subscribe(result => {
         console.log(`Dialog result: ${result}`);
       });
-    }
-  }
-  checked_N1(event: any) {
-    if (event.checked) {
-      console.log('N1 checked');
-    }
-  }
-  checked_N2(event: any) {
-    if (event.checked) {
-      console.log('N2 checked');
     }
   }
   RouterOnWorkSpace() {
