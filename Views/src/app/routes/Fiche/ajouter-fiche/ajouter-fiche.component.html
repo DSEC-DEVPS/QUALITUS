@@ -23,6 +23,10 @@
                       >pdf,world,excel,power point,png,jpg</span
                     ></small
                   >
+                  <small class="text-muted mx-3">
+                    Taille maximale acceptée:
+                    <span class="format-customizer">100 MO</span></small
+                  >
                 </div>
 
                 <div class="row d-flex justify-content-between align-items-center left-right">
@@ -137,19 +141,19 @@
                         </tbody>
                       </table>
                     </div>
-                    <div class="row">
+                    <div class="mb-3">
+                      <label for="niveau" class="form-label">Niveau</label>
                       <select
+                        id="niveau"
                         formControlName="niveau"
                         class="form-select"
                         aria-label="Sélection du niveau"
                       >
-                        <option value="">Niveau</option>
-                        <!-- Valeur vide par défaut -->
+                        <option value="" selected>Sélectionner un niveau</option>
                         <option value="1">N1</option>
                         <option value="2">N2</option>
                       </select>
                     </div>
-
                   </div>
                   <!-- Titre -->
                 </div>
