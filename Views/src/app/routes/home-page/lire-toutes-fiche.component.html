@@ -6,38 +6,38 @@
     <mat-table [dataSource]="table_toutes_fiche" class="mat-elevation-z8">
       <!-- Position Column -->
       <ng-container matColumnDef="titre">
-        <mat-header-cell *matHeaderCellDef> Description </mat-header-cell>
-        <mat-cell *matCellDef="let element" style="font-size: 10px">
-          {{ element.titre | uppercaseAll}}
+        <mat-header-cell *matHeaderCellDef class="colTitle"> Description </mat-header-cell>
+        <mat-cell *matCellDef="let element" style="font-size: 13px">
+          {{ element.titre | uppercaseAll }}
         </mat-cell>
       </ng-container>
 
       <!-- Name Column -->
       <ng-container matColumnDef="type">
-        <mat-header-cell *matHeaderCellDef> Type </mat-header-cell>
-        <mat-cell *matCellDef="let element" style="font-size: 10px">
+        <mat-header-cell *matHeaderCellDef class="colTitle"> Type </mat-header-cell>
+        <mat-cell *matCellDef="let element" style="font-size: 13px">
           {{ element.type | uppercaseAll }}
         </mat-cell>
       </ng-container>
 
       <!-- Weight Column -->
       <ng-container matColumnDef="dateDebut">
-        <mat-header-cell *matHeaderCellDef> Date Début </mat-header-cell>
-        <mat-cell *matCellDef="let element" style="font-size: 10px">
+        <mat-header-cell *matHeaderCellDef class="colTitle"> Date Début </mat-header-cell>
+        <mat-cell *matCellDef="let element" style="font-size: 13px">
           {{ element.dateDebut }}
         </mat-cell>
       </ng-container>
 
       <!-- Symbol Column -->
       <ng-container matColumnDef="dateFin">
-        <mat-header-cell *matHeaderCellDef> Date Fin </mat-header-cell>
-        <mat-cell *matCellDef="let element" style="font-size: 10px">
+        <mat-header-cell *matHeaderCellDef class="colTitle"> Date Fin </mat-header-cell>
+        <mat-cell *matCellDef="let element" style="font-size: 13px">
           {{ element.dateFin }}
         </mat-cell>
       </ng-container>
       <ng-container matColumnDef="Gestionnaire">
-        <mat-header-cell *matHeaderCellDef> Gestionnaire </mat-header-cell>
-        <mat-cell *matCellDef="let element" style="font-size: 10px">
+        <mat-header-cell *matHeaderCellDef class="colTitle"> Gestionnaire </mat-header-cell>
+        <mat-cell *matCellDef="let element" style="font-size: 13px">
           {{ element.Gestionnaire }}
         </mat-cell>
       </ng-container>

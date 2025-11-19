@@ -424,8 +424,8 @@ td {
 
 .mat-mdc-row,
 .mat-mdc-header-row {
-  height: 32px !important;
-  min-height: 32px !important;
+  height: auto !important;
+  min-height: 36px !important;
 }
 
 .mat-mdc-cell,
@@ -591,4 +591,7 @@ td {
   .mat-calendar-period-button {
     color: orange !important; // Bouton de période en orange
   }
+}
+.colTitle {
+  font-size: 14px !important;
 }

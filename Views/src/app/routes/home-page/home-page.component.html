@@ -160,13 +160,19 @@
                 matSortDirection="desc"
               >
                 <ng-container matColumnDef="titre">
-                  <th mat-header-cell *matHeaderCellDef>{{ 'titre' | titlecase }}</th>
-                  <td mat-cell *matCellDef="let row">{{ row.titre | uppercaseAll }}</td>
+                  <th mat-header-cell *matHeaderCellDef class="colTitle">
+                    {{ 'titre' | titlecase }}
+                  </th>
+                  <td mat-cell *matCellDef="let row" style="font-size: 12px">
+                    {{ row.titre | uppercaseAll }}
+                  </td>
                 </ng-container>
 
                 <ng-container matColumnDef="type">
-                  <th mat-header-cell *matHeaderCellDef>{{ 'type' | titlecase }}</th>
-                  <td mat-cell *matCellDef="let row">
+                  <th mat-header-cell *matHeaderCellDef class="colTitle">
+                    {{ 'type' | titlecase }}
+                  </th>
+                  <td mat-cell *matCellDef="let row" style="font-size: 12px">
                     {{ row.type | uppercaseAll }}
                   </td>
                 </ng-container>
@@ -263,38 +269,38 @@
       <mat-table [dataSource]="dataSource" class="mat-elevation-z8">
         <!-- Position Column -->
         <ng-container matColumnDef="titre">
-          <mat-header-cell *matHeaderCellDef> Description </mat-header-cell>
-          <mat-cell *matCellDef="let element" style="font-size: 10px">
-            {{ element.titre | uppercaseAll}}
+          <mat-header-cell *matHeaderCellDef class="colTitle"> Description </mat-header-cell>
+          <mat-cell *matCellDef="let element" style="font-size: 13px">
+            {{ element.titre | uppercaseAll }}
           </mat-cell>
         </ng-container>
 
         <!-- Name Column -->
         <ng-container matColumnDef="type">
-          <mat-header-cell *matHeaderCellDef> Type </mat-header-cell>
-          <mat-cell *matCellDef="let element" style="font-size: 10px">
-            {{ element.type | uppercaseAll}}
+          <mat-header-cell *matHeaderCellDef class="colTitle"> Type </mat-header-cell>
+          <mat-cell *matCellDef="let element" style="font-size: 13px">
+            {{ element.type | uppercaseAll }}
           </mat-cell>
         </ng-container>
 
         <!-- Weight Column -->
         <ng-container matColumnDef="dateDebut">
-          <mat-header-cell *matHeaderCellDef> Date Début </mat-header-cell>
-          <mat-cell *matCellDef="let element" style="font-size: 10px">
+          <mat-header-cell *matHeaderCellDef class="colTitle"> Date Début </mat-header-cell>
+          <mat-cell *matCellDef="let element" style="font-size: 13px">
             {{ element.dateDebut }}
           </mat-cell>
         </ng-container>
 
         <!-- Symbol Column -->
-        <ng-container matColumnDef="dateFin">
-          <mat-header-cell *matHeaderCellDef> Date Fin </mat-header-cell>
-          <mat-cell *matCellDef="let element" style="font-size: 10px">
+        <ng-container matColumnDef="dateFin" class="colTitle">
+          <mat-header-cell *matHeaderCellDef class="colTitle"> Date Fin </mat-header-cell>
+          <mat-cell *matCellDef="let element" style="font-size: 13px">
             {{ element.dateFin }}
           </mat-cell>
         </ng-container>
         <ng-container matColumnDef="Gestionnaire">
-          <mat-header-cell *matHeaderCellDef> Gestionnaire </mat-header-cell>
-          <mat-cell *matCellDef="let element" style="font-size: 10px">
+          <mat-header-cell *matHeaderCellDef class="colTitle"> Gestionnaire </mat-header-cell>
+          <mat-cell *matCellDef="let element" style="font-size: 13px">
             {{ element.Gestionnaire }}
           </mat-cell>
         </ng-container>
@@ -310,45 +316,45 @@
     <div [class]="div_table" *ngIf="isShowValueSearchArchive">
       <mat-table [dataSource]="dataSource_Archive" class="mat-elevation-z8">
         <!-- Position Column -->
-        <ng-container matColumnDef="titre">
-          <mat-header-cell *matHeaderCellDef> Description </mat-header-cell>
-          <mat-cell *matCellDef="let element" style="font-size: 10px">
+        <ng-container matColumnDef="titre" class="colTitle">
+          <mat-header-cell *matHeaderCellDef class="colTitle"> Description </mat-header-cell>
+          <mat-cell *matCellDef="let element" style="font-size: 13px">
             {{ element.titre }}
           </mat-cell>
         </ng-container>
 
         <!-- Name Column -->
         <ng-container matColumnDef="type">
-          <mat-header-cell *matHeaderCellDef> Type </mat-header-cell>
-          <mat-cell *matCellDef="let element" style="font-size: 10px">
+          <mat-header-cell *matHeaderCellDef class="colTitle"> Type </mat-header-cell>
+          <mat-cell *matCellDef="let element" style="font-size: 13px">
             {{ element.type }}
           </mat-cell>
         </ng-container>
 
         <!-- Weight Column -->
         <ng-container matColumnDef="dateDebut">
-          <mat-header-cell *matHeaderCellDef> Date Début </mat-header-cell>
-          <mat-cell *matCellDef="let element" style="font-size: 10px">
+          <mat-header-cell *matHeaderCellDef class="colTitle"> Date Début </mat-header-cell>
+          <mat-cell *matCellDef="let element" style="font-size: 13px">
             {{ element.dateDebut }}
           </mat-cell>
         </ng-container>
 
         <!-- Symbol Column -->
         <ng-container matColumnDef="dateFin">
-          <mat-header-cell *matHeaderCellDef> Date Archive </mat-header-cell>
-          <mat-cell *matCellDef="let element" style="font-size: 10px">
+          <mat-header-cell *matHeaderCellDef class="colTitle"> Date Archive </mat-header-cell>
+          <mat-cell *matCellDef="let element" style="font-size: 13px">
             {{ element.dateFin }}
           </mat-cell>
         </ng-container>
         <ng-container matColumnDef="ETAT">
-          <mat-header-cell *matHeaderCellDef> ETAT </mat-header-cell>
-          <mat-cell *matCellDef="let element" style="font-size: 10px; color: red">
+          <mat-header-cell *matHeaderCellDef class="colTitle"> ETAT </mat-header-cell>
+          <mat-cell *matCellDef="let element" style="font-size: 13px; color: red">
             {{ element.ETAT }}
           </mat-cell>
         </ng-container>
         <ng-container matColumnDef="Gestionnaire">
-          <mat-header-cell *matHeaderCellDef> Gestionnaire </mat-header-cell>
-          <mat-cell *matCellDef="let element" style="font-size: 10px">
+          <mat-header-cell *matHeaderCellDef class="colTitle"> Gestionnaire </mat-header-cell>
+          <mat-cell *matCellDef="let element" style="font-size: 13px">
             {{ element.Gestionnaire }}
           </mat-cell>
         </ng-container>
@@ -420,7 +426,7 @@
   <div class="row" style="position: relative; bottom: 0px">
     <div class="col-md-12 col-sm-12 text-center py-3" style="cursor: pointer; font-weight: bold">
       <button (click)="openDialog_Lire_toutes_les_fiche()" class="btn_toutes_fiches">
-        <span style="font-size: small">Voir toutes les fiches</span>
+        <span style="font-size: medium">Voir toutes les fiches</span>
       </button>
     </div>
   </div>

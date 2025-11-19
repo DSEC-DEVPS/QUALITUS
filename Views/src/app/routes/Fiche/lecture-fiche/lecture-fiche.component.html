@@ -14,7 +14,7 @@
   <div class="row">
     <div [class]="col_div_iframe">
       <div class="row mt-1">
-        @if (fiche.extention === '.pdf') {
+        @if (fiche!.extention === '.pdf') {
           <div
             class="row justify-content-between mt-3 align-items-center"
             style="margin-bottom: -25px"
@@ -23,7 +23,7 @@
               <button mat-raised-button class="small-button" (click)="back()">Retour</button>
             </div>
             <div class="col-md-4 col-sm-2" style="font-size: small">
-              {{ fiche.titre | titlecase }}
+              {{ fiche!.titre | titlecase }}
             </div>
 
             <div class="col-md-4 col-sm-2 text-end">
@@ -32,7 +32,7 @@
                   style="color: #ff8e36; cursor: pointer"
                   matTooltip="Modifer"
                   matTooltipPosition="above"
-                  (click)="update(fiche.id)"
+                  (click)="update(fiche!.id)"
                   >edit</mat-icon
                 >
                 <mat-icon
@@ -80,13 +80,13 @@
                   name=""
                   id="select"
                   [(ngModel)]="currentSheet"
-                  (selectionChange)="changeSheet()"
+                  (change)="changeSheet()"
                 >
                   <option *ngFor="let sheet of sheetNames" [value]="sheet">{{ sheet }}</option>
                 </select>
               </div>
               <div style="font-size: small">
-                <span style="font-weight: bold">Titre: </span>{{ fiche.titre | titlecase }}
+                <span style="font-weight: bold">Titre: </span>{{ fiche!.titre | titlecase }}
               </div>
 
               <div class="actions d-flex align-items-center">
@@ -96,7 +96,7 @@
                       style="color: #ff8e36; cursor: pointer"
                       matTooltip="Modifer"
                       matTooltipPosition="above"
-                      (click)="update(fiche.id)"
+                      (click)="update(fiche!.id)"
                       >edit</mat-icon
                     >
                     <mat-icon
@@ -151,23 +151,146 @@
               </hot-table>
             </div>
           </div>
+
+          <div *ngIf="fiche?.extention === '.pptx'" class="excel-container">
+            <div class="controls-row">
+              <div>
+                <button mat-raised-button class="small-button" (click)="back()">Retour</button>
+              </div>
+
+              <div style="font-size: medium">
+                <span style="font-weight: bold">Titre: </span>{{ fiche!.titre | titlecase }}
+              </div>
+
+              <div class="actions d-flex align-items-center">
+                <div>
+                  @if (user.roles === 'R_ADMI' || user.roles === 'R_GB') {
+                    <mat-icon
+                      style="color: #ff8e36; cursor: pointer"
+                      matTooltip="Modifer"
+                      matTooltipPosition="above"
+                      (click)="update(fiche!.id)"
+                      >edit</mat-icon
+                    >
+                    <mat-icon
+                      (click)="
+                        deleteSomething(
+                          'Êtes vous sûr de vouloir archiver cette fiche ?',
+                          'archivage'
+                        )
+                      "
+                      style="color: #ff8e36; margin-left: 15px; cursor: pointer"
+                      matTooltip="archiver"
+                      matTooltipPosition="above"
+                      >archive</mat-icon
+                    >
+                    <mat-icon
+                      (click)="
+                        deleteSomething(
+                          'Êtes vous sûr de vouloir supprimer cette fiche ?',
+                          'suppression'
+                        )
+                      "
+                      style="color: #ff8e36; margin-left: 15px; cursor: pointer"
+                      matTooltip="supprimer"
+                      matTooltipPosition="above"
+                      >delete_forever</mat-icon
+                    >
+                  } @else {}
+                </div>
+                @if (user.roles === 'R_ADMI' || user.roles === 'R_GB') {
+                  <button
+                    mat-raised-button
+                    color="primary"
+                    class="small-button"
+                    (click)="downloadPptx()"
+                  >
+                    <mat-icon>download</mat-icon> Télécharger
+                  </button>
+                }
+              </div>
+            </div>
+
+            <!-- contrôles -->
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px">
+              <mat-icon
+                (click)="zoomOut()"
+                style="color: #ff8e36; cursor: pointer; font-size: 25px"
+                matTooltip="Zoom arrière"
+                >zoom_out</mat-icon
+              >
+              <button
+                (click)="resetZoom()"
+                title="Reset"
+                style="border-radius: 5%; border: none; font-size: medium; font-weight: normal"
+              >
+                100%
+              </button>
+              <mat-icon
+                (click)="zoomIn()"
+                style="color: #ff8e36; cursor: pointer; font-size: 25px"
+                matTooltip="Zoom avant"
+                >zoom_in</mat-icon
+              >
+              <label style="margin-left: 12px; font-size: medium">
+                Zoom: {{ zoom * 100 | number: '1.0-0' }}%
+              </label>
+
+              <input
+                type="range"
+                min="{{ minZoom }}"
+                max="{{ maxZoom }}"
+                step="{{ zoomStep }}"
+                [value]="zoom"
+                (input)="onSlider($event)"
+                style="width: 160px; margin-left: 8px; color: #ff8e36"
+              />
+            </div>
+
+            <!-- viewport déroulable qui gère la molette -->
+            <div
+              #viewport
+              (wheel)="onWheel($event)"
+              style="
+                width: 100%;
+                height: 640px;
+                border: 1px solid #ccc;
+                overflow: auto;
+                position: relative;
+              "
+            >
+              <!-- c'est ici que le previewer s'attache et que l'on applique le scale -->
+              <div
+                #pptxWrapper
+                id="pptx-wrapper"
+                [hidden]="fiche?.extention !== '.pptx'"
+                [style.transform]="'scale(' + zoom + ')'"
+                style="
+                  transform-origin: top left;
+                  width: 100%;
+                  height: 100%;
+                  will-change: transform;
+                "
+              ></div>
+            </div>
+          </div>
         }
       </div>
     </div>
     @if (user.roles === 'R_ADMI' || user.roles === 'R_GB' || user.roles === 'R_SUPE') {
     } @else {
       <div class="col-md-3 col-sm-12 mt-md-5 mt-sm-1">
-        <mat-tab-group *ngIf="fiche.Commentaire || fiche.Utilite || fiche.Quiz.length > 0">
+        <mat-tab-group *ngIf="fiche!.Commentaire || fiche!.Utilite || fiche!.Quiz.length > 0">
           <!-- Onglet Utilité -->
           <mat-tab>
             <ng-template mat-tab-label> Sondages </ng-template>
-            @if (fiche.Quiz.length > 0) {
+            @if (fiche!.Quiz.length > 0) {
               <form [formGroup]="formGroup_Quiz">
                 <div *ngIf="show_value_Quiz">
                   <hr class="Quiz" />
                   <div>
                     <p class="mt-3" style="font-family: poppins, sans-serif; font-size: small">
-                      {{ fiche.Quiz[0].libelleQuestion }} ?
+                      {{ fiche!.Quiz[0].libelleQuestion }} ?
                     </p>
                     <div class="d-flex">
                       <mat-radio-group formControlName="Reponse1">
@@ -182,7 +305,7 @@
                   </div>
                   <div>
                     <p class="mt-3" style="font-family: poppins, sans-serif; font-size: small">
-                      {{ fiche.Quiz[1].libelleQuestion }} ?
+                      {{ fiche!.Quiz[1].libelleQuestion }} ?
                     </p>
 
                     <div class="d-flex">

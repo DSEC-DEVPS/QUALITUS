@@ -1,4 +1,12 @@
-import { Component, ViewEncapsulation, OnInit, inject, model } from '@angular/core';
+import {
+  Component,
+  ViewEncapsulation,
+  OnInit,
+  inject,
+  model,
+  ViewChild,
+  ElementRef,
+} from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { DomSanitizer } from '@angular/platform-browser';
@@ -28,7 +36,7 @@ import {
   DialogLayoutDisplay,
   DisappearanceAnimation,
 } from '@costlydeveloper/ngx-awesome-popup';
-import { catchError, of, Subject, takeUntil, tap } from 'rxjs';
+import { catchError, of, Subject, switchMap, takeUntil, tap } from 'rxjs';
 import { CommonModule, TitleCasePipe } from '@angular/common';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatRadioModule } from '@angular/material/radio';
@@ -38,6 +46,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTableModule } from '@angular/material/table';
 import { Z } from '@angular/cdk/keycodes';
+import { init } from 'pptx-preview';
 registerAllModules();
 @Component({
   selector: 'app-lecture-fiche',
@@ -67,6 +76,8 @@ registerAllModules();
   styleUrl: './lecture-fiche.component.scss',
 })
 export class LectureFicheComponent implements OnInit {
+  @ViewChild('pptxWrapper', { static: false }) pptxWrapper!: ElementRef<HTMLDivElement>;
+  private pptxPreviewer: any;
   /** les attributs pour la lecture des fiches de type excel */
   fileId = '';
   workbook: XLSX.WorkBook | null = null;
@@ -74,6 +85,8 @@ export class LectureFicheComponent implements OnInit {
   currentSheet = '';
   data: any[][] = [];
   excelBlob: Blob | null = null;
+  pptxBlob: Blob | null = null;
+  private objectUrl?: string;
   hotSettings: Handsontable.GridSettings = {
     stretchH: 'all',
     autoWrapRow: true,
@@ -103,7 +116,7 @@ export class LectureFicheComponent implements OnInit {
 
   msg = '';
   destroy$: Subject<boolean> = new Subject<boolean>();
-  fiche!: url;
+  fiche: url | null = null;
   formGroum!: FormGroup;
   formGroup_Quiz!: FormGroup;
   url: any;
@@ -117,6 +130,11 @@ export class LectureFicheComponent implements OnInit {
   user!: User;
   col_div_iframe = 'col-md-11 pt-2 m-auto';
   resultat_Quiz!: number;
+  // Zoom state
+  zoom = 1;
+  minZoom = 0.2;
+  maxZoom = 3;
+  zoomStep = 0.1;
   constructor(private _location: Location) {}
   ngOnInit(): void {
     const id = this.route.snapshot.params['id'];
@@ -161,6 +179,8 @@ export class LectureFicheComponent implements OnInit {
         } else {
           if (result.extention === '.xlsx') {
             /****** */
+            console.log('testttttttttttttttttttttttttttttttttt1111111111111111111');
+
             this.userService.getAllExcelFicheByIDFiche(id).subscribe({
               next: (data: Blob) => {
                 console.log('Données Excel reçues:', data);
@@ -212,6 +232,32 @@ export class LectureFicheComponent implements OnInit {
                 console.log(error);
               },
             });
+          } else if (result.extention === '.pptx') {
+            console.log('testttttttttttttttttttttttttttttttttt');
+            this.userService
+              .getAllFicheByIDFiche(id)
+              .pipe(
+                switchMap((meta: any) => {
+                  console.log('Metadata reçues:', meta);
+                  return this.userService.downloadFileByUrl(meta.url); // retourne Observable<Blob>
+                })
+              )
+              .subscribe({
+                next: (data: Blob) => {
+                  console.log('data reçu:', data);
+                  console.log('Données Pptx reçues:', data);
+                  console.log('Type MIME:', data.type);
+                  console.log('Taille:', data.size, 'octets');
+                  this.pptxPreviewer = init(this.pptxWrapper.nativeElement, {
+                    width: 1100,
+                    height: 840,
+                  });
+
+                  this.loadPptx(data);
+                  this.pptxBlob = data;
+                },
+                error: err => console.error(err),
+              });
           }
         }
       },
@@ -220,6 +266,56 @@ export class LectureFicheComponent implements OnInit {
       },
     });
   }
+  // Zoom controls
+  zoomIn() {
+    this.setZoom(this.zoom + this.zoomStep);
+  }
+  zoomOut() {
+    this.setZoom(this.zoom - this.zoomStep);
+  }
+  resetZoom() {
+    this.setZoom(1);
+  }
+  onSlider(event: Event) {
+    const v = (event.target as HTMLInputElement).valueAsNumber;
+    this.setZoom(v);
+  }
+  private setZoom(value: number) {
+    this.zoom = Math.max(this.minZoom, Math.min(this.maxZoom, Math.round(value * 100) / 100));
+  }
+
+  // molette : si Ctrl (ou meta) est enfoncé, on effectue un zoom
+  onWheel(event: WheelEvent) {
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      const delta = event.deltaY;
+      if (delta < 0) {
+        this.zoomIn();
+      } else {
+        this.zoomOut();
+      }
+    }
+    // sinon laisser le scroll normal
+  }
+  async loadPptx(data: Blob): Promise<void> {
+    if (!(data instanceof Blob)) {
+      console.error("loadPptx: data n'est pas un Blob :", data);
+      this.toast.error('Le fichier PPTX est corrompu.');
+      return;
+    }
+
+    try {
+      // conversion propre
+      const arrayBuffer = await data.arrayBuffer();
+
+      // affichage
+      this.pptxPreviewer.preview(arrayBuffer);
+    } catch (err) {
+      console.error('Erreur lors de la conversion Blob -> ArrayBuffer', err);
+      this.toast.error('Impossible de lire le fichier PPTX.');
+    }
+  }
+
   // Modifiez votre méthode loadSheet pour formater les données
   loadSheet(): void {
     if (this.workbook && this.currentSheet) {
@@ -248,6 +344,7 @@ export class LectureFicheComponent implements OnInit {
   }
 
   changeSheet(): void {
+    console.log('La feuille currente', this.currentSheet);
     this.loadSheet();
   }
 
@@ -258,12 +355,32 @@ export class LectureFicheComponent implements OnInit {
       document.body.appendChild(a);
       a.style.display = 'none';
       a.href = url;
-      a.download = `${this.fiche.titre}.xlsx`;
+      a.download = `${this.fiche?.titre}.xlsx`;
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     }
   }
+  downloadPptx(): void {
+    if (!this.pptxBlob) {
+      this.toast.error('Aucun fichier PPTX à télécharger');
+      return;
+    }
+
+    const url = URL.createObjectURL(this.pptxBlob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${this.fiche?.titre || 'presentation'}.pptx`;
+    a.style.display = 'none';
+
+    document.body.appendChild(a);
+    a.click();
+
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   back() {
     if (window.history.length > 1) {
       this.location.back();
@@ -378,8 +495,8 @@ export class LectureFicheComponent implements OnInit {
   }
   response_quiz() {
     if (
-      this.fiche.Quiz[0].reponseQuestion === this.formGroup_Quiz.value.Reponse1 &&
-      this.fiche.Quiz[1].reponseQuestion === this.formGroup_Quiz.value.Reponse2
+      this.fiche?.Quiz[0].reponseQuestion === this.formGroup_Quiz.value.Reponse1 &&
+      this.fiche?.Quiz[1].reponseQuestion === this.formGroup_Quiz.value.Reponse2
     ) {
       this.resultat_Quiz = 1;
       this.userService
