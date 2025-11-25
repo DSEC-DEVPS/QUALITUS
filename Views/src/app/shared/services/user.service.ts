@@ -62,7 +62,9 @@ export class UserService {
           console.log(fiche);
         })
       )
-      .subscribe();
+      .subscribe({
+        error: error => console.error('Erreur lors du chargement des fiches:', error),
+      });
   }
   addUser(formValue: {
     nom: string;
@@ -274,10 +276,10 @@ export class UserService {
     );
   }
   getResultat_controle_actif(): Observable<Fiche[]> {
-    return this.http.get<echantillon[]>(`/api/v1/resultat_controle_actif`);
+    return this.http.get<Fiche[]>(`/api/v1/resultat_controle_actif`);
   }
   getResultat_controle_m_1(): Observable<Fiche[]> {
-    return this.http.get<echantillon[]>(`/api/v1/resultat_controle_m_1`);
+    return this.http.get<Fiche[]>(`/api/v1/resultat_controle_m_1`);
   }
   getReporting(data: {
     typeControle: string;

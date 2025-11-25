@@ -141,6 +141,7 @@ CREATE TABLE IF NOT EXISTS B_FICHE (
   id_SousCategorie INT,
   id_Sla INT,
   ETAT VARCHAR(10),
+  Niveau VARCHAR(10),
   AccesSite VARCHAR(100),
   AccesProfil VARCHAR(100),
   AccesUtilite VARCHAR(100),

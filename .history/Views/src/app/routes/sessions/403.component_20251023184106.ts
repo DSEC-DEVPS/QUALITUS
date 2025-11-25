@@ -2,15 +2,15 @@ import { Component } from '@angular/core';
 import { ErrorCodeComponent } from '@shared/components/error-code/error-code.component';
 
 @Component({
-  selector: 'app-error-404',
+  selector: 'app-error-403',
   template: `
     <error-code
-      code="404"
-      title="Page not found!"
-      message="This is not the web page you are looking for."
+      code="403"
+      title="Permission denied!"
+      message="You do not have permission to access the requested data."
     />
   `,
   standalone: true,
   imports: [ErrorCodeComponent],
 })
-export class Error404Component {}
+export class Error403Component {}
