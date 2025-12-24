@@ -62,7 +62,7 @@
           </div>
           <div class="embed-responsive embed-responsive-16by9">
             <!-- Remplacez "votre-fichier.pdf" par le chemin de votre fichier PDF
-            
+
             -->
             <iframe class="embed-responsive-item" [src]="url" allowfullscreen></iframe>
           </div>
@@ -233,7 +233,7 @@
                 matTooltip="Zoom avant"
                 >zoom_in</mat-icon
               >
-              <label style="margin-left: 12px; font-size: medium">
+              <label for="" style="margin-left: 12px; font-size: medium">
                 Zoom: {{ zoom * 100 | number: '1.0-0' }}%
               </label>
 
@@ -278,7 +278,7 @@
         }
       </div>
     </div>
-    @if (fiche.Utilite) {
+    @if (fiche?.Utilite) {
       <div class="col-md-3 col-sm-12 mt-md-5 mt-sm-1">
         <mat-tab-group *ngIf="fiche!.Commentaire || fiche!.Utilite || fiche!.Quiz.length > 0">
           <!-- Onglet Utilité -->
