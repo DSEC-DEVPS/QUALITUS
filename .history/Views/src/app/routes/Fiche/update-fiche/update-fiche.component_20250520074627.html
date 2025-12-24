@@ -11,72 +11,18 @@
                   <label for="fileInput" class="form-label">
                     <h6>Télécharger un document</h6>
                   </label>
-
-                  <!-- Affichage du fichier existant -->
-                  <!-- Affichage du fichier existant 
-                  <div
-                    *ngIf="existingFileName && !isFileChanged"
-                    class="existing-file-container mb-2 p-3 border rounded bg-light"
-                  >
-                    <div class="d-flex align-items-center justify-content-between">
-                      <div class="d-flex align-items-center">
-                        <mat-icon class="text-primary me-2">attach_file</mat-icon>
-                        <div>
-                          <strong>Fichier actuel :</strong>
-                          <span class="ms-2">{{ existingFileName }}</span>
-                        </div>
-                      </div>
-                      <button
-                        *ngIf="existingFileUrl"
-                        type="button"
-                        mat-icon-button
-                        color="primary"
-                        (click)="downloadExistingFile()"
-                        matTooltip="Télécharger le fichier"
-                      >
-                        <mat-icon>download</mat-icon>
-                      </button>
-                    </div>
-                  </div>
--->
-                  <!-- Input pour nouveau fichier -->
-                  <div class="file-input-wrapper">
-                    <input
-                      type="file"
-                      id="fileInput"
-                      class="form-control"
-                      (change)="onFileSelected($event)"
-                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
-                    />
-
-                    <!-- Affichage du nouveau fichier sélectionné -->
-                    <div
-                      *ngIf="isFileChanged && file"
-                      class="new-file-indicator mt-2 p-2 border rounded bg-success bg-opacity-10"
-                    >
-                      <div class="d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center">
-                          <mat-icon class="text-success me-2">check_circle</mat-icon>
-                          <span><strong>Nouveau fichier :</strong> {{ selectedFileName }}</span>
-                        </div>
-                        <button
-                          type="button"
-                          mat-icon-button
-                          color="warn"
-                          (click)="removeFile()"
-                          matTooltip="Annuler la sélection"
-                        >
-                          <mat-icon>close</mat-icon>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
+                  <input
+                    type="file"
+                    id="fileInput"
+                    class="form-control"
+                    (change)="onFileSelected($event)"
+                  />
                   <small class="text-muted">
                     Formats acceptés :
-                    <span class="format-customizer">PDF, Word, Excel, PowerPoint</span>
-                    <span class="text-muted ms-2">(Max: 10MB)</span>
-                  </small>
+                    <span class="format-customizer"
+                      >pdf,world,excel,power point,png,jpg</span
+                    ></small
+                  >
                 </div>
 
                 <div class="row d-flex justify-content-between align-items-center left-right">
@@ -163,51 +109,27 @@
                       </div>
                     </div>
                   </div>
-
                   <div class="col-md-5 col-sm-12 right">
                     <div class="row">
-                      <table class="table table-bordered">
-                        <thead>
-                          <tr>
-                            <th>Sites</th>
-                            <th>Accès</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr *ngFor="let site of ListeSite">
-                            <td>{{ site.nom }}</td>
-                            <td>
-                              <div class="form-check form-switch">
-                                <input
-                                  class="form-check-input"
-                                  type="checkbox"
-                                  [id]="'siteCheckbox_' + site.id"
-                                  [checked]="selectedAccesSite.includes(site.id)"
-                                  (change)="onAccesSiteCheckboxChange($event, site.id)"
-                                />
-                              </div>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                    <div class="mb-3">
-                      <label for="niveau" class="form-label">Niveau</label>
-                      <select
-                        id="niveau"
-                        formControlName="niveau"
-                        class="form-select"
-                        aria-label="Sélection du niveau"
-                      >
-                        <option value="">Sélectionner un niveau</option>
-                        <option value="0">PAS DE NIVEAU</option>
-                        <option value="1">N1</option>
-                        <option value="2">N2</option>
-                      </select>
+                      <div class="col-md-6 col-ms-12" *ngFor="let item of ListeSite">
+                        <div class="toggle-container">
+                          <label class="toggle-label" for="flexSwitchCheckChecked">{{
+                            item.nom
+                          }}</label>
+                          <div class="form-check form-switch">
+                            <input
+                              class="form-check-input"
+                              type="checkbox"
+                              id="flexSwitchCheckChecked"
+                              checked
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                  <!-- Titre -->
                 </div>
-
                 <!-- Ajouter des questionnaires -->
                 <div class="form-check mt-4 mb-3">
                   <input
@@ -225,19 +147,17 @@
                 <!-- Questions / Réponses -->
                 <div *ngIf="showQuestionnaireValue" class="mt-3">
                   <div class="row mt-2">
-                    <div formGroupName="Quiz1">
+                    <md-input-container formGroupName="Quiz1">
                       <div class="row mt-2">
                         <div class="col-md-6">
                           <div class="form-floating">
                             <textarea
                               class="form-control"
                               placeholder="Leave a comment here"
-                              id="floatingTextarea1"
+                              id="floatingTextarea"
                               formControlName="Question1"
                             ></textarea>
-                            <label for="floatingTextarea1" style="font-size: 10px"
-                              >Question 1</label
-                            >
+                            <label for="floatingTextarea" style="font-size: 10px">Question 1</label>
                           </div>
                         </div>
                         <div class="col-md-6">
@@ -257,20 +177,18 @@
                           </select>
                         </div>
                       </div>
-                    </div>
-                    <div formGroupName="Quiz2">
+                    </md-input-container>
+                    <md-input-container formGroupName="Quiz2">
                       <div class="row mt-2">
                         <div class="col-md-6">
                           <div class="form-floating">
                             <textarea
                               class="form-control"
                               placeholder="Leave a comment here"
-                              id="floatingTextarea2"
+                              id="floatingTextarea"
                               formControlName="Question2"
                             ></textarea>
-                            <label for="floatingTextarea2" style="font-size: 10px"
-                              >Question 2</label
-                            >
+                            <label for="floatingTextarea" style="font-size: 10px">Question 2</label>
                           </div>
                         </div>
                         <div class="col-md-6">
@@ -290,20 +208,18 @@
                           </select>
                         </div>
                       </div>
-                    </div>
-                    <div formGroupName="Quiz3">
+                    </md-input-container>
+                    <md-input-container formGroupName="Quiz3">
                       <div class="row mt-2">
                         <div class="col-md-6">
                           <div class="form-floating">
                             <textarea
                               class="form-control"
                               placeholder="Leave a comment here"
-                              id="floatingTextarea3"
+                              id="floatingTextarea"
                               formControlName="Question3"
                             ></textarea>
-                            <label for="floatingTextarea3" style="font-size: 10px"
-                              >Question 3</label
-                            >
+                            <label for="floatingTextarea" style="font-size: 10px">Question 3</label>
                           </div>
                         </div>
                         <div class="col-md-6">
@@ -323,20 +239,18 @@
                           </select>
                         </div>
                       </div>
-                    </div>
-                    <div formGroupName="Quiz4">
+                    </md-input-container>
+                    <md-input-container formGroupName="Quiz4">
                       <div class="row mt-2">
                         <div class="col-md-6">
                           <div class="form-floating">
                             <textarea
                               class="form-control"
                               placeholder="Leave a comment here"
-                              id="floatingTextarea4"
+                              id="floatingTextarea"
                               formControlName="Question4"
                             ></textarea>
-                            <label for="floatingTextarea4" style="font-size: 10px"
-                              >Question 4</label
-                            >
+                            <label for="floatingTextarea" style="font-size: 10px">Question 4</label>
                           </div>
                         </div>
                         <div class="col-md-6">
@@ -356,10 +270,9 @@
                           </select>
                         </div>
                       </div>
-                    </div>
+                    </md-input-container>
                   </div>
                 </div>
-
                 <!-- Autorisation de la fiche -->
                 <h6 class="mt-4">Autorisation de la fiche</h6>
                 <table class="table table-bordered">
@@ -368,8 +281,6 @@
                       <th>Autorisation</th>
                       <th>Quiz</th>
                       <th>Utilité</th>
-                      <th>Accès</th>
-                      <th>Commentaire</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -380,86 +291,22 @@
                         role.Role_Associe === 'R_SUPE' ||
                         role.Role_Associe === 'R_GB'
                       ) {
-                        <td>
-                          <input
-                            class="form-check-input"
-                            type="checkbox"
-                            [id]="'quizCheckbox_' + role.id"
-                            [checked]="selectedQuizProfiles.includes(role.id)"
-                            (change)="onQuizCheckboxChange($event, role.id)"
-                          />
-                        </td>
-                        <td>
-                          <input
-                            class="form-check-input"
-                            type="checkbox"
-                            [id]="'utiliteCheckbox_' + role.id"
-                            [checked]="selectedUtiliteProfiles.includes(role.id)"
-                            (change)="onUtiliteCheckboxChange($event, role.id)"
-                          />
-                        </td>
+                        <td><input class="form-check-input" type="checkbox" /></td>
+                        <td><input class="form-check-input" type="checkbox" /></td>
                       } @else {
-                        <td>
-                          <input
-                            class="form-check-input"
-                            type="checkbox"
-                            [id]="'quizCheckbox_' + role.id"
-                            [checked]="selectedQuizProfiles.includes(role.id)"
-                            (change)="onQuizCheckboxChange($event, role.id)"
-                          />
-                        </td>
-                        <td>
-                          <input
-                            class="form-check-input"
-                            type="checkbox"
-                            [id]="'utiliteCheckbox_' + role.id"
-                            [checked]="selectedUtiliteProfiles.includes(role.id)"
-                            (change)="onUtiliteCheckboxChange($event, role.id)"
-                          />
-                        </td>
+                        <td><input class="form-check-input" type="checkbox" checked /></td>
+                        <td><input class="form-check-input" type="checkbox" checked /></td>
                       }
-                      <td>
-                        <input
-                          class="form-check-input"
-                          type="checkbox"
-                          [id]="'accesCheckbox_' + role.id"
-                          [checked]="selectedAccesProfiles.includes(role.id)"
-                          (change)="onAccesCheckboxChange($event, role.id)"
-                        />
-                      </td>
-                      <td>
-                        <input
-                          class="form-check-input"
-                          type="checkbox"
-                          [id]="'commentaireCheckbox_' + role.id"
-                          [checked]="selectedAccesCommentaire.includes(role.id)"
-                          (change)="onAccesCommentaireCheckboxChange($event, role.id)"
-                        />
-                      </td>
                     </tr>
                   </tbody>
                 </table>
 
                 <!-- Boutons -->
-                <div class="text-center mt-4">
-                  <button
-                    mat-raised-button
-                    color="primary"
-                    [disabled]="isSubmitting"
-                    (click)="handleOnSumit()"
-                    style="margin-right: 10px"
-                  >
-                    <mat-icon *ngIf="isSubmitting">hourglass_empty</mat-icon>
-                    {{ isSubmitting ? 'Mise à jour...' : 'Mettre à jour' }}
+                <div class="text-center">
+                  <button mat-raised-button (click)="handleOnSumit()" style="margin-right: 5px">
+                    Envoyer
                   </button>
-                  <button
-                    mat-raised-button
-                    color="warn"
-                    (click)="resetForm()"
-                    [disabled]="isSubmitting"
-                  >
-                    Effacer
-                  </button>
+                  <button mat-raised-button (click)="resetForm()">Effacer</button>
                 </div>
               </form>
             </div>

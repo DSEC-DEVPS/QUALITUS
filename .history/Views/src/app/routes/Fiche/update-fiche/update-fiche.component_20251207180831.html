@@ -13,7 +13,6 @@
                   </label>
 
                   <!-- Affichage du fichier existant -->
-                  <!-- Affichage du fichier existant 
                   <div
                     *ngIf="existingFileName && !isFileChanged"
                     class="existing-file-container mb-2 p-3 border rounded bg-light"
@@ -38,7 +37,7 @@
                       </button>
                     </div>
                   </div>
--->
+
                   <!-- Input pour nouveau fichier -->
                   <div class="file-input-wrapper">
                     <input
@@ -181,7 +180,7 @@
                                 <input
                                   class="form-check-input"
                                   type="checkbox"
-                                  [id]="'siteCheckbox_' + site.id"
+                                  id="flexSwitchCheckChecked"
                                   [checked]="selectedAccesSite.includes(site.id)"
                                   (change)="onAccesSiteCheckboxChange($event, site.id)"
                                 />
@@ -384,7 +383,6 @@
                           <input
                             class="form-check-input"
                             type="checkbox"
-                            [id]="'quizCheckbox_' + role.id"
                             [checked]="selectedQuizProfiles.includes(role.id)"
                             (change)="onQuizCheckboxChange($event, role.id)"
                           />
@@ -393,7 +391,6 @@
                           <input
                             class="form-check-input"
                             type="checkbox"
-                            [id]="'utiliteCheckbox_' + role.id"
                             [checked]="selectedUtiliteProfiles.includes(role.id)"
                             (change)="onUtiliteCheckboxChange($event, role.id)"
                           />
@@ -403,7 +400,6 @@
                           <input
                             class="form-check-input"
                             type="checkbox"
-                            [id]="'quizCheckbox_' + role.id"
                             [checked]="selectedQuizProfiles.includes(role.id)"
                             (change)="onQuizCheckboxChange($event, role.id)"
                           />
@@ -412,7 +408,6 @@
                           <input
                             class="form-check-input"
                             type="checkbox"
-                            [id]="'utiliteCheckbox_' + role.id"
                             [checked]="selectedUtiliteProfiles.includes(role.id)"
                             (change)="onUtiliteCheckboxChange($event, role.id)"
                           />
@@ -422,7 +417,6 @@
                         <input
                           class="form-check-input"
                           type="checkbox"
-                          [id]="'accesCheckbox_' + role.id"
                           [checked]="selectedAccesProfiles.includes(role.id)"
                           (change)="onAccesCheckboxChange($event, role.id)"
                         />
@@ -431,7 +425,6 @@
                         <input
                           class="form-check-input"
                           type="checkbox"
-                          [id]="'commentaireCheckbox_' + role.id"
                           [checked]="selectedAccesCommentaire.includes(role.id)"
                           (change)="onAccesCommentaireCheckboxChange($event, role.id)"
                         />
@@ -445,7 +438,7 @@
                   <button
                     mat-raised-button
                     color="primary"
-                    [disabled]="isSubmitting"
+                    [disabled]="snapForm.invalid || isSubmitting"
                     (click)="handleOnSumit()"
                     style="margin-right: 10px"
                   >

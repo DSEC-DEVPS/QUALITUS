@@ -350,7 +350,6 @@ export interface updateFiche {
   AccesUtilite: string | string[];
   AccesQuiz: string | string[];
   AccesCommentaire: string | string[];
-  extention: string;
   isChecked: boolean;
   Quiz: Quiz[];
   Site: string[];

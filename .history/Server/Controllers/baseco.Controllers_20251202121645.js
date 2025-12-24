@@ -2370,10 +2370,11 @@ const getOneFiche = async (req, res, next) => {
   }
   try {
     console.log(id);
-    const Query = `Select id,titre,id_Sla,id_Categorie,id_SousCategorie,dateReception,dateDebut,dateVisibilite,dateFin,Niveau as niveau,url,AccesSite,AccesProfil,AccesUtilite,AccesQuiz,AccesCommentaire,extention from B_FICHE where id=?`;
+    const Query = `Select id,titre,id_Sla,id_Categorie,id_SousCategorie,dateReception,dateDebut,dateVisibilite,Niveau as niveau,dateFin,AccesSite from B_FICHE where id=?`;
     const Query2 = `SELECT id,libelleQuestion,reponseQuestion,id_Fiche from B_QUIZ where id_Fiche=? `;
     const [resultat] = await db.query(Query, [id]);
     const [resultat2] = await db.query(Query2, [id]);
+    console.log(resultat);
     if (resultat2.length > 0) {
       resultat[0]["isChecked"] = true;
     } else {
@@ -2381,11 +2382,6 @@ const getOneFiche = async (req, res, next) => {
     }
     resultat[0]["Quiz"] = resultat2;
     resultat[0]["AccesSite"] = resultat[0].AccesSite.split(",");
-    resultat[0]["fichier"] = {
-      nom:
-        resultat[0].url.split("/chargements/")[1] + "." + resultat[0].extention,
-      url: resultat[0].url,
-    };
     console.log(resultat[0]);
     return res.status(200).send(resultat[0]);
   } catch (error) {

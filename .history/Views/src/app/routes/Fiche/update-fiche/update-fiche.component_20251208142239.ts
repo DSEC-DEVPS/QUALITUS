@@ -97,29 +97,28 @@ export class UpdateFicheComponent implements OnInit {
   selectedAccesSite: number[] = [];
   selectedAccesCommentaire: number[] = [];
 
-  private dataLoaded = false;
-
   constructor() {}
 
   ngOnInit() {
     this.ficheId = this.route.snapshot.params['id'];
+
     this.initializeForm();
     this.loadFormData();
   }
 
   private initializeForm() {
     this.snapForm = this.fb.group({
-      titre: [null],
-      id_Sla: [null],
-      dateReception: [null],
-      dateDebut: [null],
-      dateVisibilite: [null],
-      niveau: [null],
-      dateFin: [null],
-      id_Categorie: [null],
-      id_SousCategorie: [null],
-      AccesSite: [true],
-      Utilite: [true],
+      titre: [null, [Validators.required]],
+      id_Sla: [null, [Validators.required]],
+      dateReception: [null, [Validators.required]],
+      dateDebut: [null, [Validators.required]],
+      dateVisibilite: [null, [Validators.required]],
+      niveau: [null, [Validators.required]],
+      dateFin: [null, [Validators.required]],
+      id_Categorie: [null, [Validators.required]],
+      id_SousCategorie: [null, [Validators.required]],
+      AccesSite: [true, [Validators.required]],
+      Utilite: [true, [Validators.required]],
       isChecked: [false],
       Quiz1: this.fb.group({
         Question1: [null],
@@ -172,6 +171,7 @@ export class UpdateFicheComponent implements OnInit {
     this.userService.getAllFonction().subscribe({
       next: fonction => {
         this.ListeProfil = fonction;
+        this.initializeCheckboxes();
       },
       error: error => {
         console.error('Erreur lors du chargement des fonctions:', error);
@@ -196,89 +196,37 @@ export class UpdateFicheComponent implements OnInit {
           },
         });
 
-        // Charger les informations du fichier existant
-        /* if (resultat.fichier) {
-          this.existingFileName = resultat.fichier.nom || resultat.fichier.filename || resultat.fichier.name || 'Document existant';
-          this.existingFileUrl = resultat.fichier.url || resultat.fichier.path || resultat.fichier.chemin;
-          this.selectedFileName = this.existingFileName;
-          console.log('Fichier existant chargé:', this.existingFileName);
-        } else if (resultat.fileName || resultat.filename) {
-          this.existingFileName = resultat.fileName || resultat.filename;
-          this.existingFileUrl = resultat.fileUrl || resultat.filePath;
-          this.selectedFileName = this.existingFileName;
-          console.log('Fichier existant chargé (format alternatif):', this.existingFileName);
-        }*/
-
-        // Restaurer les autorisations Quiz
-        if (resultat.AccesQuiz) {
-          if (typeof resultat.AccesQuiz === 'string') {
-            this.selectedQuizProfiles = resultat.AccesQuiz.split(',')
-              .map((id: string) => parseInt(id.trim()))
-              .filter((id: number) => !isNaN(id));
-          } else if (Array.isArray(resultat.AccesQuiz)) {
-            this.selectedQuizProfiles = resultat.AccesQuiz.map((id: any) => parseInt(id));
-          }
-          console.log('Autorisations Quiz restaurées:', this.selectedQuizProfiles);
-        }
-
-        // Restaurer les autorisations Utilité
-        if (resultat.AccesUtilite) {
-          if (typeof resultat.AccesUtilite === 'string') {
-            this.selectedUtiliteProfiles = resultat.AccesUtilite.split(',')
-              .map((id: string) => parseInt(id.trim()))
-              .filter((id: number) => !isNaN(id));
-          } else if (Array.isArray(resultat.AccesUtilite)) {
-            this.selectedUtiliteProfiles = resultat.AccesUtilite.map((id: any) => parseInt(id));
-          }
-          console.log('Autorisations Utilité restaurées:', this.selectedUtiliteProfiles);
-        }
-
-        // Restaurer les autorisations Accès
-        if (resultat.AccesProfil) {
-          if (typeof resultat.AccesProfil === 'string') {
-            this.selectedAccesProfiles = resultat.AccesProfil.split(',')
-              .map((id: string) => parseInt(id.trim()))
-              .filter((id: number) => !isNaN(id));
-          } else if (Array.isArray(resultat.AccesProfil)) {
-            this.selectedAccesProfiles = resultat.AccesProfil.map((id: any) => parseInt(id));
-          }
-          console.log('Autorisations Accès restaurées:', this.selectedAccesProfiles);
-        }
-
-        // Restaurer les autorisations Commentaire
-        if (resultat.AccesCommentaire) {
-          if (typeof resultat.AccesCommentaire === 'string') {
-            this.selectedAccesCommentaire = resultat.AccesCommentaire.split(',')
-              .map((id: string) => parseInt(id.trim()))
-              .filter((id: number) => !isNaN(id));
-          } else if (Array.isArray(resultat.AccesCommentaire)) {
-            this.selectedAccesCommentaire = resultat.AccesCommentaire.map((id: any) =>
-              parseInt(id)
-            );
-          }
-          console.log('Autorisations Commentaire restaurées:', this.selectedAccesCommentaire);
-        }
-
-        // Restaurer les sites autorisés
-        if (resultat.AccesSite) {
-          if (typeof resultat.AccesSite === 'string') {
-            this.selectedAccesSite = resultat.AccesSite.split(',')
-              .map((id: string) => parseInt(id.trim()))
-              .filter((id: number) => !isNaN(id));
-          } else if (Array.isArray(resultat.AccesSite)) {
-            this.selectedAccesSite = resultat.AccesSite.map((id: any) => parseInt(id));
-          }
-        }
-        console.log('Sites autorisés restaurés:', this.selectedAccesSite);
-
-        // Marquer que les données ont été chargées
-        this.dataLoaded = true;
-
         // Remplir le formulaire avec les données existantes
         this.populateForm(resultat);
 
-        // Mettre à jour les valeurs d'autorisation dans le formulaire
-        this.updateAuthorizationFormValues();
+        // Gérer le fichier existant
+
+        this.snapForm.get('titre')?.setValue(resultat.titre);
+        this.snapForm.get('id_Sla')?.setValue(resultat.id_Sla);
+        this.snapForm.get('id_Categorie')?.setValue(resultat.id_Categorie);
+        this.snapForm.get('id_SousCategorie')?.setValue(resultat.id_SousCategorie);
+        this.snapForm.get('dateReception')?.setValue(resultat.dateReception.slice(0, 16));
+        this.snapForm.get('dateFin')?.setValue(resultat.dateFin.slice(0, 16));
+        this.snapForm.get('dateDebut')?.setValue(resultat.dateDebut.slice(0, 16));
+        this.snapForm.get('dateVisibilite')?.setValue(resultat.dateVisibilite.slice(0, 16));
+        this.snapForm.get('niveau')?.setValue(resultat.niveau);
+        this.snapForm.get('isChecked')?.setValue(resultat.isChecked);
+        console.log(resultat.AccesSite.length);
+        for (let i = 0; i < resultat.AccesSite.length; i++) {
+          console.log('valeur');
+        }
+        if (resultat.isChecked === true) {
+          this.snapForm.get('isChecked')?.setValue(resultat.isChecked);
+          //this.showQuestionnaireValue = !this.showQuestionnaireValue;
+          this.snapForm.get('Quiz1')?.get('Question1')?.setValue(resultat.Quiz[0].libelleQuestion);
+          this.snapForm.get('Quiz1')?.get('Reponse1')?.setValue(resultat.Quiz[0].reponseQuestion);
+          this.snapForm.get('Quiz2')?.get('Question2')?.setValue(resultat.Quiz[1].libelleQuestion);
+          this.snapForm.get('Quiz2')?.get('Reponse2')?.setValue(resultat.Quiz[1].reponseQuestion);
+          this.snapForm.get('Quiz3')?.get('Question3')?.setValue(resultat.Quiz[2].libelleQuestion);
+          this.snapForm.get('Quiz3')?.get('Reponse3')?.setValue(resultat.Quiz[2].reponseQuestion);
+          this.snapForm.get('Quiz4')?.get('Question4')?.setValue(resultat.Quiz[3].libelleQuestion);
+          this.snapForm.get('Quiz4')?.get('Reponse4')?.setValue(resultat.Quiz[3].reponseQuestion);
+        }
       },
       error: error => {
         console.error('Erreur lors du chargement de la fiche:', error);
@@ -305,7 +253,7 @@ export class UpdateFicheComponent implements OnInit {
 
     // Gérer le questionnaire si activé
     if (data.isChecked === true && data.Quiz && data.Quiz.length >= 4) {
-      this.showQuestionnaireValue = data.isChecked;
+      this.showQuestionnaireValue = true;
       this.snapForm.patchValue({
         Quiz1: {
           Question1: data.Quiz[0]?.libelleQuestion,
@@ -327,20 +275,6 @@ export class UpdateFicheComponent implements OnInit {
     }
   }
 
-  private updateAuthorizationFormValues() {
-    this.snapForm.patchValue({
-      quizAutorisation:
-        this.selectedQuizProfiles.length > 0 ? this.selectedQuizProfiles.join(',') : '',
-      utiliteAutorisation:
-        this.selectedUtiliteProfiles.length > 0 ? this.selectedUtiliteProfiles.join(',') : '',
-      accesAutorisation:
-        this.selectedAccesProfiles.length > 0 ? this.selectedAccesProfiles.join(',') : '',
-      siteAutorisation: this.selectedAccesSite.length > 0 ? this.selectedAccesSite.join(',') : '',
-      commentaireAutorisation:
-        this.selectedAccesCommentaire.length > 0 ? this.selectedAccesCommentaire.join(',') : '',
-    });
-  }
-
   onFileSelected(event: any) {
     const selectedFile = event.target.files[0];
 
@@ -356,11 +290,12 @@ export class UpdateFicheComponent implements OnInit {
       this.selectedFileName = this.existingFileName || 'Aucun fichier choisi';
       this.file = null;
       this.isFileChanged = false;
+      // Réinitialiser l'input
       event.target.value = '';
       return;
     }
 
-    // Vérifier la taille du fichier (max 10MB)
+    // Vérifier la taille du fichier (max 10MB par exemple)
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (selectedFile.size > maxSize) {
       this.toastSrv.warning('Le fichier est trop volumineux. Taille maximale : 10MB');
@@ -409,12 +344,6 @@ export class UpdateFicheComponent implements OnInit {
       return;
     }
 
-    // Vérifier qu'un fichier existe (soit existant, soit nouveau)
-    if (!this.existingFileName && !this.file) {
-      this.toastSrv.warning('Veuillez sélectionner un fichier');
-      return;
-    }
-
     this.isSubmitting = true;
     const formdata = new FormData();
 
@@ -422,38 +351,19 @@ export class UpdateFicheComponent implements OnInit {
     if (this.isFileChanged && this.file) {
       formdata.append('file', this.file);
       console.log('Nouveau fichier ajouté au FormData');
+    } else if (!this.existingFileName && !this.file) {
+      // Si aucun fichier existant et aucun nouveau fichier
+      this.toastSrv.warning('Veuillez sélectionner un fichier');
+      this.isSubmitting = false;
+      return;
     }
 
     // Ajouter les données du formulaire
     const formValue = this.snapForm.value;
-    console.log('Données du formulaire à envoyer:', formValue);
+    console.log('Données du formulaire:', formValue);
     formdata.append('data', JSON.stringify(formValue));
 
-    // Appel API pour mettre à jour la fiche
-    /*  this.userService.updateFiche(this.ficheId, formdata).subscribe({
-      next: (response) => {
-        console.log('Fiche mise à jour avec succès:', response);
-        this.toastSrv.success('Fiche mise à jour avec succès !');
-        this.isSubmitting = false;
-        
-        // Option: Recharger les données pour refléter les changements
-        this.loadFormData();
-      },
-      error: (error) => {
-        console.error('Erreur lors de la mise à jour de la fiche:', error);
-        
-        // Message d'erreur plus détaillé
-        let errorMessage = 'Erreur lors de la mise à jour de la fiche';
-        if (error.error && error.error.message) {
-          errorMessage = error.error.message;
-        } else if (error.message) {
-          errorMessage = error.message;
-        }
-        
-        this.toastSrv.error(errorMessage);
-        this.isSubmitting = false;
-      }
-    });*/
+    // Utiliser updateFiche au lieu de addFiche
   }
 
   checkValue(event: any) {
@@ -549,12 +459,6 @@ export class UpdateFicheComponent implements OnInit {
   }
 
   initializeCheckboxes() {
-    // Ne pas initialiser si les données ont déjà été chargées depuis la base
-    if (this.dataLoaded) {
-      console.log("Données déjà chargées, pas d'initialisation par défaut");
-      return;
-    }
-
     // Initialiser les checkboxes par défaut si aucune autorisation n'est définie
     if (this.selectedQuizProfiles.length === 0) {
       this.ListeProfil.forEach(role => {
@@ -621,7 +525,13 @@ export class UpdateFicheComponent implements OnInit {
     }
 
     // Mettre à jour les valeurs du formulaire
-    this.updateAuthorizationFormValues();
+    this.snapForm.patchValue({
+      quizAutorisation: this.selectedQuizProfiles.join(','),
+      utiliteAutorisation: this.selectedUtiliteProfiles.join(','),
+      accesAutorisation: this.selectedAccesProfiles.join(','),
+      siteAutorisation: this.selectedAccesSite.join(','),
+      commentaireAutorisation: this.selectedAccesCommentaire.join(','),
+    });
   }
 
   getErrorMessage(form: FormGroup<ControlsOf<IProfile>>) {
@@ -657,13 +567,10 @@ export class UpdateFicheComponent implements OnInit {
     this.file = null;
     this.isFileChanged = false;
     this.selectedFileName = 'Aucun fichier choisi';
-    this.existingFileName = null;
-    this.existingFileUrl = null;
     this.selectedQuizProfiles = [];
     this.selectedUtiliteProfiles = [];
     this.selectedAccesProfiles = [];
     this.selectedAccesSite = [];
     this.selectedAccesCommentaire = [];
-    this.dataLoaded = false;
   }
 }

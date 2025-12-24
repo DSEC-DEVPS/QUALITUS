@@ -109,17 +109,17 @@ export class UpdateFicheComponent implements OnInit {
 
   private initializeForm() {
     this.snapForm = this.fb.group({
-      titre: [null],
-      id_Sla: [null],
-      dateReception: [null],
-      dateDebut: [null],
-      dateVisibilite: [null],
-      niveau: [null],
-      dateFin: [null],
-      id_Categorie: [null],
-      id_SousCategorie: [null],
-      AccesSite: [true],
-      Utilite: [true],
+      titre: [null, [Validators.required]],
+      id_Sla: [null, [Validators.required]],
+      dateReception: [null, [Validators.required]],
+      dateDebut: [null, [Validators.required]],
+      dateVisibilite: [null, [Validators.required]],
+      niveau: [null, [Validators.required]],
+      dateFin: [null, [Validators.required]],
+      id_Categorie: [null, [Validators.required]],
+      id_SousCategorie: [null, [Validators.required]],
+      AccesSite: [true, [Validators.required]],
+      Utilite: [true, [Validators.required]],
       isChecked: [false],
       Quiz1: this.fb.group({
         Question1: [null],

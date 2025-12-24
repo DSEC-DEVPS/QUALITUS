@@ -328,14 +328,9 @@ export interface profile_assignation {
   id: number;
   nom: string;
 }
-export interface file {
-  nom: string;
-  url: string;
-}
 export interface updateFiche {
   id: number;
   titre: string;
-  fichier: file;
   id_Sla: number;
   id_Categorie: number;
   id_SousCategorie: number;
@@ -344,14 +339,6 @@ export interface updateFiche {
   dateVisibilite: string;
   dateFin: string;
   niveau: string;
-  url: string;
-  AccesSite: string | string[];
-  AccesProfil: string | string[];
-  AccesUtilite: string | string[];
-  AccesQuiz: string | string[];
-  AccesCommentaire: string | string[];
-  extention: string;
   isChecked: boolean;
   Quiz: Quiz[];
-  Site: string[];
 }
