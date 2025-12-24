@@ -248,6 +248,10 @@ export class UserService {
   getAllFicheByIDFiche(id: number): Observable<url> {
     return this.http.get<url>(`/api/v1/fiche_by_id_Fiche/${id}`);
   }
+  downloadFileByUrl(url: string) {
+    return this.http.get(url, { responseType: 'blob' });
+  }
+
   getAllExcelFicheByIDFiche(id: number): Observable<Blob> {
     return this.http
       .get(`/api/v1/excel_fiche_by_id_Fiche/${id}`, {
