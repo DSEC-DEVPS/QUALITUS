@@ -303,3 +303,20 @@ hr {
   padding: 0 10px;
   min-width: 70px;
 }
+
+.mdc-button:disabled {
+    cursor: default;
+    pointer-events: none;
+    background-color: #cc7a00;
+}
+.mat-mdc-button:not(:disabled) {
+    color: var(--mdc-text-button-label-text-color, var(--mat-app-primary));
+    background-color: #cc7a00;
+}
+html .mat-accent.mat-mdc-radio-button {
+    --mdc-radio-selected-focus-icon-color: #cc7a00;
+    --mdc-radio-selected-hover-icon-color: #cc7a00;
+    --mdc-radio-selected-icon-color: #cc7a00;
+    --mdc-radio-selected-pressed-icon-color: #cc7a00;
+    --mat-radio-checked-ripple-color: #cc7a00;
+}

@@ -98,6 +98,7 @@ export interface reporting {
   ETAT: string;
   nom_utilisateur: string;
   exactitude: string;
+  on_time:string;
   dateControle: string;
 }
 export interface Utilisateur {
@@ -353,5 +354,4 @@ export interface updateFiche {
   extention: string;
   isChecked: boolean;
   Quiz: Quiz[];
-  Site: string[];
 }

@@ -201,6 +201,52 @@ CREATE TABLE IF NOT EXISTS B_NOTIFICATION (
   FOREIGN KEY(id_FICHE) REFERENCES B_FICHE(id)
 );
 
+-- Schéma de base de données pour le système de notifications
+
+-- Table des notifications
+CREATE TABLE IF NOT EXISTS B_notifications (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  id_UTILISATEUR INT NOT NULL,
+  id_NOTIFICATION INT NOT NULL,
+  id_FICHE INT NOT NULL,
+  titre VARCHAR(255) NOT NULL,
+  createdBy INT NOT NULL,
+  isRead BOOLEAN DEFAULT false,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  readAt TIMESTAMP NULL,
+  
+  -- Clés étrangères
+  FOREIGN KEY (id_UTILISATEUR) REFERENCES B_UTILISATEUR(id) ON DELETE CASCADE,
+  FOREIGN KEY (id_FICHE) REFERENCES B_FICHE(id) ON DELETE CASCADE,
+  FOREIGN KEY (id_NOTIFICATION) REFERENCES B_NOTIFICATION(id) ON DELETE CASCADE,
+  FOREIGN KEY (createdBy) REFERENCES B_UTILISATEUR(id) ON DELETE CASCADE,
+  
+  -- Index pour améliorer les performances
+  INDEX idx_user_read (id_UTILISATEUR, isRead),
+  INDEX idx_created_at (createdAt DESC)
+);
+
+-- Si vous devez ajouter la colonne isRead à une table existante
+-- ALTER TABLE notifications ADD COLUMN isRead BOOLEAN DEFAULT false;
+-- ALTER TABLE notifications ADD COLUMN readAt TIMESTAMP NULL;
+
+-- Index pour optimiser les requêtes
+-- CREATE INDEX idx_user_read ON notifications(userId, isRead);
+-- CREATE INDEX idx_created_at ON notifications(createdAt DESC);
+
+-- Exemple de requête pour obtenir le nombre de notifications non lues
+-- SELECT COUNT(*) as unreadCount 
+-- FROM notifications 
+-- WHERE userId = ? AND isRead = false;
+
+-- Exemple de requête pour obtenir les notifications récentes
+-- SELECT n.*, u.nom 
+-- FROM notifications n
+-- INNER JOIN users u ON n.createdBy = u.id
+-- WHERE n.userId = ?
+-- ORDER BY n.createdAt DESC
+-- LIMIT 50;
+
 CREATE TABLE IF NOT EXISTS B_HISTORIQUE (
   id INT AUTO_INCREMENT PRIMARY KEY,
   dateConsultation DATETIME,

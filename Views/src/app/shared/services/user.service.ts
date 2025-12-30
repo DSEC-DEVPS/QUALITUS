@@ -88,7 +88,7 @@ export class UserService {
         score: score,
         message: message,
       },
-      duration: 5000,
+      duration: 10000,
       horizontalPosition: 'center',
       verticalPosition: 'top',
       panelClass: ['score-notification-panel'],
@@ -233,6 +233,9 @@ export class UserService {
   addFiche(formData: FormData): Observable<message> {
     return this.http.post<message>(`/api/v1/fiche/add`, formData);
   }
+    updateFiche(id:number,formData:FormData):Observable<message>{
+      return this.http.put<message>(`/api/v1/fiche/update/${id}`,formData);
+    }
   getAllFiche(): Observable<Fiche[]> {
     return this.http.get<Fiche[]>(`/api/v1/fiche/all`);
   }
@@ -242,9 +245,11 @@ export class UserService {
   getOneFiche(id: number): Observable<updateFiche> {
     return this.http.get<updateFiche>(`/api/v1/one_fiche/${id}`);
   }
+
   getAllFicheByGestionnaire(): Observable<Fiche[]> {
     return this.http.get<Fiche[]>(`/api/v1/fiche_by_gestionnaire/all`);
   }
+
   getAllFicheByIDFiche(id: number): Observable<url> {
     return this.http.get<url>(`/api/v1/fiche_by_id_Fiche/${id}`);
   }
@@ -275,8 +280,8 @@ export class UserService {
       form
     );
   }
-  getResultat_controle_actif(): Observable<Fiche[]> {
-    return this.http.get<Fiche[]>(`/api/v1/resultat_controle_actif`);
+  getResultat_controle_actif(quantite_echantillon:number): Observable<Fiche[]> {
+    return this.http.post<Fiche[]>(`/api/v1/resultat_controle_actif`,quantite_echantillon);
   }
   getResultat_controle_m_1(): Observable<Fiche[]> {
     return this.http.get<Fiche[]>(`/api/v1/resultat_controle_m_1`);
