@@ -32,8 +32,13 @@
                 <mat-icon
                   style="color: #ff8e36; cursor: pointer"
                   matTooltip="Modifer"
+<<<<<<< HEAD
                   matTooltipPosition="above"
                   (click)="update(fiche!.id)"
+=======
+                  matTooltipPosition="below"
+                  (click)="update(fiche.id)"
+>>>>>>> temp-merge-branch
                   >edit</mat-icon
                 >
                 <mat-icon
@@ -42,7 +47,7 @@
                   "
                   style="color: #ff8e36; margin-left: 15px; cursor: pointer"
                   matTooltip="archiver"
-                  matTooltipPosition="above"
+                  matTooltipPosition="below"
                   >archive</mat-icon
                 >
                 <mat-icon
@@ -54,7 +59,7 @@
                   "
                   style="color: #ff8e36; margin-left: 15px; cursor: pointer"
                   matTooltip="supprimer"
-                  matTooltipPosition="above"
+                  matTooltipPosition="below"
                   >delete_forever</mat-icon
                 >
               } @else {}
@@ -278,7 +283,7 @@
         }
       </div>
     </div>
-    @if (fiche?.Utilite) {
+    @if (fiche.Utilite ||show_value_Quiz||fiche.Commentaire) {
       <div class="col-md-3 col-sm-12 mt-md-5 mt-sm-1">
         <mat-tab-group *ngIf="fiche!.Commentaire || fiche!.Utilite || fiche!.Quiz.length > 0">
           <!-- Onglet Utilité -->

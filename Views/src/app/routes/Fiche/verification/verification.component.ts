@@ -81,12 +81,13 @@ export class VerificationComponent implements OnInit {
   private readonly router = inject(Router);
   private fb = inject(FormBuilder);
   private readonly toast = inject(ToastrService);
+  form_echantillon!: FormGroup;
   dateForm!: FormGroup;
   form!: FormGroup;
   form_M_1!: FormGroup;
   readonly dialog = inject(MatDialog);
   show_echantillon_actif = false;
-  displayedColumns = ['id', 'titre', 'type', 'ETAT', 'Gestionnaire', 'exactitude'];
+  displayedColumns = ['id', 'titre', 'type', 'dateDebut','dateFin', 'Gestionnaire', 'exactitude'];
   displayedColumns_reporting = [
     'id',
     'id_CONTROLE',
@@ -94,6 +95,7 @@ export class VerificationComponent implements OnInit {
     'ETAT',
     'nom_utilisateur',
     'exactitude',
+    'on_time',
     'dateControle',
   ];
   score = 0;
@@ -114,7 +116,9 @@ export class VerificationComponent implements OnInit {
     this.form_M_1 = this.fb.group({
       items: this.fb.array([]),
     });
-
+this.form_echantillon=this.fb.group({
+ quantite_echantillon:[null,[Validators.required]]
+});
     this.dateForm = this.fb.group({
       typeControle: ['', [Validators.required]],
       dateDebut: ['', [Validators.required]],
@@ -196,7 +200,7 @@ export class VerificationComponent implements OnInit {
 
   display_echantillon_actif() {
     this.show_echantillonnage_template = true;
-    this.userService.getResultat_controle_actif().subscribe({
+    this.userService.getResultat_controle_actif(this.form_echantillon.value).subscribe({
       next: resultat => {
         // Mettre à jour la source de données
         this.dataSource.data = resultat;

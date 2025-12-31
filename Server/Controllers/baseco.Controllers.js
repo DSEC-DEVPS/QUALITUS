@@ -407,7 +407,7 @@ const getAllSla = async (req, res, next) => {
 };
 const getSlaById = async (req, res, next) => {
   const id = req.params.id;
-  console.log(id);
+  //console.log(id);
   try {
     const Query = `SELECT * from B_SLA WHERE id=?`;
     const [resultat] = await db.query(Query, [id]);
@@ -444,7 +444,7 @@ const updateSla = async (req, res, next) => {
 };
 const deleteSla = async (req, res, next) => {
   const id = req.params.id;
-  console.log(id);
+  //console.log(id);
   if (!id) {
     return res
       .status(403)
@@ -924,22 +924,122 @@ const addNotification = async (req, res, next) => {
       message: " vous venez d'ajouter une nouvelle fiche avec succes.",
     });
   } catch (error) {
-    console.log();
+    //console.log();
     res.status(500).json({ message: "Error request." });
   }
 };
-const getAllNotification = async (req, res, next) => {
+const getAllNotification = async (req, res) => {
   try {
-    const Query = ` SELECT A.id_FICHE,C.titre,A.message,A.TYPE as type,B.nom,C.titre,A.url from
-     B_NOTIFICATION A INNER JOIN B_UTILISATEUR B on A.id_UTILISATEUR=B.id
-     INNER JOIN B_FICHE C on A.id_FICHE=C.id ORDER BY A.dateReception DESC`;
-    const [resultat] = await db.query(Query);
-    return res.status(200).send(resultat);
+    const userId = req.auth.userId; // Depuis votre middleware d'authentification
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Non authentifié' });
+    }
+
+    // Exemple avec une base de données SQL
+    const [notifications] = await db.query(`
+      SELECT 
+        BN.id,
+        BN.id_FICHE,
+        f.titre,
+        IF(n.id_NOTIFICATION is null,0,1 ) isRead,
+        BN.dateReception as createdAt,
+        u.nom
+      FROM B_NOTIFICATION BN 
+      LEFT JOIN (select id_NOTIFICATION,createdBy from B_notifications where createdBy=?) n
+      on BN.id=n.id_NOTIFICATION
+      INNER JOIN B_UTILISATEUR u on BN.id_UTILISATEUR=u.ID
+      INNER JOIN B_FICHE f on BN.id_FICHE=f.id
+      ORDER BY n.createdBy ASC
+    `,[userId]);
+    console.log(notifications);
+    return res.status(200).json(notifications);
   } catch (error) {
-    console.log(error);
-    throw error;
+    console.error('Erreur lors de la récupération des notifications:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
-};
+}
+const redOneNotifcation= async (req, res) => {
+  try {
+    const notificationId = parseInt(req.params.id);
+    const userId = req.auth.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Non authentifié' });
+    }
+
+    // Vérifier que la notification appartient à l'utilisateur
+    const [result1]=await db.query(`Select F.id, F.titre from B_NOTIFICATION BN ,B_FICHE F where BN.id_FICHE=F.id and BN.id=?`,[notificationId]);
+    const createdAt=new Date();
+    const titre=result1[0].titre;
+    const isRead=true;
+    const id_FICHE=result1[0].id;
+    const result = await db.query(`
+      INSERT INTO B_notifications (id_UTILISATEUR,id_NOTIFICATION,id_FICHE,titre,createdBy,isRead,createdAt,readAt) VALUES(?,?,?,?,?,?,?,?) `, [userId,notificationId,id_FICHE,titre,userId,isRead,createdAt,createdAt]);
+   /* if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Notification non trouvée' });
+    }*/
+    
+    res.json({ success: true, message: 'Notification marquée comme lue' });
+  } catch (error) {
+    console.error('Erreur lors du marquage de la notification:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+const redAllNotification=async (req, res) => {
+  try {
+    const { ids } = req.body;
+    const userId = req.auth.userId;
+    console.log(ids);
+    if (!userId) {
+      return res.status(401).json({ error: 'Non authentifié' });
+    }
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'IDs invalides' });
+    }
+
+    // Marquer toutes les notifications spécifiées comme lues
+    const result = await db.query(`
+      UPDATE B_notifications 
+      SET isRead = true, readAt = NOW()
+      WHERE id IN (?) AND id_UTILISATEUR = ?
+    `, [ids, userId]);
+    
+    res.json({ 
+      success: true, 
+      message: `${result.affectedRows} notification(s) marquée(s) comme lue(s)` 
+    });
+  } catch (error) {
+    console.error('Erreur lors du marquage des notifications:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+const createNotification=async (req ,res) => {
+  try {
+    const { userId, id_FICHE, titre } = req.body;
+    const createdBy = req.auth.userId;
+    
+    if (!userId || !id_FICHE || !titre) {
+      return res.status(400).json({ error: 'Données manquantes' });
+    }
+
+    const result = await db.query(`
+      INSERT INTO notifications (userId, id_FICHE, titre, createdBy, isRead, createdAt)
+      VALUES (?, ?, ?, ?, false, NOW())
+    `, [userId, id_FICHE, titre, createdBy]);
+    
+    res.status(201).json({ 
+      success: true, 
+      id: result.insertId,
+      message: 'Notification créée' 
+    });
+  } catch (error) {
+    console.error('Erreur lors de la création de la notification:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
 /** fin de controllers historique */
 /*controlleurs sur les fonctionnalités de  COMMENTAIRE*/
 
@@ -1043,7 +1143,7 @@ const getOneMotifMaVoixCompte = async (req, res, next) => {
 const updateMotifMaVoixCompte = async (req, res, next) => {
   const { id } = req.params;
   const { nomMotif } = req.body;
-  console.log(nomMotif);
+  //console.log(nomMotif);
   try {
     if (!nomMotif) {
       return res
@@ -1072,7 +1172,7 @@ const deleteMotifMaVoixCompte = async (req, res, next) => {
 const addMaVoixCompte = async (req, res, next) => {
   const { motif_ma_voix_compte, message } = req.body;
   const userId = req.auth.userId;
-  console.log(req.body);
+  //console.log(req.body);
   if (!motif_ma_voix_compte || !message) {
     return res
       .status(403)
@@ -1138,8 +1238,9 @@ const getAllExport = async (req, res, next) => {
           } else {
             if (dataType === "Utilité") {
               Query = `SELECT FCH.titre as DESCRIPTION,UT.nom as NOM,UT.nom_utilisateur as LOGIN,ST.nom as SITE,
-            BS.utilite as UTILITE,DATE_FORMAT(BS.dateSondage,'%Y-%m-%d %H:%i:%s' )as DATE_SONDAGE
+           IF(BS.utilite=1,'OUI','NON') as UTILITE,DATE_FORMAT(BS.dateSondage,'%Y-%m-%d %H:%i:%s' )as DATE_SONDAGE,BC.message
             FROM B_SONDAGE BS 
+            LEFT JOIN B_COMMENTAIRE BC on BS.id_FICHE=BC.id_FICHE
             LEFT JOIN B_FICHE FCH on BS.id_FICHE=FCH.id
             LEFT JOIN B_UTILISATEUR UT on BS.id_UTILISATEUR=UT.id
             LEFT JOIN B_SITE ST on UT.id_Site=ST.id
@@ -1333,14 +1434,14 @@ const getAllDashboard = async (req, res, next) => {
       model_on_time["amount"] = `${taux_on_time} %`;
       model_on_time["progress"].value = taux_on_time;
     } else {
-      console.log(resultat4);
-      console.log(resultat5);
+      //console.log(resultat4);
+      //console.log(resultat5);
       const taux_on_time = Math.round(
         (resultat4[0].nombre_chargement_on_time /
           resultat5[0].nombre_chargement) *
           100
       );
-      console.log(taux_on_time);
+      //console.log(taux_on_time);
       model_on_time["amount"] = `${taux_on_time} %`;
       model_on_time["progress"].value = taux_on_time;
     }
@@ -1417,8 +1518,8 @@ const getAllDashboard = async (req, res, next) => {
       model_taux_lecture["amount"] = `${taux_lecture} %`;
       model_taux_lecture["progress"].value = taux_lecture;
     } else {
-      console.log(resultat9);
-      console.log(resultat1);
+      //console.log(resultat9);
+      //console.log(resultat1);
       const taux_lecture = Math.round(
         (resultat9[0].nombre_chargement_lu / resultat5[0].nombre_chargement) *
           100
@@ -1435,7 +1536,7 @@ const getAllDashboard = async (req, res, next) => {
     retour_table[5] = model_taux_lecture_J;
     retour_table[6] = model_taux_lecture_J_2;
     retour_table[7] = model_taux_lecture;
-    // console.log(resultat10[0]);
+    // //console.log(resultat10[0]);
     return res.status(200).send(retour_table);
   } catch (error) {
     console.log(error);
@@ -1694,7 +1795,7 @@ const getAllDashboard_admin = async (req, res, next) => {
     retour_table[5] = model_taux_lecture_J;
     retour_table[6] = model_taux_lecture_J_2;
     retour_table[7] = model_taux_lecture;
-    // console.log(resultat10[0]);
+    // //console.log(resultat10[0]);
     return res.status(200).send(retour_table);
   } catch (error) {
     console.log(error);
@@ -1708,7 +1809,7 @@ const getStatistique_par_site = async (req, res, next) => {
     const Query_taux_lecture_J = `SELECT COUNT(*) as nombre_chargement_lu_J from (SELECT id_FICHE,MIN(dateConsultation) as min_dateConsultation from B_HISTORIQUE GROUP BY id_FICHE)A INNER JOIN B_FICHE FCH on A.id_FICHE=FCH.id where  DATE_FORMAT(A.min_dateConsultation,'%Y-%m-%d')=DATE_FORMAT(FCH.dateEnregistrement,'%Y-%m-%d') ;`;
     const [resultat1] = await db.query(Query_allSite);
     resultat1.forEach(async (element) => {
-      console.log(element);
+      //console.log(element);
       /* const [resultat2] = await db.query(Query2,[element.id]);
       element["nombre_utilisateur_sur_ce_site"]=resultat2[0].nombre_utilisateur_sur_ce_site
     */
@@ -2006,9 +2107,9 @@ const method_addNotification = async (
 /** debut de controllers FICHE  */
 
 const addFiche = async (req, res, next) => {
-  console.log(req.body);
+  //console.log(req.body);
   const data = JSON.parse(req.body.data);
-  console.log(data);
+  //console.log(data);
   const userId = req.auth.userId;
   const extention = path.extname(req.file.filename);
   // const url = `${req.protocol}://${req.get("host")}/chargements/${
@@ -2145,9 +2246,9 @@ const getAllFiche = async (req, res, next) => {
     const [resultat1] = await db.query(Query2, [userId]);
     const id_Site = `%${resultat1[0].id_Site}%`;
     const id_Fonction = `%${resultat1[0].id_Fonction}%`;
-    console.log(id_Site, id_Fonction);
+    //console.log(id_Site, id_Fonction);
     const [resutat] = await db.query(Query, [ETAT, id_Site, id_Fonction]);
-    console.log(resutat);
+    //console.log(resutat);
     return res.status(200).send(resutat);
   } catch (error) {
     console.error("Erreur getAllFiche:", error);
@@ -2235,7 +2336,7 @@ const getAllFicheByIDFiche = async (req, res, next) => {
       await db.query(Query3, [dateConsultation, userId, id]);
       const [resultat_id_fonction] = await db.query(Query5, [userId]);
       const id_Fonction = `${resultat_id_fonction[0].id_Fonction.toString()}`;
-      console.log(id_Fonction);
+      //console.log(id_Fonction);
       if (resultat[0].AccesUtilite.includes(`${id_Fonction}`)) {
         resultat[0]["Utilite"] = true;
       } else {
@@ -2274,7 +2375,7 @@ const getAllFicheByIDFiche = async (req, res, next) => {
     delete resultat[0].AccesUtilite;
     delete resultat[0].AccesQuiz;
     delete resultat[0].AccesCommentaire;
-    console.log(resultat[0]);
+    //console.log(resultat[0]);
     return res.status(200).send(resultat[0]);
   } catch (error) {
     console.log(error);
@@ -2304,19 +2405,19 @@ const getExcelFile = async (req, res, next) => {
       : path.join("/chargements", filePath);
     const fullPath2 = path.join(__dirname, "..", fullPath);
 
-    console.log("Chemins du fichier:");
-    console.log("- Path relatif:", filePath);
-    console.log("- Full path 1:", fullPath);
-    console.log("- Full path 2:", fullPath2);
+    //console.log("Chemins du fichier:");
+    //console.log("- Path relatif:", filePath);
+    //console.log("- Full path 1:", fullPath);
+    //console.log("- Full path 2:", fullPath2);
 
     if (!fs.existsSync(fullPath2)) {
-      console.log("Fichier non trouvé à:", fullPath2);
+      //console.log("Fichier non trouvé à:", fullPath2);
       return res.status(404).json({
         message: "Fichier non trouvé",
       });
     }
 
-    console.log("Fichier trouvé, lecture en cours...");
+    //console.log("Fichier trouvé, lecture en cours...");
 
     // Utiliser une promesse pour traiter la lecture du fichier de manière plus claire
     fs.readFile(fullPath2, (err, data) => {
@@ -2329,7 +2430,7 @@ const getExcelFile = async (req, res, next) => {
       }
 
       // Vérifier que data est bien présent et de la bonne taille
-      console.log("Fichier lu avec succès, taille:", data.length, "octets");
+      //console.log("Fichier lu avec succès, taille:", data.length, "octets");
 
       try {
         // Définir les en-têtes pour un fichier Excel
@@ -2344,9 +2445,9 @@ const getExcelFile = async (req, res, next) => {
         res.setHeader("Content-Length", data.length);
 
         // Envoyer le fichier et terminer la réponse
-        console.log("Envoi du fichier en cours...");
+        //console.log("Envoi du fichier en cours...");
         res.status(200).send(data);
-        console.log("Fichier envoyé avec succès");
+        //console.log("Fichier envoyé avec succès");
       } catch (sendError) {
         console.error("Erreur lors de l'envoi de la réponse:", sendError);
         // Ne pas essayer d'envoyer une autre réponse si celle-ci a échoué
@@ -2369,7 +2470,7 @@ const getOneFiche = async (req, res, next) => {
       .json({ message: "Merci de bien renseigner les paramettres." });
   }
   try {
-    console.log(id);
+    //console.log(id);
     const Query = `Select id,titre,id_Sla,id_Categorie,id_SousCategorie,dateReception,dateDebut,dateVisibilite,dateFin,Niveau as niveau,url,AccesSite,AccesProfil,AccesUtilite,AccesQuiz,AccesCommentaire,extention from B_FICHE where id=?`;
     const Query2 = `SELECT id,libelleQuestion,reponseQuestion,id_Fiche from B_QUIZ where id_Fiche=? `;
     const [resultat] = await db.query(Query, [id]);
@@ -2380,13 +2481,12 @@ const getOneFiche = async (req, res, next) => {
       resultat[0]["isChecked"] = false;
     }
     resultat[0]["Quiz"] = resultat2;
-    resultat[0]["AccesSite"] = resultat[0].AccesSite.split(",");
     resultat[0]["fichier"] = {
       nom:
         resultat[0].url.split("/chargements/")[1] + "." + resultat[0].extention,
       url: resultat[0].url,
     };
-    console.log(resultat[0]);
+    //console.log(resultat[0]);
     return res.status(200).send(resultat[0]);
   } catch (error) {
     console.log(error);
@@ -2417,7 +2517,70 @@ const getAllFicheByIdCategorieAndIdSousCategorie = async (req, res, next) => {
     throw error;
   }
 };
-const updateFiche = async (req, res, next) => {};
+const updateFiche = async (req, res, next) => {
+ const data = JSON.parse(req.body.data);
+  //console.log(data);
+  const userId = req.auth.userId;
+  const {id}=req.params;
+  
+
+  try {
+    if(req.file){
+     const extention = path.extname(req.file.filename);
+  // const url = `${req.protocol}://${req.get("host")}/chargements/${
+  const url = `/chargements/${req.file.filename}`;
+  const Query=`UPDATE B_FICHE set url=? where id=?`;
+  await db.query(Query,[url,id]);
+  }
+    if(data['isChecked']){
+      const Query=`DELETE FROM B_QUIZ where id_FICHE=?`;
+      await db.query(Query,[id]);
+      const Query2=`INSERT INTO B_QUIZ (libelleQuestion,reponseQuestion,dateCreation,id_Fiche) VALUES (?,?,?,?) `;
+          const dateEnregistrement = new Date(); 
+      await db.query(Query2, [
+        data.Quiz1.Question1,
+        data.Quiz1.Reponse1,
+        dateEnregistrement,
+        id,
+      ]);
+      await db.query(Query2, [
+        data.Quiz2.Question2,
+        data.Quiz2.Reponse2,
+        dateEnregistrement,
+        id,
+      ]);
+      await db.query(Query2, [
+        data.Quiz3.Question3,
+        data.Quiz3.Reponse3,
+        dateEnregistrement,
+        id,
+      ]);
+      await db.query(Query2, [
+        data.Quiz4.Question4,
+        data.Quiz4.Reponse4,
+        dateEnregistrement,
+        id,
+      ]);
+   
+    }
+    // suppression des questionnaire dans json data
+    delete data.isChecked;
+    delete data.Quiz1;
+    delete data.Quiz2;
+    delete data.Quiz3;
+    delete data.Quiz4;
+    Object.entries(data).forEach(async([key, value]) => {
+  if (value !== null && value !== undefined) {
+    const Query=`UPDATE B_FICHE set ${key}=? where id=?`;
+    await db.query(Query,[value,id]);
+  }});
+    return res.status(201).json({message:"La modification a été bien effectuée."});
+  } catch (error) {
+  console.log(error);
+    throw error;  
+  }
+
+};
 const deleteFiche = async (req, res, next) => {
   const userId = req.auth.userId;
   const { id } = req.params;
@@ -2745,7 +2908,6 @@ const change_password = async (req, res, next) => {
 };
 const assignation_agent = async (req, res, next) => {
   const { id_SUPERVISEUR, liste_agents } = req.body;
-  console.log(req.body);
   try {
     const Query = `select * from B_R_SUPERVISEUR_AGENT RSA INNER JOIN B_UTILISATEUR UT on RSA.id_AGENT=UT.id where  UT.nom_utilisateur=?`;
     const Query_select_id_agent = `SELECT id from B_UTILISATEUR where nom_utilisateur=?`;
@@ -2755,7 +2917,6 @@ const assignation_agent = async (req, res, next) => {
     for (let index = 0; index < liste_agents.length; index++) {
       const [resultat] = await db.query(Query, [liste_agents[index]]);
       if (resultat.length > 0) {
-        console.log("update");
         const [resultat] = await db.query(Query_select_id_agent, [
           liste_agents[index],
         ]);
@@ -2809,9 +2970,7 @@ const response_Quiz = async (req, res, next) => {
     const [resultat1] = await db.query(Query1, [userId, id]);
     let nb_restest = 0;
     if (resultat1.length > 0) {
-      console.log("UPDATEEEEEEE");
       const id = resultat1[0].id;
-      console.log("id=", id);
       const nb_retest_old = resultat1[0].NB_RETEST;
       nb_restest = nb_retest_old + 1;
       const resultat = await db.query(Query2, [
@@ -3038,7 +3197,7 @@ const statistic_TC = async (req, res, next) => {
     resultat["nombre_fiche_lue"] = resultat1[0].nombre_fiche_lue;
     resultat["nombre_sondage_effectue"] = resultat2[0].nombre_sondage_effectue;
     resultat["nombre_quiz_effectue"] = resultat3[0].nombre_quiz_effectue;
-    console.log(resultat);
+   // //console.log(resultat);
     return res.status(200).send(resultat);
   } catch (error) {
     console.log(error);
@@ -3081,7 +3240,7 @@ const statistic_TC_FOR_SUP = async (req, res, next) => {
       resultat5[0].nombre_total_quiz_en_retest;
     resultat["nombre_total_quiz_Echecs"] =
       resultat6[0].nombre_total_quiz_Echecs;
-    console.log(resultat);
+    //console.log(resultat);
     return res.status(200).send(resultat);
   } catch (error) {
     console.log(error);
@@ -3092,19 +3251,22 @@ const statistic_TC_FOR_SUP = async (req, res, next) => {
 /** */
 /***  debut des contrôles pour le profil Gestionnaire d'exactitude */
 const controle_actif = async (req, res, next) => {
+  const {quantite_echantillon}=req.body
+  //console.log(quantite_echantillon);
   try {
     const dateCreation = new Date();
     const yers = new Date(
       dateCreation.getFullYear(),
-      dateCreation.getMonth() - 1,
+      dateCreation.getMonth(),
       dateCreation.getDay()
     );
+   // console.log(yers);
     const ETAT = "ACTIF";
-    const Query = `SELECT FCH.id, FCH.titre,sl.type,FCH.ETAT,DATE_FORMAT(FCH.dateFin,'%Y-%m-%d') as dateFin,UT.nom_utilisateur as Gestionnaire FROM B_FICHE FCH
+    const Query = `SELECT FCH.id, FCH.titre,sl.type,DATE_FORMAT(FCH.dateDebut,'%Y-%m-%d') as dateDebut,DATE_FORMAT(FCH.dateFin,'%Y-%m-%d') as dateFin,UT.nom_utilisateur as Gestionnaire FROM B_FICHE FCH
     LEFT JOIN B_SLA sl on FCH.id=sl.id
     LEFT JOIN B_UTILISATEUR UT on FCH.id_Gestionnaire=UT.id 
-    where  DATE_FORMAT(FCH.dateEnregistrement,'%Y-%m')!=DATE_FORMAT(?,'%Y-%m') and FCH.ETAT=?  ORDER BY RAND() LIMIT 10;`;
-    const [resultat] = await db.query(Query, [yers, ETAT]);
+    where  DATE_FORMAT(FCH.dateEnregistrement,'%Y-%m')!=DATE_FORMAT(?,'%Y-%m') and FCH.ETAT=?  ORDER BY RAND() LIMIT ?;`;
+    const [resultat] = await db.query(Query, [yers, ETAT,quantite_echantillon]);
     return res.status(200).send(resultat);
   } catch (error) {
     console.log(error);
@@ -3116,11 +3278,11 @@ const controle_m_1 = async (req, res, next) => {
     const dateCreation = new Date();
     const yers = new Date(
       dateCreation.getFullYear(),
-      dateCreation.getMonth(),
+      dateCreation.getMonth()-1,
       dateCreation.getDay()
     );
     const Query1 = `SELECT COUNT(*) as nombre_fiche from B_FICHE`;
-    const Query = `SELECT FCH.id, FCH.titre,sl.type,FCH.ETAT,DATE_FORMAT(FCH.dateFin,'%Y-%m-%d') as dateFin,UT.nom_utilisateur as Gestionnaire FROM B_FICHE FCH
+    const Query = `SELECT FCH.id, FCH.titre,sl.type,DATE_FORMAT(FCH.dateDebut,'%Y-%m-%d') as dateDebut,DATE_FORMAT(FCH.dateFin,'%Y-%m-%d') as dateFin,UT.nom_utilisateur as Gestionnaire FROM B_FICHE FCH
     LEFT JOIN B_SLA sl on FCH.id=sl.id
     LEFT JOIN B_UTILISATEUR UT on FCH.id_Gestionnaire=UT.id 
     where  DATE_FORMAT(FCH.dateEnregistrement,'%Y-%m')=DATE_FORMAT(?,'%Y-%m') ORDER BY RAND() LIMIT ?;`;
@@ -3135,23 +3297,26 @@ const controle_m_1 = async (req, res, next) => {
 };
 const getReporting = async (req, res, next) => {
   const userId = req.auth.userId;
-
+  console.log(req.body);
+  console.log(userId);
   const { typeControle, dateDebut, dateFin } = req.body;
-  console.log(dateDebut, typeControle, dateFin);
+  //console.log(dateDebut, typeControle, dateFin);
   try {
     const resultat = {};
-
-    const Query = `select F.id,C.id_CONTROLE,F.titre,F.ETAT,U.nom_utilisateur,C.exactitude,DATE_FORMAT(C.dateControle,'%Y-%m-%d') as dateControle from B_CONTROLE C INNER JOIN B_RESULTAT_CONTROLE RC on C.id_CONTROLE=RC.id_CONTROLE
+    const Query = `select F.id,C.id_CONTROLE,F.titre,F.ETAT,U.nom_utilisateur,IF(C.exactitude=1,'oui','non') as exactitude,BOT.on_time,DATE_FORMAT(C.dateControle,'%Y-%m-%d') as dateControle 
+    from B_CONTROLE C INNER JOIN B_RESULTAT_CONTROLE RC on C.id_CONTROLE=RC.id_CONTROLE
     INNER JOIN B_FICHE F on C.id_FICHE=F.id INNER JOIN B_UTILISATEUR U on C.id_UTILISATEUR=U.id
-    where C.id_UTILISATEUR=? and C.typeControle=? and C.dateControle between DATE_FORMAT(?,'%Y-%m-%d') and DATE_FORMAT(?,'%Y-%m-%d')`;
-
-    const Query2 = `select score from B_RESULTAT_CONTROLE where id_CONTROLEUR=? and id_CONTROLE=? and dateControle between DATE_FORMAT(?,'%Y-%m-%d') and DATE_FORMAT(?,'%Y-%m-%d')`;
+    INNER JOIN B_ON_TIME BOT on C.id_FICHE=BOT.id_Fiche
+    where C.id_UTILISATEUR=? and C.typeControle=? and DATE_FORMAT(C.dateControle,'%Y-%m-%d') between DATE_FORMAT(?,'%Y-%m-%d') and DATE_FORMAT(?,'%Y-%m-%d')`;
+    const Query2 = `select score from B_RESULTAT_CONTROLE where id_CONTROLEUR=? and id_CONTROLE=? and DATE_FORMAT(dateControle,'%Y-%m-%d') between DATE_FORMAT(?,'%Y-%m-%d') and DATE_FORMAT(?,'%Y-%m-%d')`;
     const [resultat1] = await db.query(Query, [
       userId,
       typeControle,
       dateDebut,
       dateFin,
     ]);
+    console.log(resultat1[0]);
+
     const id_CONTROLE = resultat1[0].id_CONTROLE;
     const [resultat2] = await db.query(Query2, [
       userId,
@@ -3161,7 +3326,7 @@ const getReporting = async (req, res, next) => {
     ]);
     resultat["reporting_data"] = resultat1;
     resultat["score"] = resultat2[0].score;
-    console.log(resultat);
+    //console.log(resultat);
     return res.status(200).send(resultat);
   } catch (error) {
     console.log(error);
@@ -3183,9 +3348,9 @@ const addControle = async (req, res, next) => {
 
   try {
     const data = req.body.Data;
-    console.log(data);
+    //console.log(data);
     const id_controle = Math.floor(Math.random() * 100000) + 1;
-    console.log(id_controle);
+    //console.log(id_controle);
     const date_controle = new Date();
     if (Array.isArray(data) && data.length > 0) {
       for (const profile of data) {
@@ -3326,4 +3491,7 @@ module.exports = {
   getOneProgramme,
   getAllFiche_Archive,
   statistic_TC_FOR_SUP,
+  redOneNotifcation,
+  redAllNotification,
+  createNotification
 };

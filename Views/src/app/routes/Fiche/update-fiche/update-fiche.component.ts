@@ -57,6 +57,7 @@ export class UpdateFicheComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
+
   snapForm!: FormGroup;
   isSubmitting = false;
   ficheId!: number;
@@ -114,13 +115,11 @@ export class UpdateFicheComponent implements OnInit {
       dateReception: [null],
       dateDebut: [null],
       dateVisibilite: [null],
-      niveau: [null],
       dateFin: [null],
       id_Categorie: [null],
       id_SousCategorie: [null],
-      AccesSite: [true],
-      Utilite: [true],
       isChecked: [false],
+      niveau:[false],
       Quiz1: this.fb.group({
         Question1: [null],
         Reponse1: [null],
@@ -137,11 +136,11 @@ export class UpdateFicheComponent implements OnInit {
         Question4: [null],
         Reponse4: [null],
       }),
-      quizAutorisation: [''],
-      utiliteAutorisation: [''],
-      accesAutorisation: [''],
-      siteAutorisation: [''],
-      commentaireAutorisation: [''],
+      AccesQuiz: [''],
+      AccesUtilite: [''],
+      AccesProfil: [''],
+      AccesSite: [''],
+      AccesCommentaire: [''],
     });
   }
 
@@ -329,14 +328,14 @@ export class UpdateFicheComponent implements OnInit {
 
   private updateAuthorizationFormValues() {
     this.snapForm.patchValue({
-      quizAutorisation:
+      AccesQuiz:
         this.selectedQuizProfiles.length > 0 ? this.selectedQuizProfiles.join(',') : '',
-      utiliteAutorisation:
+      AccesUtilite:
         this.selectedUtiliteProfiles.length > 0 ? this.selectedUtiliteProfiles.join(',') : '',
-      accesAutorisation:
+      AccesProfil:
         this.selectedAccesProfiles.length > 0 ? this.selectedAccesProfiles.join(',') : '',
-      siteAutorisation: this.selectedAccesSite.length > 0 ? this.selectedAccesSite.join(',') : '',
-      commentaireAutorisation:
+      AccesSite: this.selectedAccesSite.length > 0 ? this.selectedAccesSite.join(',') : '',
+      AccesCommentaire:
         this.selectedAccesCommentaire.length > 0 ? this.selectedAccesCommentaire.join(',') : '',
     });
   }
@@ -380,7 +379,7 @@ export class UpdateFicheComponent implements OnInit {
   removeFile() {
     this.file = null;
     this.isFileChanged = false;
-    this.selectedFileName = this.existingFileName || 'Aucun fichier choisi';
+    this.selectedFileName = this.existingFileName || 'Choisissez un nouveau fichier';
 
     // Réinitialiser l'input file
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
@@ -398,7 +397,7 @@ export class UpdateFicheComponent implements OnInit {
   }
 
   handleOnSumit() {
-    if (this.snapForm.invalid) {
+   /* if (this.snapForm.invalid) {
       this.toastSrv.warning('Veuillez remplir tous les champs obligatoires');
       Object.keys(this.snapForm.controls).forEach(key => {
         const control = this.snapForm.get(key);
@@ -407,14 +406,14 @@ export class UpdateFicheComponent implements OnInit {
         }
       });
       return;
-    }
+    }*/
 
     // Vérifier qu'un fichier existe (soit existant, soit nouveau)
-    if (!this.existingFileName && !this.file) {
+   /* if (!this.existingFileName && !this.file) {
       this.toastSrv.warning('Veuillez sélectionner un fichier');
       return;
     }
-
+*/
     this.isSubmitting = true;
     const formdata = new FormData();
 
@@ -428,8 +427,41 @@ export class UpdateFicheComponent implements OnInit {
     const formValue = this.snapForm.value;
     console.log('Données du formulaire à envoyer:', formValue);
     formdata.append('data', JSON.stringify(formValue));
+     console.log('Données du formulaire à envoyer:', formdata);
 
     // Appel API pour mettre à jour la fiche
+    this.userService.updateFiche(this.ficheId,formdata).subscribe({
+      next:(response)=>{
+        const message="Fiche mise à jour avec succès !";
+         this.toastSrv.success(message, 'Modification reussie', {
+        timeOut: 5000,
+        progressBar: true,
+        closeButton: true,
+      });
+        
+        this.isSubmitting = false;
+         // Option: Recharger les données pour refléter les changements
+        this.loadFormData();
+        setInterval(()=>{ this.router.navigateByUrl('mon-espace/Fiche/Liste');},5500);
+       
+        
+      },
+      error:(error)=>{
+        console.error('Erreur lors de la mise à jour de la fiche:', error);
+        
+        // Message d'erreur plus détaillé
+        let errorMessage = 'Erreur lors de la mise à jour de la fiche';
+        if (error.error && error.error.message) {
+          errorMessage = error.error.message;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        this.toastSrv.error(errorMessage);
+        this.isSubmitting = false;
+      
+      }
+    })
     /*  this.userService.updateFiche(this.ficheId, formdata).subscribe({
       next: (response) => {
         console.log('Fiche mise à jour avec succès:', response);
@@ -476,7 +508,7 @@ export class UpdateFicheComponent implements OnInit {
     }
 
     this.snapForm
-      .get('siteAutorisation')
+      .get('AccesSite')
       ?.setValue(this.selectedAccesSite.length > 0 ? this.selectedAccesSite.join(',') : '');
   }
 
@@ -492,7 +524,7 @@ export class UpdateFicheComponent implements OnInit {
     }
 
     this.snapForm
-      .get('commentaireAutorisation')
+      .get('AccesCommentaire')
       ?.setValue(
         this.selectedAccesCommentaire.length > 0 ? this.selectedAccesCommentaire.join(',') : ''
       );
@@ -510,7 +542,7 @@ export class UpdateFicheComponent implements OnInit {
     }
 
     this.snapForm
-      .get('quizAutorisation')
+      .get('AccesQuiz')
       ?.setValue(this.selectedQuizProfiles.length > 0 ? this.selectedQuizProfiles.join(',') : '');
   }
 
@@ -526,7 +558,7 @@ export class UpdateFicheComponent implements OnInit {
     }
 
     this.snapForm
-      .get('utiliteAutorisation')
+      .get('AccesUtilite')
       ?.setValue(
         this.selectedUtiliteProfiles.length > 0 ? this.selectedUtiliteProfiles.join(',') : ''
       );
@@ -544,7 +576,7 @@ export class UpdateFicheComponent implements OnInit {
     }
 
     this.snapForm
-      .get('accesAutorisation')
+      .get('AccesProfil')
       ?.setValue(this.selectedAccesProfiles.length > 0 ? this.selectedAccesProfiles.join(',') : '');
   }
 

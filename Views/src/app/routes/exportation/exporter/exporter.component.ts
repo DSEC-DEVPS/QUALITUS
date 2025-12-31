@@ -53,7 +53,7 @@ export class ExporterComponent implements OnInit {
   type_donnes = [
     { label: 'Chargements', permissions: ['R_ADMI', 'R_GB', 'R_GE', 'R_SUP'] },
     { label: 'Commentaires', permissions: ['R_ADMI', 'R_GB', 'R_GE', 'R_SUP'] },
-    { label: 'Exactitude', permissions: ['R_ADMI', 'R_GB', 'R_GE', 'SUP'] },
+    { label: 'Exactitude', permissions: ['R_ADMI', 'R_GE', 'SUP'] },
     { label: 'Utilité', permissions: ['R_ADMI', 'R_GB', 'R_GE', 'R_SUP'] },
     { label: 'Quiz', permissions: ['R_ADMI', 'R_GB', 'R_GE', 'R_SUP'] },
     { label: 'Ma voix compte', permissions: ['R_ADMI', 'R_GB', 'R_GE,SUP'] },

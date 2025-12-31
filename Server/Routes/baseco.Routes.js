@@ -111,6 +111,9 @@ const {
   getOneProgramme,
   getOneMotifMaVoixCompte,
   getStatistique_par_site,
+  redOneNotifcation,
+  redAllNotification,
+  createNotification,
 } = require("../Controllers/baseco.Controllers");
 
 // routes object
@@ -258,7 +261,7 @@ router.get("/excel_fiche_by_id_Fiche/:id", auth, getExcelFile);
 router.get("/fiche_export/all", auth, exportFiche);
 router.get("/one_fiche/:id", auth, getOneFiche);
 router.post("/fiche/add", auth, multer.single("file"), addFiche);
-router.put("/fiche/:id", auth, updateFiche);
+router.put("/fiche/update/:id", auth,multer.single("file"), updateFiche);
 router.delete("/fiche/:id", auth, deleteFiche);
 router.post(
   "/fiche_id_categorie_and_id_sous_cateogorie",
@@ -309,7 +312,7 @@ router.get("/export_dashboard/all", auth, getAllDashboard);
 router.get("/export_statistique_par_site", getStatistique_par_site);
 router.get("/export_dashboard_amin/all", auth, getAllDashboard_admin);
 /** fin d routes pour utilité et exactitude */
-router.get("/resultat_controle_actif", controle_actif);
+router.post("/resultat_controle_actif", controle_actif);
 router.get("/resultat_controle_m_1", controle_m_1);
 router.get("/hello", async (req, res, next) => {
   return res.status(201).json({ message: "Hello word " });
@@ -317,5 +320,34 @@ router.get("/hello", async (req, res, next) => {
 /** Routes pour   Controle et reporting*/
 router.post("/add_controle", auth, addControle);
 router.post("/get_reporting", auth, getReporting);
+
+/***** les notifications */
+
+
+/**
+ * GET /api/notifications
+ * Récupère toutes les notifications de l'utilisateur connecté
+ */
+router.get('/notifications',auth, getAllNotification);
+
+/**
+ * PATCH /api/notifications/:id/read
+ * Marque une notification spécifique comme lue
+ */
+router.patch('/notifications/:id/read',auth,redOneNotifcation);
+
+/**
+ * PATCH /api/notifications/read-all
+ * Marque plusieurs notifications comme lues
+ */
+router.patch('/notifications/read-all',auth, redAllNotification);
+
+/**
+ * POST /api/notifications
+ * Crée une nouvelle notification (appelé quand une fiche est ajoutée)
+ */
+router.post('/notifications', auth,createNotification);
+
+
 
 module.exports = router;
