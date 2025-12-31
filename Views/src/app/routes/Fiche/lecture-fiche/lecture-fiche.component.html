@@ -32,13 +32,8 @@
                 <mat-icon
                   style="color: #ff8e36; cursor: pointer"
                   matTooltip="Modifer"
-<<<<<<< HEAD
-                  matTooltipPosition="above"
-                  (click)="update(fiche!.id)"
-=======
                   matTooltipPosition="below"
-                  (click)="update(fiche.id)"
->>>>>>> temp-merge-branch
+                  (click)="update(fiche!.id)"
                   >edit</mat-icon
                 >
                 <mat-icon
@@ -283,7 +278,7 @@
         }
       </div>
     </div>
-    @if (fiche.Utilite ||show_value_Quiz||fiche.Commentaire) {
+    @if (fiche!.Utilite ||show_value_Quiz||fiche!.Commentaire) {
       <div class="col-md-3 col-sm-12 mt-md-5 mt-sm-1">
         <mat-tab-group *ngIf="fiche!.Commentaire || fiche!.Utilite || fiche!.Quiz.length > 0">
           <!-- Onglet Utilité -->

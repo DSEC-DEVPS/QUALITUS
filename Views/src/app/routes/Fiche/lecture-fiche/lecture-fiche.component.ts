@@ -175,7 +175,6 @@ export class LectureFicheComponent implements OnInit {
         }
         if (
           result.extention === '.pdf' ||
-          result.extention === '.pptx' ||
           result.extention === '.docx'
         ) {
           console.log(this.fiche);
