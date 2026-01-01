@@ -158,6 +158,7 @@ export interface programme {
 export interface maVoixCompte {
   Motif_du_Message: string;
   message: string;
+  Commentaire:string;
   Date: string;
   Login: string;
   Site: string;

@@ -432,18 +432,18 @@ export class UpdateFicheComponent implements OnInit {
     // Appel API pour mettre à jour la fiche
     this.userService.updateFiche(this.ficheId,formdata).subscribe({
       next:(response)=>{
-        const message="Fiche mise à jour avec succès !";
+        const message="La fiche a été mise à jour avec succès.";
          this.toastSrv.success(message, 'Modification reussie', {
-        timeOut: 5000,
+        timeOut: 2000,
         progressBar: true,
         closeButton: true,
       });
         
         this.isSubmitting = false;
          // Option: Recharger les données pour refléter les changements
-        this.loadFormData();
-        setInterval(()=>{ this.router.navigateByUrl('mon-espace/Fiche/Liste');},5500);
-       
+        //this.loadFormData();
+        //setInterval(()=>{ this.router.navigateByUrl('mon-espace/Fiche/Liste');},5500);
+       this.router.navigateByUrl('mon-espace/Fiche/Liste');
         
       },
       error:(error)=>{

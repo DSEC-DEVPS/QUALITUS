@@ -1238,7 +1238,7 @@ const getAllExport = async (req, res, next) => {
           } else {
             if (dataType === "Utilité") {
               Query = `SELECT FCH.titre as DESCRIPTION,UT.nom as NOM,UT.nom_utilisateur as LOGIN,ST.nom as SITE,
-           IF(BS.utilite=1,'OUI','NON') as UTILITE,DATE_FORMAT(BS.dateSondage,'%Y-%m-%d %H:%i:%s' )as DATE_SONDAGE,BC.message
+           IF(BS.utilite=1,'OUI','NON') as UTILITE,DATE_FORMAT(BS.dateSondage,'%Y-%m-%d %H:%i:%s' )as DATE_SONDAGE,BC.message as Commentaire
             FROM B_SONDAGE BS 
             LEFT JOIN B_COMMENTAIRE BC on BS.id_FICHE=BC.id_FICHE
             LEFT JOIN B_FICHE FCH on BS.id_FICHE=FCH.id

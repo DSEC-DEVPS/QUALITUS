@@ -297,7 +297,6 @@ import { Subject, takeUntil } from 'rxjs';
               <mat-list-item 
                 (click)="displayFiche(notification)"
                 [class.unread]="!notification.isRead"
-                (mouseenter)="markAsReadOnHover(notification)"
               >
                 <mat-icon 
                   class="m-x-16" 

@@ -183,7 +183,7 @@ export class LectureFicheComponent implements OnInit {
         } else {
           if (result.extention === '.xlsx') {
             /****** */
-            console.log('testttttttttttttttttttttttttttttttttt1111111111111111111');
+     
 
             this.userService.getAllExcelFicheByIDFiche(id).subscribe({
               next: (data: Blob) => {
@@ -198,7 +198,7 @@ export class LectureFicheComponent implements OnInit {
 
                 this.excelBlob = data;
                 const reader = new FileReader();
-                this.downloadExcel();
+                //this.downloadExcel();
                 reader.onload = (e: any) => {
                   try {
                     console.log('Lecture du fichier réussie');
@@ -237,7 +237,6 @@ export class LectureFicheComponent implements OnInit {
               },
             });
           } else if (result.extention === '.pptx') {
-            console.log('testttttttttttttttttttttttttttttttttt');
             this.userService
               .getAllFicheByIDFiche(id)
               .pipe(

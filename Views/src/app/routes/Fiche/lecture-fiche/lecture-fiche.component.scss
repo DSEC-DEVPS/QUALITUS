@@ -311,7 +311,10 @@ hr {
 }
 .mat-mdc-button:not(:disabled) {
     color: var(--mdc-text-button-label-text-color, var(--mat-app-primary));
-    background-color: #cc7a00;
+    background-color: #ff8e36;
+}
+mdc-button .mdc-button__label {
+   color: #fff;
 }
 html .mat-accent.mat-mdc-radio-button {
     --mdc-radio-selected-focus-icon-color: #cc7a00;
