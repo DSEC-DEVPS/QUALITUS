@@ -102,9 +102,17 @@
         </div>
       </mat-tab>
       <mat-tab label="Contrôle M-1">
-        <div>
-          <button mat-button (click)="display_echantillon_M_1()">Échantillon</button>
+         <form [formGroup]="form_echantillon_M_1">
+         <div class="col-md-2 align-items-center" style="margin-top:5px;">
+          <mat-form-field>
+            <mat-label>Saisissez la quantité</mat-label>
+            <input type="number" min="1" matInput formControlName="quantite_echantillon_M_1">
+          </mat-form-field>
         </div>
+        <div class="col-md-1 align-items-center" style="margin-top: -10px;">
+          <button mat-button  [disabled]="form_echantillon_M_1.invalid" (click)="display_echantillon_M_1()">Échantillon</button>
+        </div>
+        </form>
         <div
           *ngIf="show_echantillonnage_template_M_1"
           class="example-container mat-elevation-z8 py-2"

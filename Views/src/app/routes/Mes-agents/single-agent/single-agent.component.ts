@@ -56,6 +56,7 @@ export class SingleAgentComponent implements OnInit {
   nb_quiz_echecs = 0;
   nb_quiz_total_en_retest = 0;
   nb_quiz_total_echecs = 0;
+  bn_notification_non_lues=0;
   statistic_TC!: statistic_TC;
   todayDate!: string | null;
   details_utilisateur!: detailsUtilisateur;
@@ -103,6 +104,7 @@ export class SingleAgentComponent implements OnInit {
           this.nb_sondage_encours = resultat.nombre_sondage_effectue || 0;
           this.nb_quiz_total_en_retest = resultat.nombre_total_quiz_en_retest || 0;
           this.nb_quiz_total_echecs = resultat.nombre_total_quiz_Echecs || 0;
+          this.bn_notification_non_lues=resultat.nombre_notification_non_lue ||0;
         },
         error: error => {
           console.log(error);

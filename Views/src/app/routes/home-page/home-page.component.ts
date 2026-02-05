@@ -89,7 +89,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
   templateUrl: './home-page.component.html',
   styleUrl: './home-page.component.scss',
 })
-export class HomePageComponent implements AfterViewInit, OnInit {
+export class HomePageComponent implements  OnInit {
   dataSource: MatTableDataSource<Fiche> = new MatTableDataSource<Fiche>([]);
 
   dataSource_Archive!: MatTableDataSource<Fiche>;
@@ -106,6 +106,7 @@ export class HomePageComponent implements AfterViewInit, OnInit {
   displayedColumns_table: string[] = ['titre', 'type'];
   data!: MatTableDataSource<Fiche>;
   data_table!: MatTableDataSource<fiche_id_categorie_and_id_sous_cateogorie>;
+ 
   resultsLength = 0;
   resultsLength_table = 0;
   isLoadingResults = true;
@@ -113,8 +114,8 @@ export class HomePageComponent implements AfterViewInit, OnInit {
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
-  @ViewChild(MatPaginator) paginator_table!: MatPaginator;
-  @ViewChild(MatSort) sort_table!: MatSort;
+  //@ViewChild(MatPaginator) paginator_table!: MatPaginator;
+  //@ViewChild(MatSort) sort_table!: MatSort;
   private readonly router = inject(Router);
   private readonly settings = inject(SettingsService);
   private readonly auth = inject(AuthService);
@@ -251,10 +252,7 @@ export class HomePageComponent implements AfterViewInit, OnInit {
       },
     });
   }
-  ngAfterViewInit() {
-    this.dataSource.paginator = this.paginator;
-    this.dataSource.sort = this.sort;
-  }
+ 
   private initObservable() {
     this.fiches$ = this.userService.fiches$;
     console.log(this.fiches$);
@@ -507,8 +505,8 @@ export class HomePageComponent implements AfterViewInit, OnInit {
             filteredData = resultat;
           }
           this.data_table = new MatTableDataSource(filteredData);
-          this.data_table.paginator = this.paginator_table;
-          this.data_table.sort = this.sort_table;
+          this.data_table.paginator = this.paginator;
+          this.data_table.sort = this.sort;
           this.div_cat_nb_col = 'col-md-6';
           this.div_cat_img_col = 'col-md-3 col-sm-4';
           this.isShowTableValueVariable = true;

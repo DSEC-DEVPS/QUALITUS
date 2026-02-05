@@ -1,0 +1,5 @@
+docker exec -i mysql_db \
+  mysql -u root -p QUALITUS < db/migrations/01_add_niveau_to_b_fiche.sql
+²
+docker exec -i mysql_db \
+  mysql -u root -p QUALITUS < db/migrations/02_create_b_notifications.sql

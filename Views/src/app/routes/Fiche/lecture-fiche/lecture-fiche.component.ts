@@ -14,7 +14,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService, url, User } from '@core';
 import { UserService } from '@shared/services/user.service';
 import { MatButtonModule } from '@angular/material/button';
-
 import {
   FormBuilder,
   FormGroup,
@@ -76,7 +75,7 @@ registerAllModules();
   styleUrl: './lecture-fiche.component.scss',
 })
 export class LectureFicheComponent implements OnInit {
-  @ViewChild('pptxWrapper', { static: false }) pptxWrapper!: ElementRef<HTMLDivElement>;
+@ViewChild('pptxWrapper', { static: false }) pptxWrapper!: ElementRef<HTMLDivElement>;
   private pptxPreviewer: any;
   /** les attributs pour la lecture des fiches de type excel */
   fileId = '';

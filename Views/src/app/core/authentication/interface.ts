@@ -319,6 +319,7 @@ export interface statistic_TC {
   nombre_quiz_en_retest?: number;
   nombre_total_quiz_en_retest?: number;
   nombre_total_quiz_Echecs?: number;
+  nombre_notification_non_lue?:number;
 }
 export interface fiche_id_categorie_and_id_sous_cateogorie {
   id: number;

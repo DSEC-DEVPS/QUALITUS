@@ -3208,6 +3208,7 @@ const statistic_TC_FOR_SUP = async (req, res, next) => {
   const { data } = req.body;
   const date = data.date + "%";
   const userId = data.userId;
+  console.log(userId);
   if (!date) {
     return res
       .status(430)
@@ -3221,7 +3222,7 @@ const statistic_TC_FOR_SUP = async (req, res, next) => {
     const Query4 = `select COUNT(id_FICHE) as nombre_quiz_echecs from ( select id_FICHE from B_REPONSE_QUIZ where date_Quiz like ? and id_UTILISATEUR =? and ETAT=?   GROUP BY id_FICHE) A`;
     const Query5 = `select COUNT(id_FICHE) as nombre_total_quiz_en_retest from ( select id_FICHE from B_REPONSE_QUIZ where  id_UTILISATEUR =? and STATUT=?  GROUP BY id_FICHE) A`;
     const Query6 = `select COUNT(id_FICHE) as nombre_total_quiz_Echecs from ( select id_FICHE from B_REPONSE_QUIZ where id_UTILISATEUR =? and ETAT=?  GROUP BY id_FICHE) A`;
-
+    const Query7=` SELECT COUNT(BN.id) as nombre_notification_non_lue FROM B_NOTIFICATION BN LEFT JOIN (select id_NOTIFICATION,createdBy from B_notifications where createdBy=?) n on BN.id=n.id_NOTIFICATION where n.ID_NOTIFICATION is null  `
     const [resultat1] = await db.query(Query1, [date, userId]);
     const [resultat2] = await db.query(Query2, [date, userId]);
     const [resultat3] = await db.query(Query3, [
@@ -3232,6 +3233,7 @@ const statistic_TC_FOR_SUP = async (req, res, next) => {
     const [resultat4] = await db.query(Query4, [date, userId, "Echecs"]);
     const [resultat5] = await db.query(Query5, [userId, "Encours_Retest"]);
     const [resultat6] = await db.query(Query6, [userId, "Echecs"]);
+    const [resultat7] = await db.query(Query7, [userId]);
     resultat["nombre_fiche_lue"] = resultat1[0].nombre_fiche_lue;
     resultat["nombre_sondage_effectue"] = resultat2[0].nombre_sondage_effectue;
     resultat["nombre_quiz_en_retest"] = resultat3[0].nombre_quiz_en_retest;
@@ -3240,6 +3242,8 @@ const statistic_TC_FOR_SUP = async (req, res, next) => {
       resultat5[0].nombre_total_quiz_en_retest;
     resultat["nombre_total_quiz_Echecs"] =
       resultat6[0].nombre_total_quiz_Echecs;
+       resultat["nombre_notification_non_lue"] =
+      resultat7[0].nombre_notification_non_lue;
     //console.log(resultat);
     return res.status(200).send(resultat);
   } catch (error) {
@@ -3252,17 +3256,17 @@ const statistic_TC_FOR_SUP = async (req, res, next) => {
 /***  debut des contrôles pour le profil Gestionnaire d'exactitude */
 const controle_actif = async (req, res, next) => {
   const {quantite_echantillon}=req.body
-  //console.log(quantite_echantillon);
+  console.log(quantite_echantillon);
   try {
     const dateCreation = new Date();
     const yers = new Date(
       dateCreation.getFullYear(),
-      dateCreation.getMonth(),
+      dateCreation.getMonth()-1,
       dateCreation.getDay()
     );
-   // console.log(yers);
+   console.log(yers);
     const ETAT = "ACTIF";
-    const Query = `SELECT FCH.id, FCH.titre,sl.type,DATE_FORMAT(FCH.dateDebut,'%Y-%m-%d') as dateDebut,DATE_FORMAT(FCH.dateFin,'%Y-%m-%d') as dateFin,UT.nom_utilisateur as Gestionnaire FROM B_FICHE FCH
+    const Query =`SELECT FCH.id, FCH.titre,sl.type,DATE_FORMAT(FCH.dateDebut,'%Y-%m-%d') as dateDebut,DATE_FORMAT(FCH.dateFin,'%Y-%m-%d') as dateFin,UT.nom_utilisateur as Gestionnaire FROM B_FICHE FCH
     LEFT JOIN B_SLA sl on FCH.id=sl.id
     LEFT JOIN B_UTILISATEUR UT on FCH.id_Gestionnaire=UT.id 
     where  DATE_FORMAT(FCH.dateEnregistrement,'%Y-%m')!=DATE_FORMAT(?,'%Y-%m') and FCH.ETAT=?  ORDER BY RAND() LIMIT ?;`;
@@ -3274,6 +3278,7 @@ const controle_actif = async (req, res, next) => {
   }
 };
 const controle_m_1 = async (req, res, next) => {
+  const {quantite_echantillon_M_1}=req.body;
   try {
     const dateCreation = new Date();
     const yers = new Date(
@@ -3288,7 +3293,7 @@ const controle_m_1 = async (req, res, next) => {
     where  DATE_FORMAT(FCH.dateEnregistrement,'%Y-%m')=DATE_FORMAT(?,'%Y-%m') ORDER BY RAND() LIMIT ?;`;
     const [resultat1] = await db.query(Query1);
     const LIMIT = Math.ceil(resultat1[0].nombre_fiche / 2);
-    const [resultat] = await db.query(Query, [yers, LIMIT]);
+    const [resultat] = await db.query(Query, [yers, quantite_echantillon_M_1]);
     return res.status(200).send(resultat);
   } catch (error) {
     console.log(error);

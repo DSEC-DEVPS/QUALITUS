@@ -186,12 +186,7 @@
                 ></tr>
               </table>
             </div>
-
-            <mat-paginator
-              [length]="resultsLength_table"
-              [pageSize]="5"
-              aria-label="table"
-            ></mat-paginator>
+             <mat-paginator [pageSizeOptions]="[5, 10]" aria-label="les chargements ...."></mat-paginator>
           </div>
         </div>
       </div>

@@ -312,8 +312,8 @@ router.get("/export_dashboard/all", auth, getAllDashboard);
 router.get("/export_statistique_par_site", getStatistique_par_site);
 router.get("/export_dashboard_amin/all", auth, getAllDashboard_admin);
 /** fin d routes pour utilité et exactitude */
-router.post("/resultat_controle_actif", controle_actif);
-router.get("/resultat_controle_m_1", controle_m_1);
+router.post("/resultat_controle_actif",auth, controle_actif);
+router.post("/resultat_controle_m_1", auth,controle_m_1);
 router.get("/hello", async (req, res, next) => {
   return res.status(201).json({ message: "Hello word " });
 });

@@ -1,13 +1,16 @@
 import { Component, Inject, OnInit } from '@angular/core';
-import { MAT_SNACK_BAR_DATA, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MAT_SNACK_BAR_DATA, MatSnackBarModule,MatSnackBarRef } from '@angular/material/snack-bar';
 import { trigger, state, style, animate, transition } from '@angular/animations';
 import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { MatIconModule } from '@angular/material/icon';
+
+
 
 @Component({
   selector: 'app-popup',
   standalone: true,
-  imports: [BrowserModule, BrowserAnimationsModule, MatSnackBarModule],
+  imports: [BrowserModule, BrowserAnimationsModule, MatSnackBarModule,MatIconModule],
   templateUrl: './popup.component.html',
   styleUrl: './popup.component.scss',
   animations: [
@@ -39,17 +42,45 @@ export class PopupComponent implements OnInit {
   ];
 
   selectedAvatar = '';
-
-  constructor(@Inject(MAT_SNACK_BAR_DATA) public data: any) {
-    this.score = data.score;
+  ngOnInit(): void {
+    this.startAnimations();
+  }
+  constructor(
+    @Inject(MAT_SNACK_BAR_DATA) public data: { score: number; message: string },
+    private snackBarRef: MatSnackBarRef<PopupComponent>
+  ) {
+this.score = data.score;
     this.message = data.message;
     // Randomly select an avatar based on score
     const avatarIndex = Math.min(Math.floor(this.score / 30), this.avatars.length - 1);
     this.selectedAvatar = this.avatars[avatarIndex];
+
   }
 
-  ngOnInit(): void {
-    this.startAnimations();
+  close(): void {
+    this.snackBarRef.dismiss();
+  }
+
+  getIcon(): string {
+    // Retourne une icône basée sur le score
+    if (this.data.score >= 80) {
+      return 'emoji_events'; // Trophée pour score élevé
+    } else if (this.data.score >= 50) {
+      return 'thumb_up'; // Pouce levé pour score moyen
+    } else {
+      return 'info'; // Info pour score faible
+    }
+  }
+
+  getIconClass(): string {
+    // Retourne une classe CSS basée sur le score
+    if (this.data.score >= 80) {
+      return 'success';
+    } else if (this.data.score >= 50) {
+      return 'warning';
+    } else {
+      return '';
+    }
   }
 
   startAnimations(): void {
@@ -64,3 +95,4 @@ export class PopupComponent implements OnInit {
     }, 2000);
   }
 }
+

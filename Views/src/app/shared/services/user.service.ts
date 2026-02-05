@@ -287,8 +287,8 @@ export class UserService {
   getResultat_controle_actif(quantite_echantillon:number): Observable<Fiche[]> {
     return this.http.post<Fiche[]>(`/api/v1/resultat_controle_actif`,quantite_echantillon);
   }
-  getResultat_controle_m_1(): Observable<Fiche[]> {
-    return this.http.get<Fiche[]>(`/api/v1/resultat_controle_m_1`);
+  getResultat_controle_m_1(quantite_echantillon_M_1:number): Observable<Fiche[]> {
+    return this.http.post<Fiche[]>(`/api/v1/resultat_controle_m_1`,quantite_echantillon_M_1);
   }
   getReporting(data: {
     typeControle: string;

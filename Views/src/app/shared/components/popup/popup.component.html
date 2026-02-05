@@ -1,3 +1,4 @@
+
 <div class="score-notification-container">
   <div class="avatar-container">
     <div class="avatar" [@bounce]="avatarState" [@rotate]="rotationState">
@@ -9,3 +10,25 @@
     <div class="message">{{ message }}</div>
   </div>
 </div>
+
+
+<!-- Template pour le PopupComponent -->
+ <!---
+<div class="score-popup-content">
+  <div class="score-icon" [ngClass]="getIconClass()">
+    <mat-icon>{{getIcon() }}</mat-icon>
+  </div>
+  <div class="score-value">
+    {{ data.score }}
+  </div>
+  <div class="score-message">
+    {{ data.message }}
+  </div>
+  <button 
+    mat-icon-button 
+    (click)="close()" 
+    style="position: absolute; top: 8px; right: 8px; color: #999;">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+-->
