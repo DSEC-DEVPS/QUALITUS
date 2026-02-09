@@ -4,7 +4,7 @@ import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
 import { UserService } from '@shared/services/user.service';
 import { MatSort } from '@angular/material/sort';
-import { AuthService, Fiche, reporting, reporting_retour, User } from '@core';
+import {  Fiche, reporting,  User } from '@core';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -12,7 +12,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatButtonModule } from '@angular/material/button';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import {  Router } from '@angular/router';
 import {
   MAT_DIALOG_DATA,
   MatDialog,
@@ -22,11 +22,9 @@ import {
 import { ViewEncapsulation } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
-import { url } from '@core';
 import {
   FormArray,
   FormBuilder,
-  FormControl,
   FormGroup,
   FormsModule,
   ReactiveFormsModule,
@@ -34,7 +32,7 @@ import {
 } from '@angular/forms';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { catchError, of, Subject, switchMap, takeUntil, tap } from 'rxjs';
+import {  Subject, switchMap, } from 'rxjs';
 import { ChangeDetectionStrategy } from '@angular/core';
 import { MatDialogActions, MatDialogClose } from '@angular/material/dialog';
 import Handsontable from 'handsontable';
