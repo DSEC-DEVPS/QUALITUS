@@ -183,12 +183,12 @@
           "name": "Ajouter",
           "type": "link",
           "permissions": {
-            "only": ["R_TÉLÉ"]
+            "only": ["R_TC"]
           }
         }
       ],
       "permissions": {
-        "only": ["R_TÉLÉ", "R_ADMI"]
+        "only": ["R_TC", "R_ADMI"]
       }
     },
     {

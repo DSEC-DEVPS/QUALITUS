@@ -162,7 +162,7 @@ export class HomePageComponent implements  OnInit {
     id_categorie: 0,
   };
   ngOnInit(): void {
-    console.log('Selected niveau', this.selectedNiveau);
+    //console.log('Selected niveau', this.selectedNiveau);
     this.initObservable();
     this.userService.getFicheFromServer();
     this.isShowValue = false;
@@ -179,7 +179,7 @@ export class HomePageComponent implements  OnInit {
     this.auth.user().subscribe({
       next: user => {
         this.user = user;
-        console.log(user);
+        //console.log(user);
         if (user.roles === 'R_ADMI' || user.roles === 'R_GB' || user.roles === 'R_SUPE') {
           this.div_table = 'col-md-12 p-3';
         } else {
@@ -187,7 +187,7 @@ export class HomePageComponent implements  OnInit {
         }
       },
       error: error => {
-        console.log(error);
+        //console.log(error);
       },
     });
     // Observer les changements de la date et envoyer la requête
@@ -207,7 +207,7 @@ export class HomePageComponent implements  OnInit {
         this.statistic_TC = resultat;
       },
       error: error => {
-        console.log(error);
+        //console.log(error);
       },
     });
 
@@ -216,7 +216,7 @@ export class HomePageComponent implements  OnInit {
         this.dataSource_Archive = new MatTableDataSource(resultat);
       },
       error: error => {
-        console.log(error);
+        //console.log(error);
       },
     });
     this.userService.getAllCategorieWithTheirSousCategorie().subscribe({
@@ -232,13 +232,13 @@ export class HomePageComponent implements  OnInit {
         this.nb_sondage_encours = resultat.sondage_encours.length;
       },
       error: error => {
-        console.log(error);
+        //console.log(error);
       },
     });
     this.userInfoService.me().subscribe({
       next: resultat => {
         this.user_info = resultat;
-        console.log(this.user_info);
+        //console.log(this.user_info);
         if (this.user_info?.roles === 'R_TC') {
           this.selectedNiveau = '1';
         } else if (this.user_info?.roles === 'R_BO') {
@@ -247,6 +247,7 @@ export class HomePageComponent implements  OnInit {
           this.selectedNiveau = null;
           this.showDefaut = true;
         }
+        console.log("infos me ",resultat);
 
         this.getAllFiche();
       },
@@ -255,7 +256,7 @@ export class HomePageComponent implements  OnInit {
  
   private initObservable() {
     this.fiches$ = this.userService.fiches$;
-    console.log(this.fiches$);
+    //console.log(this.fiches$);
   }
   getFormattedDate(date: Date): string {
     date = this.dateForm.get('selectedDate')?.value;
@@ -274,13 +275,13 @@ export class HomePageComponent implements  OnInit {
         this.statistic_TC = resultat;
       },
       error: error => {
-        console.log(error);
+        //console.log(error);
       },
     });
   }
   openDialog_Quiz_encours() {
     if (this.nb_quiz_encours === 0) {
-      console.log('rien');
+      //console.log('rien');
     } else {
       const dialogRef = this.dialog.open(Quiz_Encours_DialogComponent, {
         height: 'calc(100% - 30px)',
@@ -291,7 +292,7 @@ export class HomePageComponent implements  OnInit {
     }
   }
   openDialog_Lire_toutes_les_fiche() {
-    console.log('Selected niveau before entering dialog:', this.selectedNiveau);
+    //console.log('Selected niveau before entering dialog:', this.selectedNiveau);
 
     const dialogRef = this.dialog.open(LiretouteficheComponent, {
       height: 'calc(100% - 30px)',
@@ -304,13 +305,13 @@ export class HomePageComponent implements  OnInit {
     });
 
     dialogRef.afterClosed().subscribe(result => {
-      console.log(`Dialog result: ${result}`);
+      //console.log(`Dialog result: ${result}`);
     });
   }
 
   openDialog_Sondages_encours() {
     if (this.nb_sondage_encours === 0) {
-      console.log('rien');
+      //console.log('rien');
     } else {
       const dialogRef = this.dialog.open(Sondages_Encours_DialogComponent, {
         height: 'calc(100% - 30px)',
@@ -320,13 +321,13 @@ export class HomePageComponent implements  OnInit {
       });
 
       dialogRef.afterClosed().subscribe(result => {
-        console.log(`Dialog result: ${result}`);
+        //console.log(`Dialog result: ${result}`);
       });
     }
   }
   openDialog_Fiche_non_lu() {
     if (this.nb_fiche_non_lu === 0) {
-      console.log('rien');
+      //console.log('rien');
     } else {
       // Passez directement les données que vous m'avez montrées
       const fiches_non_lues = this.statitic.fiche_non_lu;
@@ -337,22 +338,22 @@ export class HomePageComponent implements  OnInit {
         maxHeight: '95%',
       });
       dialogRef.afterClosed().subscribe(result => {
-        console.log(`Dialog result: ${result}`);
+        //console.log(`Dialog result: ${result}`);
       });
     }
   }
   checked_N1(event: any) {
     if (event.checked) {
-      console.log('N1 checked');
+      //console.log('N1 checked');
     }
   }
   checked_N2(event: any) {
     if (event.checked) {
-      console.log('N2 checked');
+      //console.log('N2 checked');
     }
   }
   RouterOnWorkSpace() {
-    if (this.user.roles === 'R_TC') {
+    if ((this.user.roles === 'R_TC')||(this.user.roles === 'R_BO')) {
       this.router.navigateByUrl('mon-espace/MaVoixCompte/ajouter');
     } else {
       if (this.user.roles === 'R_GE') {
@@ -389,7 +390,7 @@ export class HomePageComponent implements  OnInit {
   }
   onNiveauChange(selected: string) {
     this.selectedNiveau = selected;
-    console.log('Niveau sélectionné:', this.selectedNiveau);
+    //console.log('Niveau sélectionné:', this.selectedNiveau);
     if (
       this.currentStateOfIdSubCatAndCat.id !== 0 &&
       this.currentStateOfIdSubCatAndCat.id_categorie !== 0 &&
@@ -411,13 +412,13 @@ export class HomePageComponent implements  OnInit {
         if (this.selectedNiveau) {
           if (this.selectedNiveau === '1') {
             filteredData = result.data.filter(fiche => fiche?.Niveau === '1');
-            console.log('Step 1', filteredData);
+            //console.log('Step 1', filteredData);
           } else if (this.selectedNiveau === '2') {
             filteredData = result.data.filter(fiche => fiche?.Niveau === '2');
-            console.log('Step 2', filteredData);
+            //console.log('Step 2', filteredData);
           } else if (this.selectedNiveau === 'reset') {
             filteredData = result.data;
-            console.log('Step 3', filteredData);
+            //console.log('Step 3', filteredData);
           }
         } else {
           filteredData = result.data;
@@ -441,14 +442,13 @@ export class HomePageComponent implements  OnInit {
         this.stateTransition = false;
         this.isShowCategorie = false;
         this.isShowValue = false;
-        console.log('if testtttttt', this.isShowCategorie);
-        console.log('if testtttttt isShowValue', this.isShowValue);
+       
       } else {
         this.isShowCategorie = !this.isShowCategorie;
-        console.log('else testtttttt', this.isShowCategorie);
-        console.log('esle testtttttt isShowValue', this.isShowValue);
+        ////console.log('else testtttttt', this.isShowCategorie);
+        ////console.log('esle testtttttt isShowValue', this.isShowValue);
       }
-      // console.log(' search categorie this.isShowCategorie', this.isShowCategorie);
+      // //console.log(' search categorie this.isShowCategorie', this.isShowCategorie);
     } else {
       if (type === 'SearchAvance') {
         this.isShowValueSearchArchive = false;
@@ -477,7 +477,7 @@ export class HomePageComponent implements  OnInit {
     this.isShowTableValueVariable = false;
     this.sous_categorie = this.categorieAndSousCategorie.filter(cat => cat.id === id);
     this.activeCategorieId = id;
-    console.log(' sous categorie this.isShowCategorie', this.isShowCategorie);
+    ////console.log(' sous categorie this.isShowCategorie', this.isShowCategorie);
   }
   isShowTableValue(id: number, id_categorie: number) {
     this.currentStateOfIdSubCatAndCat.id = id;
@@ -493,13 +493,13 @@ export class HomePageComponent implements  OnInit {
           if (this.selectedNiveau) {
             if (this.selectedNiveau === '1') {
               filteredData = resultat.filter(fiche => fiche?.Niveau === '1');
-              console.log('Step 1', filteredData);
+              //console.log('Step 1', filteredData);
             } else if (this.selectedNiveau === '2') {
               filteredData = resultat.filter(fiche => fiche?.Niveau === '2');
-              console.log('Step 2', filteredData);
+              //console.log('Step 2', filteredData);
             } else if (this.selectedNiveau === 'reset') {
               filteredData = resultat;
-              console.log('Step 3', filteredData);
+              //console.log('Step 3', filteredData);
             }
           } else {
             filteredData = resultat;
@@ -570,13 +570,13 @@ export class Quiz_Encours_DialogComponent implements OnInit {
   ngOnInit() {
     this.userService.statistic().subscribe({
       next: resultat => {
-        console.log(resultat);
+        //console.log(resultat);
         this.lenghtFiche = resultat.Quiz_encours.length;
         this.table_quiz_encours = new MatTableDataSource(resultat.Quiz_encours);
         this.cdr.detectChanges();
       },
       error: error => {
-        console.log(error);
+        //console.log(error);
         this.cdr.detectChanges();
       },
     });
@@ -614,13 +614,13 @@ export class Sondages_Encours_DialogComponent implements OnInit {
   ngOnInit() {
     this.userService.statistic().subscribe({
       next: resultat => {
-        console.log(resultat);
+        //console.log(resultat);
         this.lenghtFiche = resultat.sondage_encours.length;
         this.table_sondages_encours = new MatTableDataSource(resultat.sondage_encours);
         this.cdr.detectChanges();
       },
       error: error => {
-        console.log(error);
+        //console.log(error);
         this.cdr.detectChanges();
       },
     });
@@ -661,13 +661,13 @@ export class Fiche_non_lu_DialogComponent {
   ngOnInit() {
     this.userService.statistic().subscribe({
       next: resultat => {
-        console.log(resultat);
+        //console.log(resultat);
         this.lenghtFiche = resultat.fiche_non_lu.length;
         this.table_fiche_non_lu_encours = new MatTableDataSource(resultat.fiche_non_lu);
         this.cdr.detectChanges();
       },
       error: error => {
-        console.log(error);
+        //console.log(error);
         this.cdr.detectChanges();
       },
     });
@@ -715,20 +715,20 @@ export class LiretouteficheComponent implements OnInit {
   ngOnInit() {
     // this.userService.getAllFiche().subscribe({
     //   next: resultat => {
-    //     console.log(resultat);
+    //     //console.log(resultat);
     //     this.lenghtFiche = resultat.length;
     //     this.table_toutes_fiche = new MatTableDataSource(resultat);
     //     this.cdr.detectChanges();
     //   },
     //   error: error => {
-    //     console.log(error);
+    //     //console.log(error);
     //     this.cdr.detectChanges();
     //   },
     // });
     this.userInfoService.me().subscribe({
       next: resultat => {
         this.user_info = resultat;
-        console.log(this.user_info);
+        //console.log(this.user_info);
         if (this.user_info?.roles === 'R_TC') {
           this.selectedNiveau = this.data?.selectedNiveau || '1';
         } else if (this.user_info?.roles === 'R_BO') {
@@ -736,7 +736,7 @@ export class LiretouteficheComponent implements OnInit {
         } else {
           this.selectedNiveau = this.data?.selectedNiveau || 'reset';
         }
-        console.log('Selected niveau', this.selectedNiveau);
+        //console.log('Selected niveau', this.selectedNiveau);
         this.getAllFiche();
       },
     });
@@ -747,17 +747,16 @@ export class LiretouteficheComponent implements OnInit {
       next: resultat => {
         const result = new MatTableDataSource(resultat);
         let filteredData: any = [];
-
         if (this.selectedNiveau) {
           if (this.selectedNiveau === '1') {
             filteredData = result.data.filter(fiche => fiche?.Niveau === '1');
-            console.log('Step 1', filteredData);
+            //console.log('Step 1', filteredData);
           } else if (this.selectedNiveau === '2') {
             filteredData = result.data.filter(fiche => fiche?.Niveau === '2');
-            console.log('Step 2', filteredData);
+            //console.log('Step 2', filteredData);
           } else if (this.selectedNiveau === 'reset') {
             filteredData = result.data;
-            console.log('Step 3', filteredData);
+            //console.log('Step 3', filteredData);
           }
         } else {
           filteredData = result.data;

@@ -323,3 +323,12 @@ html .mat-accent.mat-mdc-radio-button {
     --mdc-radio-selected-pressed-icon-color: #cc7a00;
     --mat-radio-checked-ripple-color: #cc7a00;
 }
+.cdk-overlay-container .center-snackbar {
+  position: fixed !important;
+  top: 50% !important;
+  bottom: auto !important;
+  left: 50% !important;
+  right: auto !important;
+  transform: translate(-50%, -50%) !important;
+  margin: 0 !important;
+}

@@ -334,7 +334,7 @@ $shadow-primary: 0 4px 16px rgba(255, 142, 54, 0.25);
 // CONTAINER PRINCIPAL
 // ============================================
 
-.container-fluid {
+/*.container-fluid {
   //animation: fadeInUp 0.6s ease-out;
   
   &.mb-md-2 {
@@ -357,7 +357,7 @@ $shadow-primary: 0 4px 16px rgba(255, 142, 54, 0.25);
       box-shadow: $shadow-md;
     }
   }
-}
+}*/
 
 // ============================================
 // DATEPICKER
@@ -423,9 +423,9 @@ $shadow-primary: 0 4px 16px rgba(255, 142, 54, 0.25);
   justify-content: center;
   
   // Animation d'entrée décalée
-  @for $i from 1 through 5 {
+ @for $i from 1 through 5 {
     &:nth-child(#{$i}) {
-      animation: fadeInUp 0.6s ease-out #{$i * 0.1}s both;
+      //animation: fadeInUp 0.6s ease-out #{$i * 0.1}s both;
     }
   }
   
@@ -447,7 +447,7 @@ $shadow-primary: 0 4px 16px rgba(255, 142, 54, 0.25);
   }
   
   &:hover {
-    transform: translateY(-8px) scale(1.02);
+   // transform: translateY(-8px) scale(1.02);
     box-shadow: $shadow-primary;
     border-color: $primary-color;
     
@@ -466,9 +466,9 @@ $shadow-primary: 0 4px 16px rgba(255, 142, 54, 0.25);
   }
   
   // Effet de pulsation pour attirer l'attention
-  &:active {
+  /*&:active {
     animation: pulse 0.3s ease;
-  }
+  }*/
 }
 
 .numbers {

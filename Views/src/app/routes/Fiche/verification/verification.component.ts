@@ -238,7 +238,10 @@ this.form_echantillon_M_1=this.fb.group({
     console.log(this.dateForm.value);
     this.userService.getReporting(this.dateForm.value).subscribe({
       next: resultat => {
+        console.log("********* debuh ************");
+        
         console.log(resultat);
+        console.log("********* debuh ************");
         this.reporting_data = resultat.reporting_data;
         this.dataSource_reporting.data = resultat.reporting_data;
         this.score = resultat.score;

@@ -2227,6 +2227,7 @@ const addFiche = async (req, res, next) => {
 };
 const getAllFiche = async (req, res, next) => {
   const userId = req.auth.userId;
+  console.log("ID de utilisateur est",userId);
   try {
     Auto_archivage();
     const Query = ` SELECT FH.id,FH.titre,SL.type,SL.priorite,FH.ETAT,FH.Niveau,DATE_FORMAT(FH.dateEnregistrement,'%Y-%m-%d %H:%i:%s') as dateEnregistrement,DATE_FORMAT(FH.dateDebut,'%Y-%m-%d %H:%i:%s') as dateDebut,DATE_FORMAT(FH.dateFin,'%Y-%m-%d %H:%i:%s') as dateFin,CT.nom as Categorie,SCT.nom as Sous_Categorie, UT.nom_utilisateur as Gestionnaire ,FH.url,FH.extention from
@@ -2324,6 +2325,8 @@ const getAllFicheByIDFiche = async (req, res, next) => {
     const Query3 = `INSERT INTO B_HISTORIQUE (dateConsultation,id_UTILISATEUR,id_FICHE) VALUES (?,?,?)`;
     const Query4 = `SELECT * from B_REPONSE_QUIZ where id_UTILISATEUR=? and id_FICHE=? `;
     const Query5 = `SELECT id_Fonction from B_UTILISATEUR where id=?`;
+    const Query6=`SELECT id from B_NOTIFICATION where id_FICHE=?`;
+    const Query7=`INSERT into B_notifications (id_UTILISATEUR,id_NOTIFICATION,id_FICHE,titre,createdBy,isRead,createdAt,readAt) VALUES (?,?,?,?,?,?,?,?)`;
     const ETAT = "Echecs";
     const STATUT = "Encours_retest";
     const dateConsultation = new Date();
@@ -2336,6 +2339,10 @@ const getAllFicheByIDFiche = async (req, res, next) => {
       await db.query(Query3, [dateConsultation, userId, id]);
       const [resultat_id_fonction] = await db.query(Query5, [userId]);
       const id_Fonction = `${resultat_id_fonction[0].id_Fonction.toString()}`;
+      const [resultatNotif]= await db.query(Query6,[id]);
+      const id_NOTIFICATION=resultatNotif[0].id;
+      const date=new Date();
+      await db.query(Query7,[userId,id_NOTIFICATION,id,"test",userId,1,date,date]);
       //console.log(id_Fonction);
       if (resultat[0].AccesUtilite.includes(`${id_Fonction}`)) {
         resultat[0]["Utilite"] = true;
@@ -3302,8 +3309,6 @@ const controle_m_1 = async (req, res, next) => {
 };
 const getReporting = async (req, res, next) => {
   const userId = req.auth.userId;
-  console.log(req.body);
-  console.log(userId);
   const { typeControle, dateDebut, dateFin } = req.body;
   //console.log(dateDebut, typeControle, dateFin);
   try {
@@ -3321,8 +3326,9 @@ const getReporting = async (req, res, next) => {
       dateFin,
     ]);
     console.log(resultat1[0]);
-
-    const id_CONTROLE = resultat1[0].id_CONTROLE;
+     //console.log("id controle est",resultat1[0].id_CONTROLE);
+    if(resultat1[0].length <1){
+ const id_CONTROLE = resultat1[0][0].id_CONTROLE;
     const [resultat2] = await db.query(Query2, [
       userId,
       id_CONTROLE,
@@ -3332,7 +3338,8 @@ const getReporting = async (req, res, next) => {
     resultat["reporting_data"] = resultat1;
     resultat["score"] = resultat2[0].score;
     //console.log(resultat);
-    return res.status(200).send(resultat);
+    }
+       return res.status(200).send(resultat);
   } catch (error) {
     console.log(error);
     throw error;

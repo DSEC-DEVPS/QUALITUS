@@ -61,7 +61,7 @@ export class StartupService {
             this.rolesService.addRoles({ R_ROO: permissions });
           } else {
             if (user.roles === 'R_TC') {
-              this.rolesService.addRoles({ R_TÉLÉ: permissions });
+              this.rolesService.addRoles({ R_TC: permissions });
             } else {
               if (user.roles === 'R_ADMI') {
                 this.rolesService.addRoles({ R_ADMI: permissions });
@@ -81,11 +81,11 @@ export class StartupService {
                         if (user.role === 'R_GE') {
                           this.rolesService.addRoles({ R_GE: permissions });
                         } else {
-                          if (user.role === 'R_TÉLÉ') {
-                            this.rolesService.addRoles({ R_TÉLÉ: permissions });
+                          if (user.role === 'R_TC') {
+                            this.rolesService.addRoles({ R_TC: permissions });
                           } else {
                             if (user.role === 'R_BO') {
-                              this.rolesService.addRoles({ R_BO: permissions });
+                              this.rolesService.addRoles({ R_TC: permissions });
                             } else {
                               this.rolesService.addRoles({ R_TC: permissions });
                             }

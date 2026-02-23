@@ -89,9 +89,9 @@ export class UserService {
         message: message,
       },
       duration: 10000,
-      horizontalPosition: 'center',
-      verticalPosition: 'top',
-      panelClass: ['score-notification-panel'],
+        horizontalPosition: 'center',
+    verticalPosition: 'bottom', // IMPORTANT
+    panelClass: ['center-snackbar'],
     });
   }
   getAllUtilisateur(): Observable<Utilisateur[]> {

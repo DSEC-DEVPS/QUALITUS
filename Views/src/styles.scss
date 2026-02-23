@@ -19,3 +19,13 @@
 @import '../node_modules/@syncfusion/ej2-notifications/styles/material.scss';
 @import '../node_modules/@syncfusion/ej2-pdfviewer/styles/material.scss';
 */
+/* Cible le container interne Angular Material */
+.cdk-overlay-container .center-snackbar {
+  position: fixed !important;
+  top: 50% !important;
+  bottom: auto !important;
+  left: 50% !important;
+  right: auto !important;
+  transform: translate(-50%, -50%) !important;
+  margin: 0 !important;
+}
