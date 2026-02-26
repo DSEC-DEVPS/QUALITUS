@@ -4,7 +4,7 @@ import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
 import { UserService } from '@shared/services/user.service';
 import { MatSort } from '@angular/material/sort';
-import {  Fiche, reporting,  User } from '@core';
+import {  AuthService, Fiche, reporting,  reporting_resultat,  User } from '@core';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -44,6 +44,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { init } from 'pptx-preview';
+import { userInfo } from 'os';
 
 registerAllModules();
 @Component({
@@ -77,7 +78,9 @@ registerAllModules();
 })
 export class VerificationComponent implements OnInit {
   private readonly userService = inject(UserService);
+  private readonly auth=inject(AuthService);
   private readonly router = inject(Router);
+  hoveredCard: number | null = null; // 👈 AJOUTE ÇA
   private fb = inject(FormBuilder);
   private readonly toast = inject(ToastrService);
   form_echantillon!: FormGroup;
@@ -89,14 +92,9 @@ export class VerificationComponent implements OnInit {
   show_echantillon_actif = false;
   displayedColumns = ['id', 'titre', 'type', 'dateDebut','dateFin', 'Gestionnaire', 'exactitude'];
   displayedColumns_reporting = [
-    'id',
     'id_CONTROLE',
-    'titre',
-    'ETAT',
-    'nom_utilisateur',
-    'exactitude',
-    'on_time',
-    'dateControle',
+  'score',
+  'dateControle'
   ];
   score = 0;
   //table_echantillon!: Fiche[];
@@ -104,10 +102,13 @@ export class VerificationComponent implements OnInit {
   dataSource = new MatTableDataSource<Fiche>([]);
   dataSource_M_1 = new MatTableDataSource<Fiche>([]);
   dataSource_reporting = new MatTableDataSource<reporting>([]);
+  //dataSource_reporting_resultat= new MatTableDataSource<reporting_resultat>([]);
+    dataSource_reporting_resultat:reporting_resultat[]=[];
   reporting_data: reporting[] = [];
   show_echantillonnage_template = false;
   show_reporting_template = false;
   show_echantillonnage_template_M_1 = false;
+  user!:User;
   @ViewChild(MatSort) sort!: MatSort;
   ngOnInit() {
     this.form = this.fb.group({
@@ -116,19 +117,29 @@ export class VerificationComponent implements OnInit {
     this.form_M_1 = this.fb.group({
       items: this.fb.array([]),
     });
-this.form_echantillon=this.fb.group({
- quantite_echantillon:[null,[Validators.required]]
-});
-this.form_echantillon_M_1=this.fb.group({
- quantite_echantillon_M_1:[null,[Validators.required]]
-});
+      this.form_echantillon=this.fb.group({
+      quantite_echantillon:[null,[Validators.required]]
+      });
+      this.form_echantillon_M_1=this.fb.group({
+      quantite_echantillon_M_1:[null,[Validators.required]]
+      });
     this.dateForm = this.fb.group({
       typeControle: ['', [Validators.required]],
       dateDebut: ['', [Validators.required]],
       dateFin: ['', [Validators.required]],
     });
+     this.auth.user().subscribe({
+      next: user => {
+        this.user = user;
+      },
+      error: error => {
+        //console.log(error);
+      },
+    });
   }
-
+  
+  // user infos
+  
   // Getter pour accéder facilement au FormArray
   get itemsFormArray(): FormArray {
     return this.form.get('items') as FormArray;
@@ -234,9 +245,26 @@ this.form_echantillon_M_1=this.fb.group({
   lire(id: number) {
     this.router.navigateByUrl(`lecture-fiche/${id}`);
   }
-  chargement_reporting() {
+
+ chargement_reporting() {
+  this.userService.getReporting().subscribe({
+    next: (resultat) => {
+      console.log(Array.isArray(resultat), resultat);
+      console.log("Retour API :", resultat);
+      this.dataSource_reporting_resultat= resultat;
+      if(resultat.length<1){
+        this.userService.showScoreNotification(0, "Désolé,nous n'avez pas de reporting.");
+      }
+      this.show_reporting_template=true;
+    },
+    error: (error) => {
+      console.error(error);
+    }
+  });
+}
+   /*chargement_reporting() {
     console.log(this.dateForm.value);
-    this.userService.getReporting(this.dateForm.value).subscribe({
+    this.userService.getReporting(this.user.id||0).subscribe({
       next: resultat => {
         console.log("********* debuh ************");
         
@@ -251,7 +279,7 @@ this.form_echantillon_M_1=this.fb.group({
         console.log(error);
       },
     });
-  }
+  }*/
   // Envoyer les réponses à la base de données
   submitResponses(): void {
     if (this.form.valid) {

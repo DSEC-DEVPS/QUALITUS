@@ -319,7 +319,7 @@ router.get("/hello", async (req, res, next) => {
 });
 /** Routes pour   Controle et reporting*/
 router.post("/add_controle", auth, addControle);
-router.post("/get_reporting", auth, getReporting);
+router.get("/get_reporting", auth, getReporting);
 
 /***** les notifications */
 

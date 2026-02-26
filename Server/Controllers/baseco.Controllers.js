@@ -3307,6 +3307,7 @@ const controle_m_1 = async (req, res, next) => {
     throw error;
   }
 };
+/*
 const getReporting = async (req, res, next) => {
   const userId = req.auth.userId;
   const { typeControle, dateDebut, dateFin } = req.body;
@@ -3344,7 +3345,21 @@ const getReporting = async (req, res, next) => {
     console.log(error);
     throw error;
   }
+};*/
+const getReporting = async (req, res, next) => {
+  const userId = req.auth.userId;
+  //console.log(dateDebut, typeControle, dateFin);
+  try {
+    
+    const Query =`Select id,id_CONTROLE,score,DATE_FORMAT(dateControle, '%Y-%m-%d') as dateControle from B_RESULTAT_CONTROLE where id_CONTROLEUR=? ORDER BY dateControle DESC `;
+    const [resultat1]=await db.query(Query,[userId]);
+       return res.status(200).send(resultat1);
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
 };
+
 function removeHostFromUrl(fullUrl) {
   try {
     const parsedUrl = new URL(fullUrl);

@@ -765,3 +765,76 @@ hr {
   display: flex;
   align-items: flex-start;
 }
+.title{
+  align-content: center;
+  align-items: center;
+  text-align: center;
+  font-weight: 600;
+}
+.cards-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding: 20px;
+  justify-content: flex-start;
+}
+
+.card {
+  background: #fd8b0970;
+  border-radius: 10px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+  padding: 10px;
+  width: 300px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+}
+
+.card.hovered {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.25);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.card-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+}
+
+.card-header .etat {
+  padding: 2px 8px;
+  border-radius: 5px;
+  background-color: #1976d2;
+  color: white;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.card-body p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #555;
+}
+
+@media (max-width: 768px) {
+  .card {
+    width: 100%;
+  }
+}
+.delete_icon{
+  color: #000;
+  margin: 4px;
+}
+.icons-content{
+  align-content: end;
+  text-align: end;
+}
+.score{
+  
+}

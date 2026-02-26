@@ -27,6 +27,7 @@ import {
   statistic_TC,
   echantillon,
   reporting_retour,
+  reporting_resultat,
 } from '@core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, catchError, map, Observable, tap, throwError } from 'rxjs';
@@ -290,13 +291,17 @@ export class UserService {
   getResultat_controle_m_1(quantite_echantillon_M_1:number): Observable<Fiche[]> {
     return this.http.post<Fiche[]>(`/api/v1/resultat_controle_m_1`,quantite_echantillon_M_1);
   }
-  getReporting(data: {
+  getReporting(): Observable<reporting_resultat[]> {
+    return this.http.get<reporting_resultat[]>(`/api/v1/get_reporting`);
+  }
+  /*
+   getReporting(data: {
     typeControle: string;
     dateDebut: Date;
     dateFin: string;
   }): Observable<reporting_retour> {
     return this.http.post<reporting_retour>(`/api/v1/get_reporting`, data);
-  }
+  }*/
   deleteFiche(id: number): Observable<message> {
     return this.http.delete<message>(`/api/v1/fiche/${id}`);
   }

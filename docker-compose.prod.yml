@@ -28,7 +28,7 @@ services:
       - internalnet
 
   server:
-    image: diack500/backend2.0
+    image: diack500/qualitus-backend-v2
     restart: always
     environment:
       DB_HOST: db
@@ -46,7 +46,7 @@ services:
       - internalnet
 
   view:
-    image: diack500/frontend2.0
+    image: diack500/qualitus-frontend-v2
     restart: always
     ports:
       - "80:80"

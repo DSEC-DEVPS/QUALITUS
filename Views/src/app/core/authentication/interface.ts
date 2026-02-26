@@ -91,6 +91,12 @@ export interface reporting_retour {
   reporting_data: reporting[];
   score: number;
 }
+export interface reporting_resultat {
+  id:number,
+  id_CONTROLE:number,
+  score:number,
+  dateControle: string;
+}
 export interface reporting {
   id: number;
   id_CONTROLE: number;
