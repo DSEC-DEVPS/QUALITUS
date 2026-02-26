@@ -1204,7 +1204,7 @@ const getAllExport = async (req, res, next) => {
      INNER JOIN B_MOTIF_MA_VOIX_COMPTE A on MVCP.motif_ma_voix_compte=A.id
     LEFT join B_UTILISATEUR UT on MVCP.id_UTILISATEUR=UT.id
     INNER JOIN B_SITE st on UT.id_Site=st.id 
-    where DATE_FORMAT(MVCP.dateCreation,'%Y-%m-%d')  between ? and ?
+    where DATE_FORMAT(MVCP.dateCreation,'%Y-%m-%d')  between DATE_FORMAT(?,'%Y-%m-%d') and DATE_FORMAT(?,'%Y-%m-%d')
     `;
     } else {
       if (dataType === "Commentaires") {
