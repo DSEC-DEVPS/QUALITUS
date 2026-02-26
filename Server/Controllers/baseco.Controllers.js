@@ -1196,6 +1196,7 @@ const addMaVoixCompte = async (req, res, next) => {
 };
 const getAllExport = async (req, res, next) => {
   const { dataType, dateDebut, dateFin } = req.body;
+  console.log(req.body);
   try {
     let Query = "";
     if (dataType === "Ma voix compte") {
@@ -1204,7 +1205,7 @@ const getAllExport = async (req, res, next) => {
      INNER JOIN B_MOTIF_MA_VOIX_COMPTE A on MVCP.motif_ma_voix_compte=A.id
     LEFT join B_UTILISATEUR UT on MVCP.id_UTILISATEUR=UT.id
     INNER JOIN B_SITE st on UT.id_Site=st.id 
-    where DATE_FORMAT(MVCP.dateCreation,'%Y-%m-%d')  between ? and ?
+    where DATE_FORMAT(MVCP.dateCreation,'%Y-%m-%d')  BETWEEN DATE_FORMAT(?,'%Y-%m-%d') and DATE_FORMAT(?,'%Y-%m-%d')
     `;
     } else {
       if (dataType === "Commentaires") {
@@ -1269,6 +1270,7 @@ where DATE_FORMAT(FCH.dateEnregistrement,'%Y-%m-%d') BETWEEN DATE_FORMAT(?,'%Y-%
       }
     }
     const [resultat] = await db.query(Query, [dateDebut, dateFin]);
+    console.log(resultat);
     return res.status(200).send(resultat);
   } catch (error) {
     console.log(error);

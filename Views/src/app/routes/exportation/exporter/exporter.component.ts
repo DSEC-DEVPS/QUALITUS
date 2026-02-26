@@ -78,6 +78,7 @@ export class ExporterComponent implements OnInit {
   onExport(): void {
     this.userService.export_ma_voix_compte(this.exportForm.value).subscribe({
       next: resultat => {
+        console.log(resultat);
         this.download(resultat);
       },
       error: error => {
