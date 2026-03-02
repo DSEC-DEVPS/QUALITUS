@@ -3157,8 +3157,8 @@ const statistic = async (req, res, next) => {
     INNER JOIN
     (SELECT id_FICHE as id_Fiche_Quiz FROM B_QUIZ GROUP BY id_FICHE)B on A.id_FICHE=B.id_Fiche_Quiz)C
     LEFT JOIN
-    (SELECT id_UTILISATEUR as user_id,id_FICHE as id_Fiche_RQ FROM B_REPONSE_QUIZ WHERE id_UTILISATEUR=?) D on C.id_FICHE=D.id_Fiche_RQ
-    WHERE D.id_Fiche_RQ is null)temp
+    (SELECT id_UTILISATEUR as user_id,id_FICHE as id_Fiche_RQ,ETAT,STATUT FROM B_REPONSE_QUIZ WHERE id_UTILISATEUR=?) D on C.id_FICHE=D.id_Fiche_RQ
+    WHERE (D.id_Fiche_RQ is null) or (D.ETAT='Echecs' and D.STATUT='Encours_Retest'))temp
     INNER JOIN B_FICHE FH ON temp.id_FICHE=FH.id
     INNER JOIN B_SLA sl on FH.id_Sla=sl.id
     INNER JOIN B_UTILISATEUR UT ON FH.id_gestionnaire=UT.id
