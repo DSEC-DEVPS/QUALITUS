@@ -2547,7 +2547,6 @@ const getAllFicheByIdCategorieAndIdSousCategorie = async (req, res, next) => {
                     AND FH.ETAT = ?
                     AND FH.id_Categorie = ?
                     AND FH.id_SousCategorie = ?`;
-
     const Query2 = `SELECT UT.id,ST.id as id_Site,F.id as id_Fonction from B_UTILISATEUR UT,B_SITE ST, B_FONCTION F where UT.id_Site=ST.id and UT.id_Fonction=F.id  and UT.id=?`;
     const [resultat2] = await db.query(Query2, [userId]);
     const id_Site = `%${resultat2[0].id_Site}%`;
