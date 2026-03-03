@@ -403,6 +403,9 @@ export class AjouterFicheComponent implements OnInit {
     if (!this.snapForm.get('niveau')?.value) {
       missingFields.push('Niveau');
     }
+    if(this.selectedAccesSite.length<1){
+      missingFields.push('Sites');
+    }
 
     // Vérifier les questions du quiz si le questionnaire est activé
     if (this.showQuestionnaireValue) {
