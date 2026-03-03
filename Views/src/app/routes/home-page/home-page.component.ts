@@ -89,7 +89,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
   templateUrl: './home-page.component.html',
   styleUrl: './home-page.component.scss',
 })
-export class HomePageComponent implements  OnInit {
+export class HomePageComponent implements OnInit {
   dataSource: MatTableDataSource<Fiche> = new MatTableDataSource<Fiche>([]);
 
   dataSource_Archive!: MatTableDataSource<Fiche>;
@@ -106,7 +106,7 @@ export class HomePageComponent implements  OnInit {
   displayedColumns_table: string[] = ['titre', 'type'];
   data!: MatTableDataSource<Fiche>;
   data_table!: MatTableDataSource<fiche_id_categorie_and_id_sous_cateogorie>;
- 
+
   resultsLength = 0;
   resultsLength_table = 0;
   isLoadingResults = true;
@@ -247,13 +247,13 @@ export class HomePageComponent implements  OnInit {
           this.selectedNiveau = null;
           this.showDefaut = true;
         }
-        console.log("infos me ",resultat);
+        console.log('infos me ', resultat);
 
         this.getAllFiche();
       },
     });
   }
- 
+
   private initObservable() {
     this.fiches$ = this.userService.fiches$;
     //console.log(this.fiches$);
@@ -353,7 +353,7 @@ export class HomePageComponent implements  OnInit {
     }
   }
   RouterOnWorkSpace() {
-    if ((this.user.roles === 'R_TC')||(this.user.roles === 'R_BO')) {
+    if (this.user.roles === 'R_TC' || this.user.roles === 'R_BO') {
       this.router.navigateByUrl('mon-espace/MaVoixCompte/ajouter');
     } else {
       if (this.user.roles === 'R_GE') {
@@ -442,7 +442,6 @@ export class HomePageComponent implements  OnInit {
         this.stateTransition = false;
         this.isShowCategorie = false;
         this.isShowValue = false;
-       
       } else {
         this.isShowCategorie = !this.isShowCategorie;
         ////console.log('else testtttttt', this.isShowCategorie);
@@ -492,10 +491,14 @@ export class HomePageComponent implements  OnInit {
           let filteredData: any = [];
           if (this.selectedNiveau) {
             if (this.selectedNiveau === '1') {
-              filteredData = resultat.filter(fiche => fiche?.Niveau === '1');
+              filteredData = resultat.filter(
+                fiche => fiche?.Niveau === '1' || fiche?.Niveau === '0'
+              );
               //console.log('Step 1', filteredData);
             } else if (this.selectedNiveau === '2') {
-              filteredData = resultat.filter(fiche => fiche?.Niveau === '2');
+              filteredData = resultat.filter(
+                fiche => fiche?.Niveau === '2' || fiche?.Niveau === '0'
+              );
               //console.log('Step 2', filteredData);
             } else if (this.selectedNiveau === 'reset') {
               filteredData = resultat;
