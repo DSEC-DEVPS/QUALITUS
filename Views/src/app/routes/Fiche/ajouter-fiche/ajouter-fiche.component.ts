@@ -158,21 +158,22 @@ export class AjouterFicheComponent implements OnInit {
       },
     });
 
-    this.userService.getAllSite().subscribe({
-      next: site => {
-        this.ListeSite = site;
-      },
-      error: error => {
-        console.log(error);
-      },
-    });
-
     this.userService.getAllFonction().subscribe({
       next: fonction => {
         console.log(fonction);
         this.ListeProfil = fonction;
         console.log(this.ListeProfil);
-        this.initializeCheckboxes();
+        this.userService.getAllSite().subscribe({
+          next: site => {
+            this.ListeSite = site;
+            if (this.ListeProfil && this.ListeSite) {
+              this.initializeCheckboxes();
+            }
+          },
+          error: error => {
+            console.log(error);
+          },
+        });
       },
       error: error => {
         console.log(error);
@@ -403,7 +404,7 @@ export class AjouterFicheComponent implements OnInit {
     if (!this.snapForm.get('niveau')?.value) {
       missingFields.push('Niveau');
     }
-    if(this.selectedAccesSite.length<1){
+    if (this.selectedAccesSite.length < 1) {
       missingFields.push('Sites');
     }
 

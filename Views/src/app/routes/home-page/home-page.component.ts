@@ -54,6 +54,7 @@ import { FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angul
 import { MatRadioModule } from '@angular/material/radio';
 import { UppercaseAllPipe } from '../../shared/pipes/UppercaseAllPipe';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { filtrerListeFiche } from '@shared/utils/filtrerListeFiche';
 
 @Component({
   selector: 'app-home-page',
@@ -135,6 +136,8 @@ export class HomePageComponent implements OnInit {
   isShowCategorie!: boolean;
   stateTransition = false;
   activeCategorieId: number | null = null;
+  activeSousCategorieId: number | null = null;
+
   div_table = 'col-md-10 p-3';
   div_cat_nb_col = 'col-md-8';
   div_cat_img_col = 'col-md-2 col-sm-4';
@@ -210,7 +213,6 @@ export class HomePageComponent implements OnInit {
         //console.log(error);
       },
     });
-
     this.userService.getAllFiche_Archive().subscribe({
       next: resultat => {
         this.dataSource_Archive = new MatTableDataSource(resultat);
@@ -224,17 +226,7 @@ export class HomePageComponent implements OnInit {
         this.categorieAndSousCategorie = categorie;
       },
     });
-    this.userService.statistic().subscribe({
-      next: resultat => {
-        this.statitic = resultat;
-        this.nb_fiche_non_lu = resultat.fiche_non_lu.length;
-        this.nb_quiz_encours = resultat.Quiz_encours.length;
-        this.nb_sondage_encours = resultat.sondage_encours.length;
-      },
-      error: error => {
-        //console.log(error);
-      },
-    });
+
     this.userInfoService.me().subscribe({
       next: resultat => {
         this.user_info = resultat;
@@ -250,6 +242,7 @@ export class HomePageComponent implements OnInit {
         console.log('infos me ', resultat);
 
         this.getAllFiche();
+        this.loadSideStat();
       },
     });
   }
@@ -258,6 +251,7 @@ export class HomePageComponent implements OnInit {
     this.fiches$ = this.userService.fiches$;
     //console.log(this.fiches$);
   }
+
   getFormattedDate(date: Date): string {
     date = this.dateForm.get('selectedDate')?.value;
     const year = date.getFullYear();
@@ -279,11 +273,32 @@ export class HomePageComponent implements OnInit {
       },
     });
   }
-  openDialog_Quiz_encours() {
+  loadSideStat() {
+    this.userService.statistic().subscribe({
+      next: resultat => {
+        this.statitic = resultat;
+
+        let filteredData: any[] = filtrerListeFiche(resultat.fiche_non_lu, this.selectedNiveau);
+        let filteredDataQuiz: any[] = filtrerListeFiche(resultat.Quiz_encours, this.selectedNiveau);
+        let filteredDataSondage: any[] = filtrerListeFiche(
+          resultat.sondage_encours,
+          this.selectedNiveau
+        );
+        this.nb_fiche_non_lu = filteredData.length;
+        this.nb_quiz_encours = filteredDataQuiz.length;
+        this.nb_sondage_encours = filteredDataSondage.length;
+      },
+      error: error => {
+        //console.log(error);
+      },
+    });
+  }
+  openDialog_Quiz_encours(selectedNiveau: any) {
     if (this.nb_quiz_encours === 0) {
       //console.log('rien');
     } else {
       const dialogRef = this.dialog.open(Quiz_Encours_DialogComponent, {
+        data: { selectedNiveau: selectedNiveau },
         height: 'calc(100% - 30px)',
         width: 'calc(100% - 30px)',
         maxWidth: '95%',
@@ -309,11 +324,12 @@ export class HomePageComponent implements OnInit {
     });
   }
 
-  openDialog_Sondages_encours() {
+  openDialog_Sondages_encours(selectedNiveau: any) {
     if (this.nb_sondage_encours === 0) {
       //console.log('rien');
     } else {
       const dialogRef = this.dialog.open(Sondages_Encours_DialogComponent, {
+        data: { selectedNiveau: selectedNiveau },
         height: 'calc(100% - 30px)',
         width: 'calc(100% - 30px)',
         maxWidth: '95%',
@@ -325,13 +341,14 @@ export class HomePageComponent implements OnInit {
       });
     }
   }
-  openDialog_Fiche_non_lu() {
+  openDialog_Fiche_non_lu(selectedNiveau: any) {
     if (this.nb_fiche_non_lu === 0) {
       //console.log('rien');
     } else {
       // Passez directement les données que vous m'avez montrées
       const fiches_non_lues = this.statitic.fiche_non_lu;
       const dialogRef = this.dialog.open(Fiche_non_lu_DialogComponent, {
+        data: { selectedNiveau: selectedNiveau },
         height: 'calc(100% - 30px)',
         width: 'calc(100% - 30px)',
         maxWidth: '95%',
@@ -402,28 +419,14 @@ export class HomePageComponent implements OnInit {
       );
     }
     this.getAllFiche();
+    this.loadSideStat();
   }
 
   getAllFiche() {
     this.userService.getAllFiche().subscribe({
       next: resultat => {
         const result = new MatTableDataSource(resultat);
-        let filteredData: any = [];
-        if (this.selectedNiveau) {
-          if (this.selectedNiveau === '1') {
-            filteredData = result.data.filter(fiche => fiche?.Niveau === '1');
-            //console.log('Step 1', filteredData);
-          } else if (this.selectedNiveau === '2') {
-            filteredData = result.data.filter(fiche => fiche?.Niveau === '2');
-            //console.log('Step 2', filteredData);
-          } else if (this.selectedNiveau === 'reset') {
-            filteredData = result.data;
-            //console.log('Step 3', filteredData);
-          }
-        } else {
-          filteredData = result.data;
-        }
-
+        let filteredData: any[] = filtrerListeFiche(result.data, this.selectedNiveau);
         this.dataSource = new MatTableDataSource(filteredData);
         this.cdr.detectChanges();
       },
@@ -456,6 +459,7 @@ export class HomePageComponent implements OnInit {
         this.isShowValueSousCategorieDiv = false;
         this.isShowValueSearchAvance = true;
         this.activeCategorieId = null;
+        this.activeSousCategorieId = null;
       } else {
         if (type === 'SearchArchive') {
           this.isShowValueSearchAvance = false;
@@ -464,6 +468,7 @@ export class HomePageComponent implements OnInit {
           this.isShowCategorie = false;
           this.isShowValueSearchArchive = true;
           this.activeCategorieId = null;
+          this.activeSousCategorieId = null;
         }
       }
     }
@@ -481,6 +486,7 @@ export class HomePageComponent implements OnInit {
   isShowTableValue(id: number, id_categorie: number) {
     this.currentStateOfIdSubCatAndCat.id = id;
     this.currentStateOfIdSubCatAndCat.id_categorie = id_categorie;
+    this.activeSousCategorieId = id;
     this.userService
       .getAllFicheByIdCategorieAndIdSousCategorie({
         id_SousCategorie: id,
@@ -488,28 +494,13 @@ export class HomePageComponent implements OnInit {
       })
       .subscribe({
         next: resultat => {
-          let filteredData: any = [];
-          if (this.selectedNiveau) {
-            if (this.selectedNiveau === '1') {
-              filteredData = resultat.filter(
-                fiche => fiche?.Niveau === '1' || fiche?.Niveau === '0'
-              );
-              //console.log('Step 1', filteredData);
-            } else if (this.selectedNiveau === '2') {
-              filteredData = resultat.filter(
-                fiche => fiche?.Niveau === '2' || fiche?.Niveau === '0'
-              );
-              //console.log('Step 2', filteredData);
-            } else if (this.selectedNiveau === 'reset') {
-              filteredData = resultat;
-              //console.log('Step 3', filteredData);
-            }
-          } else {
-            filteredData = resultat;
-          }
+          let filteredData: any[] = filtrerListeFiche(resultat, this.selectedNiveau);
           this.data_table = new MatTableDataSource(filteredData);
-          this.data_table.paginator = this.paginator;
-          this.data_table.sort = this.sort;
+          setTimeout(() => {
+            this.data_table.paginator = this.paginator;
+            this.data_table.sort = this.sort;
+          });
+
           this.div_cat_nb_col = 'col-md-6';
           this.div_cat_img_col = 'col-md-3 col-sm-4';
           this.isShowTableValueVariable = true;
@@ -570,12 +561,21 @@ export class Quiz_Encours_DialogComponent implements OnInit {
   table_quiz_encours!: MatTableDataSource<Fiche>;
   displayedColumns: string[] = ['titre', 'type', 'dateDebut', 'dateFin', 'Gestionnaire'];
   lenghtFiche = 0;
+  data: any;
+  constructor(@Inject(MAT_DIALOG_DATA) data: any) {
+    this.data = data;
+  }
   ngOnInit() {
     this.userService.statistic().subscribe({
       next: resultat => {
         //console.log(resultat);
-        this.lenghtFiche = resultat.Quiz_encours.length;
-        this.table_quiz_encours = new MatTableDataSource(resultat.Quiz_encours);
+
+        let filteredData: any[] = filtrerListeFiche(
+          resultat.Quiz_encours,
+          this.data.selectedNiveau
+        );
+        this.lenghtFiche = filteredData.length;
+        this.table_quiz_encours = new MatTableDataSource(filteredData);
         this.cdr.detectChanges();
       },
       error: error => {
@@ -614,12 +614,21 @@ export class Sondages_Encours_DialogComponent implements OnInit {
   table_sondages_encours!: MatTableDataSource<Fiche>;
   displayedColumns: string[] = ['titre', 'type', 'dateDebut', 'dateFin', 'Gestionnaire'];
   lenghtFiche = 0;
+  data: any;
+  constructor(@Inject(MAT_DIALOG_DATA) data: any) {
+    this.data = data;
+  }
   ngOnInit() {
     this.userService.statistic().subscribe({
       next: resultat => {
         //console.log(resultat);
-        this.lenghtFiche = resultat.sondage_encours.length;
-        this.table_sondages_encours = new MatTableDataSource(resultat.sondage_encours);
+
+        let filteredData: any[] = filtrerListeFiche(
+          resultat.sondage_encours,
+          this.data.selectedNiveau
+        );
+        this.lenghtFiche = filteredData.length;
+        this.table_sondages_encours = new MatTableDataSource(filteredData);
         this.cdr.detectChanges();
       },
       error: error => {
@@ -661,12 +670,23 @@ export class Fiche_non_lu_DialogComponent {
   table_fiche_non_lu_encours!: MatTableDataSource<Fiche>;
   displayedColumns: string[] = ['titre', 'type', 'dateDebut', 'dateFin', 'Gestionnaire'];
   lenghtFiche = 0;
+  data: any;
+  constructor(@Inject(MAT_DIALOG_DATA) data: any) {
+    this.data = data;
+  }
   ngOnInit() {
+    console.log('data fiche non lu', this.data.selectedNiveau);
     this.userService.statistic().subscribe({
       next: resultat => {
-        //console.log(resultat);
-        this.lenghtFiche = resultat.fiche_non_lu.length;
-        this.table_fiche_non_lu_encours = new MatTableDataSource(resultat.fiche_non_lu);
+        console.log(resultat);
+
+        let filteredData: any[] = filtrerListeFiche(
+          resultat.fiche_non_lu,
+          this.data.selectedNiveau
+        );
+
+        this.lenghtFiche = filteredData.length;
+        this.table_fiche_non_lu_encours = new MatTableDataSource(filteredData);
         this.cdr.detectChanges();
       },
       error: error => {
@@ -749,22 +769,7 @@ export class LiretouteficheComponent implements OnInit {
     this.userService.getAllFiche().subscribe({
       next: resultat => {
         const result = new MatTableDataSource(resultat);
-        let filteredData: any = [];
-        if (this.selectedNiveau) {
-          if (this.selectedNiveau === '1') {
-            filteredData = result.data.filter(fiche => fiche?.Niveau === '1');
-            //console.log('Step 1', filteredData);
-          } else if (this.selectedNiveau === '2') {
-            filteredData = result.data.filter(fiche => fiche?.Niveau === '2');
-            //console.log('Step 2', filteredData);
-          } else if (this.selectedNiveau === 'reset') {
-            filteredData = result.data;
-            //console.log('Step 3', filteredData);
-          }
-        } else {
-          filteredData = result.data;
-        }
-
+        let filteredData: any[] = filtrerListeFiche(result.data, this.selectedNiveau);
         this.table_toutes_fiche = new MatTableDataSource(filteredData);
         this.lenghtFiche = filteredData.length;
         this.cdr.detectChanges();

@@ -10,7 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 @Component({
   selector: 'app-popup',
   standalone: true,
-  imports: [BrowserModule, BrowserAnimationsModule, MatSnackBarModule,MatIconModule],
+  imports: [MatSnackBarModule,MatIconModule],
   templateUrl: './popup.component.html',
   styleUrl: './popup.component.scss',
   animations: [

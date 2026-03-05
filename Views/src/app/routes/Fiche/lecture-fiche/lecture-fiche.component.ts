@@ -75,7 +75,7 @@ registerAllModules();
   styleUrl: './lecture-fiche.component.scss',
 })
 export class LectureFicheComponent implements OnInit {
-@ViewChild('pptxWrapper', { static: false }) pptxWrapper!: ElementRef<HTMLDivElement>;
+  @ViewChild('pptxWrapper', { static: false }) pptxWrapper!: ElementRef<HTMLDivElement>;
   private pptxPreviewer: any;
   /** les attributs pour la lecture des fiches de type excel */
   fileId = '';
@@ -172,17 +172,13 @@ export class LectureFicheComponent implements OnInit {
           this.show_div_value_commentaire = result.Commentaire;
           this.col_div_iframe = 'col-md-9 pt-2';
         }
-        if (
-          result.extention === '.pdf' ||
-          result.extention === '.docx'
-        ) {
+        if (result.extention === '.pdf' || result.extention === '.docx') {
           console.log(this.fiche);
           this.selectedDocumentType(result);
           console.log(this.url);
         } else {
           if (result.extention === '.xlsx') {
             /****** */
-     
 
             this.userService.getAllExcelFicheByIDFiche(id).subscribe({
               next: (data: Blob) => {
@@ -525,6 +521,24 @@ export class LectureFicheComponent implements OnInit {
             console.log(error);
           },
         });
+    } else if (
+      this.fiche?.Quiz[0].reponseQuestion === this.formGroup_Quiz.value.Reponse1 ||
+      this.fiche?.Quiz[1].reponseQuestion === this.formGroup_Quiz.value.Reponse2
+    ) {
+      this.resultat_Quiz = 0;
+      this.userService
+        .response_Quiz(this.router_id, { resultat_Quiz: this.resultat_Quiz })
+        .subscribe({
+          next: resultat => {
+            this.userService.showScoreNotification(
+              50,
+              `Désolé, vous n'avez pas réussi tous les quiz. Votre superviseur vous en enverra d'autres.`
+            );
+          },
+          error: error => {
+            console.log(error);
+          },
+        });
     } else {
       this.resultat_Quiz = 0;
       this.userService
@@ -533,7 +547,7 @@ export class LectureFicheComponent implements OnInit {
           next: resultat => {
             this.userService.showScoreNotification(
               0,
-              `Désolé, vous n'avez pas réussi tous les quiz. Votre superviseur vous en enverra d'autres.`
+              `Désolé, vous n'avez réussi aucun des quiz. Votre superviseur vous en enverra d'autres.`
             );
           },
           error: error => {

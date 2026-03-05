@@ -122,11 +122,15 @@
 
     <div class="col-md-4">
       <div class="row d-block" style="padding-top: 0px">
-        <div class="col-md-12" *ngIf="isShowValueSousCategorie">
+        <div class="col-md-12 mb-4" *ngIf="isShowValueSousCategorie">
           <div class="container">
             <div class="row justify-content-center d-flex align-items-center">
               <div class="col-md-4 p-0" *ngFor="let item of sous_categorie[0].Sous_Categorie">
-                <button class="btn" (click)="isShowTableValue(item.id, item.id_Categorie)">
+                <button
+                  class="btn card_sous_categorie"
+                  (click)="isShowTableValue(item.id, item.id_Categorie)"
+                  [ngClass]="{ active: activeSousCategorieId === item.id }"
+                >
                   <img [src]="folder2" class="img_sous_categeory" alt="" />
                   <h6 class="label_sous_categorie">{{ item.nom | uppercaseAll }}</h6>
                 </button>
@@ -186,7 +190,10 @@
                 ></tr>
               </table>
             </div>
-             <mat-paginator [pageSizeOptions]="[5, 10]" aria-label="les chargements ...."></mat-paginator>
+            <mat-paginator
+              [pageSizeOptions]="[5, 10]"
+              aria-label="les chargements ...."
+            ></mat-paginator>
           </div>
         </div>
       </div>
@@ -372,7 +379,7 @@
             <div class="container py-3">
               <div class="row d-block">
                 <div class="col nbrTirage">
-                  <button class="nbrliste_button" (click)="openDialog_Fiche_non_lu()">
+                  <button class="nbrliste_button" (click)="openDialog_Fiche_non_lu(selectedNiveau)">
                     <div class="labelContainer">
                       <h6>
                         <span style="font-size: small; text-align: center">
@@ -385,7 +392,7 @@
                   </button>
                 </div>
                 <diV class="col nbrliste my-md-3">
-                  <button class="nbrliste_button" (click)="openDialog_Quiz_encours()">
+                  <button class="nbrliste_button" (click)="openDialog_Quiz_encours(selectedNiveau)">
                     <div class="labelContainer">
                       <h6 style="font-size: small; text-align: center">
                         <span style="font-size: small; text-align: center">
@@ -399,7 +406,7 @@
                 </diV>
 
                 <div class="col nbrTirageValide p-0">
-                  <button class="nbrliste_button" (click)="openDialog_Sondages_encours()">
+                  <button class="nbrliste_button" (click)="openDialog_Sondages_encours(selectedNiveau)">
                     <div class="labelContainer">
                       <h6 style="font-size: small; text-align: center">
                         <span style="font-size: small; text-align: center">

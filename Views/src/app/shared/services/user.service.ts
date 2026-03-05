@@ -91,7 +91,7 @@ export class UserService {
       },
       duration: 10000,
         horizontalPosition: 'center',
-    verticalPosition: 'bottom', // IMPORTANT
+    verticalPosition: 'top', // IMPORTANT
     panelClass: ['center-snackbar'],
     });
   }

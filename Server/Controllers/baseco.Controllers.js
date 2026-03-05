@@ -2266,13 +2266,13 @@ const getAllFiche = async (req, res, next) => {
     on CT.id=FH.id_Categorie
     LEFT JOIN B_SOUS_CATEGORIE SCT
     on FH.id_SousCategorie=SCT.id 
-    where FH.ETAT =? and FH.AccesSite like ? and FH.AccesProfil like ?
+    where FH.ETAT =? and FIND_IN_SET(?, FH.AccesSite) > 0 and FIND_IN_SET(?, FH.AccesProfil) > 0
     ORDER BY dateEnregistrement DESC`;
     const Query2 = `SELECT id,id_Site,id_Fonction from B_UTILISATEUR  where id=?`;
     const ETAT = "ACTIF";
     const [resultat1] = await db.query(Query2, [userId]);
-    const id_Site = `%${resultat1[0].id_Site}%`;
-    const id_Fonction = `%${resultat1[0].id_Fonction}%`;
+    const id_Site = resultat1[0].id_Site;
+    const id_Fonction = resultat1[0].id_Fonction;
     //console.log(id_Site, id_Fonction);
     const [resutat] = await db.query(Query, [ETAT, id_Site, id_Fonction]);
     //console.log(resutat);
@@ -2549,8 +2549,8 @@ const getAllFicheByIdCategorieAndIdSousCategorie = async (req, res, next) => {
                     AND FH.id_SousCategorie = ?`;
     const Query2 = `SELECT UT.id,ST.id as id_Site,F.id as id_Fonction from B_UTILISATEUR UT,B_SITE ST, B_FONCTION F where UT.id_Site=ST.id and UT.id_Fonction=F.id  and UT.id=?`;
     const [resultat2] = await db.query(Query2, [userId]);
-    const id_Site = `%${resultat2[0].id_Site}%`;
-    const id_Fonction = `%${resultat2[0].id_Fonction}%`;
+    const id_Site = resultat2[0].id_Site;
+    const id_Fonction = resultat2[0].id_Fonction;
     const ETAT = "ACTIF";
     const [resultat] = await db.query(Query, [
       id_Site,
@@ -3188,7 +3188,7 @@ const statistic = async (req, res, next) => {
   const userId = req.auth.userId;
   try {
     const resultat = {};
-    const Query = `select A.* from (SELECT * FROM B_FICHE where ETAT='ACTIF') A LEFT JOIN (select id_FICHE from B_HISTORIQUE where id_UTILISATEUR=? GROUP BY id_FICHE) B on A.id=B.id_FICHE where  B.id_FICHE is null`;
+    const Query = `select A.* from (SELECT * FROM B_FICHE where ETAT='ACTIF' AND FIND_IN_SET(?, AccesSite) > 0 AND FIND_IN_SET(?, AccesProfil) > 0) A LEFT JOIN (select id_FICHE from B_HISTORIQUE where id_UTILISATEUR=? GROUP BY id_FICHE) B on A.id=B.id_FICHE where  B.id_FICHE is null`;
     const Query2 = `  
     SELECT FH.id,FH.titre,sl.type,FH.dateDebut,FH.dateFin,UT.nom_utilisateur as Gestionnaire,FH.extention FROM
     (SELECT * FROM 
@@ -3203,20 +3203,32 @@ const statistic = async (req, res, next) => {
     INNER JOIN B_SLA sl on FH.id_Sla=sl.id
     INNER JOIN B_UTILISATEUR UT ON FH.id_gestionnaire=UT.id
     `;
-    const Query3 = `SELECT temp.id,temp.titre,sl.type,temp.dateDebut,temp.dateFin,UT.nom_utilisateur as Gestionnaire,temp.extention FROM
+    const Query3 = `SELECT temp.id,temp.titre,sl.type,temp.dateDebut,temp.dateFin,temp.Niveau,UT.nom_utilisateur as Gestionnaire,temp.extention FROM
     (SELECT * from 
     (SELECT id_UTILISATEUR,id_FICHE from B_HISTORIQUE where id_UTILISATEUR=? GROUP BY id_FICHE) A
-    INNER JOIN B_FICHE FH on A.id_FICHE=FH.id)temp LEFT JOIN 
-    (SELECT id_UTILISATEUR,id_FICHE from B_SONDAGE WHERE id_UTILISATEUR=? and utilite is not null GROUP BY id_FICHE)B 
+    INNER JOIN B_FICHE FH on A.id_FICHE=FH.id AND FIND_IN_SET(?, FH.AccesSite) > 0 AND FIND_IN_SET(?, FH.AccesProfil) > 0)temp 
+    LEFT JOIN (SELECT id_UTILISATEUR,id_FICHE from B_SONDAGE WHERE id_UTILISATEUR=? and utilite is not null GROUP BY id_FICHE)B 
     on temp.id_FICHE=B.id_FICHE 
     INNER JOIN B_UTILISATEUR UT on temp.id_Gestionnaire=UT.id
     INNER JOIN B_SLA sl on temp.id_Sla=sl.id
     where B.id_FICHE is null
 `;
-
-    const [resultat_Query1] = await db.query(Query, [userId]);
+    const QuerySiteProfil = `SELECT UT.id,ST.id as id_Site,F.id as id_Fonction from B_UTILISATEUR UT,B_SITE ST, B_FONCTION F where UT.id_Site=ST.id and UT.id_Fonction=F.id  and UT.id=?`;
+    const [resultat2] = await db.query(QuerySiteProfil, [userId]);
+    const id_Site = resultat2[0].id_Site;
+    const id_Fonction = resultat2[0].id_Fonction;
+    const [resultat_Query1] = await db.query(Query, [
+      id_Site,
+      id_Fonction,
+      userId,
+    ]);
     const [resultat_Query2] = await db.query(Query2, [userId, userId]);
-    const [resultat_Query3] = await db.query(Query3, [userId, userId]);
+    const [resultat_Query3] = await db.query(Query3, [
+      userId,
+      id_Site,
+      id_Fonction,
+      userId,
+    ]);
     resultat["fiche_non_lu"] = resultat_Query1;
     resultat["Quiz_encours"] = resultat_Query2;
     resultat["sondage_encours"] = resultat_Query3;

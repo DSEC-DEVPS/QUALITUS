@@ -333,6 +333,13 @@ ul li {
   color: white;
   transition: 0.1s ease-in-out;
 }
+
+
+.card_sous_categorie.active {
+  background: #ff8d3688;
+  color: white;
+  transition: 0.1s ease-in-out;
+}
 .mat-column-number,
 .mat-column-state {
   width: 64px;
