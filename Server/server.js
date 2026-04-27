@@ -34,6 +34,8 @@ app.use("/chargements", express.static(path.join(__dirname, "chargements")));
 /** routes */
 
 app.use("/api/v1", require("./Routes/baseco.Routes"));
+app.use("/api/v1", require("./Routes/evaluationRouter/evaluation.Routes"));
+
 /*app.get("/{*test}", (req, res) => {
   res.sendFile(path.join(__dirname + "/Frontend/index.html"));
 });*/

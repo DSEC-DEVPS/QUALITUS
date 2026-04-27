@@ -1,0 +1,115 @@
+<div class="container mt-auto mb-auto">
+  <mat-card>
+    <mat-card-header>
+      <div class="container mt-4 pb-3">
+        <div class="row justify-content-space-between">
+          <div class="col-md-6 text-start">
+            <h3>Evaluations Supplementaires</h3>
+          </div>
+          <div class="col-md-6 text-end">
+            <div class="btn btn-light align-items-center delete_button">
+              <mat-icon
+                (click)="openAddDialog()"
+                class="add_icon"
+                matTooltip="Ajouter une evaluation"
+                matTooltipPosition="above"
+              >
+                add_circle
+              </mat-icon>
+            </div>
+          </div>
+        </div>
+      </div>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="mat-elevation-z6">
+        <table mat-table [dataSource]="dataSource" matSort>
+          <ng-container matColumnDef="contexte">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header="">Contexte</th>
+            <td mat-cell *matCellDef="let element">
+              {{ element?.contexte }}
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="programme">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header="">Programme</th>
+            <td mat-cell *matCellDef="let element">
+              {{ element?.programme }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="dateCreation">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header="">Date de création</th>
+            <td mat-cell *matCellDef="let element">
+              {{ element?.date_creation | date: 'dd-MM-yyyy' }}
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="conclusion">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header="">Conclusion</th>
+            <td mat-cell *matCellDef="let element">
+              <span
+                class="col-4 text_lead_content"
+                [class.succes]="element?.conclusion === 'SUCCES'"
+                [class.echec]="element?.conclusion === 'ECHEC'"
+              >
+                {{ element?.conclusion }}
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="statut">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header="">Statut</th>
+            <td mat-cell *matCellDef="let element">
+              <span
+                class="col-6 text_lead_content"
+                [class.succes]="element?.statut === 'Terminer'"
+                [class.en_cours]="element?.statut === 'En cours'"
+              >
+                {{ element?.statut }}
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="Actions">
+            <th mat-header-cell *matHeaderCellDef>ACTIONS</th>
+            <td mat-cell *matCellDef="let element">
+              <div class="ACTIONS">
+                <mat-icon
+                  (click)="completionSupplementaire(element?.id)"
+                  class="eye_icon text-center"
+                  matTooltip="Details"
+                  matTooltipPosition="above"
+                  >remove_red_eye</mat-icon
+                ><mat-icon
+                  (click)="deleteSupplemntaire(element?.id)"
+                  class="delete_icon text-center"
+                  matTooltip="Supprimer"
+                  matTooltipPosition="above"
+                  >delete</mat-icon
+                >
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColums"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColums"></tr>
+          <!-- <tr class="mat-row" *matNoDataRow>
+          <td class="mat-cell" colspan="4">No data matching the filter "{{ input.value }}"</td>
+        </tr> -->
+        </table>
+
+        <mat-paginator
+          [pageSizeOptions]="[5, 10, 25, 100]"
+          aria-label="Select page of users"
+        ></mat-paginator>
+      </div>
+    </mat-card-content>
+    <mat-card-footer class="mx-2 py-5 d-flex justify-content-end">
+      <button
+        mat-button
+        (click)="onCloseModal()"
+        class="large-button"
+        style="background-color: #ff8e36; color: #ffffff; margin-bottom: 3px"
+      >
+        Fermer
+      </button>
+    </mat-card-footer>
+  </mat-card>
+</div>

@@ -1,0 +1,109 @@
+<div class="container mt-auto mb-auto">
+  <mat-card>
+    <mat-card-header>
+      <h3>Evaluations</h3>
+    </mat-card-header>
+
+    <mat-card-content class="mt-2">
+      <form [formGroup]="formGroup" (ngSubmit)="createEvaluations()" class="form-field-full mt-5">
+        <div class="row mt-5 mb-5">
+          <div class="col-sm-6 m-auto">
+            <mat-form-field appearance="fill">
+              <mat-label>Agent</mat-label>
+              <input matInput (input)="onInputChange($event)" formControlName="id_Agent" required />
+            </mat-form-field>
+            <div
+              *ngIf="inputStart"
+              class="user-box d-flex flex-column justify-content-center text-center"
+              [ngClass]="{
+                'box-danger': inputStart,
+                'box-success': !inputStart,
+              }"
+            >
+              <span class="fw-small">
+                {{ usernameError }}
+              </span>
+            </div>
+            <div
+              *ngIf="agent"
+              class="user-box d-flex flex-column justify-content-center text-center"
+              [ngClass]="{
+                'box-danger': inputStart,
+                'box-success': !inputStart,
+              }"
+            >
+              <span> {{ agent?.prenom }} {{ agent?.nom }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="row mt-5 mb-5">
+          <div class="col-sm-6 m-auto">
+            <mat-form-field appearance="fill">
+              <mat-label>Contexte</mat-label>
+              <input matInput formControlName="contexte" required />
+            </mat-form-field>
+          </div>
+
+          <div class="col-sm-6 m-auto">
+            <mat-form-field appearance="fill">
+              <mat-label>Identifiant d'appel</mat-label>
+              <input matInput formControlName="identifiant_appel" required />
+            </mat-form-field>
+          </div>
+        </div>
+
+        <div class="row mt-5 mb-5">
+          <div class="col-sm-6 m-auto">
+            <mat-form-field appearance="fill">
+              <mat-label>Numero de case</mat-label>
+              <input matInput formControlName="numero_case" required />
+            </mat-form-field>
+          </div>
+          <div class="col-sm-6 m-auto">
+            <mat-form-field appearance="fill">
+              <mat-label>Numero d'appel</mat-label>
+              <input matInput formControlName="numero_appel" required />
+            </mat-form-field>
+          </div>
+          <div class="row mt-5 mb-5">
+            <div class="col-sm-12 m-auto">
+              <mat-form-field appearance="fill">
+                <mat-label>Motif d'appel</mat-label>
+                <textarea matInput formControlName="motif_appel" required></textarea>
+              </mat-form-field>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mt-5 mb-5">
+          <div class="col-sm-6 m-auto">
+            <mat-form-field appearance="fill">
+              <mat-label>Date d'appel</mat-label>
+              <input
+                matInput
+                [matDatepicker]="pickerDateAppel"
+                formControlName="date_appel"
+                required
+              />
+              <mat-datepicker-toggle matSuffix [for]="pickerDateAppel"></mat-datepicker-toggle>
+              <mat-datepicker #pickerDateAppel></mat-datepicker>
+            </mat-form-field>
+          </div>
+          <div class="col-sm-6 m-auto">
+            <mat-form-field appearance="fill">
+              <mat-label>DMT</mat-label>
+              <input matInput type="time" formControlName="dmt" step="1" required />
+            </mat-form-field>
+          </div>
+        </div>
+
+        <div class="m-t-8 text-center">
+          <button mat-flat-button [loading]="isSubmitting" [disabled]="formGroup.invalid">
+            Ajouter
+          </button>
+          <button mat-button mat-dialog-close>Annuler</button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

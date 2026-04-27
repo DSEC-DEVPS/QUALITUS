@@ -1,0 +1,230 @@
+<mat-card>
+  <mat-card-header>
+    <div class="container pb-3">
+      <div class="row justify-content-space-between">
+        <div class="col-sm-6 text-start p-0">
+          <h3>Business Intelligence</h3>
+        </div>
+        <div class="col-sm-6 text-end p-0">
+          <div class="btn btn-light align-items-center delete_button">
+            <mat-icon
+              (click)="openAddBusinessIntelligenceDialog()"
+              class="add_icon"
+              matTooltip="Ajouter un niveau 1"
+              matTooltipPosition="above"
+            >
+              add_circle
+            </mat-icon>
+          </div>
+        </div>
+      </div>
+    </div>
+  </mat-card-header>
+
+  <mat-card-content class="mt-2">
+    <div class="accordion" id="accordionBI">
+      <div class="accordion-item" *ngFor="let bi of businessList">
+        <h2 class="accordion-header d-flex justify-content-between align-items-center px-2">
+          <button
+            class="accordion-button collapsed"
+            data-bs-toggle="collapse"
+            [attr.data-bs-target]="'#bi_' + bi.id"
+          >
+            {{ bi.nom }}
+          </button>
+          <div class="ms-2 d-flex gap-2">
+            <mat-icon
+              (click)="openEditBusinessIntelligenceDialog(bi)"
+              class="edit_icon"
+              matTooltip="Modifier"
+              >edit</mat-icon
+            >
+            <mat-icon
+              (click)="delete(bi.id, 1)"
+              class="delete_icon"
+              matTooltip="Supprimer"
+              class="text-danger"
+              >delete</mat-icon
+            >
+          </div>
+        </h2>
+        <div class="accordion-collapse collapse" [id]="'bi_' + bi.id">
+          <div class="accordion-body">
+            <!-- BI_1 -->
+            <div class="accordion">
+              <div class="ms-2 d-flex gap-2 mb-2">
+                <mat-icon
+                  (click)="openAddBI1Dialog(bi)"
+                  class="add_icon"
+                  matTooltip="Ajouter un niveau 2"
+                  matTooltipPosition="above"
+                >
+                  add_circle
+                </mat-icon>
+              </div>
+              <div class="accordion-item" *ngFor="let bi1 of bi.bi1">
+                <h2 class="accordion-header d-flex justify-content-between align-items-center px-2">
+                  <button
+                    class="accordion-button collapsed"
+                    data-bs-toggle="collapse"
+                    [attr.data-bs-target]="'#bi1_' + bi.id + '_' + bi1.id"
+                  >
+                    {{ bi1.options }}
+                  </button>
+                  <div class="ms-2 d-flex gap-2">
+                    <mat-icon
+                      (click)="openEditBI1Dialog(bi1)"
+                      class="edit_icon"
+                      matTooltip="Modifier"
+                      >edit</mat-icon
+                    >
+                    <mat-icon
+                      (click)="delete(bi1.id, 2)"
+                      class="delete_icon"
+                      matTooltip="Supprimer"
+                      class="text-danger"
+                      >delete</mat-icon
+                    >
+                  </div>
+                </h2>
+
+                <div class="accordion-collapse collapse" [id]="'bi1_' + bi.id + '_' + bi1.id">
+                  <div class="accordion-body">
+                    <!-- BI_2 -->
+                    <div class="accordion">
+                      <div class="ms-2 d-flex gap-2 mb-2">
+                        <mat-icon
+                          (click)="openAddBI2Dialog(bi1)"
+                          class="add_icon"
+                          matTooltip="Ajouter un niveau 3"
+                          matTooltipPosition="above"
+                        >
+                          add_circle
+                        </mat-icon>
+                      </div>
+                      <div class="accordion-item" *ngFor="let bi2 of bi1.bi2">
+                        <h2
+                          class="accordion-header d-flex justify-content-between align-items-center px-2"
+                        >
+                          <button
+                            class="accordion-button collapsed"
+                            data-bs-toggle="collapse"
+                            [attr.data-bs-target]="'#bi2_' + bi.id + '_' + bi2.id"
+                          >
+                            {{ bi2.options }}
+                          </button>
+                          <div class="ms-2 d-flex gap-2">
+                            <mat-icon
+                              (click)="openEditBI2Dialog(bi1, bi2)"
+                              class="edit_icon"
+                              matTooltip="Modifier"
+                              >edit</mat-icon
+                            >
+                            <mat-icon
+                              (click)="delete(bi2.id, 3)"
+                              class="delete_icon"
+                              matTooltip="Supprimer"
+                              class="text-danger"
+                              >delete</mat-icon
+                            >
+                          </div>
+                        </h2>
+
+                        <div
+                          class="accordion-collapse collapse"
+                          [id]="'bi2_' + bi.id + '_' + bi2.id"
+                        >
+                          <div class="accordion-body">
+                            <!-- BI_3 -->
+                            <div class="accordion">
+                              <div class="ms-2 d-flex gap-2 mb-2">
+                                <mat-icon
+                                  (click)="openAddBI3Dialog(bi2)"
+                                  class="add_icon"
+                                  matTooltip="Ajouter un niveau 4"
+                                  matTooltipPosition="above"
+                                >
+                                  add_circle
+                                </mat-icon>
+                              </div>
+                              <div class="accordion-item" *ngFor="let bi3 of bi2.bi3">
+                                <h2
+                                  class="accordion-header d-flex justify-content-between align-items-center px-2"
+                                >
+                                  <button
+                                    class="accordion-button collapsed"
+                                    data-bs-toggle="collapse"
+                                    [attr.data-bs-target]="'#bi3_' + bi.id + '_' + bi3.id"
+                                  >
+                                    {{ bi3.options }}
+                                  </button>
+                                  <div class="ms-2 d-flex gap-2">
+                                    <mat-icon
+                                      (click)="openEditBI3Dialog(bi2, bi3)"
+                                      class="edit_icon"
+                                      matTooltip="Modifier"
+                                      >edit</mat-icon
+                                    >
+                                    <mat-icon
+                                      (click)="delete(bi3.id, 4)"
+                                      matTooltip="Supprimer"
+                                      class="text-danger"
+                                      >delete</mat-icon
+                                    >
+                                  </div>
+                                </h2>
+
+                                <div
+                                  class="accordion-collapse collapse"
+                                  [id]="'bi3_' + bi.id + '_' + bi3.id"
+                                >
+                                  <div class="accordion-body">
+                                    <div class="ms-2 d-flex gap-2 mb-2">
+                                      <mat-icon
+                                        (click)="openAddBI4Dialog(bi3)"
+                                        class="add_icon"
+                                        matTooltip="Ajouter un niveau 5"
+                                        matTooltipPosition="above"
+                                      >
+                                        add_circle
+                                      </mat-icon>
+                                    </div>
+                                    <div *ngFor="let bi4 of bi3.bi4">
+                                      <h6
+                                        class="d-flex justify-content-between align-items-center px-2"
+                                      >
+                                        <span>{{ bi4.options }}</span>
+                                        <div class="ms-2 d-flex gap-2">
+                                          <mat-icon
+                                            (click)="openEditBI4Dialog(bi3, bi4)"
+                                            class="edit_icon"
+                                            matTooltip="Modifier"
+                                            >edit</mat-icon
+                                          >
+                                          <mat-icon
+                                            (click)="delete(bi4.id, 5)"
+                                            matTooltip="Supprimer"
+                                            class="text-danger"
+                                            >delete</mat-icon
+                                          >
+                                        </div>
+                                      </h6>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </mat-card-content>
+</mat-card>

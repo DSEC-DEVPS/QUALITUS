@@ -1,0 +1,67 @@
+<mat-card>
+  <mat-card-header>
+    <div class="container pb-3">
+      <div class="row justify-content-space-between">
+        <div class="col-sm-6 text-start p-0">
+          <h3>Calendrier</h3>
+        </div>
+        <div class="col-sm-6 text-end p-0">
+          <div class="btn btn-light align-items-center delete_button" (click)="openDialog()">
+            <mat-icon
+              class="add_icon"
+              matTooltip="Ajouter un calendrier"
+              matTooltipPosition="above"
+            >
+              add_circle
+            </mat-icon>
+          </div>
+        </div>
+      </div>
+    </div>
+  </mat-card-header>
+
+  <mat-card-content class="mt-2">
+    <div class="cards-container mt-2 d-flex justify-content-center">
+      <div class="card-wrapper" *ngFor="let site of listeCalendrier">
+        <div *ngIf="site.calendars.length > 0" class="card" style="width: 20rem">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="card-title">{{ site.nom }}</h5>
+              <mat-icon
+                (click)="deleteCalendarsBySite(site?.id)"
+                class="delete_icon"
+                matTooltip="Supprimer"
+                matTooltipPosition="above"
+              >
+                delete
+              </mat-icon>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-bordered text-center align-middle">
+                <thead>
+                  <tr>
+                    <th>Mois</th>
+                    <th>État</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let cal of site.calendars">
+                    <td class="month-cell">
+                      {{ cal.mois | uppercaseAll }}
+                    </td>
+                    <td class="state-cell">
+                      <mat-checkbox [(ngModel)]="cal.etat" (change)="toggleEtat(cal)">
+                        {{ cal.etat ? 'Actif' : 'Inactif' }}
+                      </mat-checkbox>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </mat-card-content>
+</mat-card>

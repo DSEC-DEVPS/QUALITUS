@@ -1,0 +1,40 @@
+<div class="container">
+  <h6>BI 2</h6>
+  <div class="row m-auto justify-content-center register-template">
+    <div class="col-sm-8">
+      <mat-card>
+        <mat-card-content>
+          <form [formGroup]="formGroup" (ngSubmit)="updateBI1()" class="form-field-full">
+            <div class="row">
+              <div class="col-sm-6 m-auto">
+                <mat-form-field appearance="fill">
+                  <mat-label>Options</mat-label>
+                  <input matInput formControlName="options" required />
+                </mat-form-field>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-sm-6 m-auto">
+                <mat-form-field appearance="fill">
+                  <mat-label>Business Intelligence</mat-label>
+                  <mat-select formControlName="id_Business_Intelligence" required>
+                    <mat-option *ngFor="let bi of businessIntelligences" [value]="bi.id">
+                      {{ bi.nom }}
+                    </mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="m-t-8 text-center">
+              <button mat-flat-button [loading]="isSubmitting" [disabled]="formGroup.invalid">
+                Ajouter
+              </button>
+              <button mat-button mat-dialog-close>Annuler</button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

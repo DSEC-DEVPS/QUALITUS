@@ -9,6 +9,7 @@ import { ListeGrilleComponent } from './routes/liste-grille/liste-grille.compone
 import { LectureFicheComponent } from './routes/Fiche/lecture-fiche/lecture-fiche.component';
 import { ExporterComponent } from './routes/exportation/exporter/exporter.component';
 import { ChangedPasswordComponent } from './routes/sessions/changed-password/changed-password.component';
+import { BusinessIntelligenceComponent } from './routes/businessIntelligence/business-intelligence/business-intelligence.component';
 
 export const routes: Routes = [
   {
@@ -71,6 +72,18 @@ export const routes: Routes = [
       {
         path: 'grille',
         component: ListeGrilleComponent,
+      },
+      {
+        path: 'Calendars',
+        loadChildren: () => import('./routes/calendrier/calendrier.routes').then(m => m.routes),
+      },
+      {
+        path: 'Evaluations',
+        loadChildren: () => import('./routes/Evaluations/evaluations.routes').then(m => m.routes),
+      },
+      {
+        path: 'BusinessIntelligence',
+        component: BusinessIntelligenceComponent,
       },
     ],
   },

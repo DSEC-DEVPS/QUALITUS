@@ -1,0 +1,166 @@
+.border {
+  border: solid 1px;
+}
+.bottomCard mat-card {
+  height: auto;
+  min-height: unset; /* 🔥 IMPORTANT */
+}
+
+mat-card {
+  width: 100%;
+  height: auto;
+  margin: auto;
+  background: #ffffff9a;
+}
+
+mat-card-header {
+  display: flex;
+  background-color: #ff8e36;
+  justify-content: center;
+}
+
+mat-card-content {
+  overflow-x: auto;
+}
+.title-banner {
+  display: flex;
+  justify-content: end;
+  flex-wrap: wrap;
+  margin-bottom: 5px;
+}
+.ACTIONS {
+  width: 100%;
+}
+
+.titles-container {
+  display: flex;
+  gap: 12px; /* espace entre items */
+  overflow-x: auto; /* scroll horizontal si trop d'items */
+}
+
+.title-item {
+  flex: 0 0 220px; /* 🔥 largeur FIXE */
+  max-width: 220px;
+  min-width: 220px;
+
+  padding: 8px;
+  text-align: center;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #f8f9fa;
+
+  cursor: pointer;
+}
+/* hover */
+.title-item:hover {
+  background-color: #ff8e36;
+  color: #fff;
+}
+
+/* 🔥 sélection */
+.title-item.selected {
+  background-color: #ff8e36;
+  color: #fff;
+  border-color: #ff8e36;
+  font-weight: 600;
+  box-shadow: 0 0 0 2px rgba(255, 142, 54, 0.4);
+}
+
+/* Contexte "danger" */
+.indeterminate_check_box {
+  background-color: #fdecea;
+  border-color: #dc3545;
+  color: #dc3545;
+  cursor: pointer;
+}
+
+/* Contexte "success" */
+.check_box {
+  background-color: #e9f7ef;
+  border-color: #198754;
+  color: #198754;
+  cursor: pointer;
+}
+.evaluation-image {
+  max-width: 300px;
+  width: 100%;
+  opacity: 0.9;
+  height: 200px;
+  object-fit: scale-down;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+.text_lead {
+  font-size: 14px;
+  font-weight: bold;
+  font-family: Helvetica, sans-serif;
+}
+.text_lead_content {
+  font-size: 15px;
+  font-weight: small;
+  font-family: Helvetica, sans-serif;
+}
+
+.score-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.text_lead_content.succes {
+  background-color: #18bb6f;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 5px;
+  border-radius: 10px;
+}
+.text_lead_content.echec {
+  background-color: #dc3545;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 5px;
+  border-radius: 10px;
+}
+
+.text_lead_content.en_cours {
+  background-color: #ff8e36;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 5px;
+  border-radius: 10px;
+}
+
+.cards-container {
+  display: flex;
+  flex-wrap: wrap; /* 👈 passe à la ligne automatiquement */
+  gap: 1rem; /* espace entre les cards */
+}
+
+.card-wrapper {
+  flex: 0 0 auto; /* taille fixe, pas d’étirement bizarre */
+}
+
+.icon-cell {
+  font-size: 14px;
+}
+
+.msg-cell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
