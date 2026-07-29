@@ -26,6 +26,7 @@ import {
 } from '@costlydeveloper/ngx-awesome-popup';
 import { catchError, of, Subject, takeUntil, tap } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
+import { Router } from '@angular/router';
 @Component({
   selector: 'app-table-overview-example',
   standalone: true,
@@ -60,6 +61,7 @@ export class ListeGrilleComponent implements OnInit {
   downloadData!: grille[];
   @ViewChild(MatSort) sort!: MatSort;
   readonly dialog = inject(MatDialog);
+  private readonly router = inject(Router);
   constructor(private userService: UserService) {}
   ngOnInit(): void {
     this.userService.getAllGrille().subscribe(user => {
@@ -69,7 +71,9 @@ export class ListeGrilleComponent implements OnInit {
       this.dataSource.sort = this.sort;
     });
   }
-
+  grilleEvaluationDetails(id: number) {
+    this.router.navigateByUrl(`mon-espace/EvaluationsItem/${id}`);
+  }
   openDialog(): void {
     this.dialog.open(AjouterGrilleComponent, {
       height: 'calc(100% - 30px)',

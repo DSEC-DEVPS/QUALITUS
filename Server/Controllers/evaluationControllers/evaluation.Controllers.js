@@ -494,7 +494,7 @@ const createSupplementaire = async (req, res, next) => {
     ) {
       return res.status(400).send({
         message:
-          "L'un des identifiants suivants est nulle: Agent, Evaluateur, Evaluation ",
+          "L'un des identifiants suivants est nul: Agent, Evaluateur, Evaluation ",
       });
     }
 
@@ -767,7 +767,16 @@ const getSupplementairesById = async (req, res, next) => {
       res.status(400).send({ message: "La valeur de idEvaluations est nulle" });
     }
     const [[supplementaire]] = await db.query(
-      `SELECT * FROM SUPPLEMENTAIRES WHERE id=?`,
+      `SELECT
+        supp.*,
+        u1.nom    AS evaluateur_nom,
+        u1.prenom AS evaluateur_prenom,
+        u2.nom    AS agent_nom,
+        u2.prenom AS agent_prenom
+        FROM SUPPLEMENTAIRES supp
+      JOIN B_UTILISATEUR u1 ON u1.id = supp.id_Evaluateur
+      JOIN B_UTILISATEUR u2 ON u2.id = supp.id_Agent 
+      WHERE supp.id=?`,
       [id],
     );
 
@@ -1017,7 +1026,9 @@ const createEvaluation = async (req, res, next) => {
     date_appel,
     dmt,
     motif_appel,
+    type_evaluation,
     id_Evaluateur,
+    id_Evaluations,
     id_Agent,
   } = req.body;
   await db.query("START TRANSACTION");
@@ -1059,10 +1070,12 @@ const createEvaluation = async (req, res, next) => {
     , motif_appel
     , statut
     , id_Evaluateur
+    , id_Evaluations
     , id_Agent
     , id_Grille
     , site
     , programme
+    , type_evaluation
     , resolution
     , conclusion
     , type
@@ -1110,10 +1123,12 @@ const createEvaluation = async (req, res, next) => {
       motif_appel,
       statut,
       id_Evaluateur,
+      id_Evaluations,
       id_Agent,
       id_Grille,
       site,
       programme,
+      type_evaluation,
       "Oui",
       "SUCCES",
       "Evaluation",

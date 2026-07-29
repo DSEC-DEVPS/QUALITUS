@@ -538,11 +538,13 @@ CREATE TABLE IF NOT EXISTS EVALUATIONS (
   pourquoi2 VARCHAR(255),
   pourquoi3 VARCHAR(255),
   pourquoi4 VARCHAR(255),
-  type VARCHAR(255),
+  type_evaluation VARCHAR(255),
   id_Evaluateur INT,
+  id_Evaluations INT UNSIGNED NULL,
   id_Grille INT,
   id_Agent INT,
   FOREIGN KEY(id_Evaluateur) REFERENCES B_UTILISATEUR(id),
+  FOREIGN KEY(id_Evaluations) REFERENCES EVALUATIONS(id),
   FOREIGN KEY(id_Agent) REFERENCES B_UTILISATEUR(id),
   FOREIGN KEY(id_Grille) REFERENCES B_GRILLE(id)
 );
@@ -603,62 +605,62 @@ CREATE TABLE IF NOT EXISTS SCORES (
   FOREIGN KEY(id_Evaluations) REFERENCES EVALUATIONS(id)
 );
 CREATE INDEX idx_scores_eval_cat ON SCORES(id_Evaluations, id_Categories_Erreurs);
-CREATE TABLE IF NOT EXISTS SUPPLEMENTAIRES (
-  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  contexte VARCHAR(255),
-  identifiant_appel VARCHAR(255),
-  numero_case VARCHAR(255),
-  numero_appel VARCHAR(255),
-  date_appel DATETIME,
-  date_evaluations DATETIME,
-  date_creation DATETIME,
-  dmt VARCHAR(255),
-  motif_appel VARCHAR(255),
-  programme VARCHAR(255),
-  site VARCHAR(255),
-  synthese TEXT,
-  avis_agents TEXT,
-  conclusion VARCHAR(255),
-  statut VARCHAR(255),
-  resolution VARCHAR(255),
-  pourquoi1 VARCHAR(255),
-  pourquoi2 VARCHAR(255),
-  pourquoi3 VARCHAR(255),
-  pourquoi4 VARCHAR(255),
-  type VARCHAR(255),
-  id_Evaluations INT UNSIGNED,
-  id_Evaluateur INT,
-  id_Grille INT,
-  id_Agent INT,
-  FOREIGN KEY(id_Evaluations) REFERENCES EVALUATIONS(id),
-  FOREIGN KEY(id_Evaluateur) REFERENCES B_UTILISATEUR(id),
-  FOREIGN KEY(id_Agent) REFERENCES B_UTILISATEUR(id),
-  FOREIGN KEY(id_Grille) REFERENCES B_GRILLE(id)
-);
-CREATE TABLE IF NOT EXISTS SUPPLEMENTAIRES_RESULTATS (
-  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  id_Categories_Erreurs INT,
-  id_Sous_Categories_Erreurs INT,
-  items TEXT NOT NULL,
-  sous_items TEXT NOT NULL,
-  referentiels TEXT NOT NULL,
-  poids_items DECIMAL(30, 12),
-  score_en_pourcent DECIMAL(30, 12),
-  score_sur_vingt DECIMAL(30, 12),
-  commentaire TEXT,
-  etat TINYINT(1),
-  id_Supplementaires INT UNSIGNED,
-  FOREIGN KEY(id_Supplementaires) REFERENCES SUPPLEMENTAIRES(id)
-);
-CREATE TABLE IF NOT EXISTS SCORES_SUPPLEMENTAIRES (
-  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  score DECIMAL(30, 12),
-  nombre TINYINT UNSIGNED,
-  id_Categories_Erreurs INT UNSIGNED,
-  categorie_erreur VARCHAR(255),
-  id_Supplementaires INT UNSIGNED,
-  FOREIGN KEY(id_Supplementaires) REFERENCES SUPPLEMENTAIRES(id)
-);
+-- CREATE TABLE IF NOT EXISTS SUPPLEMENTAIRES (
+--   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+--   contexte VARCHAR(255),
+--   identifiant_appel VARCHAR(255),
+--   numero_case VARCHAR(255),
+--   numero_appel VARCHAR(255),
+--   date_appel DATETIME,
+--   date_evaluations DATETIME,
+--   date_creation DATETIME,
+--   dmt VARCHAR(255),
+--   motif_appel VARCHAR(255),
+--   programme VARCHAR(255),
+--   site VARCHAR(255),
+--   synthese TEXT,
+--   avis_agents TEXT,
+--   conclusion VARCHAR(255),
+--   statut VARCHAR(255),
+--   resolution VARCHAR(255),
+--   pourquoi1 VARCHAR(255),
+--   pourquoi2 VARCHAR(255),
+--   pourquoi3 VARCHAR(255),
+--   pourquoi4 VARCHAR(255),
+--   type VARCHAR(255),
+--   id_Evaluations INT UNSIGNED,
+--   id_Evaluateur INT,
+--   id_Grille INT,
+--   id_Agent INT,
+--   FOREIGN KEY(id_Evaluations) REFERENCES EVALUATIONS(id),
+--   FOREIGN KEY(id_Evaluateur) REFERENCES B_UTILISATEUR(id),
+--   FOREIGN KEY(id_Agent) REFERENCES B_UTILISATEUR(id),
+--   FOREIGN KEY(id_Grille) REFERENCES B_GRILLE(id)
+-- );
+-- CREATE TABLE IF NOT EXISTS SUPPLEMENTAIRES_RESULTATS (
+--   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+--   id_Categories_Erreurs INT,
+--   id_Sous_Categories_Erreurs INT,
+--   items TEXT NOT NULL,
+--   sous_items TEXT NOT NULL,
+--   referentiels TEXT NOT NULL,
+--   poids_items DECIMAL(30, 12),
+--   score_en_pourcent DECIMAL(30, 12),
+--   score_sur_vingt DECIMAL(30, 12),
+--   commentaire TEXT,
+--   etat TINYINT(1),
+--   id_Supplementaires INT UNSIGNED,
+--   FOREIGN KEY(id_Supplementaires) REFERENCES SUPPLEMENTAIRES(id)
+-- );
+-- CREATE TABLE IF NOT EXISTS SCORES_SUPPLEMENTAIRES (
+--   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+--   score DECIMAL(30, 12),
+--   nombre TINYINT UNSIGNED,
+--   id_Categories_Erreurs INT UNSIGNED,
+--   categorie_erreur VARCHAR(255),
+--   id_Supplementaires INT UNSIGNED,
+--   FOREIGN KEY(id_Supplementaires) REFERENCES SUPPLEMENTAIRES(id)
+-- );
 CREATE TABLE IF NOT EXISTS CALENDARS (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   numero INT,

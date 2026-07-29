@@ -505,7 +505,7 @@
     },
     {
       "route": "mon-espace/grille",
-      "name": "Grille",
+      "name": "Grilles Evaluations",
       "type": "link",
       "icon": "flag",
       "permissions": {
@@ -587,17 +587,6 @@
     {
       "route": "mon-espace/BusinessIntelligence",
       "name": "Business Intelligence",
-      "type": "link",
-      "icon": "event",
-      "permissions": {
-        "only": [
-          "R_ADMI"
-        ]
-      }
-    },
-    {
-      "route": "mon-espace/EvaluationsItem",
-      "name": "Evaluations Items",
       "type": "link",
       "icon": "event",
       "permissions": {

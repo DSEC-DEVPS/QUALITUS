@@ -10,6 +10,7 @@ import { LectureFicheComponent } from './routes/Fiche/lecture-fiche/lecture-fich
 import { ExporterComponent } from './routes/exportation/exporter/exporter.component';
 import { ChangedPasswordComponent } from './routes/sessions/changed-password/changed-password.component';
 import { BusinessIntelligenceComponent } from './routes/businessIntelligence/business-intelligence/business-intelligence.component';
+import { EvaluationsItemsComponent } from './routes/Evaluations/evaluations-items/evaluations-items.component';
 
 export const routes: Routes = [
   {
@@ -72,6 +73,7 @@ export const routes: Routes = [
       {
         path: 'grille',
         component: ListeGrilleComponent,
+        // loadChildren: () => import('./routes/liste-grille/grille.routes').then(m => m.routes),
       },
       {
         path: 'Calendars',
@@ -80,6 +82,10 @@ export const routes: Routes = [
       {
         path: 'Evaluations',
         loadChildren: () => import('./routes/Evaluations/evaluations.routes').then(m => m.routes),
+      },
+      {
+        path: 'EvaluationsItem/:id',
+        component: EvaluationsItemsComponent,
       },
       {
         path: 'BusinessIntelligence',

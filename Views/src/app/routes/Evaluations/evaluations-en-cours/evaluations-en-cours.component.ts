@@ -295,7 +295,7 @@ export class EvaluationsEnCoursComponent implements OnInit {
       this.router.navigateByUrl(`mon-espace/Evaluations/Supplementaire/Completion/${id}`);
     }
   }
-  deleteEvaluation(id: any) {
+  deleteEvaluation(id: any, data: any) {
     const newConfirmBox = new ConfirmBoxInitializer();
     newConfirmBox.setTitle('Suppression !');
     newConfirmBox.setMessage('Êtes vous sûr de vouloir supprimer ?');
@@ -312,20 +312,37 @@ export class EvaluationsEnCoursComponent implements OnInit {
       .pipe(
         tap(value => {
           if (value.success) {
-            this.evaluationService.deleteEvaluation(id).subscribe({
-              next: response => {
-                console.log('delete ' + id + ' ');
-                console.log('response');
-                console.log(response);
-                this.toastSrv.success(response?.message);
-                // this.loadEvaluations();
-                this.loadAllData();
-              },
-              error: error => {
-                console.log('error');
-                console.log(error);
-              },
-            });
+            if (data.sourceTable === 'EVAL') {
+              this.evaluationService.deleteEvaluation(id).subscribe({
+                next: response => {
+                  console.log('delete ' + id + ' ');
+                  console.log('response');
+                  console.log(response);
+                  this.toastSrv.success(response?.message);
+                  // this.loadEvaluations();
+                  this.loadAllData();
+                },
+                error: error => {
+                  console.log('error');
+                  console.log(error);
+                },
+              });
+            } else {
+              this.supplementaireService.deleteSupplementaire(id).subscribe({
+                next: response => {
+                  console.log('delete ' + id + ' ');
+                  console.log('response');
+                  console.log(response);
+                  this.toastSrv.success(response?.message);
+                  // this.loadEvaluations();
+                  this.loadAllData();
+                },
+                error: error => {
+                  console.log('error');
+                  console.log(error);
+                },
+              });
+            }
           }
         }),
         catchError(error => {

@@ -56,7 +56,11 @@
           <th mat-header-cell *matHeaderCellDef>ACTIONS</th>
           <td mat-cell *matCellDef="let element">
             <div class="ACTIONS">
-              <mat-icon class="eye_icon" matTooltip="Details" matTooltipPosition="above"
+              <mat-icon
+                class="eye_icon"
+                matTooltip="Details"
+                matTooltipPosition="above"
+                (click)="grilleEvaluationDetails(element?.id)"
                 >remove_red_eye</mat-icon
               >
               <mat-icon
