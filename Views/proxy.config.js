@@ -25,22 +25,14 @@
 const PROXY_CONFIG = {
   // Proxy pour l'API principale
   '/api/**': {
-<<<<<<< HEAD
-    target: 'http://server:3000',  // backend Node.js
-=======
     target: 'http://localhost:3000',  // backend Node.js
->>>>>>> ea2e7f6 (Mohamed CISSE 13082026)
     changeOrigin: true,
     secure: false,
     logLevel: 'debug'
   },
   // Proxy pour le dossier chargements
   '/chargements/**': {
-<<<<<<< HEAD
-    target: 'http://server:3000',  // backend Node.js
-=======
     target: 'http://localhost:3000',  // backend Node.js
->>>>>>> ea2e7f6 (Mohamed CISSE 13082026)
     changeOrigin: true,
     secure: false,
     logLevel: 'debug'

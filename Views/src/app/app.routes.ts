@@ -69,8 +69,6 @@ export const routes: Routes = [
       },
       { path: 'quiz', loadChildren: () => import('./routes/Quiz/quiz.routes').then(m => m.routes) },
       {
-<<<<<<< HEAD
-=======
         path: 'calibrage',
         loadChildren: () => import('./routes/Calibrage/calibrage.routes').then(m => m.routes),
       },
@@ -79,7 +77,6 @@ export const routes: Routes = [
         loadChildren: () => import('./routes/Evaluation/evaluation.routes').then(m => m.routes),
       },
       {
->>>>>>> ea2e7f6 (Mohamed CISSE 13082026)
         path: 'grille',
         component: ListeGrilleComponent,
       },

@@ -1,12 +1,6 @@
 import { Routes } from '@angular/router';
 import { QuizEnEchecsComponent } from './quiz-en-echecs/quiz-en-echecs.component';
 import { QuizEnResetComponent } from './quiz-en-reset/quiz-en-reset.component';
-<<<<<<< HEAD
-
-export const routes: Routes = [
-  { path: 'quiz-en-echecs', component: QuizEnEchecsComponent },
-  { path: 'Quiz-en-reset', component: QuizEnResetComponent },
-=======
 import { ListeQuizComponent } from './liste-quiz/liste-quiz.component';
 import { EditeurQuizComponent } from './editeur-quiz/editeur-quiz.component';
 import { ParticiperListeComponent } from './participer-liste/participer-liste.component';
@@ -33,5 +27,4 @@ export const routes: Routes = [
   { path: 'rapports', component: RapportsComponent },
   // Superviseur : autorisation des retests
   { path: 'retests', component: RetestsComponent },
->>>>>>> ea2e7f6 (Mohamed CISSE 13082026)
 ];

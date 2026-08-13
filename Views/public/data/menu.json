@@ -404,8 +404,6 @@
       }
     },
     {
-<<<<<<< HEAD
-=======
       "route": "mon-espace/quiz",
       "name": "Gestion Quiz",
       "type": "sub",
@@ -594,7 +592,6 @@
       }
     },
     {
->>>>>>> ea2e7f6 (Mohamed CISSE 13082026)
       "route": "mon-espace/grille",
       "name": "Grille",
       "type": "link",
