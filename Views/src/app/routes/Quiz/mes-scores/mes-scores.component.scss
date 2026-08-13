@@ -1,0 +1,64 @@
+.p-16 {
+  padding: 16px;
+}
+.m-b-16 {
+  margin-bottom: 16px;
+}
+
+table {
+  width: 100%;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.badge {
+  position: relative;
+  width: 110px;
+  text-align: center;
+  padding: 12px 8px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+.badge.gagne {
+  opacity: 1;
+  filter: none;
+  border-color: #ff7900;
+  box-shadow: 0 2px 8px rgba(255, 121, 0, 0.2);
+}
+.badge mat-icon {
+  font-size: 40px;
+  width: 40px;
+  height: 40px;
+  color: #ff7900;
+}
+.badge-nom {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 4px;
+}
+.badge .verrou {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+.badge .verrou mat-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  color: #999;
+}
+
+mat-chip.ok {
+  --mdc-chip-label-text-color: #fff;
+  --mdc-chip-elevated-container-color: #1b8a3a;
+}
+mat-chip.ko {
+  --mdc-chip-label-text-color: #fff;
+  --mdc-chip-elevated-container-color: #c62828;
+}

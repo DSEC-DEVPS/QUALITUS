@@ -1,0 +1,100 @@
+<div class="container-fluid p-16">
+  <div class="d-flex align-items-center m-b-16">
+    <button mat-icon-button (click)="retour()" matTooltip="Retour"><mat-icon>arrow_back</mat-icon></button>
+    <span class="h5 m-0">Contre-evaluation</span>
+  </div>
+
+  @if (chargement) {
+    <p class="text-muted">Chargement...</p>
+  } @else if (contre) {
+    <mat-card class="m-b-16">
+      <mat-card-content>
+        <div class="entete">
+          <div><span class="lbl">Agent</span><strong>{{ contre.agent_nom }} {{ contre.agent_prenom }}</strong></div>
+          <div><span class="lbl">Login</span>{{ contre.login_genesys }}</div>
+          <div><span class="lbl">Grille</span>{{ contre.grille_nom }}</div>
+          <div><span class="lbl">Statut</span>{{ contre.statut }}</div>
+          @if (readOnly) {
+            <div><span class="lbl">Conclusion</span>
+              <strong [class.vert]="contre.conclusion === 'SUCCES'" [class.rouge]="contre.conclusion === 'ECHEC'">
+                {{ contre.conclusion }} ({{ contre.score_global }}%)
+              </strong>
+            </div>
+            <div><span class="lbl">Visibilite</span>{{ dateVisibilite }}</div>
+          }
+        </div>
+        @if (readOnly && contre.actif) {
+          <div class="m-t-8 text-right">
+            <button mat-stroked-button color="warn" (click)="desactiver()">
+              <mat-icon>block</mat-icon> Desactiver la contre-evaluation
+            </button>
+          </div>
+        }
+        @if (readOnly && !contre.actif) {
+          <div class="m-t-8"><em class="text-muted">Contre-evaluation desactivee.</em></div>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <p class="text-muted m-b-8">
+      Colonne <strong>Ancienne</strong> = evaluation initiale (lecture seule). Colonne
+      <strong>Nouvelle</strong> = votre contre-evaluation.
+    </p>
+
+    @for (cat of contre.grille; track cat.id) {
+      <mat-expansion-panel class="m-b-8" [expanded]="true">
+        <mat-expansion-panel-header>
+          <mat-panel-title><strong>{{ cat.nom }}</strong></mat-panel-title>
+        </mat-expansion-panel-header>
+        @for (err of cat.erreurs; track err.id) {
+          <div class="erreur-bloc">
+            <div class="erreur-titre">{{ err.nom }}</div>
+            @for (it of err.items; track it.id) {
+              @for (si of it.sousItems; track si.id) {
+                <div class="si-ligne">
+                  <span class="si-nom">{{ si.nom }}</span>
+                  <span class="ancien" [class.nc]="!ancien[si.id]">
+                    {{ ancien[si.id] ? 'Conforme' : 'Non conforme' }}
+                  </span>
+                  <span class="nouveau">
+                    <mat-checkbox [(ngModel)]="nouveau[si.id]" [disabled]="readOnly">
+                      {{ nouveau[si.id] ? 'Conforme' : 'Non conforme' }}
+                    </mat-checkbox>
+                  </span>
+                </div>
+              }
+            }
+          </div>
+        }
+      </mat-expansion-panel>
+    }
+
+    @if (!readOnly) {
+      <mat-card class="m-t-16">
+        <mat-card-content>
+          <div class="row">
+            <div class="col-sm-6">
+              <mat-form-field appearance="fill" class="w-100">
+                <mat-label>Date de visibilite (superviseur)</mat-label>
+                <input matInput type="date" [(ngModel)]="dateVisibilite" required />
+                <mat-hint>Obligatoire</mat-hint>
+              </mat-form-field>
+            </div>
+            <div class="col-sm-6 d-flex align-items-center" style="gap: 16px">
+              <span><strong>Resolution</strong></span>
+              <mat-radio-group [(ngModel)]="resolution">
+                <mat-radio-button value="OUI" class="m-r-16">OUI</mat-radio-button>
+                <mat-radio-button value="NON">NON</mat-radio-button>
+              </mat-radio-group>
+            </div>
+          </div>
+          <div class="text-center m-t-8">
+            <button mat-flat-button color="primary" (click)="terminer()">
+              <mat-icon>done_all</mat-icon> Terminer
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+</div>

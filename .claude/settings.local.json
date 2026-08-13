@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Write-Output \"=== Services MySQL/MariaDB ===\"; Get-Service | Where-Object { $_.Name -match 'mysql|maria' } | Select-Object Name, Status | Format-Table -AutoSize; Write-Output \"=== Docker Desktop installe? ===\"; Test-Path \"C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop.exe\"; Write-Output \"=== node_modules Server ===\"; Test-Path \"C:\\\\Users\\\\mccisse\\\\QUALITUS-main\\\\Server\\\\node_modules\\\\express\"; Write-Output \"=== node_modules Views ===\"; Test-Path \"C:\\\\Users\\\\mccisse\\\\QUALITUS-main\\\\Views\\\\node_modules\\\\@angular\\\\core\")",
+      "PowerShell($mysql = Get-ChildItem \"C:\\\\wamp64\\\\bin\\\\mysql\" -Directory -ErrorAction SilentlyContinue | Select-Object -Last 1; if \\($mysql\\) { $exe = Join-Path $mysql.FullName \"bin\\\\mysql.exe\"; Write-Output \"mysql.exe: $exe\"; Write-Output \"=== Test connexion root \\(sans mot de passe\\) + bases ===\"; & $exe -u root -e \"SHOW DATABASES;\" 2>&1 } else { Write-Output \"WAMP mysql introuvable sous C:\\\\wamp64\" })",
+      "PowerShell($exe = \"C:\\\\wamp64\\\\bin\\\\mysql\\\\mysql8.3.0\\\\bin\\\\mysql.exe\"; Write-Output \"=== Chargement init.sql ===\"; Get-Content \"C:\\\\Users\\\\mccisse\\\\QUALITUS-main\\\\db\\\\init.sql\" -Raw | & $exe -u root; if \\($?\\) { Write-Output \"init.sql OK\" }; Write-Output \"=== Migration 01 \\(ADD COLUMN Niveau\\) ===\"; Get-Content \"C:\\\\Users\\\\mccisse\\\\QUALITUS-main\\\\db\\\\01_add_niveau_to_B_FICHE.sql\" -Raw | & $exe -u root QUALITUS; if \\($?\\) { Write-Output \"migration 01 OK\" }; Write-Output \"=== Tables creees ===\"; & $exe -u root -e \"USE QUALITUS; SHOW TABLES;\")",
+      "PowerShell($exe = \"C:\\\\wamp64\\\\bin\\\\mysql\\\\mysql8.3.0\\\\bin\\\\mysql.exe\"; Get-Content \"C:\\\\Users\\\\mccisse\\\\QUALITUS-main\\\\db\\\\init.sql\" -Raw | & $exe -u root --force; Write-Output \"=== Tables apres rechargement ===\"; & $exe -u root -e \"USE QUALITUS; SHOW TABLES;\")",
+      "Bash([ -f \"$f\" ])",
+      "Bash(node \"C:/Users/mccisse/AppData/Local/Temp/claude/C--Users-mccisse-QUALITUS-main/77e3c610-5369-4c88-a6f0-99e37d0d7a43/scratchpad/dump_xlsx.js\")"
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+<div class="d-flex justify-content-between align-items-center m-b-8">
+  <p class="text-muted m-0">
+    Listes de valeurs interdependantes (max 5 niveaux). Chaque valeur peut
+    contenir des sous-valeurs (le "pourquoi" suivant).
+  </p>
+  <button mat-stroked-button color="primary" (click)="ajouterRacine()">
+    <mat-icon>add</mat-icon> Ajouter (niveau 1)
+  </button>
+</div>
+
+@if (!racines.length) {
+  <p class="text-muted">Aucune valeur definie. Commencez par un Pourquoi de niveau 1.</p>
+}
+
+<ul class="pourquoi-tree">
+  @for (n of racines; track n.id) {
+    <ng-container [ngTemplateOutlet]="noeud" [ngTemplateOutletContext]="{ $implicit: n }" />
+  }
+</ul>
+
+<!-- Template recursif d'un noeud -->
+<ng-template #noeud let-n>
+  <li>
+    <div class="noeud-ligne">
+      <span class="badge-niveau">P{{ n.niveau }}</span>
+      <span class="libelle">{{ n.libelle }}</span>
+      <span class="actions">
+        @if (n.niveau < NIVEAU_MAX) {
+          <button mat-icon-button color="primary" matTooltip="Ajouter une sous-valeur" (click)="ajouterEnfant(n)">
+            <mat-icon>subdirectory_arrow_right</mat-icon>
+          </button>
+        }
+        <button mat-icon-button matTooltip="Modifier" (click)="modifier(n)">
+          <mat-icon>edit</mat-icon>
+        </button>
+        <button mat-icon-button color="warn" matTooltip="Supprimer" (click)="supprimer(n)">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </span>
+    </div>
+
+    @if (n.enfants?.length) {
+      <ul>
+        @for (child of n.enfants; track child.id) {
+          <ng-container [ngTemplateOutlet]="noeud" [ngTemplateOutletContext]="{ $implicit: child }" />
+        }
+      </ul>
+    }
+  </li>
+</ng-template>

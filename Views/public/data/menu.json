@@ -404,6 +404,197 @@
       }
     },
     {
+<<<<<<< HEAD
+=======
+      "route": "mon-espace/quiz",
+      "name": "Gestion Quiz",
+      "type": "sub",
+      "icon": "quiz",
+      "children": [
+        {
+          "route": "creer",
+          "name": "Nouveau quiz",
+          "type": "link",
+          "icon": "add_circle",
+          "permissions": {
+            "only": ["R_ADMI", "R_GB", "R_SUP"]
+          }
+        },
+        {
+          "route": "gestion",
+          "name": "Liste des quiz",
+          "type": "link",
+          "icon": "list",
+          "permissions": {
+            "only": ["R_ADMI", "R_GB", "R_SUP"]
+          }
+        },
+        {
+          "route": "rapports",
+          "name": "Rapports",
+          "type": "link",
+          "icon": "bar_chart",
+          "permissions": {
+            "only": ["R_ADMI", "R_GB", "R_SUP"]
+          }
+        }
+      ],
+      "permissions": {
+        "only": ["R_ADMI", "R_GB", "R_SUP"]
+      }
+    },
+    {
+      "route": "mon-espace/quiz",
+      "name": "Mes Quiz",
+      "type": "sub",
+      "icon": "school",
+      "children": [
+        {
+          "route": "participer",
+          "name": "Participer",
+          "type": "link",
+          "icon": "play_circle",
+          "permissions": {
+            "only": ["R_TC", "R_ADMI"]
+          }
+        },
+        {
+          "route": "nouveautes",
+          "name": "Nouveautés",
+          "type": "link",
+          "icon": "notifications_active",
+          "permissions": {
+            "only": ["R_TC", "R_ADMI"]
+          }
+        },
+        {
+          "route": "mes-scores",
+          "name": "Mes scores",
+          "type": "link",
+          "icon": "history",
+          "permissions": {
+            "only": ["R_TC", "R_ADMI"]
+          }
+        },
+        {
+          "route": "retests",
+          "name": "Retests à autoriser",
+          "type": "link",
+          "icon": "lock_open",
+          "permissions": {
+            "only": ["R_SUP", "R_ADMI"]
+          }
+        }
+      ],
+      "permissions": {
+        "only": ["R_TC", "R_SUP", "R_ADMI"]
+      }
+    },
+    {
+      "route": "mon-espace/evaluation",
+      "name": "Évaluation",
+      "type": "sub",
+      "icon": "assignment_turned_in",
+      "children": [
+        {
+          "route": "evaluations",
+          "name": "Évaluations",
+          "type": "link",
+          "icon": "fact_check",
+          "permissions": {
+            "only": ["R_ADMI", "R_AQ"]
+          }
+        },
+        {
+          "route": "evaluateurs",
+          "name": "Évaluateurs",
+          "type": "link",
+          "icon": "supervisor_account",
+          "permissions": {
+            "only": ["R_ADMI", "R_AQ"]
+          }
+        },
+        {
+          "route": "agents",
+          "name": "Agents à évaluer",
+          "type": "link",
+          "icon": "groups",
+          "permissions": {
+            "only": ["R_ADMI", "R_AQ"]
+          }
+        },
+        {
+          "route": "contre-evaluation",
+          "name": "Contre-évaluation",
+          "type": "link",
+          "icon": "compare_arrows",
+          "permissions": {
+            "only": ["R_ADMI", "R_AQ"]
+          }
+        },
+        {
+          "route": "notifications",
+          "name": "Notifications",
+          "type": "link",
+          "icon": "notifications_active",
+          "permissions": {
+            "only": ["R_ADMI", "R_AQ", "R_SUP"]
+          }
+        },
+        {
+          "route": "agents-pole",
+          "name": "Agents en pôle",
+          "type": "link",
+          "icon": "trending_down",
+          "permissions": {
+            "only": ["R_ADMI", "R_AQ", "R_SUP"]
+          }
+        },
+        {
+          "route": "contextes",
+          "name": "Contextes",
+          "type": "link",
+          "icon": "tune",
+          "permissions": {
+            "only": ["R_ADMI", "R_AQ"]
+          }
+        },
+        {
+          "route": "types-action",
+          "name": "Types d'action",
+          "type": "link",
+          "icon": "playlist_add_check",
+          "permissions": {
+            "only": ["R_ADMI", "R_AQ"]
+          }
+        }
+      ],
+      "permissions": {
+        "only": ["R_ADMI", "R_AQ", "R_SUP"]
+      }
+    },
+    {
+      "route": "mon-espace/calibrage",
+      "name": "Calibrage",
+      "type": "sub",
+      "icon": "rule",
+      "children": [
+        {
+          "route": "modeles",
+          "name": "Modèles de grille",
+          "type": "link",
+          "icon": "grid_on",
+          "permissions": {
+            "only": ["R_ADMI"]
+          }
+        }
+      ],
+      "permissions": {
+        "only": ["R_ADMI"]
+      }
+    },
+    {
+>>>>>>> ea2e7f6 (Mohamed CISSE 13082026)
       "route": "mon-espace/grille",
       "name": "Grille",
       "type": "link",

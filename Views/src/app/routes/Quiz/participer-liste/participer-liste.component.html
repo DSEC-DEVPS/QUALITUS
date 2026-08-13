@@ -1,0 +1,58 @@
+<div class="container-fluid p-16">
+  <h5 class="m-b-16">Quiz disponibles</h5>
+
+  @if (chargement) {
+    <p class="text-muted">Chargement...</p>
+  } @else if (!quizzes.length) {
+    <mat-card><mat-card-content class="text-center text-muted p-16">
+      Aucun quiz disponible pour le moment.
+    </mat-card-content></mat-card>
+  } @else {
+    <div class="row">
+      @for (q of quizzes; track q.id) {
+        <div class="col-sm-6 col-md-4 m-b-16">
+          <mat-card class="quiz-card">
+            <mat-card-content>
+              <div class="d-flex justify-content-between align-items-start">
+                <h6 class="m-0">{{ q.titre }}</h6>
+                @if (q.derniere_reussi === 1) {
+                  <mat-icon class="ok" matTooltip="Deja reussi">verified</mat-icon>
+                }
+              </div>
+              @if (q.description) {
+                <p class="text-muted desc">{{ q.description }}</p>
+              }
+              @if (q.fiche_titre) {
+                <p class="text-muted small">Contenu : {{ q.fiche_titre }}</p>
+              }
+              <mat-chip-set>
+                <mat-chip>{{ q.nb_questions }} question(s)</mat-chip>
+                <mat-chip>Passage {{ q.note_passage }}%</mat-chip>
+                @if (q.nb_essais > 0) {
+                  <mat-chip>{{ q.nb_essais }} essai(s)</mat-chip>
+                }
+                @if (retestAutorise(q) && !estReussi(q)) {
+                  <mat-chip class="ok-chip">Retest autorisé</mat-chip>
+                }
+              </mat-chip-set>
+            </mat-card-content>
+            <mat-card-actions align="end">
+              @if (estReussi(q)) {
+                <span class="statut-ok"><mat-icon>verified</mat-icon> Réussi</span>
+              } @else if (estBloque(q)) {
+                <span class="statut-bloque" matTooltip="Votre superviseur doit autoriser un retest">
+                  <mat-icon>lock</mat-icon> En attente d'autorisation
+                </span>
+              } @else {
+                <button mat-flat-button color="primary" (click)="commencer(q)">
+                  <mat-icon>play_arrow</mat-icon>
+                  {{ q.nb_essais > 0 ? 'Refaire (retest)' : 'Commencer' }}
+                </button>
+              }
+            </mat-card-actions>
+          </mat-card>
+        </div>
+      }
+    </div>
+  }
+</div>

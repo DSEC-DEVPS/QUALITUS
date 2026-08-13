@@ -1,0 +1,59 @@
+<div class="container-fluid p-16">
+  <mat-card>
+    <mat-card-content>
+      <div class="d-flex align-items-center justify-content-between flex-wrap m-b-16">
+        <h5 class="m-0">Evaluateurs</h5>
+        <button mat-flat-button color="primary" (click)="ajouter()">
+          <mat-icon>add</mat-icon> Nouvel evaluateur
+        </button>
+      </div>
+
+      <mat-form-field appearance="outline" class="w-100 m-b-8">
+        <mat-label>Rechercher</mat-label>
+        <input matInput (keyup)="applyFilter($event)" placeholder="Nom, login..." />
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+
+      <div style="overflow-x: auto">
+        <table mat-table [dataSource]="dataSource" class="w-100">
+          <ng-container matColumnDef="id">
+            <th mat-header-cell *matHeaderCellDef>#</th>
+            <td mat-cell *matCellDef="let e">{{ e.id }}</td>
+          </ng-container>
+          <ng-container matColumnDef="nom">
+            <th mat-header-cell *matHeaderCellDef>Nom</th>
+            <td mat-cell *matCellDef="let e">{{ e.nom }}</td>
+          </ng-container>
+          <ng-container matColumnDef="prenom">
+            <th mat-header-cell *matHeaderCellDef>Prenom</th>
+            <td mat-cell *matCellDef="let e">{{ e.prenom }}</td>
+          </ng-container>
+          <ng-container matColumnDef="login">
+            <th mat-header-cell *matHeaderCellDef>Login</th>
+            <td mat-cell *matCellDef="let e">{{ e.login }}</td>
+          </ng-container>
+          <ng-container matColumnDef="site_nom">
+            <th mat-header-cell *matHeaderCellDef>Site</th>
+            <td mat-cell *matCellDef="let e">{{ e.site_nom }}</td>
+          </ng-container>
+          <ng-container matColumnDef="Etat">
+            <th mat-header-cell *matHeaderCellDef>Etat</th>
+            <td mat-cell *matCellDef="let e"><mat-chip-set><mat-chip>{{ e.Etat }}</mat-chip></mat-chip-set></td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let e">
+              <button mat-icon-button color="primary" (click)="modifier(e)"><mat-icon>edit</mat-icon></button>
+              <button mat-icon-button color="warn" (click)="supprimer(e)"><mat-icon>delete</mat-icon></button>
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
+          <tr mat-row *matRowDef="let row; columns: colonnes"></tr>
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell text-center p-16" [attr.colspan]="colonnes.length">Aucun evaluateur.</td>
+          </tr>
+        </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

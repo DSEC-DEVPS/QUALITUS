@@ -1,0 +1,106 @@
+.p-16 {
+  padding: 16px;
+}
+.p-8 {
+  padding: 8px;
+}
+.m-b-16 {
+  margin-bottom: 16px;
+}
+.m-b-8 {
+  margin-bottom: 8px;
+}
+.m-t-8 {
+  margin-top: 8px;
+}
+.m-l-40 {
+  margin-left: 40px;
+}
+
+.lvl-icon {
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.poids {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.actions-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+// Legere teinte par niveau pour la lisibilite de la hierarchie
+.niveau-1 {
+  border-left: 4px solid #ff7900; // orange (identite Orange)
+}
+.niveau-2 {
+  border-left: 4px solid #5aa9e6;
+}
+.niveau-3 {
+  border-left: 4px solid #9bc53d;
+}
+
+.m-t-16 {
+  margin-top: 16px;
+}
+.text-right {
+  text-align: right;
+}
+.nowrap {
+  white-space: nowrap;
+}
+
+.criteres-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 8px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+}
+
+.sous-items {
+  width: 100%;
+  border-collapse: collapse;
+
+  tr {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  td {
+    padding: 6px 8px;
+    vertical-align: top;
+  }
+
+  .si-nom {
+    font-weight: 500;
+    width: 25%;
+  }
+  .si-ref {
+    width: 55%;
+    font-size: 0.85rem;
+  }
+  .si-poids {
+    width: 8%;
+    white-space: nowrap;
+  }
+  .si-act {
+    width: 12%;
+    white-space: nowrap;
+    text-align: right;
+  }
+}

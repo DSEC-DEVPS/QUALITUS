@@ -1,0 +1,7 @@
+.p-16 { padding: 16px; }
+.m-b-16 { margin-bottom: 16px; }
+table { width: 100%; }
+mat-chip.motif {
+  --mdc-chip-elevated-container-color: rgba(198, 40, 40, 0.12);
+  --mdc-chip-label-text-color: #c62828;
+}

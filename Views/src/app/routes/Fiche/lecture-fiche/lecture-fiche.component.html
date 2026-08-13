@@ -14,7 +14,11 @@
   <div class="row">
     <div [class]="col_div_iframe">
       <div class="row mt-1">
+<<<<<<< HEAD
         @if (fiche!.extention === '.pdf') {
+=======
+        @if (fiche?.extention === '.pdf') {
+>>>>>>> ea2e7f6 (Mohamed CISSE 13082026)
 
           <div
             class="row justify-content-between mt-3 align-items-center"
@@ -278,6 +282,7 @@
         }
       </div>
     </div>
+<<<<<<< HEAD
     @if (fiche!.Utilite ||show_value_Quiz||fiche!.Commentaire) {
       <div class="col-md-3 col-sm-12 mt-md-5 mt-sm-1">
         <mat-tab-group *ngIf="fiche!.Commentaire || fiche!.Utilite || fiche!.Quiz.length > 0">
@@ -285,6 +290,15 @@
           <mat-tab>
             <ng-template mat-tab-label> Sondages </ng-template>
             @if (fiche!.Quiz.length > 0) {
+=======
+    @if (fiche?.Utilite || show_value_Quiz || fiche?.Commentaire) {
+      <div class="col-md-3 col-sm-12 mt-md-5 mt-sm-1">
+        <mat-tab-group *ngIf="fiche?.Commentaire || fiche?.Utilite || (fiche?.Quiz?.length || 0) > 0">
+          <!-- Onglet Utilité -->
+          <mat-tab>
+            <ng-template mat-tab-label> Sondages </ng-template>
+            @if ((fiche?.Quiz?.length || 0) > 0) {
+>>>>>>> ea2e7f6 (Mohamed CISSE 13082026)
               <form [formGroup]="formGroup_Quiz">
                 <div *ngIf="show_value_Quiz">
                   <hr class="Quiz" />

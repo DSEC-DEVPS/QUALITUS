@@ -1,0 +1,82 @@
+<div class="container-fluid p-16">
+  <mat-card>
+    <mat-card-content>
+      <div class="d-flex align-items-center justify-content-between flex-wrap m-b-16">
+        <h5 class="m-0">Gestion des quiz</h5>
+        <div class="d-flex" style="gap: 8px">
+          <button mat-stroked-button color="primary" (click)="exporter()">
+            <mat-icon>download</mat-icon> Exporter Excel
+          </button>
+          <button mat-flat-button color="primary" (click)="nouveau()">
+            <mat-icon>add</mat-icon> Nouveau quiz
+          </button>
+        </div>
+      </div>
+
+      <mat-form-field appearance="outline" class="w-100 m-b-8">
+        <mat-label>Rechercher</mat-label>
+        <input matInput (keyup)="applyFilter($event)" placeholder="Titre du quiz..." />
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+
+      <div class="mat-elevation-z1" style="overflow-x: auto">
+        <table mat-table [dataSource]="dataSource" matSort class="w-100">
+          <ng-container matColumnDef="id">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>#</th>
+            <td mat-cell *matCellDef="let q">{{ q.id }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="titre">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Titre</th>
+            <td mat-cell *matCellDef="let q">{{ q.titre }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="fiche_titre">
+            <th mat-header-cell *matHeaderCellDef>Contenus associes</th>
+            <td mat-cell *matCellDef="let q">{{ q.fiches_titres || q.fiche_titre || '—' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="nb_questions">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Questions</th>
+            <td mat-cell *matCellDef="let q">{{ q.nb_questions }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="note_passage">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Passage</th>
+            <td mat-cell *matCellDef="let q">{{ q.note_passage }}%</td>
+          </ng-container>
+
+          <ng-container matColumnDef="Etat">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Etat</th>
+            <td mat-cell *matCellDef="let q">
+              <mat-chip-set><mat-chip>{{ q.Etat }}</mat-chip></mat-chip-set>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let q">
+              <button mat-icon-button color="primary" matTooltip="Editer" (click)="editer(q)">
+                <mat-icon>edit_note</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" matTooltip="Supprimer" (click)="supprimer(q)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell text-center p-16" [attr.colspan]="displayedColumns.length">
+              Aucun quiz pour le moment.
+            </td>
+          </tr>
+        </table>
+
+        <mat-paginator [pageSizeOptions]="[5, 10, 25]" showFirstLastButtons></mat-paginator>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

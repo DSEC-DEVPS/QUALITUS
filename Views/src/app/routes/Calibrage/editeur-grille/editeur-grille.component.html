@@ -1,0 +1,210 @@
+<div class="container-fluid p-16">
+  <!-- Entete modele -->
+  <mat-card class="m-b-16">
+    <mat-card-content>
+      <div class="d-flex align-items-center justify-content-between flex-wrap">
+        <div>
+          <button mat-icon-button (click)="retour()" matTooltip="Retour">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          <span class="h5">{{ modele?.nom }}</span>
+          @if (modele?.description) {
+            <div class="text-muted m-l-40">{{ modele?.description }}</div>
+          }
+        </div>
+        <button mat-stroked-button (click)="associerCategories()">
+          <mat-icon>group_work</mat-icon> Categories de ressources
+        </button>
+      </div>
+
+      @if (modele?.categoriesRessources?.length) {
+        <div class="m-t-8 m-l-40">
+          <mat-chip-set>
+            @for (cr of modele?.categoriesRessources; track cr.id) {
+              <mat-chip>{{ cr.nom }}@if (cr.est_robot) { <span>&nbsp;(robot)</span> }</mat-chip>
+            }
+          </mat-chip-set>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  @if (chargement) {
+    <p class="text-center text-muted">Chargement...</p>
+  } @else {
+    <div class="d-flex justify-content-end m-b-8">
+      <button mat-flat-button color="primary" (click)="ajouterCategorie()">
+        <mat-icon>add</mat-icon> Ajouter une categorie d'erreur
+      </button>
+    </div>
+
+    <!-- Niveau 1 : Categories d'erreur -->
+    @for (cat of modele?.categories; track cat.id) {
+      <mat-expansion-panel class="niveau-1 m-b-8">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon class="lvl-icon">folder</mat-icon>
+            <strong>{{ cat.nom }}</strong>
+          </mat-panel-title>
+          <mat-panel-description>
+            <span class="poids">Poids : {{ pourcentage(cat.poids) }}</span>
+          </mat-panel-description>
+        </mat-expansion-panel-header>
+
+        <div class="actions-ligne">
+          <button mat-button (click)="modifierCategorie(cat)">
+            <mat-icon>edit</mat-icon> Modifier
+          </button>
+          <button mat-button color="warn" (click)="supprimerCategorie(cat)">
+            <mat-icon>delete</mat-icon> Supprimer
+          </button>
+          <button mat-button color="primary" (click)="ajouterErreur(cat)">
+            <mat-icon>add</mat-icon> Ajouter une erreur
+          </button>
+        </div>
+
+        <!-- Niveau 2 : Erreurs -->
+        @for (err of cat.erreurs; track err.id) {
+          <mat-expansion-panel class="niveau-2 m-b-8">
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                <mat-icon class="lvl-icon">error_outline</mat-icon>
+                {{ err.nom }}
+              </mat-panel-title>
+              <mat-panel-description>
+                <span class="poids">{{ pourcentage(err.poids) }}</span>
+              </mat-panel-description>
+            </mat-expansion-panel-header>
+
+            <div class="actions-ligne">
+              <button mat-button (click)="modifierErreur(err)">
+                <mat-icon>edit</mat-icon> Modifier
+              </button>
+              <button mat-button color="warn" (click)="supprimerErreur(err)">
+                <mat-icon>delete</mat-icon> Supprimer
+              </button>
+              <button mat-button color="primary" (click)="ajouterItem(err)">
+                <mat-icon>add</mat-icon> Ajouter un item
+              </button>
+            </div>
+
+            <!-- Niveau 3 : Items -->
+            @for (it of err.items; track it.id) {
+              <mat-expansion-panel class="niveau-3 m-b-8">
+                <mat-expansion-panel-header>
+                  <mat-panel-title>
+                    <mat-icon class="lvl-icon">label</mat-icon>
+                    {{ it.nom }}
+                  </mat-panel-title>
+                  <mat-panel-description>
+                    <span class="poids">{{ pourcentage(it.poids) }}</span>
+                  </mat-panel-description>
+                </mat-expansion-panel-header>
+
+                <div class="actions-ligne">
+                  <button mat-button (click)="modifierItem(it)">
+                    <mat-icon>edit</mat-icon> Modifier
+                  </button>
+                  <button mat-button color="warn" (click)="supprimerItem(it)">
+                    <mat-icon>delete</mat-icon> Supprimer
+                  </button>
+                  <button mat-button color="primary" (click)="ajouterSousItem(it)">
+                    <mat-icon>add</mat-icon> Ajouter un sous-item
+                  </button>
+                </div>
+
+                <!-- Niveau 4 : Sous-items -->
+                <table class="sous-items">
+                  @for (s of it.sousItems; track s.id) {
+                    <tr>
+                      <td class="si-nom">{{ s.nom }}</td>
+                      <td class="si-ref text-muted">{{ s.referentiel }}</td>
+                      <td class="si-poids">{{ pourcentage(s.poids) }}</td>
+                      <td class="si-act">
+                        <button mat-icon-button (click)="modifierSousItem(s)" matTooltip="Modifier">
+                          <mat-icon>edit</mat-icon>
+                        </button>
+                        <button mat-icon-button color="warn" (click)="supprimerSousItem(s)" matTooltip="Supprimer">
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="4" class="text-muted p-8">Aucun sous-item.</td>
+                    </tr>
+                  }
+                </table>
+              </mat-expansion-panel>
+            } @empty {
+              <p class="text-muted p-8">Aucun item.</p>
+            }
+          </mat-expansion-panel>
+        } @empty {
+          <p class="text-muted p-8">Aucune erreur.</p>
+        }
+      </mat-expansion-panel>
+    } @empty {
+      <mat-card>
+        <mat-card-content class="text-center text-muted p-16">
+          Cette grille est vide. Commencez par ajouter une categorie d'erreur.
+        </mat-card-content>
+      </mat-card>
+    }
+
+    <!-- Section : Criteres de reussite / echec -->
+    <mat-card class="m-t-16">
+      <mat-card-content>
+        <div class="d-flex align-items-center justify-content-between flex-wrap m-b-8">
+          <h6 class="m-0">Criteres de reussite / echec</h6>
+          <button mat-flat-button color="primary" (click)="ajouterCritere()">
+            <mat-icon>add</mat-icon> Ajouter un critere
+          </button>
+        </div>
+        <div style="overflow-x: auto">
+          <table class="criteres-table">
+            <thead>
+              <tr>
+                <th>Type d'ecart</th>
+                <th>Objectif</th>
+                <th>Echec</th>
+                <th>Reussite</th>
+                <th class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of criteres; track c.id) {
+                <tr>
+                  <td>{{ c.type_ecart }}</td>
+                  <td class="nowrap">{{ c.operateur }} {{ c.valeur_objectif }}%</td>
+                  <td class="text-muted">{{ c.libelle_echec }}</td>
+                  <td class="text-muted">{{ c.libelle_reussite }}</td>
+                  <td class="text-right nowrap">
+                    <button mat-icon-button (click)="modifierCritere(c)" matTooltip="Modifier">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" (click)="supprimerCritere(c)" matTooltip="Supprimer">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5" class="text-muted p-8">Aucun critere defini.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Section : Business Intelligence - 5 Pourquoi -->
+    <mat-card class="m-t-16">
+      <mat-card-content>
+        <h6 class="m-b-8">Business Intelligence - 5 Pourquoi</h6>
+        <app-pourquoi-editor [modeleId]="modeleId" />
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

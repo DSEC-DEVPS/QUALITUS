@@ -1,0 +1,61 @@
+.p-16 {
+  padding: 16px;
+}
+.m-b-16 {
+  margin-bottom: 16px;
+}
+.m-b-8 {
+  margin-bottom: 8px;
+}
+.text-right {
+  text-align: right;
+}
+.m-t-8 {
+  margin-top: 8px;
+}
+
+// Bouton "Charger" (jaune/ambre comme la maquette)
+.btn-charger {
+  --mdc-filled-button-container-color: #f5a623;
+  --mdc-filled-button-label-text-color: #fff;
+  background-color: #f5a623;
+  color: #fff;
+  min-width: 130px;
+  padding: 4px 28px;
+  font-weight: 600;
+}
+.btn-charger:hover {
+  --mdc-filled-button-container-color: #e0951c;
+  background-color: #e0951c;
+}
+
+.question-ligne {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 4px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.q-num {
+  font-weight: 700;
+  color: #ff7900;
+  min-width: 36px;
+}
+
+.q-corps {
+  flex: 1;
+}
+
+.q-libelle {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.q-act {
+  white-space: nowrap;
+}
+
+mat-chip.ok {
+  --mdc-chip-label-text-color: #1b5e20;
+}

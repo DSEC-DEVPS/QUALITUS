@@ -1,0 +1,72 @@
+<div class="container-fluid p-16">
+  <mat-card>
+    <mat-card-content>
+      <div class="d-flex align-items-center justify-content-between flex-wrap m-b-8">
+        <div>
+          <h5 class="m-0">Rapports de difficulte</h5>
+          <p class="text-muted m-0">Quiz tries du plus difficile au plus facile (taux de reussite croissant).</p>
+        </div>
+        <button mat-stroked-button color="primary" (click)="exporter()">
+          <mat-icon>download</mat-icon> Exporter Excel
+        </button>
+      </div>
+
+      @if (!rapport.length) {
+        <p class="text-muted text-center p-16">Aucune donnee de quiz.</p>
+      } @else {
+        @for (r of rapport; track r.id) {
+          <mat-expansion-panel class="m-b-8" (opened)="chargerDetail(r)">
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                <strong>{{ r.titre }}</strong>
+              </mat-panel-title>
+              <mat-panel-description>
+                <span class="taux" [class]="classeTaux(r.taux_reussite)">
+                  {{ r.taux_reussite == null ? 'Aucune tentative' : 'Reussite ' + r.taux_reussite + '%' }}
+                </span>
+              </mat-panel-description>
+            </mat-expansion-panel-header>
+
+            <div class="stats-ligne">
+              <span>Tentatives : <strong>{{ r.nb_tentatives }}</strong></span>
+              <span>Reussites : <strong>{{ r.nb_reussis }}</strong></span>
+              <span>Score moyen : <strong>{{ r.score_moyen ?? '—' }}%</strong></span>
+              @if (r.fiche_titre) {
+                <span>Contenu : <strong>{{ r.fiche_titre }}</strong></span>
+              }
+            </div>
+
+            <h6 class="m-t-8">Detail par question (taux d'echec)</h6>
+            @if (detailParQuiz[r.id]) {
+              @if (detailParQuiz[r.id].length) {
+                <table class="q-table">
+                  <thead>
+                    <tr><th>Question</th><th>Reponses</th><th>Echecs</th><th>Taux d'echec</th></tr>
+                  </thead>
+                  <tbody>
+                    @for (q of detailParQuiz[r.id]; track q.id) {
+                      <tr>
+                        <td>{{ q.libelle }}</td>
+                        <td>{{ q.nb_reponses }}</td>
+                        <td>{{ q.nb_echecs }}</td>
+                        <td>
+                          <span class="taux" [class]="classeTaux(100 - (q.taux_echec ?? 0))">
+                            {{ q.taux_echec == null ? '—' : q.taux_echec + '%' }}
+                          </span>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              } @else {
+                <p class="text-muted">Aucune question.</p>
+              }
+            } @else {
+              <mat-progress-bar mode="indeterminate" />
+            }
+          </mat-expansion-panel>
+        }
+      }
+    </mat-card-content>
+  </mat-card>
+</div>
