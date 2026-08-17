@@ -43,7 +43,7 @@ import { ToastrService } from 'ngx-toastr';
   templateUrl: './liste-archive.component.html',
   styleUrl: './liste-archive.component.scss',
 })
-export class ListeArchiveComponent implements AfterViewInit, OnInit {
+export class ListeArchiveComponent implements OnInit {
   private readonly userService = inject(UserService);
   private readonly router = inject(Router);
   private readonly toatSrv = inject(ToastrService);
@@ -78,9 +78,9 @@ export class ListeArchiveComponent implements AfterViewInit, OnInit {
       },
     });
   }
-  ngAfterViewInit() {
-    this.dataSource.paginator = this.paginator;
-  }
+  // ngAfterViewInit() {
+  //   this.dataSource.paginator = this.paginator;
+  // }
   lire_fiche(id: number) {
     this.router.navigateByUrl(`lecture-fiche/${id}`);
   }

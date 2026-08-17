@@ -229,13 +229,13 @@ export interface agent_by_superviseur {
 }
 export interface detailsUtilisateur {
   id: number;
-  nom: string;
-  prenom: string;
-  telephone: string;
-  email: string;
-  Fonction: string;
-  Site: string;
-  Programme: string;
+  nom: string | null;
+  prenom: string | null;
+  telephone: string | null;
+  email: string | null;
+  Fonction: string | null;
+  Site: string | null;
+  Programme: string | null;
   consultations: Consultation[];
   commentaires: Commentaire[];
 }

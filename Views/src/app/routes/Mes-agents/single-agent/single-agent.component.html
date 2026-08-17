@@ -57,19 +57,19 @@
               <ul class="p-0">
                 <li class="mb-2">
                   <span class="title">Nom :</span>
-                  <span class="sub_title"> {{ details_utilisateur.nom | titlecase }}</span>
+                  <span class="sub_title"> {{ details_utilisateur?.nom | titlecase }}</span>
                 </li>
                 <li class="mb-2">
                   <span class="title">Prenom :</span
-                  ><span class="sub_title"> {{ details_utilisateur.prenom | titlecase }}</span>
+                  ><span class="sub_title"> {{ details_utilisateur?.prenom | titlecase }}</span>
                 </li>
                 <li class="mb-2">
                   <span class="title">Telephone :</span
-                  ><span class="sub_title"> {{ details_utilisateur.telephone }}</span>
+                  ><span class="sub_title"> {{ details_utilisateur?.telephone }}</span>
                 </li>
                 <li class="mb-2">
                   <span class="title">email :</span
-                  ><span class="sub_title"> {{ details_utilisateur.email }}</span>
+                  ><span class="sub_title"> {{ details_utilisateur?.email }}</span>
                 </li>
               </ul>
             </div>
@@ -77,15 +77,15 @@
               <ul class="p-0">
                 <li class="mb-2">
                   <span class="title">Fonction :</span
-                  ><span class="sub_title"> {{ details_utilisateur.Fonction | titlecase }}</span>
+                  ><span class="sub_title"> {{ details_utilisateur?.Fonction | titlecase }}</span>
                 </li>
                 <li class="mb-2">
                   <span class="title">Site :</span
-                  ><span class="sub_title"> {{ details_utilisateur.Site | titlecase }}</span>
+                  ><span class="sub_title"> {{ details_utilisateur?.Site | titlecase }}</span>
                 </li>
                 <li class="mb-2">
                   <span class="title">Programme :</span
-                  ><span class="sub_title"> {{ details_utilisateur.Programme | titlecase }}</span>
+                  ><span class="sub_title"> {{ details_utilisateur?.Programme | titlecase }}</span>
                 </li>
               </ul>
             </div>
@@ -105,7 +105,7 @@
           >
         </div>
       </div>
-      <mat-tab-group animationDuration="0.5ms">
+      <mat-tab-group animationDuration="0.5ms" >
         <mat-tab label="Consultation">
           <div class="mat-elevation-z8">
             <table mat-table [dataSource]="dataSource">
@@ -146,6 +146,7 @@
             </table>
 
             <mat-paginator
+              #consultPaginator
               [pageSizeOptions]="[5, 10, 20]"
               showFirstLastButtons
               aria-label="Select page of periodic elements"
@@ -187,6 +188,7 @@
             </table>
 
             <mat-paginator
+              #messagePaginator
               [pageSizeOptions]="[5, 10, 20]"
               showFirstLastButtons
               aria-label="Select page of periodic elements"

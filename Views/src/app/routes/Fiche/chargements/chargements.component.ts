@@ -36,7 +36,7 @@ import * as XLSX from 'xlsx';
   templateUrl: './chargements.component.html',
   styleUrl: './chargements.component.scss',
 })
-export class ChargementsComponent implements OnInit, AfterViewInit {
+export class ChargementsComponent implements OnInit {
   private readonly userService = inject(UserService);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
@@ -69,15 +69,17 @@ export class ChargementsComponent implements OnInit, AfterViewInit {
       next: result => {
         this.dataSource = new MatTableDataSource(result);
         this.downloadData = result;
+        this.dataSource.paginator = this.paginator;
+        this.dataSource.sort = this.sort;
       },
       error: error => {
         console.log(error);
       },
     });
   }
-  ngAfterViewInit() {
-    this.dataSource.paginator = this.paginator;
-  }
+  // ngAfterViewInit() {
+  // //   this.dataSource.paginator = this.paginator;
+  // // }
   lire_fiche(id: number) {
     this.router.navigateByUrl(`lecture-fiche/${id}`);
   }
