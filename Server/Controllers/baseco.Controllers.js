@@ -2132,14 +2132,155 @@ const method_addNotification = async (
 };
 /** debut de controllers FICHE  */
 
+// const addFiche = async (req, res, next) => {
+//   //console.log(req.body);
+//   const data = JSON.parse(req.body.data);
+//   //console.log(data);
+//   const userId = req.auth.userId;
+//   const extention = path.extname(req.file.filename);
+//   // const url = `${req.protocol}://${req.get("host")}/chargements/${
+//   const url = `/chargements/${req.file.filename}`;
+//   const {
+//     titre,
+//     dateReception,
+//     dateDebut,
+//     dateVisibilite,
+//     dateFin,
+//     id_Categorie,
+//     id_SousCategorie,
+//     id_Sla,
+//     niveau,
+//     utiliteAutorisation,
+//     quizAutorisation,
+//     accesAutorisation,
+//     siteAutorisation,
+//     commentaireAutorisation,
+//   } = data;
+//   try {
+//     const Query = `INSERT INTO B_FICHE (id_gestionnaire,titre,dateReception,dateDebut,dateVisibilite,dateFin,dateEnregistrement,id_Categorie
+//     ,id_SousCategorie,id_Sla,Niveau,ETAT,AccesSite,AccesProfil,AccesUtilite,AccesQuiz,AccesCommentaire,url,extention) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
+//     const QueryInsertOnTime = `INSERT INTO B_ON_TIME (id_Fiche,temps,date_effective,id_Sla,delai,on_time) VALUES (?,?,?,?,?,?)`;
+//     const Query1 = `INSERT INTO B_QUIZ (libelleQuestion,reponseQuestion,dateCreation,id_Fiche) VALUES (?,?,?,?) `;
+//     const QyeryInsertNotification = `INSERT INTO B_NOTIFICATION (titre,message,type,dateReception,id_UTILISATEUR,id_FICHE,url) VALUES (?,?,?,?,?,?,?)`;
+//     const Query_Sla = `select * from B_SLA where id=?`;
+//     const dateEnregistrement = new Date();
+//     const titre_notification = "nouveau document";
+//     const message = `Vous venez d'ajouter une nouvelle fiche`;
+//     const type = "chargement";
+//     const diff_date = new Date(dateEnregistrement) - new Date(dateReception);
+//     const calcul_diff_time = Calcul_on_time(diff_date);
+//     const ETAT = "ACTIF";
+//     const resultat = await db.query(Query, [
+//       userId,
+//       titre,
+//       dateReception,
+//       dateDebut,
+//       dateVisibilite,
+//       dateFin,
+//       dateEnregistrement,
+//       id_Categorie,
+//       id_SousCategorie,
+//       id_Sla,
+//       niveau,
+//       ETAT,
+//       siteAutorisation,
+//       accesAutorisation,
+//       utiliteAutorisation,
+//       quizAutorisation,
+//       commentaireAutorisation,
+//       url,
+//       extention,
+//     ]);
+//     const [resultat_sla] = await db.query(Query_Sla, [id_Sla]);
+//     const diff_on_time = resultat_sla[0].delai - calcul_diff_time;
+//     let on_time = "";
+//     if (diff_on_time > +0) {
+//       on_time = "OUI";
+//     } else {
+//       on_time = "NON";
+//     }
+//     await db.query(QueryInsertOnTime, [
+//       resultat[0].insertId,
+//       calcul_diff_time,
+//       dateEnregistrement,
+//       resultat_sla[0].id,
+//       resultat_sla[0].delai,
+//       on_time,
+//     ]);
+//     const id_fiche = resultat[0].insertId;
+//     await db.query(QyeryInsertNotification, [
+//       titre_notification,
+//       message,
+//       type,
+//       dateEnregistrement,
+//       userId,
+//       id_fiche,
+//       url,
+//     ]);
+//     if (data.isChecked) {
+//       await db.query(Query1, [
+//         data.Quiz1.Question1,
+//         data.Quiz1.Reponse1,
+//         dateEnregistrement,
+//         id_fiche,
+//       ]);
+//       await db.query(Query1, [
+//         data.Quiz2.Question2,
+//         data.Quiz2.Reponse2,
+//         dateEnregistrement,
+//         id_fiche,
+//       ]);
+//       await db.query(Query1, [
+//         data.Quiz3.Question3,
+//         data.Quiz3.Reponse3,
+//         dateEnregistrement,
+//         id_fiche,
+//       ]);
+//       await db.query(Query1, [
+//         data.Quiz4.Question4,
+//         data.Quiz4.Reponse4,
+//         dateEnregistrement,
+//         id_fiche,
+//       ]);
+//     }
+//     return res
+//       .status(201)
+//       .json({ message: "Vous avez ajouté une nouvelle fiche" });
+//   } catch (error) {
+//     console.log(error);
+//     throw error;
+//   }
+// };
+
+
+// Convertit une valeur en Date, retourne null si vide/invalide
+const normalizeDate = (value) => {
+  if (value === undefined || value === null || value === "") return null;
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? null : d;
+};
+
 const addFiche = async (req, res, next) => {
-  //console.log(req.body);
-  const data = JSON.parse(req.body.data);
-  //console.log(data);
+  if (!req.auth || !req.auth.userId) {
+    return res.status(401).json({ message: "Utilisateur non authentifié." });
+  }
   const userId = req.auth.userId;
+
+  if (!req.file || !req.file.filename) {
+    return res.status(400).json({ message: "Aucun fichier n'a été envoyé." });
+  }
+
+  let data;
+  try {
+    data = JSON.parse(req.body.data);
+  } catch (e) {
+    fs.unlink(req.file.path, () => {});
+    return res.status(400).json({ message: "Le champ 'data' n'est pas un JSON valide." });
+  }
+
   const extention = path.extname(req.file.filename);
-  // const url = `${req.protocol}://${req.get("host")}/chargements/${
   const url = `/chargements/${req.file.filename}`;
+
   const {
     titre,
     dateReception,
@@ -2156,6 +2297,57 @@ const addFiche = async (req, res, next) => {
     siteAutorisation,
     commentaireAutorisation,
   } = data;
+
+  // --- Champs obligatoires hors dates ---
+  const champsObligatoires = { titre, id_Categorie, id_SousCategorie, id_Sla, niveau };
+  for (const [nom, valeur] of Object.entries(champsObligatoires)) {
+    if (valeur === undefined || valeur === null || valeur === "") {
+      fs.unlink(req.file.path, () => {});
+      return res.status(400).json({ message: `Le champ '${nom}' est obligatoire.` });
+    }
+  }
+
+  // --- Normalisation des dates ---
+  const dateReceptionSafe = normalizeDate(dateReception);
+  const dateDebutSafe = normalizeDate(dateDebut);
+  const dateVisibiliteSafe = normalizeDate(dateVisibilite);
+  const dateFinSafe = normalizeDate(dateFin); // seule date autorisée à rester null
+
+  if (!dateReceptionSafe) {
+    fs.unlink(req.file.path, () => {});
+    return res.status(400).json({ message: "La date de réception est obligatoire et doit être valide." });
+  }
+  if (!dateDebutSafe) {
+    fs.unlink(req.file.path, () => {});
+    return res.status(400).json({ message: "La date de début est obligatoire et doit être valide." });
+  }
+  if (!dateVisibiliteSafe) {
+    fs.unlink(req.file.path, () => {});
+    return res.status(400).json({ message: "La date de visibilité est obligatoire et doit être valide." });
+  }
+  if (dateFin !== undefined && dateFin !== null && dateFin !== "" && !dateFinSafe) {
+    fs.unlink(req.file.path, () => {});
+    return res.status(400).json({ message: "La date de fin renseignée n'est pas valide." });
+  }
+
+  // --- Cohérence chronologique ---
+  const chaineDates = [
+    { label: "dateReception", valeur: dateReceptionSafe },
+    { label: "dateDebut", valeur: dateDebutSafe },
+    { label: "dateVisibilite", valeur: dateVisibiliteSafe },
+  ];
+  if (dateFinSafe) chaineDates.push({ label: "dateFin", valeur: dateFinSafe });
+
+  for (let i = 1; i < chaineDates.length; i++) {
+    if (chaineDates[i].valeur < chaineDates[i - 1].valeur) {
+      fs.unlink(req.file.path, () => {});
+      return res.status(400).json({
+        message: `Incohérence de dates : '${chaineDates[i].label}' doit être postérieure ou égale à '${chaineDates[i - 1].label}'.`,
+      });
+    }
+  }
+
+  let connection;
   try {
     const Query = `INSERT INTO B_FICHE (id_gestionnaire,titre,dateReception,dateDebut,dateVisibilite,dateFin,dateEnregistrement,id_Categorie
     ,id_SousCategorie,id_Sla,Niveau,ETAT,AccesSite,AccesProfil,AccesUtilite,AccesQuiz,AccesCommentaire,url,extention) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
@@ -2163,20 +2355,47 @@ const addFiche = async (req, res, next) => {
     const Query1 = `INSERT INTO B_QUIZ (libelleQuestion,reponseQuestion,dateCreation,id_Fiche) VALUES (?,?,?,?) `;
     const QyeryInsertNotification = `INSERT INTO B_NOTIFICATION (titre,message,type,dateReception,id_UTILISATEUR,id_FICHE,url) VALUES (?,?,?,?,?,?,?)`;
     const Query_Sla = `select * from B_SLA where id=?`;
+
     const dateEnregistrement = new Date();
     const titre_notification = "nouveau document";
     const message = `Vous venez d'ajouter une nouvelle fiche`;
     const type = "chargement";
-    const diff_date = new Date(dateEnregistrement) - new Date(dateReception);
-    const calcul_diff_time = Calcul_on_time(diff_date);
     const ETAT = "ACTIF";
-    const resultat = await db.query(Query, [
+
+    // Vérification du SLA avant d'ouvrir la transaction (pas besoin de rollback pour un simple 404)
+    const [resultat_sla] = await db.query(Query_Sla, [id_Sla]);
+    if (!resultat_sla || resultat_sla.length === 0) {
+      fs.unlink(req.file.path, () => {});
+      return res.status(404).json({ message: "Le SLA renseigné est introuvable." });
+    }
+
+    const diff_date = dateEnregistrement - dateReceptionSafe;
+    const calcul_diff_time = Calcul_on_time(diff_date);
+    const diff_on_time = resultat_sla[0].delai - calcul_diff_time;
+    const on_time = diff_on_time > 0 ? "OUI" : "NON";
+
+    // Validation du quiz avant d'ouvrir la transaction, même raison
+    let quizList = null;
+    if (data.isChecked) {
+      quizList = [data.Quiz1, data.Quiz2, data.Quiz3, data.Quiz4];
+      const quizComplet = quizList.every((q, i) => q && q[`Question${i + 1}`] && q[`Reponse${i + 1}`]);
+      if (!quizComplet) {
+        fs.unlink(req.file.path, () => {});
+        return res.status(400).json({ message: "Les 4 questions/réponses du quiz sont obligatoires." });
+      }
+    }
+
+    // --- Transaction : une seule connexion dédiée pour tout le bloc ---
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    const [resultat] = await connection.query(Query, [
       userId,
       titre,
-      dateReception,
-      dateDebut,
-      dateVisibilite,
-      dateFin,
+      dateReceptionSafe,
+      dateDebutSafe,
+      dateVisibiliteSafe,
+      dateFinSafe,
       dateEnregistrement,
       id_Categorie,
       id_SousCategorie,
@@ -2191,24 +2410,18 @@ const addFiche = async (req, res, next) => {
       url,
       extention,
     ]);
-    const [resultat_sla] = await db.query(Query_Sla, [id_Sla]);
-    const diff_on_time = resultat_sla[0].delai - calcul_diff_time;
-    let on_time = "";
-    if (diff_on_time > +0) {
-      on_time = "OUI";
-    } else {
-      on_time = "NON";
-    }
-    await db.query(QueryInsertOnTime, [
-      resultat[0].insertId,
+    const id_fiche = resultat.insertId;
+
+    await connection.query(QueryInsertOnTime, [
+      id_fiche,
       calcul_diff_time,
       dateEnregistrement,
       resultat_sla[0].id,
       resultat_sla[0].delai,
       on_time,
     ]);
-    const id_fiche = resultat[0].insertId;
-    await db.query(QyeryInsertNotification, [
+
+    await connection.query(QyeryInsertNotification, [
       titre_notification,
       message,
       type,
@@ -2217,38 +2430,29 @@ const addFiche = async (req, res, next) => {
       id_fiche,
       url,
     ]);
-    if (data.isChecked) {
-      await db.query(Query1, [
-        data.Quiz1.Question1,
-        data.Quiz1.Reponse1,
-        dateEnregistrement,
-        id_fiche,
-      ]);
-      await db.query(Query1, [
-        data.Quiz2.Question2,
-        data.Quiz2.Reponse2,
-        dateEnregistrement,
-        id_fiche,
-      ]);
-      await db.query(Query1, [
-        data.Quiz3.Question3,
-        data.Quiz3.Reponse3,
-        dateEnregistrement,
-        id_fiche,
-      ]);
-      await db.query(Query1, [
-        data.Quiz4.Question4,
-        data.Quiz4.Reponse4,
-        dateEnregistrement,
-        id_fiche,
-      ]);
+
+    if (quizList) {
+      for (let i = 0; i < 4; i++) {
+        await connection.query(Query1, [
+          quizList[i][`Question${i + 1}`],
+          quizList[i][`Reponse${i + 1}`],
+          dateEnregistrement,
+          id_fiche,
+        ]);
+      }
     }
-    return res
-      .status(201)
-      .json({ message: "Vous avez ajouté une nouvelle fiche" });
+
+    await connection.commit();
+    return res.status(201).json({ message: "Vous avez ajouté une nouvelle fiche" });
   } catch (error) {
+    if (connection) {
+      try { await connection.rollback(); } catch (e) {}
+    }
+    fs.unlink(req.file.path, () => {});
     console.log(error);
-    throw error;
+    return res.status(500).json({ message: "Erreur serveur.", error: error.message });
+  } finally {
+    if (connection) connection.release();
   }
 };
 const getAllFiche = async (req, res, next) => {
@@ -2338,12 +2542,20 @@ const Calcul_on_time = (dure) => {
 
 const getAllFicheByIDFiche = async (req, res, next) => {
   const { id } = req.params;
+
+  // Garde-fou : req.auth peut être undefined si le middleware d'authentification
+  // n'a pas correctement peuplé req.auth (token absent/invalide selon la config)
+  if (!req.auth || !req.auth.userId) {
+    return res.status(401).json({ message: "Utilisateur non authentifié." });
+  }
   const userId = req.auth.userId;
+
   if (!id) {
     return res
       .status(403)
       .json({ message: "Merci de bien renseigner les parametres" });
   }
+
   try {
     Auto_archivage();
     const Query = `Select id,titre,url,extention,AccesUtilite,AccesQuiz,AccesCommentaire from B_FICHE where id=?`;
@@ -2356,16 +2568,32 @@ const getAllFicheByIDFiche = async (req, res, next) => {
     const ETAT = "Echecs";
     const STATUT = "Encours_retest";
     const dateConsultation = new Date();
+
     const [resultat] = await db.query(Query, [id]);
-    if (resultat.length === 0) {
+    if (!resultat || resultat.length === 0) {
       return res
         .status(404)
         .json({ message: "Aucune fiche trouvée avec cet ID." });
-    } else {
-      await db.query(Query3, [dateConsultation, userId, id]);
-      const [resultat_id_fonction] = await db.query(Query5, [userId]);
-      const id_Fonction = `${resultat_id_fonction[0].id_Fonction.toString()}`;
-      const [resultatNotif] = await db.query(Query6, [id]);
+    }
+
+    await db.query(Query3, [dateConsultation, userId, id]);
+
+    // L'utilisateur (userId issu du token) peut ne plus exister en base
+    const [resultat_id_fonction] = await db.query(Query5, [userId]);
+    if (
+      !resultat_id_fonction ||
+      resultat_id_fonction.length === 0 ||
+      resultat_id_fonction[0].id_Fonction === null
+    ) {
+      return res.status(404).json({
+        message: "Utilisateur introuvable ou fonction non renseignée.",
+      });
+    }
+    const id_Fonction = `${resultat_id_fonction[0].id_Fonction.toString()}`;
+
+    const [resultatNotif] = await db.query(Query6, [id]);
+    // Si aucune notification pour cette fiche on continue simplement sans insérer
+    if (resultatNotif && resultatNotif.length > 0) {
       const id_NOTIFICATION = resultatNotif[0].id;
       const date = new Date();
       await db.query(Query7, [
@@ -2378,50 +2606,50 @@ const getAllFicheByIDFiche = async (req, res, next) => {
         date,
         date,
       ]);
-      //console.log(id_Fonction);
-      if (resultat[0].AccesUtilite.includes(`${id_Fonction}`)) {
-        resultat[0]["Utilite"] = true;
-      } else {
-        resultat[0]["Utilite"] = false;
-      }
-      if (resultat[0].AccesQuiz.includes(`${id_Fonction}`)) {
-        const [result_Quiz] = await db.query(Query2, [id]);
-        const [resultat_reponse_quiz] = await db.query(Query4, [
-          userId,
-          id,
-          ETAT,
-          STATUT,
-        ]);
-        if (resultat_reponse_quiz.length > 0) {
-          if (resultat_reponse_quiz[0].ETAT == "succes") {
-            resultat[0]["Quiz"] = [];
-          } else {
-            if (resultat_reponse_quiz[0].STATUT == "Encours_Retest") {
-              resultat[0]["Quiz"] = result_Quiz;
-            } else {
-              resultat[0]["Quiz"] = [];
-            }
-          }
+    }
+
+    // Ces colonnes peuvent être NULL en base
+    const accesUtilite = resultat[0].AccesUtilite || "";
+    const accesQuiz = resultat[0].AccesQuiz || "";
+    const accesCommentaire = resultat[0].AccesCommentaire || "";
+
+    resultat[0]["Utilite"] = accesUtilite.includes(`${id_Fonction}`);
+
+    if (accesQuiz.includes(`${id_Fonction}`)) {
+      const [result_Quiz] = await db.query(Query2, [id]);
+      const [resultat_reponse_quiz] = await db.query(Query4, [
+        userId,
+        id,
+        ETAT,
+        STATUT,
+      ]);
+      if (resultat_reponse_quiz && resultat_reponse_quiz.length > 0) {
+        if (resultat_reponse_quiz[0].ETAT == "succes") {
+          resultat[0]["Quiz"] = [];
+        } else if (resultat_reponse_quiz[0].STATUT == "Encours_Retest") {
+          resultat[0]["Quiz"] = result_Quiz || [];
         } else {
-          resultat[0]["Quiz"] = result_Quiz;
+          resultat[0]["Quiz"] = [];
         }
       } else {
-        resultat[0]["Quiz"] = [];
+        resultat[0]["Quiz"] = result_Quiz || [];
       }
-      if (resultat[0].AccesCommentaire.includes(`${id_Fonction}`)) {
-        resultat[0]["Commentaire"] = true;
-      } else {
-        resultat[0]["Commentaire"] = false;
-      }
+    } else {
+      resultat[0]["Quiz"] = [];
     }
+
+    resultat[0]["Commentaire"] = accesCommentaire.includes(`${id_Fonction}`);
+
     delete resultat[0].AccesUtilite;
     delete resultat[0].AccesQuiz;
     delete resultat[0].AccesCommentaire;
-    //console.log(resultat[0]);
+
     return res.status(200).send(resultat[0]);
   } catch (error) {
     console.log(error);
-    throw error;
+    return res
+      .status(500)
+      .json({ message: "Erreur serveur.", error: error.message });
   }
 };
 const getExcelFile = async (req, res, next) => {
@@ -2630,46 +2858,137 @@ const updateFiche = async (req, res, next) => {
     throw error;
   }
 };
+// const deleteFiche = async (req, res, next) => {
+//   const userId = req.auth.userId;
+//   const { id } = req.params;
+//   if (!id) {
+//     return res
+//       .status(201)
+//       .json({ message: "Merci de bien renseigner les parametres." });
+//   }
+//   try {
+//     const Query1 = `select * from B_FICHE where id=? and id_Gestionnaire=?`;
+//     const Query = `DELETE from B_FICHE where id=?`;
+//     const [result] = await db.query(Query1, [id, userId]);
+
+//     //La condition n'etait pas bien defini c'etait < au lieu de <=
+//     if (result.length <= 0) {
+//       return res.status(401).json({ message: "Vous n'êtes pas autorisé !" });
+//     } else {
+//       // Delete all related records first
+//       await db.query(`DELETE FROM B_HISTORIQUE WHERE id_FICHE=?`, [id]);
+//       await db.query(`DELETE FROM B_REPONSE_QUIZ WHERE id_FICHE=?`, [id]);
+//       await db.query(`DELETE FROM B_QUIZ WHERE id_FICHE=?`, [id]);
+//       await db.query(`DELETE FROM B_NOTIFICATION WHERE id_FICHE=?`, [id]);
+//       await db.query(`DELETE FROM B_COMMENTAIRE WHERE id_FICHE=?`, [id]);
+//       await db.query(`DELETE FROM B_SONDAGE WHERE id_FICHE=?`, [id]);
+//       await db.query(`DELETE FROM B_ON_TIME WHERE id_FICHE=?`, [id]);
+//       console.log(
+//         "Resultat de la suppression des enregistrements liés:",
+//         result.length,
+//       );
+//       const filename = result[0].url.split("/chargements/")[1];
+//       fs.unlink(`/app/chargements/${filename}`, async () => {
+//         try {
+//           const result = await db.query(Query, [id]);
+//           return res
+//             .status(201)
+//             .json({ message: "La suppression a été effective." });
+//         } catch (error) {
+//           console.log(error);
+//           throw error;
+//         }
+//       });
+//     }
+//   } catch (error) {
+//     console.log(error);
+//     throw error;
+//   }
+// };
+
 const deleteFiche = async (req, res, next) => {
   const userId = req.auth.userId;
   const { id } = req.params;
   if (!id) {
     return res
-      .status(201)
+      .status(400)
       .json({ message: "Merci de bien renseigner les parametres." });
   }
-  try {
-    const Query1 = `select * from B_FICHE where id=? and id_Gestionnaire=?`;
-    const Query = `DELETE from B_FICHE where id=?`;
-    const [result] = await db.query(Query1, [id, userId]);
 
-    if (result.length < 0) {
+  const ROLES_AUTORISES = ["R_ADMI", "R_GB"]; // Administrateur et Gestionnaire Baseco
+
+  let connection;
+  try {
+    // Récupère la fiche, le site du créateur, le site et le rôle du demandeur en une seule requête
+    const QueryAutorisation = `
+      SELECT
+        f.id AS id_fiche,
+        f.id_gestionnaire,
+        f.url,
+        createur.id_Site AS site_createur,
+        demandeur.id_Site AS site_demandeur,
+        fonction.Role_Associe AS role_demandeur
+      FROM B_FICHE f
+      LEFT JOIN B_UTILISATEUR createur ON f.id_gestionnaire = createur.id
+      LEFT JOIN B_UTILISATEUR demandeur ON demandeur.id = ?
+      LEFT JOIN B_FONCTION fonction ON demandeur.id_Fonction = fonction.id
+      WHERE f.id = ?
+    `;
+    const [result] = await db.query(QueryAutorisation, [userId, id]);
+    console.log("Résultat de la requête d'autorisation:", result);
+    if (result.length <= 0) {
+      return res.status(404).json({ message: "Fiche introuvable." });
+    }
+
+    const fiche = result[0];
+    const estCreateur = fiche.id_gestionnaire === userId;
+    const estAdmin =
+      fiche.role_demandeur === "R_ADMIN"
+        ? true
+        : fiche.role_demandeur === "R_ADMI"; // garde le code exact de ta BDD
+    const estGestionnaireBasecoMemeSite =
+      fiche.role_demandeur === "R_GB" &&
+      fiche.site_createur !== null &&
+      fiche.site_createur === fiche.site_demandeur;
+
+    if (!estCreateur && !estAdmin && !estGestionnaireBasecoMemeSite) {
       return res.status(401).json({ message: "Vous n'êtes pas autorisé !" });
-    } else {
-      // Delete all related records first
-      await db.query(`DELETE FROM B_HISTORIQUE WHERE id_FICHE=?`, [id]);
-      await db.query(`DELETE FROM B_REPONSE_QUIZ WHERE id_FICHE=?`, [id]);
-      await db.query(`DELETE FROM B_QUIZ WHERE id_FICHE=?`, [id]);
-      await db.query(`DELETE FROM B_NOTIFICATION WHERE id_FICHE=?`, [id]);
-      await db.query(`DELETE FROM B_COMMENTAIRE WHERE id_FICHE=?`, [id]);
-      await db.query(`DELETE FROM B_SONDAGE WHERE id_FICHE=?`, [id]);
-      await db.query(`DELETE FROM B_ON_TIME WHERE id_FICHE=?`, [id]);
-      const filename = result[0].url.split("/chargements/")[1];
-      fs.unlink(`/app/chargements/${filename}`, async () => {
-        try {
-          const result = await db.query(Query, [id]);
-          return res
-            .status(201)
-            .json({ message: "La suppression a été effective." });
-        } catch (error) {
-          console.log(error);
-          throw error;
-        }
+    }
+
+    const filename = fiche.url ? fiche.url.split("/chargements/")[1] : null;
+
+    await db.query("START TRANSACTION");
+
+    await db.query(`DELETE FROM B_HISTORIQUE WHERE id_FICHE=?`, [id]);
+    await db.query(`DELETE FROM B_REPONSE_QUIZ WHERE id_FICHE=?`, [id]);
+    await db.query(`DELETE FROM B_QUIZ WHERE id_Fiche=?`, [id]);
+    await db.query(`DELETE FROM B_NOTIFICATION WHERE id_FICHE=?`, [id]);
+    await db.query(`DELETE FROM B_COMMENTAIRE WHERE id_FICHE=?`, [id]);
+    await db.query(`DELETE FROM B_SONDAGE WHERE id_FICHE=?`, [id]);
+    await db.query(`DELETE FROM B_ON_TIME WHERE id_Fiche=?`, [id]);
+    await db.query(`DELETE FROM B_CONTROLE WHERE id_Fiche=?`, [id]); // manquait — bloquait la suppression sinon
+    await db.query(`DELETE FROM B_FICHE WHERE id=?`, [id]);
+
+    await db.query("COMMIT");
+    // Suppression du fichier physique, une fois la BDD confirmée cohérente
+    if (filename) {
+      fs.unlink(`/app/chargements/${filename}`, (err) => {
+        if (err)
+          console.log(
+            "Erreur lors de la suppression du fichier physique :",
+            err,
+          );
       });
     }
+
+    return res.status(200).json({ message: "La suppression a été effective." });
   } catch (error) {
+    await db.query("ROLLBACK");
+
     console.log(error);
-    throw error;
+    return res
+      .status(500)
+      .json({ message: "Erreur serveur.", error: error.message });
   }
 };
 const Auto_archivage = async (req, res, next) => {
@@ -2912,11 +3231,18 @@ const restore_password = async (req, res, next) => {
     const Query = `SELECT default_password from B_UTILISATEUR where id=?`;
     const Query_update = `UPDATE B_UTILISATEUR SET password=? where id=?`;
     const [resultat] = await db.query(Query, [id]);
-    const default_password = resultat[0].password;
+    const default_password = resultat[0].default_password;
+    console.log("default_password", default_password);
     const resultat_update = await db.query(Query_update, [
       default_password,
       id,
     ]);
+    if (default_password == null || default_password == undefined) {
+      return res.status(404).json({
+        message:
+          "Le mot de passe par défaut n'est pas défini pour cet utilisateur.",
+      });
+    }
     return res
       .status(201)
       .json({ message: "Le mot de passe a été rénitialiser avec succes." });

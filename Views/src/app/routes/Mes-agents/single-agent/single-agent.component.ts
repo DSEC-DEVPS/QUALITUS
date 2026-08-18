@@ -56,14 +56,15 @@ export class SingleAgentComponent implements OnInit {
   nb_quiz_echecs = 0;
   nb_quiz_total_en_retest = 0;
   nb_quiz_total_echecs = 0;
-  bn_notification_non_lues=0;
+  bn_notification_non_lues = 0;
   statistic_TC!: statistic_TC;
   todayDate!: string | null;
   details_utilisateur!: detailsUtilisateur;
   filename!: string;
   dataSource!: MatTableDataSource<Consultation>;
   dataSource_messages!: MatTableDataSource<Commentaire>;
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  @ViewChild('consultPaginator') consultPaginator!: MatPaginator;
+  @ViewChild('messagePaginator') messagePaginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
   ngOnInit(): void {
     const id = this.route.snapshot.params['id'];
@@ -74,8 +75,9 @@ export class SingleAgentComponent implements OnInit {
         this.dataSource_messages = new MatTableDataSource(result.commentaires);
         this.details_utilisateur = result;
         this.filename = `Details_agent_${result.nom}.xlsx`;
-        this.dataSource.paginator = this.paginator;
+        this.dataSource.paginator = this.consultPaginator;
         this.dataSource.sort = this.sort;
+        this.dataSource_messages.paginator = this.messagePaginator;
       },
       error: error => {
         console.log(error);
@@ -104,16 +106,16 @@ export class SingleAgentComponent implements OnInit {
           this.nb_sondage_encours = resultat.nombre_sondage_effectue || 0;
           this.nb_quiz_total_en_retest = resultat.nombre_total_quiz_en_retest || 0;
           this.nb_quiz_total_echecs = resultat.nombre_total_quiz_Echecs || 0;
-          this.bn_notification_non_lues=resultat.nombre_notification_non_lue ||0;
+          this.bn_notification_non_lues = resultat.nombre_notification_non_lue || 0;
         },
         error: error => {
           console.log(error);
         },
       });
   }
-  ngAfterViewInit() {
-    this.dataSource.paginator = this.paginator;
-  }
+  // ngAfterViewInit() {
+  //   this.dataSource.paginator = this.paginator;
+  // }
   lire_fiche(id: number) {
     this.router.navigateByUrl(`lecture-fiche/${id}`);
   }
