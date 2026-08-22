@@ -15,7 +15,6 @@
     <div [class]="col_div_iframe">
       <div class="row mt-1">
         @if (fiche!.extention === '.pdf') {
-
           <div
             class="row justify-content-between mt-3 align-items-center"
             style="margin-bottom: -25px"
@@ -73,23 +72,9 @@
               <div>
                 <button mat-raised-button class="small-button" (click)="back()">Retour</button>
               </div>
-              <div class="sheet-selector" *ngIf="sheetNames.length > 0">
-                <label for="select" style="font-size: small">Veuillez changer la feuille</label>
-                <select
-                  class="form-select form-select-sm"
-                  aria-label=".form-select-sm example"
-                  name=""
-                  id="select"
-                  [(ngModel)]="currentSheet"
-                  (change)="changeSheet()"
-                >
-                  <option *ngFor="let sheet of sheetNames" [value]="sheet">{{ sheet }}</option>
-                </select>
-              </div>
               <div style="font-size: small">
                 <span style="font-weight: bold">Titre: </span>{{ fiche!.titre | titlecase }}
               </div>
-
               <div class="actions d-flex align-items-center">
                 <div>
                   @if (user.roles === 'R_ADMI' || user.roles === 'R_GB') {
@@ -126,30 +111,69 @@
                     >
                   } @else {}
                 </div>
-                @if (user.roles === 'R_ADMI' || user.roles === 'R_GB') {
-                  <button
-                    mat-raised-button
-                    color="primary"
-                    class="small-button"
-                    (click)="downloadExcel()"
-                  >
-                    <mat-icon>download</mat-icon> Télécharger
-                  </button>
-                }
               </div>
             </div>
 
             <div class="excel-viewer">
-              <hot-table
-                [data]="data"
-                [colHeaders]="true"
-                [rowHeaders]="true"
-                [height]="600"
-                [width]="'100%'"
-                [settings]="hotSettings"
-                licenseKey="non-commercial-and-evaluation"
-              >
-              </hot-table>
+              <div class="d-flex justify-content-center">
+                @if (excelLoading) {
+                  <div class="text-center p-4">
+                    <mat-progress-spinner
+                      mode="indeterminate"
+                      diameter="40"
+                      style="margin: 0 auto"
+                    ></mat-progress-spinner>
+                    <p style="font-size: medium; margin-top: 8px">Téléchargement en cours...</p>
+                  </div>
+                } @else if (excelDownloadStarted) {
+                  <div class="text-center p-4">
+                    <mat-icon style="color: #4caf50">check_circle</mat-icon>
+                    <p style="font-size: small">Le fichier a été téléchargé.</p>
+                    <button
+                      mat-raised-button
+                      (click)="confirmerTelechargementExcel()"
+                      style="width: auto"
+                    >
+                      Télécharger à nouveau
+                    </button>
+                  </div>
+                } @else if (excelCancelled) {
+                  <div class="text-center p-4">
+                    <p style="font-size: small">Téléchargement annulé.</p>
+                    <button
+                      mat-raised-button
+                      color="primary"
+                      (click)="confirmerTelechargementExcel()"
+                    >
+                      Télécharger
+                    </button>
+                  </div>
+                } @else if (excelCountdownActive) {
+                  <div class="text-center p-4">
+                    <mat-icon style="font-size: 48px; width: 48px; height: 48px; color: #ff8e36"
+                      >description</mat-icon
+                    >
+                    <p style="font-size: medium; margin-top: 12px">
+                      Téléchargement automatique dans
+                      <strong style="font-size: 18px; color: #ff8e36">{{ excelCountdown }}</strong>
+                      seconde{{ excelCountdown > 1 ? 's' : '' }}...
+                    </p>
+                    <div class="d-flex justify-content-center" style="gap: 12px">
+                      <button
+                        mat-raised-button
+                        color="primary"
+                        style="width: auto"
+                        (click)="confirmerTelechargementExcel()"
+                      >
+                        Télécharger maintenant
+                      </button>
+                      <button mat-raised-button (click)="annulerTelechargementExcel()">
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
             </div>
           </div>
 
@@ -278,7 +302,7 @@
         }
       </div>
     </div>
-    @if (fiche!.Utilite ||show_value_Quiz||fiche!.Commentaire) {
+    @if (fiche!.Utilite || show_value_Quiz || fiche!.Commentaire) {
       <div class="col-md-3 col-sm-12 mt-md-5 mt-sm-1">
         <mat-tab-group *ngIf="fiche!.Commentaire || fiche!.Utilite || fiche!.Quiz.length > 0">
           <!-- Onglet Utilité -->

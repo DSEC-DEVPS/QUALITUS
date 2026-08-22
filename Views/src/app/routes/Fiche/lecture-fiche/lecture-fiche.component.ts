@@ -85,6 +85,12 @@ export class LectureFicheComponent implements OnInit {
   data: any[][] = [];
   excelBlob: Blob | null = null;
   pptxBlob: Blob | null = null;
+  excelDownloadStarted = false;
+  excelLoading = false;
+  excelCountdown = 5;
+  excelCountdownActive = false;
+  excelCancelled = false;
+  private excelCountdownInterval: any;
   private objectUrl?: string;
   hotSettings: Handsontable.GridSettings = {
     stretchH: 'all',
@@ -177,60 +183,63 @@ export class LectureFicheComponent implements OnInit {
           this.selectedDocumentType(result);
           console.log(this.url);
         } else {
+          // if (result.extention === '.xlsx') {
+          //   /****** */
+
+          //   this.userService.getAllExcelFicheByIDFiche(id).subscribe({
+          //     next: (data: Blob) => {
+          //       console.log('Données Excel reçues:', data);
+          //       console.log('Type MIME:', data.type);
+          //       console.log('Taille:', data.size, 'octets');
+
+          //       if (!data || data.size === 0) {
+          //         this.toast.error('Le fichier Excel est vide ou corrompu');
+          //         return;
+          //       }
+
+          //       this.excelBlob = data;
+          //       const reader = new FileReader();
+          //       //this.downloadExcel();
+          //       reader.onload = (e: any) => {
+          //         try {
+          //           console.log('Lecture du fichier réussie');
+          //           const arrayBuffer = e.target.result;
+          //           console.log('ArrayBuffer obtenu, taille:', arrayBuffer.byteLength);
+
+          //           const data = new Uint8Array(arrayBuffer);
+          //           this.workbook = XLSX.read(data, { type: 'array' });
+          //           console.log('Workbook créé:', this.workbook);
+          //           this.sheetNames = this.workbook.SheetNames;
+          //           console.log('Feuilles trouvées:', this.sheetNames);
+
+          //           if (this.sheetNames.length > 0) {
+          //             this.currentSheet = this.sheetNames[0];
+          //             this.loadSheet();
+          //           } else {
+          //             this.toast.warning('Le fichier Excel ne contient aucune feuille');
+          //           }
+          //         } catch (error) {
+          //           console.error('Erreur lors de la lecture du fichier Excel:', error);
+          //           this.toast.error(
+          //             'Impossible de lire le fichier Excel. Format non valide ou fichier corrompu.'
+          //           );
+          //         }
+          //       };
+
+          //       reader.onerror = error => {
+          //         console.error('Erreur FileReader:', error);
+          //         this.toast.error('Erreur lors de la lecture du fichier');
+          //       };
+
+          //       reader.readAsArrayBuffer(data);
+          //     },
+          //     error: error => {
+          //       console.log(error);
+          //     },
+          //   });
+          // }
           if (result.extention === '.xlsx') {
-            /****** */
-
-            this.userService.getAllExcelFicheByIDFiche(id).subscribe({
-              next: (data: Blob) => {
-                console.log('Données Excel reçues:', data);
-                console.log('Type MIME:', data.type);
-                console.log('Taille:', data.size, 'octets');
-
-                if (!data || data.size === 0) {
-                  this.toast.error('Le fichier Excel est vide ou corrompu');
-                  return;
-                }
-
-                this.excelBlob = data;
-                const reader = new FileReader();
-                //this.downloadExcel();
-                reader.onload = (e: any) => {
-                  try {
-                    console.log('Lecture du fichier réussie');
-                    const arrayBuffer = e.target.result;
-                    console.log('ArrayBuffer obtenu, taille:', arrayBuffer.byteLength);
-
-                    const data = new Uint8Array(arrayBuffer);
-                    this.workbook = XLSX.read(data, { type: 'array' });
-                    console.log('Workbook créé:', this.workbook);
-                    this.sheetNames = this.workbook.SheetNames;
-                    console.log('Feuilles trouvées:', this.sheetNames);
-
-                    if (this.sheetNames.length > 0) {
-                      this.currentSheet = this.sheetNames[0];
-                      this.loadSheet();
-                    } else {
-                      this.toast.warning('Le fichier Excel ne contient aucune feuille');
-                    }
-                  } catch (error) {
-                    console.error('Erreur lors de la lecture du fichier Excel:', error);
-                    this.toast.error(
-                      'Impossible de lire le fichier Excel. Format non valide ou fichier corrompu.'
-                    );
-                  }
-                };
-
-                reader.onerror = error => {
-                  console.error('Erreur FileReader:', error);
-                  this.toast.error('Erreur lors de la lecture du fichier');
-                };
-
-                reader.readAsArrayBuffer(data);
-              },
-              error: error => {
-                console.log(error);
-              },
-            });
+            this.startExcelCountdown();
           } else if (result.extention === '.pptx') {
             this.userService
               .getAllFicheByIDFiche(id)
@@ -571,4 +580,62 @@ export class LectureFicheComponent implements OnInit {
   update(id: number) {
     this.router.navigateByUrl(`mon-espace/Fiche/update/${id}`);
   }
+
+  startExcelCountdown(): void {
+  this.excelCountdown = 5;
+  this.excelCountdownActive = true;
+  this.excelCancelled = false;
+  this.excelCountdownInterval = setInterval(() => {
+    this.excelCountdown--;
+    if (this.excelCountdown <= 0) {
+      this.confirmerTelechargementExcel();
+    }
+  }, 1000);
+}
+
+annulerTelechargementExcel(): void {
+  this.clearExcelCountdown();
+  this.excelCancelled = true;
+}
+
+confirmerTelechargementExcel(): void {
+  this.clearExcelCountdown();
+  if (this.excelBlob) {
+    this.excelDownloadStarted = true;
+    this.downloadExcel();
+    return;
+  }
+  this.excelLoading = true;
+  this.userService.getAllExcelFicheByIDFiche(this.router_id).subscribe({
+    next: (data: Blob) => {
+      this.excelLoading = false;
+      this.excelDownloadStarted = true;
+      if (!data || data.size === 0) {
+        this.toast.error('Le fichier Excel est vide ou corrompu');
+        return;
+      }
+      this.excelBlob = data;
+      this.downloadExcel();
+    },
+    error: error => {
+      this.excelLoading = false;
+      console.log(error);
+      this.toast.error("Une erreur s'est produite lors du téléchargement du fichier.");
+    },
+  });
+}
+
+private clearExcelCountdown(): void {
+  if (this.excelCountdownInterval) {
+    clearInterval(this.excelCountdownInterval);
+    this.excelCountdownInterval = null;
+  }
+  this.excelCountdownActive = false;
+}
+
+ngOnDestroy(): void {
+  this.clearExcelCountdown();
+  this.destroy$.next(true);
+  this.destroy$.complete();
+}
 }
