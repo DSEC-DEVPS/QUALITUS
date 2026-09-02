@@ -1,0 +1,68 @@
+<div class="container-fluid p-16">
+  <mat-card>
+    <mat-card-content>
+      <div class="d-flex align-items-center justify-content-between flex-wrap m-b-16">
+        <h5 class="m-0">Agents a evaluer</h5>
+        <div class="d-flex" style="gap: 8px">
+          <button mat-stroked-button color="primary" (click)="importer()">
+            <mat-icon>upload_file</mat-icon> Importer Excel
+          </button>
+          <button mat-flat-button color="primary" (click)="ajouter()">
+            <mat-icon>add</mat-icon> Nouvel agent
+          </button>
+        </div>
+      </div>
+
+      <mat-form-field appearance="outline" class="w-100 m-b-8">
+        <mat-label>Rechercher</mat-label>
+        <input matInput (keyup)="applyFilter($event)" placeholder="Nom, login genesys..." />
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+
+      <div style="overflow-x: auto">
+        <table mat-table [dataSource]="dataSource" class="w-100">
+          <ng-container matColumnDef="id">
+            <th mat-header-cell *matHeaderCellDef>#</th>
+            <td mat-cell *matCellDef="let a">{{ a.id }}</td>
+          </ng-container>
+          <ng-container matColumnDef="nom">
+            <th mat-header-cell *matHeaderCellDef>Nom</th>
+            <td mat-cell *matCellDef="let a">{{ a.nom }}</td>
+          </ng-container>
+          <ng-container matColumnDef="prenom">
+            <th mat-header-cell *matHeaderCellDef>Prenom</th>
+            <td mat-cell *matCellDef="let a">{{ a.prenom }}</td>
+          </ng-container>
+          <ng-container matColumnDef="login_genesys">
+            <th mat-header-cell *matHeaderCellDef>Login genesys</th>
+            <td mat-cell *matCellDef="let a">{{ a.login_genesys }}</td>
+          </ng-container>
+          <ng-container matColumnDef="type_nom">
+            <th mat-header-cell *matHeaderCellDef>Type</th>
+            <td mat-cell *matCellDef="let a">{{ a.type_nom || '—' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="site_nom">
+            <th mat-header-cell *matHeaderCellDef>Site</th>
+            <td mat-cell *matCellDef="let a">{{ a.site_nom || '—' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="Etat">
+            <th mat-header-cell *matHeaderCellDef>Etat</th>
+            <td mat-cell *matCellDef="let a"><mat-chip-set><mat-chip>{{ a.Etat }}</mat-chip></mat-chip-set></td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let a">
+              <button mat-icon-button color="primary" (click)="modifier(a)"><mat-icon>edit</mat-icon></button>
+              <button mat-icon-button color="warn" (click)="supprimer(a)"><mat-icon>delete</mat-icon></button>
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
+          <tr mat-row *matRowDef="let row; columns: colonnes"></tr>
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell text-center p-16" [attr.colspan]="colonnes.length">Aucun agent.</td>
+          </tr>
+        </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

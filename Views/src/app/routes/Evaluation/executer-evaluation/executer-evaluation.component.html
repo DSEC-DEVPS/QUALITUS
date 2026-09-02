@@ -1,0 +1,190 @@
+<div class="container-fluid p-16">
+  <div class="d-flex align-items-center m-b-16">
+    <button mat-icon-button (click)="retour()" matTooltip="Retour"><mat-icon>arrow_back</mat-icon></button>
+    <span class="h5 m-0">Execution de l'evaluation</span>
+  </div>
+
+  @if (chargement) {
+    <p class="text-muted">Chargement...</p>
+  } @else if (evaluation) {
+    <!-- En-tete -->
+    <mat-card class="m-b-16">
+      <mat-card-content>
+        <div class="entete">
+          <div><span class="lbl">Agent</span><strong>{{ evaluation.agent_nom }} {{ evaluation.agent_prenom }}</strong></div>
+          <div><span class="lbl">Login</span>{{ evaluation.login_genesys }}</div>
+          <div><span class="lbl">Contexte</span>{{ evaluation.contexte }}</div>
+          <div><span class="lbl">Grille</span>{{ evaluation.grille_nom }}</div>
+          <div><span class="lbl">Id appel</span>{{ evaluation.id_appel || '—' }}</div>
+          <div><span class="lbl">DMT</span>{{ evaluation.dmt || '—' }}</div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Bandeau conclusion -->
+    @if (readOnly) {
+      @let concl = resultat ? resultat.conclusion : evaluation.conclusion;
+      @let score = resultat ? resultat.score_global : evaluation.score_global;
+      <mat-card class="m-b-16 concl" [class.ok]="concl === 'SUCCES'" [class.ko]="concl === 'ECHEC'">
+        <mat-card-content class="d-flex align-items-center" style="gap: 12px">
+          <mat-icon class="big">{{ concl === 'SUCCES' ? 'check_circle' : 'cancel' }}</mat-icon>
+          <div>
+            <div class="h5 m-0">Conclusion : {{ concl }}</div>
+            <div class="text-muted">Score global {{ score }}% — Resolution : {{ resolution || evaluation.resolution || '—' }}</div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      @if (resultat) {
+        <mat-card class="m-b-16">
+          <mat-card-content>
+            <h6>Detail par categorie</h6>
+            <table class="detail">
+              <tr><th>Categorie</th><th>Score</th><th>Objectif</th><th>Resultat</th></tr>
+              @for (d of resultat.details; track d.categorie) {
+                <tr>
+                  <td>{{ d.categorie }}</td>
+                  <td>{{ d.score }}%</td>
+                  <td>{{ d.operateur }} {{ d.objectif }}</td>
+                  <td [class.vert]="d.reussi" [class.rouge]="!d.reussi">{{ d.reussi ? 'Reussi' : 'Echec' }}</td>
+                </tr>
+              }
+            </table>
+          </mat-card-content>
+        </mat-card>
+      }
+    }
+
+    <!-- Grille : criteres conformes par defaut -->
+    @if (!readOnly) {
+      <div class="text-muted m-b-8">
+        Tous les criteres sont <strong>conformes</strong> par defaut. Decochez ceux qui sont non conformes.
+        (<strong>{{ nbNonConforme }}</strong> non conforme(s))
+      </div>
+    }
+
+    @for (cat of evaluation.grille; track cat.id) {
+      <mat-expansion-panel class="m-b-8" [expanded]="true">
+        <mat-expansion-panel-header>
+          <mat-panel-title><strong>{{ cat.nom }}</strong></mat-panel-title>
+        </mat-expansion-panel-header>
+        @for (err of cat.erreurs; track err.id) {
+          <div class="erreur-bloc">
+            <div class="erreur-titre">{{ err.nom }}</div>
+            @for (it of err.items; track it.id) {
+              @for (si of it.sousItems; track si.id) {
+                <div class="si-ligne" [class.nc]="!conforme[si.id]">
+                  <mat-checkbox [(ngModel)]="conforme[si.id]" [disabled]="readOnly">
+                    <span class="si-nom">{{ si.nom }}</span>
+                  </mat-checkbox>
+                  <span class="si-etat">{{ conforme[si.id] ? 'Conforme' : 'Non conforme' }}</span>
+                </div>
+              }
+            }
+          </div>
+        }
+      </mat-expansion-panel>
+    }
+
+    <!-- Suivi (evaluation en echec) : coaching + plan d'action -->
+    @if (estEchec) {
+      <mat-card class="m-t-16">
+        <mat-card-content>
+          <div class="d-flex align-items-center justify-content-between flex-wrap m-b-8">
+            <h6 class="m-0">Coaching Agent — cause racine / 5 Pourquoi</h6>
+            <button mat-stroked-button color="primary" (click)="evalSupplementaire()">
+              <mat-icon>add</mat-icon> Ajouter une evaluation supplementaire
+            </button>
+          </div>
+          <mat-form-field appearance="fill" class="w-100">
+            <mat-label>Cause racine</mat-label>
+            <textarea matInput [(ngModel)]="coaching.cause_racine" rows="2"></textarea>
+          </mat-form-field>
+          <div class="row">
+            @for (n of [1,2,3,4,5]; track n) {
+              <div class="col-sm-6">
+                <mat-form-field appearance="fill" class="w-100">
+                  <mat-label>Pourquoi {{ n }}</mat-label>
+                  @switch (n) {
+                    @case (1) { <input matInput [(ngModel)]="coaching.pourquoi1" /> }
+                    @case (2) { <input matInput [(ngModel)]="coaching.pourquoi2" /> }
+                    @case (3) { <input matInput [(ngModel)]="coaching.pourquoi3" /> }
+                    @case (4) { <input matInput [(ngModel)]="coaching.pourquoi4" /> }
+                    @case (5) { <input matInput [(ngModel)]="coaching.pourquoi5" /> }
+                  }
+                </mat-form-field>
+              </div>
+            }
+          </div>
+          <div class="text-right">
+            <button mat-flat-button color="primary" (click)="enregistrerCoaching()">
+              <mat-icon>save</mat-icon> Enregistrer le coaching
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="m-t-16">
+        <mat-card-content>
+          <div class="d-flex align-items-center justify-content-between flex-wrap m-b-8">
+            <h6 class="m-0">Suivi des actions correctives des ecarts</h6>
+            <button mat-flat-button color="primary" (click)="ajouterAction()">
+              <mat-icon>add</mat-icon> Ajouter une action
+            </button>
+          </div>
+          <div style="overflow-x: auto">
+            <table class="actions-table">
+              <thead>
+                <tr>
+                  <th>Action</th><th>Porteur</th><th>Contributeurs</th>
+                  <th>Debut</th><th>Attendue</th><th>Realisation</th>
+                  <th>Statut</th><th>KPI</th><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (a of actions; track a.id) {
+                  <tr>
+                    <td>{{ a.type_libelle || a.action_libelle || '—' }}</td>
+                    <td>{{ a.porteur }}</td>
+                    <td>{{ a.contributeurs }}</td>
+                    <td>{{ a.date_debut }}</td>
+                    <td>{{ a.date_attendue }}</td>
+                    <td>{{ a.date_realisation }}</td>
+                    <td>{{ a.statut }}</td>
+                    <td>{{ a.kpi }}</td>
+                    <td class="nowrap">
+                      <button mat-icon-button (click)="modifierAction(a)"><mat-icon>edit</mat-icon></button>
+                      <button mat-icon-button color="warn" (click)="supprimerAction(a)"><mat-icon>delete</mat-icon></button>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="9" class="text-muted p-8">Aucune action pour le moment.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+
+    <!-- Resolution + terminer -->
+    @if (!readOnly) {
+      <mat-card class="m-t-16">
+        <mat-card-content>
+          <div class="d-flex align-items-center flex-wrap" style="gap: 16px">
+            <span><strong>Resolution</strong> (probleme client resolu ?)</span>
+            <mat-radio-group [(ngModel)]="resolution">
+              <mat-radio-button value="OUI" class="m-r-16">OUI</mat-radio-button>
+              <mat-radio-button value="NON">NON</mat-radio-button>
+            </mat-radio-group>
+          </div>
+          <div class="m-t-16 text-center">
+            <button mat-flat-button color="primary" (click)="terminer()">
+              <mat-icon>done_all</mat-icon> Terminer l'evaluation
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+</div>

@@ -1,0 +1,38 @@
+<div class="container">
+  <h6>Categories de ressources evaluees</h6>
+  <p class="text-muted">
+    Modele : <strong>{{ data.nomModele }}</strong>
+  </p>
+  <mat-card>
+    <mat-card-content>
+      <p>Selectionnez les categories de ressources evaluees par cette grille :</p>
+      <div class="row">
+        @for (cat of categories; track cat.id) {
+          <div class="col-sm-6 m-b-8">
+            <mat-checkbox
+              [checked]="estSelectionnee(cat.id)"
+              (change)="basculer(cat.id, $event.checked)"
+            >
+              {{ cat.nom }}
+              @if (cat.est_robot) {
+                <span class="text-muted"> (robot)</span>
+              }
+            </mat-checkbox>
+          </div>
+        }
+      </div>
+
+      <div class="m-t-16 text-center">
+        <button
+          mat-flat-button
+          color="primary"
+          (click)="enregistrer()"
+          [disabled]="isSubmitting"
+        >
+          Enregistrer
+        </button>
+        <button mat-button mat-dialog-close>Annuler</button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

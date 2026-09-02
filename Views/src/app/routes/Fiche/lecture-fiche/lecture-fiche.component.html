@@ -3,15 +3,30 @@
     <img class="Logo mx-2" [src]="imageOrangeLogo" alt="Logo" />
   </a>
 
-  <div class="collapse navbar-collapse" id="navbarSupportedContent" ngxPermissionsOnly="R_ADMI">
+  <div
+    class="collapse navbar-collapse"
+    id="navbarSupportedContent"
+    ngxPermissionsOnly="R_ADMI"
+  >
     <ul class="navbar-nav me-auto mb-2 mb-lg-0"></ul>
-    <button mat-icon-button class="hide-small" (click)="toggleFullscreen()">
+
+    <button
+      mat-icon-button
+      class="hide-small"
+      (click)="toggleFullscreen()"
+    >
       <mat-icon>fullscreen</mat-icon>
     </button>
   </div>
 </nav>
+
 <div class="container-fluid">
   <div class="row">
+
+    <!-- ========================================================= -->
+    <!-- COLONNE PRINCIPALE : LECTURE DU FICHIER -->
+    <!-- ========================================================= -->
+
     <div [class]="col_div_iframe">
       <div class="row mt-1">
         @if (fiche!.extention === '.pdf') {
@@ -19,101 +34,184 @@
             class="row justify-content-between mt-3 align-items-center"
             style="margin-bottom: -25px"
           >
+
+            <!-- Bouton retour -->
             <div class="col-md-4 col-sm-2">
-              <button mat-raised-button class="small-button" (click)="back()">Retour</button>
-            </div>
-            <div class="col-md-4 col-sm-2" style="font-size: small">
-              {{ fiche!.titre | titlecase }}
+              <button
+                mat-raised-button
+                class="small-button"
+                (click)="back()"
+              >
+                Retour
+              </button>
             </div>
 
+            <!-- Titre -->
+            <div
+              class="col-md-4 col-sm-2"
+              style="font-size: small"
+            >
+              {{ fiche?.titre | titlecase }}
+            </div>
+
+            <!-- Actions -->
             <div class="col-md-4 col-sm-2 text-end">
+
               @if (user.roles === 'R_ADMI' || user.roles === 'R_GB') {
+
+                <!-- Modifier -->
                 <mat-icon
                   style="color: #ff8e36; cursor: pointer"
-                  matTooltip="Modifer"
+                  matTooltip="Modifier"
                   matTooltipPosition="below"
                   (click)="update(fiche!.id)"
-                  >edit</mat-icon
                 >
+                  edit
+                </mat-icon>
+
+                <!-- Archiver -->
                 <mat-icon
-                  (click)="
-                    deleteSomething('Êtes vous sûr de vouloir archiver cette fiche ?', 'archivage')
+                  style="
+                    color: #ff8e36;
+                    margin-left: 15px;
+                    cursor: pointer;
                   "
-                  style="color: #ff8e36; margin-left: 15px; cursor: pointer"
-                  matTooltip="archiver"
+                  matTooltip="Archiver"
                   matTooltipPosition="below"
-                  >archive</mat-icon
+                  (click)="
+                    deleteSomething(
+                      'Êtes vous sûr de vouloir archiver cette fiche ?',
+                      'archivage'
+                    )
+                  "
                 >
+                  archive
+                </mat-icon>
+
+                <!-- Supprimer -->
                 <mat-icon
+                  style="
+                    color: #ff8e36;
+                    margin-left: 15px;
+                    cursor: pointer;
+                  "
+                  matTooltip="Supprimer"
+                  matTooltipPosition="below"
                   (click)="
                     deleteSomething(
                       'Êtes vous sûr de vouloir supprimer cette fiche ?',
                       'suppression'
                     )
                   "
-                  style="color: #ff8e36; margin-left: 15px; cursor: pointer"
-                  matTooltip="supprimer"
-                  matTooltipPosition="below"
-                  >delete_forever</mat-icon
                 >
+                  delete_forever
+                </mat-icon>
+
               } @else {}
+
             </div>
           </div>
-          <div class="embed-responsive embed-responsive-16by9">
-            <!-- Remplacez "votre-fichier.pdf" par le chemin de votre fichier PDF
 
-            -->
-            <iframe class="embed-responsive-item" [src]="url" allowfullscreen></iframe>
+          <!-- Lecteur PDF -->
+          <div class="embed-responsive embed-responsive-16by9">
+            <iframe
+              class="embed-responsive-item"
+              [src]="url"
+              allowfullscreen
+            ></iframe>
           </div>
+
         } @else {
-          <!-- excel-viewer.component.html -->
-          <div *ngIf="fiche?.extention === '.xlsx'" class="excel-container">
+
+          <!-- =================================================== -->
+          <!-- EXCEL -->
+          <!-- =================================================== -->
+
+          <div
+            *ngIf="fiche?.extention === '.xlsx'"
+            class="excel-container"
+          >
+
+            <!-- Barre de contrôle Excel -->
             <div class="controls-row">
+
+              <!-- Retour -->
               <div>
-                <button mat-raised-button class="small-button" (click)="back()">Retour</button>
+                <button
+                  mat-raised-button
+                  class="small-button"
+                  (click)="back()"
+                >
+                  Retour
+                </button>
               </div>
               <div style="font-size: small">
-                <span style="font-weight: bold">Titre: </span>{{ fiche!.titre | titlecase }}
+                <span style="font-weight: bold">
+                  Titre:
+                </span>
+                {{ fiche?.titre | titlecase }}
               </div>
               <div class="actions d-flex align-items-center">
+
                 <div>
+
                   @if (user.roles === 'R_ADMI' || user.roles === 'R_GB') {
+
+                    <!-- Modifier -->
                     <mat-icon
                       style="color: #ff8e36; cursor: pointer"
-                      matTooltip="Modifer"
+                      matTooltip="Modifier"
                       matTooltipPosition="above"
                       (click)="update(fiche!.id)"
-                      >edit</mat-icon
                     >
+                      edit
+                    </mat-icon>
+
+                    <!-- Archiver -->
                     <mat-icon
+                      style="
+                        color: #ff8e36;
+                        margin-left: 15px;
+                        cursor: pointer;
+                      "
+                      matTooltip="Archiver"
+                      matTooltipPosition="above"
                       (click)="
                         deleteSomething(
                           'Êtes vous sûr de vouloir archiver cette fiche ?',
                           'archivage'
                         )
                       "
-                      style="color: #ff8e36; margin-left: 15px; cursor: pointer"
-                      matTooltip="archiver"
-                      matTooltipPosition="above"
-                      >archive</mat-icon
                     >
+                      archive
+                    </mat-icon>
+
+                    <!-- Supprimer -->
                     <mat-icon
+                      style="
+                        color: #ff8e36;
+                        margin-left: 15px;
+                        cursor: pointer;
+                      "
+                      matTooltip="Supprimer"
+                      matTooltipPosition="above"
                       (click)="
                         deleteSomething(
                           'Êtes vous sûr de vouloir supprimer cette fiche ?',
                           'suppression'
                         )
                       "
-                      style="color: #ff8e36; margin-left: 15px; cursor: pointer"
-                      matTooltip="supprimer"
-                      matTooltipPosition="above"
-                      >delete_forever</mat-icon
                     >
+                      delete_forever
+                    </mat-icon>
+
                   } @else {}
+
                 </div>
               </div>
             </div>
 
+            <!-- Tableau Excel -->
             <div class="excel-viewer">
               <div class="d-flex justify-content-center">
                 @if (excelLoading) {
@@ -177,102 +275,200 @@
             </div>
           </div>
 
-          <div *ngIf="fiche?.extention === '.pptx'" class="excel-container">
+          <!-- =================================================== -->
+          <!-- POWERPOINT -->
+          <!-- =================================================== -->
+
+          <div
+            *ngIf="fiche?.extention === '.pptx'"
+            class="excel-container"
+          >
+
+            <!-- Barre de contrôle PowerPoint -->
             <div class="controls-row">
+
+              <!-- Retour -->
               <div>
-                <button mat-raised-button class="small-button" (click)="back()">Retour</button>
+                <button
+                  mat-raised-button
+                  class="small-button"
+                  (click)="back()"
+                >
+                  Retour
+                </button>
               </div>
 
+              <!-- Titre -->
               <div style="font-size: medium">
-                <span style="font-weight: bold">Titre: </span>{{ fiche!.titre | titlecase }}
+                <span style="font-weight: bold">
+                  Titre:
+                </span>
+                {{ fiche?.titre | titlecase }}
               </div>
 
+              <!-- Actions PowerPoint -->
               <div class="actions d-flex align-items-center">
+
                 <div>
+
                   @if (user.roles === 'R_ADMI' || user.roles === 'R_GB') {
+
+                    <!-- Modifier -->
                     <mat-icon
                       style="color: #ff8e36; cursor: pointer"
-                      matTooltip="Modifer"
+                      matTooltip="Modifier"
                       matTooltipPosition="above"
                       (click)="update(fiche!.id)"
-                      >edit</mat-icon
                     >
+                      edit
+                    </mat-icon>
+
+                    <!-- Archiver -->
                     <mat-icon
+                      style="
+                        color: #ff8e36;
+                        margin-left: 15px;
+                        cursor: pointer;
+                      "
+                      matTooltip="Archiver"
+                      matTooltipPosition="above"
                       (click)="
                         deleteSomething(
                           'Êtes vous sûr de vouloir archiver cette fiche ?',
                           'archivage'
                         )
                       "
-                      style="color: #ff8e36; margin-left: 15px; cursor: pointer"
-                      matTooltip="archiver"
-                      matTooltipPosition="above"
-                      >archive</mat-icon
                     >
+                      archive
+                    </mat-icon>
+
+                    <!-- Supprimer -->
                     <mat-icon
+                      style="
+                        color: #ff8e36;
+                        margin-left: 15px;
+                        cursor: pointer;
+                      "
+                      matTooltip="Supprimer"
+                      matTooltipPosition="above"
                       (click)="
                         deleteSomething(
                           'Êtes vous sûr de vouloir supprimer cette fiche ?',
                           'suppression'
                         )
                       "
-                      style="color: #ff8e36; margin-left: 15px; cursor: pointer"
-                      matTooltip="supprimer"
-                      matTooltipPosition="above"
-                      >delete_forever</mat-icon
                     >
+                      delete_forever
+                    </mat-icon>
+
                   } @else {}
+
                 </div>
+
+                <!-- Télécharger PowerPoint -->
                 @if (user.roles === 'R_ADMI' || user.roles === 'R_GB') {
+
                   <button
                     mat-raised-button
                     color="primary"
                     class="small-button"
                     (click)="downloadPptx()"
                   >
-                    <mat-icon>download</mat-icon> Télécharger
+                    <mat-icon>download</mat-icon>
+                    Télécharger
                   </button>
+
                 }
+
               </div>
             </div>
 
-            <!-- contrôles -->
-            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px">
+            <!-- ================================================= -->
+            <!-- CONTRÔLES DE ZOOM -->
+            <!-- ================================================= -->
+
+            <div
+              style="
+                display: flex;
+                gap: 8px;
+                align-items: center;
+                margin-bottom: 8px;
+              "
+            >
+
+              <!-- Zoom arrière -->
               <mat-icon
                 (click)="zoomOut()"
-                style="color: #ff8e36; cursor: pointer; font-size: 25px"
+                style="
+                  color: #ff8e36;
+                  cursor: pointer;
+                  font-size: 25px;
+                "
                 matTooltip="Zoom arrière"
-                >zoom_out</mat-icon
               >
+                zoom_out
+              </mat-icon>
+
+              <!-- Reset -->
               <button
                 (click)="resetZoom()"
                 title="Reset"
-                style="border-radius: 5%; border: none; font-size: medium; font-weight: normal"
+                style="
+                  border-radius: 5%;
+                  border: none;
+                  font-size: medium;
+                  font-weight: normal;
+                "
               >
                 100%
               </button>
+
+              <!-- Zoom avant -->
               <mat-icon
                 (click)="zoomIn()"
-                style="color: #ff8e36; cursor: pointer; font-size: 25px"
+                style="
+                  color: #ff8e36;
+                  cursor: pointer;
+                  font-size: 25px;
+                "
                 matTooltip="Zoom avant"
-                >zoom_in</mat-icon
               >
-              <label for="" style="margin-left: 12px; font-size: medium">
-                Zoom: {{ zoom * 100 | number: '1.0-0' }}%
+                zoom_in
+              </mat-icon>
+
+              <!-- Pourcentage -->
+              <label
+                for="zoomSlider"
+                style="
+                  margin-left: 12px;
+                  font-size: medium;
+                "
+              >
+                Zoom:
+                {{ zoom * 100 | number: '1.0-0' }}%
               </label>
 
+              <!-- Slider -->
               <input
+                id="zoomSlider"
                 type="range"
                 min="{{ minZoom }}"
                 max="{{ maxZoom }}"
                 step="{{ zoomStep }}"
                 [value]="zoom"
                 (input)="onSlider($event)"
-                style="width: 160px; margin-left: 8px; color: #ff8e36"
+                style="
+                  width: 160px;
+                  margin-left: 8px;
+                  color: #ff8e36;
+                "
               />
             </div>
 
-            <!-- viewport déroulable qui gère la molette -->
+            <!-- ================================================= -->
+            <!-- VIEWPORT POWERPOINT -->
+            <!-- ================================================= -->
+
             <div
               #viewport
               (wheel)="onWheel($event)"
@@ -284,7 +480,8 @@
                 position: relative;
               "
             >
-              <!-- c'est ici que le previewer s'attache et que l'on applique le scale -->
+
+              <!-- Wrapper PowerPoint -->
               <div
                 #pptxWrapper
                 id="pptx-wrapper"
@@ -297,9 +494,12 @@
                   will-change: transform;
                 "
               ></div>
+
             </div>
           </div>
+
         }
+
       </div>
     </div>
     @if (fiche!.Utilite || show_value_Quiz || fiche!.Commentaire) {
@@ -307,43 +507,105 @@
         <mat-tab-group *ngIf="fiche!.Commentaire || fiche!.Utilite || fiche!.Quiz.length > 0">
           <!-- Onglet Utilité -->
           <mat-tab>
-            <ng-template mat-tab-label> Sondages </ng-template>
-            @if (fiche!.Quiz.length > 0) {
+
+            <ng-template mat-tab-label>
+              Sondages
+            </ng-template>
+
+            <!-- Quiz -->
+            @if ((fiche?.Quiz?.length || 0) > 0) {
+
               <form [formGroup]="formGroup_Quiz">
+
                 <div *ngIf="show_value_Quiz">
+
                   <hr class="Quiz" />
+
+                  <!-- Question 1 -->
                   <div>
-                    <p class="mt-3" style="font-family: poppins, sans-serif; font-size: small">
+
+                    <p
+                      class="mt-3"
+                      style="
+                        font-family: poppins, sans-serif;
+                        font-size: small;
+                      "
+                    >
                       {{ fiche!.Quiz[0].libelleQuestion }} ?
                     </p>
+
                     <div class="d-flex">
-                      <mat-radio-group formControlName="Reponse1">
-                        <mat-radio-button class="example-margin" style="font-size: small" value="1"
-                          >VRAI</mat-radio-button
+
+                      <mat-radio-group
+                        formControlName="Reponse1"
+                      >
+
+                        <mat-radio-button
+                          class="example-margin"
+                          style="font-size: small"
+                          value="1"
                         >
-                        <mat-radio-button class="example-margin" style="font-size: small" value="0"
-                          >FAUX</mat-radio-button
+                          VRAI
+                        </mat-radio-button>
+
+                        <mat-radio-button
+                          class="example-margin"
+                          style="font-size: small"
+                          value="0"
                         >
+                          FAUX
+                        </mat-radio-button>
+
                       </mat-radio-group>
+
                     </div>
                   </div>
+
+                  <!-- Question 2 -->
                   <div>
-                    <p class="mt-3" style="font-family: poppins, sans-serif; font-size: small">
+
+                    <p
+                      class="mt-3"
+                      style="
+                        font-family: poppins, sans-serif;
+                        font-size: small;
+                      "
+                    >
                       {{ fiche!.Quiz[1].libelleQuestion }} ?
                     </p>
 
                     <div class="d-flex">
-                      <mat-radio-group formControlName="Reponse2">
-                        <mat-radio-button class="example-margin" style="font-size: small" value="1"
-                          >VRAI</mat-radio-button
+
+                      <mat-radio-group
+                        formControlName="Reponse2"
+                      >
+
+                        <mat-radio-button
+                          class="example-margin"
+                          style="font-size: small"
+                          value="1"
                         >
-                        <mat-radio-button class="example-margin" style="font-size: small" value="0"
-                          >FAUX</mat-radio-button
+                          VRAI
+                        </mat-radio-button>
+
+                        <mat-radio-button
+                          class="example-margin"
+                          style="font-size: small"
+                          value="0"
                         >
+                          FAUX
+                        </mat-radio-button>
+
                       </mat-radio-group>
+
                     </div>
                   </div>
-                  <div class="row text-center justify-content-center p-0 m-0">
+
+                  <!-- Validation Quiz -->
+                  <div
+                    class="row text-center justify-content-center p-0 m-0"
+                  >
+
                     <button
                       mat-button
                       [disabled]="formGroup_Quiz.invalid"
@@ -352,16 +614,37 @@
                     >
                       Valider
                     </button>
+
                   </div>
+
                 </div>
+
               </form>
+
             }
 
-            <div class="mt-md-0" *ngIf="show_div_value_sondage">
+            <!-- ================================================= -->
+            <!-- UTILITÉ -->
+            <!-- ================================================= -->
+
+            <div
+              class="mt-md-0"
+              *ngIf="show_div_value_sondage"
+            >
+
               <div *ngIf="show_value_utilite">
+
                 <hr class="utilite" />
-                <span style="font-size: small">Le contenu est-il utile ?</span>
-                <div class="d-flex justify-content-center m-0">
+
+                <span style="font-size: small">
+                  Le contenu est-il utile ?
+                </span>
+
+                <div
+                  class="d-flex justify-content-center m-0"
+                >
+
+                  <!-- OUI -->
                   <button
                     class="btn btn-success btn-sm btn_non"
                     value="1"
@@ -369,6 +652,8 @@
                   >
                     OUI
                   </button>
+
+                  <!-- NON -->
                   <button
                     class="btn btn-danger btn-sm btn_non"
                     value="0"
@@ -376,36 +661,62 @@
                   >
                     NON
                   </button>
+
                 </div>
               </div>
+
             </div>
+
           </mat-tab>
 
-          <!-- Onglet Commentaires -->
-          <mat-tab *ngIf="show_div_value_commentaire">
-            <ng-template mat-tab-label> Commentaires </ng-template>
-            <div class="mt-5 text-center">
-              <form [formGroup]="formGroum" action="">
+          <!-- ================================================= -->
+          <!-- ONGLET COMMENTAIRES -->
+          <!-- ================================================= -->
+
+          <mat-tab
+            *ngIf="show_div_value_commentaire"
+          >
+
+            <ng-template mat-tab-label>
+              Commentaires
+            </ng-template>
+
+            <div
+              class="mt-5 text-center"
+            >
+
+              <form
+                [formGroup]="formGroum"
+                action=""
+              >
+
                 <textarea
                   class="form-control commentaire-box"
                   rows="4"
                   placeholder="Ajoutez un commentaire..."
                   formControlName="message"
                 ></textarea>
+
               </form>
 
+              <!-- Envoyer -->
               <button
                 mat-raised-button
-                (click)="back()"
-                (click)="addCommentaire()"
+                (click)="addCommentaire(); back()"
                 [disabled]="formGroum.invalid"
               >
                 Envoyer
               </button>
+
             </div>
+
           </mat-tab>
+
         </mat-tab-group>
+
       </div>
+
     }
+
   </div>
 </div>

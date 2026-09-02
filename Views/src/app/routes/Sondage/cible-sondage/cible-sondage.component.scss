@@ -1,0 +1,46 @@
+.p-16 { padding: 16px; }
+.m-b-16 { margin-bottom: 16px; }
+.m-b-8 { margin-bottom: 8px; }
+.m-t-8 { margin-top: 8px; }
+.w-100 { width: 100%; }
+.text-right { text-align: right; }
+
+.alerte-actif {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid #f5a623;
+  background: rgba(245, 166, 35, 0.1);
+  border-radius: 8px;
+  color: #8a4b00;
+}
+
+.filtres {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.filtres mat-form-field {
+  min-width: 200px;
+}
+
+.import-ligne {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.diffusion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+mat-icon.ok {
+  color: #2e7d32;
+  margin-right: 4px;
+}

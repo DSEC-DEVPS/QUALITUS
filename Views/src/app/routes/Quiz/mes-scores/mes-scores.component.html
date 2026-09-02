@@ -1,0 +1,70 @@
+<div class="container-fluid p-16">
+  <!-- Badges / recompenses -->
+  <mat-card class="m-b-16">
+    <mat-card-content>
+      <h5 class="m-b-16">Mes badges</h5>
+      <div class="badges">
+        @for (b of badges; track b.code) {
+          <div class="badge" [class.gagne]="b.obtenu === 1" [matTooltip]="b.description">
+            <mat-icon>{{ b.icone }}</mat-icon>
+            <div class="badge-nom">{{ b.nom }}</div>
+            @if (b.obtenu !== 1) {
+              <div class="verrou"><mat-icon>lock</mat-icon></div>
+            }
+          </div>
+        } @empty {
+          <span class="text-muted">Aucun badge configure.</span>
+        }
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card>
+    <mat-card-content>
+      <h5 class="m-b-16">Mes scores</h5>
+      <div style="overflow-x: auto">
+        <table mat-table [dataSource]="dataSource" class="w-100">
+          <ng-container matColumnDef="date_tentative">
+            <th mat-header-cell *matHeaderCellDef>Date</th>
+            <td mat-cell *matCellDef="let s">{{ s.date_tentative | date: 'dd/MM/yyyy HH:mm' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="quiz_titre">
+            <th mat-header-cell *matHeaderCellDef>Quiz</th>
+            <td mat-cell *matCellDef="let s">{{ s.quiz_titre }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="num_essai">
+            <th mat-header-cell *matHeaderCellDef>Essai</th>
+            <td mat-cell *matCellDef="let s">n°{{ s.num_essai }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="score">
+            <th mat-header-cell *matHeaderCellDef>Score</th>
+            <td mat-cell *matCellDef="let s">{{ s.score }}% ({{ s.nb_bonnes }}/{{ s.nb_total }})</td>
+          </ng-container>
+
+          <ng-container matColumnDef="statut">
+            <th mat-header-cell *matHeaderCellDef>Resultat</th>
+            <td mat-cell *matCellDef="let s">
+              <mat-chip-set>
+                <mat-chip [class.ok]="s.reussi === 1" [class.ko]="s.reussi === 0">
+                  {{ s.reussi === 1 ? 'Reussi' : 'Echoue' }}
+                </mat-chip>
+              </mat-chip-set>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell text-center p-16" [attr.colspan]="displayedColumns.length">
+              Aucune tentative pour le moment.
+            </td>
+          </tr>
+        </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

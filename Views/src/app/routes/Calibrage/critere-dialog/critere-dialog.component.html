@@ -1,0 +1,52 @@
+<div class="container">
+  <h6>{{ titre }}</h6>
+  <mat-card>
+    <mat-card-content>
+      <form [formGroup]="form" class="form-field-full">
+        <mat-form-field appearance="fill" class="w-100">
+          <mat-label>Type d'ecart</mat-label>
+          <input matInput formControlName="type_ecart" required />
+          @if (form.get('type_ecart')?.invalid && form.get('type_ecart')?.touched) {
+            <mat-error>Ce champ est obligatoire</mat-error>
+          }
+        </mat-form-field>
+
+        <div class="row">
+          <div class="col-sm-6">
+            <mat-form-field appearance="fill" class="w-100">
+              <mat-label>Operateur objectif</mat-label>
+              <mat-select formControlName="operateur">
+                @for (op of operateurs; track op) {
+                  <mat-option [value]="op">{{ op }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+          <div class="col-sm-6">
+            <mat-form-field appearance="fill" class="w-100">
+              <mat-label>Valeur objectif (%)</mat-label>
+              <input matInput type="number" step="0.1" formControlName="valeur_objectif" />
+            </mat-form-field>
+          </div>
+        </div>
+
+        <mat-form-field appearance="fill" class="w-100">
+          <mat-label>Libelle ECHEC</mat-label>
+          <input matInput formControlName="libelle_echec" />
+        </mat-form-field>
+
+        <mat-form-field appearance="fill" class="w-100">
+          <mat-label>Libelle REUSSITE</mat-label>
+          <input matInput formControlName="libelle_reussite" />
+        </mat-form-field>
+
+        <div class="m-t-8 text-center">
+          <button mat-flat-button color="primary" (click)="valider()" [disabled]="form.invalid">
+            Valider
+          </button>
+          <button mat-button mat-dialog-close>Annuler</button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

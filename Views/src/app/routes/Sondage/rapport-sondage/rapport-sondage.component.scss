@@ -1,0 +1,115 @@
+.p-16 { padding: 16px; }
+.m-b-16 { margin-bottom: 16px; }
+.m-b-12 { margin-bottom: 12px; }
+.text-center { text-align: center; }
+.flex-spacer { flex: 1 1 auto; }
+
+.synthese .big {
+  font-size: 40px;
+  width: 40px;
+  height: 40px;
+  color: #3f51b5;
+}
+
+.q-card .q-tete {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.q-libelle {
+  font-weight: 600;
+}
+
+/* Barres (choix) */
+.chart {
+  padding: 4px 0;
+}
+.bar-ligne {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+}
+.bar-label {
+  min-width: 160px;
+  color: #444;
+  font-size: 0.92rem;
+}
+.bar-zone {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bar {
+  height: 22px;
+  min-width: 2px;
+  background: #3f51b5;
+  border-radius: 3px;
+}
+.bar-val {
+  font-weight: 600;
+  color: #444;
+  white-space: nowrap;
+}
+
+/* Classement */
+.classement .hint {
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+.rang-ligne {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+.rang-ligne .rang {
+  font-weight: 700;
+  color: #3f51b5;
+  min-width: 40px;
+  text-align: center;
+}
+.rang-ligne .rang-lib {
+  flex: 1;
+}
+
+/* Curseur */
+.curseur-stats {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.curseur-stats .stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 80px;
+  padding: 10px 14px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+.curseur-stats .v {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #3f51b5;
+}
+.curseur-stats .k {
+  color: #777;
+  font-size: 0.82rem;
+}
+
+/* Ouvertes */
+.ouvertes {
+  margin: 0;
+  padding-left: 18px;
+}
+.ouvertes li {
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}

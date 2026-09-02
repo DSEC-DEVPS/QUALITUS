@@ -1,0 +1,55 @@
+<div class="container">
+  <h6>Importer un modele depuis Excel</h6>
+  <mat-card>
+    <mat-card-content>
+      <form [formGroup]="form" class="form-field-full">
+        <mat-form-field appearance="fill" class="w-100">
+          <mat-label>Nom du modele</mat-label>
+          <input matInput formControlName="nom" required />
+          @if (form.get('nom')?.invalid && form.get('nom')?.touched) {
+            <mat-error>Ce champ est obligatoire</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="fill" class="w-100">
+          <mat-label>Description</mat-label>
+          <textarea matInput formControlName="description" rows="2"></textarea>
+        </mat-form-field>
+
+        <div class="m-t-8 m-b-8">
+          <button mat-stroked-button type="button" (click)="fileInput.click()">
+            <mat-icon>upload_file</mat-icon> Choisir un fichier Excel (.xlsx)
+          </button>
+          <input
+            #fileInput
+            type="file"
+            hidden
+            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            (change)="onFileSelected($event)"
+          />
+          @if (fichier) {
+            <span class="m-l-8">{{ fichier.name }}</span>
+          }
+        </div>
+
+        <p class="text-muted" style="font-size: 0.8rem">
+          Le fichier doit contenir une feuille <strong>GRILLE</strong> (hierarchie des criteres)
+          et, en option, une feuille <strong>REGLES</strong> (criteres de reussite/echec).
+        </p>
+
+        <div class="m-t-8 text-center">
+          <button
+            mat-flat-button
+            color="primary"
+            (click)="handleImport()"
+            [loading]="isSubmitting"
+            [disabled]="form.invalid || !fichier"
+          >
+            Importer
+          </button>
+          <button mat-button mat-dialog-close>Annuler</button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

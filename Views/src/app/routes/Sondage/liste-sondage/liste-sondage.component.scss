@@ -1,0 +1,22 @@
+.p-16 { padding: 16px; }
+.m-b-16 { margin-bottom: 16px; }
+.w-100 { width: 100%; }
+.text-right { text-align: right; }
+
+.badge {
+  display: inline-block;
+  padding: 2px 12px;
+  border-radius: 14px;
+  border: 1px solid #90a4ae;
+  color: #546e7a;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.badge.actif {
+  border-color: #43a047;
+  color: #2e7d32;
+}
+.badge.desactif {
+  border-color: #c62828;
+  color: #c62828;
+}

@@ -1,0 +1,23 @@
+<div class="container">
+  <h6>{{ data.titre }}</h6>
+  <mat-card>
+    <mat-card-content>
+      <form [formGroup]="form" class="form-field-full">
+        <mat-form-field appearance="fill" class="w-100">
+          <mat-label>{{ data.label || 'Libelle' }}</mat-label>
+          <input matInput formControlName="valeur" required />
+          @if (form.get('valeur')?.invalid && form.get('valeur')?.touched) {
+            <mat-error>Ce champ est obligatoire</mat-error>
+          }
+        </mat-form-field>
+
+        <div class="m-t-8 text-center">
+          <button mat-flat-button color="primary" (click)="valider()" [disabled]="form.invalid">
+            Valider
+          </button>
+          <button mat-button mat-dialog-close>Annuler</button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

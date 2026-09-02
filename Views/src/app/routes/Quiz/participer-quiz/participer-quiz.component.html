@@ -1,0 +1,135 @@
+<div class="container-fluid p-16">
+  <div class="d-flex align-items-center m-b-16">
+    <button mat-icon-button (click)="retourListe()" matTooltip="Retour">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <span class="h5 m-0">{{ quiz?.titre }}</span>
+  </div>
+
+  @if (chargement) {
+    <mat-progress-bar mode="indeterminate" />
+  } @else if (quiz) {
+
+    <!-- Quiz deja tente, en attente d'autorisation de retest du superviseur -->
+    @if (bloque && !resultat) {
+      <mat-card class="m-b-16 bloque">
+        <mat-card-content class="d-flex align-items-center" style="gap: 12px">
+          <mat-icon class="big">lock</mat-icon>
+          <div>
+            <div class="h6 m-0">Retest non disponible</div>
+            <div class="text-muted">
+              Vous avez deja passe ce quiz. Vous pourrez le refaire uniquement
+              lorsque votre superviseur aura autorise un retest.
+            </div>
+          </div>
+        </mat-card-content>
+        <mat-card-content>
+          <button mat-stroked-button (click)="mesScores()">
+            <mat-icon>history</mat-icon> Mes scores
+          </button>
+          <button mat-button (click)="retourListe()">Retour a la liste</button>
+        </mat-card-content>
+      </mat-card>
+    } @else {
+
+      <!-- Bandeau resultat (apres soumission) : uniquement reussite / echec -->
+      @if (resultat) {
+        <mat-card class="m-b-16 resultat" [class.ok]="resultat.reussi" [class.ko]="!resultat.reussi">
+          <mat-card-content>
+            <div class="d-flex align-items-center" style="gap: 12px">
+              <mat-icon class="big">{{ resultat.reussi ? 'check_circle' : 'cancel' }}</mat-icon>
+              <div>
+                <div class="h5 m-0">
+                  {{ resultat.reussi ? 'Reussi !' : 'Echoue' }} — {{ resultat.score }}%
+                </div>
+                <div class="text-muted">
+                  {{ resultat.nb_bonnes }}/{{ resultat.nb_total }} bonnes reponses
+                  (seuil {{ resultat.note_passage }}%) — essai n°{{ resultat.num_essai }}
+                </div>
+                @if (!resultat.reussi) {
+                  <div class="text-muted m-t-8">
+                    En cas de besoin, votre superviseur pourra vous autoriser un retest.
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="m-t-8">
+              <button mat-stroked-button (click)="mesScores()">
+                <mat-icon>history</mat-icon> Mes scores
+              </button>
+              <button mat-button (click)="retourListe()">Retour a la liste</button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
+
+      <!-- Questions (uniquement avant soumission ; aucune correction affichee) -->
+      @if (!resultat) {
+        <!-- Barre figee : chrono (regle 1) + progression (regle 2) -->
+        <div class="barre-chrono">
+          @if (quiz.duree) {
+            <div class="chrono" [class.urgent]="tempsRestant <= 30">
+              <mat-icon>timer</mat-icon>
+              <span>{{ chronoLabel }}</span>
+            </div>
+          }
+          <div class="progression">
+            <mat-icon>checklist</mat-icon>
+            Vous avez répondu à {{ nbRepondues }} question(s) / {{ totalQuestions }}
+          </div>
+        </div>
+
+        @for (q of quiz.questions; track q.id; let i = $index) {
+          <mat-card class="m-b-8 question">
+            <mat-card-content>
+              <div class="q-titre">Q{{ i + 1 }}. {{ q.libelle }}</div>
+
+              @if (estQCM(q)) {
+                <div class="choix">
+                  <div class="text-muted" style="font-size: 0.8rem; margin-bottom: 4px">
+                    Plusieurs réponses possibles
+                  </div>
+                  @for (o of q.options; track o.id) {
+                    <mat-checkbox
+                      [checked]="estCoche(q, o.id)"
+                      (change)="basculerQCM(q, o.id, $event.checked)"
+                    >
+                      {{ o.libelle }}
+                    </mat-checkbox>
+                  }
+                </div>
+              } @else {
+                <mat-radio-group
+                  class="choix"
+                  [ngModel]="choixUnique(q)"
+                  (ngModelChange)="setChoixUnique(q, $event)"
+                >
+                  @for (o of q.options; track o.id) {
+                    <mat-radio-button [value]="o.id">{{ o.libelle }}</mat-radio-button>
+                  }
+                </mat-radio-group>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <div class="text-center m-t-16">
+          <button
+            mat-flat-button
+            color="primary"
+            (click)="soumettre()"
+            [disabled]="envoiEnCours"
+          >
+            <mat-icon>send</mat-icon> Soumettre le quiz
+          </button>
+          @if (!toutesRepondues) {
+            <div class="text-muted m-t-8">
+              Répondez à toutes les questions ({{ nbRepondues }}/{{ totalQuestions }}) pour pouvoir soumettre.
+            </div>
+          }
+        </div>
+      }
+    }
+  }
+</div>

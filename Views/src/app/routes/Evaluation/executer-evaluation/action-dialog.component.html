@@ -1,0 +1,75 @@
+<div class="container">
+  <h6>{{ titre }}</h6>
+  <mat-card>
+    <mat-card-content>
+      <form [formGroup]="form" class="form-field-full">
+        <div class="row">
+          <div class="col-sm-6">
+            <mat-form-field appearance="fill" class="w-100">
+              <mat-label>Action</mat-label>
+              <mat-select formControlName="id_ActionType">
+                @for (t of types; track t.id) {
+                  <mat-option [value]="t.id">{{ t.libelle }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+          <div class="col-sm-6">
+            <mat-form-field appearance="fill" class="w-100">
+              <mat-label>Statut</mat-label>
+              <mat-select formControlName="statut">
+                @for (s of statuts; track s) { <mat-option [value]="s">{{ s }}</mat-option> }
+              </mat-select>
+            </mat-form-field>
+          </div>
+          <div class="col-sm-6">
+            <mat-form-field appearance="fill" class="w-100">
+              <mat-label>Porteur</mat-label>
+              <input matInput formControlName="porteur" />
+            </mat-form-field>
+          </div>
+          <div class="col-sm-6">
+            <mat-form-field appearance="fill" class="w-100">
+              <mat-label>Contributeurs</mat-label>
+              <input matInput formControlName="contributeurs" />
+            </mat-form-field>
+          </div>
+          <div class="col-sm-4">
+            <mat-form-field appearance="fill" class="w-100">
+              <mat-label>Date de debut</mat-label>
+              <input matInput type="date" formControlName="date_debut" />
+            </mat-form-field>
+          </div>
+          <div class="col-sm-4">
+            <mat-form-field appearance="fill" class="w-100">
+              <mat-label>Date attendue</mat-label>
+              <input matInput type="date" formControlName="date_attendue" />
+            </mat-form-field>
+          </div>
+          <div class="col-sm-4">
+            <mat-form-field appearance="fill" class="w-100">
+              <mat-label>Date de realisation</mat-label>
+              <input matInput type="date" formControlName="date_realisation" />
+            </mat-form-field>
+          </div>
+          <div class="col-sm-12">
+            <mat-form-field appearance="fill" class="w-100">
+              <mat-label>KPI de mesure de l'efficacite</mat-label>
+              <input matInput formControlName="kpi" />
+            </mat-form-field>
+          </div>
+          <div class="col-sm-12">
+            <mat-form-field appearance="fill" class="w-100">
+              <mat-label>Commentaire</mat-label>
+              <textarea matInput formControlName="commentaire" rows="2"></textarea>
+            </mat-form-field>
+          </div>
+        </div>
+        <div class="m-t-8 text-center">
+          <button mat-flat-button color="primary" (click)="valider()">Valider</button>
+          <button mat-button mat-dialog-close>Annuler</button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

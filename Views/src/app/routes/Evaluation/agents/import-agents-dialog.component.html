@@ -1,0 +1,41 @@
+<div class="container">
+  <h6>Importer des agents (Excel)</h6>
+  <mat-card>
+    <mat-card-content>
+      <p class="text-muted" style="font-size: 0.85rem">
+        Le fichier doit avoir une 1ere ligne d'entete avec les colonnes :
+        <strong>Nom</strong>, <strong>Prenom</strong>, <strong>Login</strong>,
+        <strong>Type</strong> (Conseiller/Backoffice...), <strong>Site</strong>.
+      </p>
+
+      <div class="m-t-8 m-b-8">
+        <button mat-stroked-button type="button" (click)="fileInput.click()">
+          <mat-icon>upload_file</mat-icon> Choisir un fichier .xlsx
+        </button>
+        <input
+          #fileInput
+          type="file"
+          hidden
+          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          (change)="onFileSelected($event)"
+        />
+        @if (fichier) {
+          <span class="m-l-8">{{ fichier.name }}</span>
+        }
+      </div>
+
+      <div class="m-t-8 text-center">
+        <button
+          mat-flat-button
+          color="primary"
+          (click)="importer()"
+          [loading]="isSubmitting"
+          [disabled]="!fichier"
+        >
+          Importer
+        </button>
+        <button mat-button mat-dialog-close>Annuler</button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

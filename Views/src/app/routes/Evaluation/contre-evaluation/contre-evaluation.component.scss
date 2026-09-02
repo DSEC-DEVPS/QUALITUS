@@ -1,0 +1,17 @@
+.p-16 { padding: 16px; }
+.p-8 { padding: 8px; }
+.m-b-16 { margin-bottom: 16px; }
+.m-b-8 { margin-bottom: 8px; }
+table { width: 100%; }
+.vert { color: #1b8a3a; font-weight: 600; }
+.rouge { color: #c62828; font-weight: 600; }
+a.actif { background: rgba(255, 121, 0, 0.1); }
+.badge {
+  display: inline-block;
+  margin-left: 6px;
+  background: #ff7900;
+  color: #fff;
+  border-radius: 10px;
+  padding: 0 6px;
+  font-size: 0.72rem;
+}

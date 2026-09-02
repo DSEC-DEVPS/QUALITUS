@@ -1,0 +1,47 @@
+.m-b-8 {
+  margin-bottom: 8px;
+}
+
+.pourquoi-tree,
+.pourquoi-tree ul {
+  list-style: none;
+  padding-left: 18px;
+  margin: 0;
+}
+
+.pourquoi-tree > li {
+  padding-left: 0;
+}
+
+.noeud-ligne {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.badge-niveau {
+  display: inline-block;
+  min-width: 28px;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #fff;
+  background: #ff7900;
+  border-radius: 10px;
+  padding: 1px 6px;
+}
+
+.libelle {
+  flex: 1;
+}
+
+.actions {
+  white-space: nowrap;
+}
+
+// Trait de rattachement visuel pour la hierarchie
+.pourquoi-tree ul {
+  border-left: 1px dashed rgba(0, 0, 0, 0.2);
+}

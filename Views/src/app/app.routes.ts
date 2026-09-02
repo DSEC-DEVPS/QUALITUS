@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from '@core';
+import { sondageObligatoireGuard } from './routes/Sondage/sondage-obligatoire.guard';
 import { AdminLayoutComponent } from '@theme/admin-layout/admin-layout.component';
 import { AuthLayoutComponent } from '@theme/auth-layout/auth-layout.component';
 import { DashboardComponent } from './routes/dashboard/dashboard.component';
@@ -14,15 +15,15 @@ export const routes: Routes = [
   {
     path: '',
     component: HomePageComponent,
-    canActivate: [authGuard],
-    canActivateChild: [authGuard],
+    canActivate: [authGuard, sondageObligatoireGuard],
+    canActivateChild: [authGuard, sondageObligatoireGuard],
   },
 
   {
     path: 'mon-espace',
     component: AdminLayoutComponent,
     canActivate: [authGuard],
-    canActivateChild: [authGuard],
+    canActivateChild: [authGuard, sondageObligatoireGuard],
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: DashboardComponent },
@@ -69,12 +70,31 @@ export const routes: Routes = [
       },
       { path: 'quiz', loadChildren: () => import('./routes/Quiz/quiz.routes').then(m => m.routes) },
       {
+        path: 'calibrage',
+        loadChildren: () => import('./routes/Calibrage/calibrage.routes').then(m => m.routes),
+      },
+      {
+        path: 'evaluation',
+        loadChildren: () => import('./routes/Evaluation/evaluation.routes').then(m => m.routes),
+      },
+      {
+        path: 'sondage',
+        loadChildren: () => import('./routes/Sondage/sondage.routes').then(m => m.routes),
+      },
+      {
         path: 'grille',
         component: ListeGrilleComponent,
       },
     ],
   },
   { path: 'lecture-fiche/:id', component: LectureFicheComponent },
+  {
+    path: 'sondage-public/:token',
+    loadComponent: () =>
+      import('./routes/Sondage/passation/passation-sondage.component').then(
+        m => m.PassationSondageComponent
+      ),
+  },
   {
     path: 'auth',
     component: AuthLayoutComponent,

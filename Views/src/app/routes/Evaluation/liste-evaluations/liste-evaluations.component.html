@@ -1,0 +1,94 @@
+<div class="container-fluid p-16">
+  <mat-card>
+    <mat-card-content>
+      <div class="d-flex align-items-center justify-content-between flex-wrap m-b-16">
+        <h5 class="m-0">Evaluations</h5>
+        <div class="d-flex" style="gap: 8px">
+          <button mat-stroked-button (click)="changerActif(1)" [disabled]="!selection.size">
+            <mat-icon>check_circle</mat-icon> Activer
+          </button>
+          <button mat-stroked-button (click)="changerActif(0)" [disabled]="!selection.size">
+            <mat-icon>block</mat-icon> Desactiver
+          </button>
+          <button mat-stroked-button color="primary" (click)="masse()">
+            <mat-icon>library_add</mat-icon> Creation en masse
+          </button>
+          <button mat-flat-button color="primary" (click)="nouvelle()">
+            <mat-icon>add</mat-icon> Nouvelle evaluation
+          </button>
+        </div>
+      </div>
+
+      <mat-form-field appearance="outline" class="w-100 m-b-8">
+        <mat-label>Rechercher</mat-label>
+        <input matInput (keyup)="applyFilter($event)" placeholder="Agent, contexte..." />
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+
+      <div style="overflow-x: auto">
+        <table mat-table [dataSource]="dataSource" class="w-100">
+          <ng-container matColumnDef="select">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let ev">
+              <mat-checkbox (change)="toggle(ev.id, $event.checked)"></mat-checkbox>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="id">
+            <th mat-header-cell *matHeaderCellDef>#</th>
+            <td mat-cell *matCellDef="let ev">{{ ev.id }}</td>
+          </ng-container>
+          <ng-container matColumnDef="agent">
+            <th mat-header-cell *matHeaderCellDef>Agent</th>
+            <td mat-cell *matCellDef="let ev">{{ ev.agent_nom }} {{ ev.agent_prenom }}<br /><small class="text-muted">{{ ev.login_genesys }}</small></td>
+          </ng-container>
+          <ng-container matColumnDef="contexte">
+            <th mat-header-cell *matHeaderCellDef>Contexte</th>
+            <td mat-cell *matCellDef="let ev">{{ ev.contexte }}</td>
+          </ng-container>
+          <ng-container matColumnDef="grille_nom">
+            <th mat-header-cell *matHeaderCellDef>Grille</th>
+            <td mat-cell *matCellDef="let ev">{{ ev.grille_nom || '—' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="date_creation">
+            <th mat-header-cell *matHeaderCellDef>Cree le</th>
+            <td mat-cell *matCellDef="let ev">{{ ev.date_creation | date: 'dd/MM/yyyy' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="statut">
+            <th mat-header-cell *matHeaderCellDef>Statut</th>
+            <td mat-cell *matCellDef="let ev"><mat-chip-set><mat-chip>{{ ev.statut }}</mat-chip></mat-chip-set></td>
+          </ng-container>
+          <ng-container matColumnDef="conclusion">
+            <th mat-header-cell *matHeaderCellDef>Conclusion</th>
+            <td mat-cell *matCellDef="let ev">
+              @if (ev.conclusion) {
+                <span [class.vert]="ev.conclusion === 'SUCCES'" [class.rouge]="ev.conclusion === 'ECHEC'">
+                  {{ ev.conclusion }} ({{ ev.score_global }}%)
+                </span>
+              } @else { — }
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="actif">
+            <th mat-header-cell *matHeaderCellDef>Actif</th>
+            <td mat-cell *matCellDef="let ev">
+              <mat-icon [style.color]="ev.actif ? '#1b8a3a' : '#bbb'">{{ ev.actif ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let ev">
+              <button mat-icon-button color="primary" [matTooltip]="ev.statut === 'TERMINE' ? 'Voir' : 'Executer'" (click)="executer(ev)">
+                <mat-icon>{{ ev.statut === 'TERMINE' ? 'visibility' : 'play_arrow' }}</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" matTooltip="Supprimer" (click)="supprimer(ev)"><mat-icon>delete</mat-icon></button>
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
+          <tr mat-row *matRowDef="let row; columns: colonnes"></tr>
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell text-center p-16" [attr.colspan]="colonnes.length">Aucune evaluation.</td>
+          </tr>
+        </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

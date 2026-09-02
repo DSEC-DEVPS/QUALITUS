@@ -1,0 +1,51 @@
+<div class="container-fluid p-16">
+  <mat-card>
+    <mat-card-content>
+      <div class="d-flex align-items-center justify-content-between flex-wrap m-b-16">
+        <div>
+          <h5 class="m-0">Agents en pole (echecs repetes)</h5>
+          <p class="text-muted m-0">
+            Echec sur 2 mois consecutifs, ou 2+ echecs le meme mois, ou 3+ erreurs critiques sur une transaction.
+          </p>
+        </div>
+        <button mat-stroked-button color="primary" (click)="exporter()">
+          <mat-icon>download</mat-icon> Exporter Excel
+        </button>
+      </div>
+
+      <div style="overflow-x: auto">
+        <table mat-table [dataSource]="dataSource" class="w-100">
+          <ng-container matColumnDef="agent">
+            <th mat-header-cell *matHeaderCellDef>Agent</th>
+            <td mat-cell *matCellDef="let a">{{ a.nom }} {{ a.prenom }}<br /><small class="text-muted">{{ a.login_genesys }}</small></td>
+          </ng-container>
+          <ng-container matColumnDef="nb_echecs">
+            <th mat-header-cell *matHeaderCellDef>Echecs</th>
+            <td mat-cell *matCellDef="let a">{{ a.nb_echecs }}</td>
+          </ng-container>
+          <ng-container matColumnDef="transactions_critiques">
+            <th mat-header-cell *matHeaderCellDef>Trans. critiques</th>
+            <td mat-cell *matCellDef="let a">{{ a.transactions_critiques }}</td>
+          </ng-container>
+          <ng-container matColumnDef="mois">
+            <th mat-header-cell *matHeaderCellDef>Mois</th>
+            <td mat-cell *matCellDef="let a">{{ a.mois.join(', ') }}</td>
+          </ng-container>
+          <ng-container matColumnDef="motifs">
+            <th mat-header-cell *matHeaderCellDef>Motifs</th>
+            <td mat-cell *matCellDef="let a">
+              <mat-chip-set>
+                @for (m of a.motifs; track m) { <mat-chip class="motif">{{ m }}</mat-chip> }
+              </mat-chip-set>
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
+          <tr mat-row *matRowDef="let row; columns: colonnes"></tr>
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell text-center p-16" [attr.colspan]="colonnes.length">Aucun agent en pole.</td>
+          </tr>
+        </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

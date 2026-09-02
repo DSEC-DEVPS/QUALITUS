@@ -1,0 +1,119 @@
+.p-16 {
+  padding: 16px;
+}
+.m-b-16 {
+  margin-bottom: 16px;
+}
+.m-b-8 {
+  margin-bottom: 8px;
+}
+.m-t-8 {
+  margin-top: 8px;
+}
+.m-t-16 {
+  margin-top: 16px;
+}
+
+.q-titre {
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.choix {
+  display: flex;
+  gap: 24px;
+}
+
+.resultat.ok {
+  border-left: 6px solid #1b8a3a;
+}
+.resultat.ko {
+  border-left: 6px solid #c62828;
+}
+.resultat .big {
+  font-size: 40px;
+  width: 40px;
+  height: 40px;
+}
+.resultat.ok .big {
+  color: #1b8a3a;
+}
+.resultat.ko .big {
+  color: #c62828;
+}
+.bloque {
+  border-left: 6px solid #f5a623;
+}
+.bloque .big {
+  font-size: 40px;
+  width: 40px;
+  height: 40px;
+  color: #f5a623;
+}
+
+.question.correcte {
+  border-left: 4px solid #1b8a3a;
+}
+.question.incorrecte {
+  border-left: 4px solid #c62828;
+}
+
+.feedback {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 0.88rem;
+}
+.feedback.ok {
+  color: #1b8a3a;
+}
+.feedback.ko {
+  color: #c62828;
+}
+
+/* Barre figee : chrono + progression (reste visible au defilement) */
+.barre-chrono {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  margin-bottom: 12px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.barre-chrono .chrono {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: #1976d2;
+  font-variant-numeric: tabular-nums;
+}
+.barre-chrono .chrono.urgent {
+  color: #c62828;
+  animation: pulse 1s ease-in-out infinite;
+}
+.barre-chrono .progression {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #444;
+  font-weight: 500;
+}
+.barre-chrono mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+@keyframes pulse {
+  50% { opacity: 0.55; }
+}

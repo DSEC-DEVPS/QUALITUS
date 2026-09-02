@@ -1,0 +1,78 @@
+<div class="container">
+  <h6>{{ titre }}</h6>
+  <mat-card>
+    <mat-card-content>
+      <mat-form-field appearance="fill" class="w-100">
+        <mat-label>Type de question</mat-label>
+        <mat-select [(ngModel)]="type" (selectionChange)="appliquerType()">
+          <mat-option value="VRAI_FAUX">Vrai / Faux</mat-option>
+          <mat-option value="QCU">QCU (une seule bonne réponse)</mat-option>
+          <mat-option value="QCM">QCM (plusieurs bonnes réponses)</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" class="w-100">
+        <mat-label>Énoncé de la question</mat-label>
+        <textarea matInput [(ngModel)]="libelle" rows="3" required></textarea>
+      </mat-form-field>
+
+      <label class="d-block m-b-8">
+        <strong>Réponses</strong>
+        @if (estUnique) {
+          <span class="text-muted"> — cochez l'unique bonne réponse</span>
+        } @else {
+          <span class="text-muted"> — cochez toutes les bonnes réponses</span>
+        }
+      </label>
+
+      <!-- Reponse unique (Vrai/Faux, QCU) : radios -->
+      @if (estUnique) {
+        <mat-radio-group [(ngModel)]="bonneIndex" class="options-col">
+          @for (opt of options; track $index) {
+            <div class="option-ligne">
+              <mat-radio-button [value]="$index"></mat-radio-button>
+              @if (vraiFaux) {
+                <span class="opt-fixe">{{ opt.libelle }}</span>
+              } @else {
+                <mat-form-field appearance="fill" class="opt-input">
+                  <input matInput [(ngModel)]="opt.libelle" placeholder="Libellé de la réponse" />
+                </mat-form-field>
+                <button mat-icon-button color="warn" (click)="supprimerOption($index)"
+                        [disabled]="options.length <= 2" matTooltip="Supprimer">
+                  <mat-icon>close</mat-icon>
+                </button>
+              }
+            </div>
+          }
+        </mat-radio-group>
+      } @else {
+        <!-- QCM : cases a cocher -->
+        <div class="options-col">
+          @for (opt of options; track $index) {
+            <div class="option-ligne">
+              <mat-checkbox [(ngModel)]="opt.correct"></mat-checkbox>
+              <mat-form-field appearance="fill" class="opt-input">
+                <input matInput [(ngModel)]="opt.libelle" placeholder="Libellé de la réponse" />
+              </mat-form-field>
+              <button mat-icon-button color="warn" (click)="supprimerOption($index)"
+                      [disabled]="options.length <= 2" matTooltip="Supprimer">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          }
+        </div>
+      }
+
+      @if (!vraiFaux) {
+        <button mat-stroked-button (click)="ajouterOption()" class="m-t-8">
+          <mat-icon>add</mat-icon> Ajouter une réponse
+        </button>
+      }
+
+      <div class="m-t-16 text-center">
+        <button mat-flat-button color="primary" (click)="valider()">Valider</button>
+        <button mat-button mat-dialog-close>Annuler</button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

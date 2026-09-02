@@ -1,0 +1,49 @@
+<div class="container">
+  <h6>{{ titre }}</h6>
+  <mat-card>
+    <mat-card-content>
+      <form [formGroup]="form" class="form-field-full">
+        <div class="row">
+          <div class="col-sm-6">
+            <mat-form-field appearance="fill" class="w-100">
+              <mat-label>Nom</mat-label>
+              <input matInput formControlName="nom" required />
+            </mat-form-field>
+          </div>
+          <div class="col-sm-6">
+            <mat-form-field appearance="fill" class="w-100">
+              <mat-label>Prenom</mat-label>
+              <input matInput formControlName="prenom" />
+            </mat-form-field>
+          </div>
+          <div class="col-sm-6">
+            <mat-form-field appearance="fill" class="w-100">
+              <mat-label>Email</mat-label>
+              <input matInput formControlName="email" type="email" />
+            </mat-form-field>
+          </div>
+          <div class="col-sm-6">
+            <mat-form-field appearance="fill" class="w-100">
+              <mat-label>Login</mat-label>
+              <input matInput formControlName="login" />
+            </mat-form-field>
+          </div>
+          <div class="col-sm-12">
+            <mat-form-field appearance="fill" class="w-100">
+              <mat-label>Site</mat-label>
+              <mat-select formControlName="id_Site" required>
+                @for (s of sites; track s.id) {
+                  <mat-option [value]="s.id">{{ s.nom }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+        </div>
+        <div class="m-t-8 text-center">
+          <button mat-flat-button color="primary" (click)="valider()" [disabled]="form.invalid">Valider</button>
+          <button mat-button mat-dialog-close>Annuler</button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

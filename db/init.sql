@@ -223,7 +223,11 @@ CREATE TABLE IF NOT EXISTS B_notifications (
   
   -- Index pour améliorer les performances
   INDEX idx_user_read (id_UTILISATEUR, isRead),
+<<<<<<< HEAD
   INDEX idx_created_at (createdAt DESC)
+=======
+  INDEX idx_created_at (createdAt)
+>>>>>>> ea2e7f6 (Mohamed CISSE 13082026)
 );
 
 -- Si vous devez ajouter la colonne isRead à une table existante
