@@ -31,6 +31,89 @@ const peutGererQuestion = async (userId, idQuestion) => {
   return peutGererQuiz(userId, r[0].id_Quiz);
 };
 
+// Peut CONSULTER la page detail d'un quiz : admin, createur, ou superviseur d'un
+// agent ayant une demande d'acces IP sur ce quiz (toute statut, pour que traiter
+// une demande ne coupe pas l'acces a la page).
+const peutVoirDetailQuiz = async (userId, idQuiz) => {
+  if (await peutGererQuiz(userId, idQuiz)) return true;
+  const [sup] = await db.query(
+    `SELECT 1 FROM B_QZ_IP_DEMANDE d
+      WHERE d.id_Quiz = ?
+        AND d.id_UTILISATEUR IN (SELECT id_AGENT FROM B_R_SUPERVISEUR_AGENT WHERE id_SUPERVISEUR = ?)
+      LIMIT 1`,
+    [idQuiz, userId]
+  );
+  return sup.length > 0;
+};
+
+// L'utilisateur appartient-il a l'un des sites cibles par le quiz ?
+// True si le quiz ne cible aucun site (pas de restriction par site).
+const utilisateurDansSiteDuQuiz = async (userId, idQuiz) => {
+  const [sites] = await db.query("SELECT id_Site FROM B_QZ_QUIZ_SITE WHERE id_Quiz = ?", [idQuiz]);
+  if (!sites.length) return true;
+  const [u] = await db.query("SELECT id_Site FROM B_UTILISATEUR WHERE id = ?", [userId]);
+  if (!u.length) return false;
+  return sites.some((x) => Number(x.id_Site) === Number(u[0].id_Site));
+};
+
+// Adresse IP du client (sans proxy : socket ; avec proxy : x-forwarded-for).
+const getClientIp = (req) => {
+  let ip =
+    (req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
+    (req.socket && req.socket.remoteAddress) ||
+    req.ip ||
+    "";
+  ip = ip.replace(/^::ffff:/, "");
+  if (ip === "::1") ip = "127.0.0.1";
+  return ip;
+};
+
+// Controle d'acces machine, pilote par le parametre "autoriser_machines" du quiz :
+//  - Oui (1) : toutes les machines peuvent acceder (liste IP ignoree)
+//  - Non (0) : seules les IP de la liste blanche sont autorisees
+//              (liste vide => aucune machine autorisee)
+const ipAutoriseePourQuiz = async (idQuiz, req) => {
+  const [qr] = await db.query(
+    "SELECT autoriser_machines FROM B_QZ_QUIZ WHERE id = ?",
+    [idQuiz]
+  );
+  // Oui => acces libre a toutes les machines
+  if (qr.length && Number(qr[0].autoriser_machines) === 1) return true;
+  // Non => restriction par liste blanche d'IP
+  const [rows] = await db.query(
+    "SELECT adresse_ip FROM B_QZ_IP_AUTORISEE WHERE id_Quiz = ?",
+    [idQuiz]
+  );
+  if (!rows.length) return false; // aucune IP autorisee => aucune machine ne passe
+  const ip = getClientIp(req);
+  return rows.some((r) => String(r.adresse_ip).trim() === ip);
+};
+
+// Journalise une demande d'acces IP en attente (machine bloquee).
+const enregistrerDemandeIp = async (idQuiz, userId, req) => {
+  try {
+    const ip = getClientIp(req);
+    if (!userId || !ip) return;
+    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+    await db.query(
+      "INSERT INTO B_QZ_IP_DEMANDE (id_Quiz, id_UTILISATEUR, adresse_ip, statut, dateCreation) VALUES (?,?,?, 'EN_ATTENTE', ?) ON DUPLICATE KEY UPDATE dateCreation = VALUES(dateCreation)",
+      [idQuiz, userId, ip, now]
+    );
+  } catch (e) {
+    console.log("demande ip:", e.message);
+  }
+};
+
+// Genere un code PIN unique (6 chiffres) pour un quiz.
+const genererPinUnique = async (executor) => {
+  for (let i = 0; i < 25; i++) {
+    const pin = String(Math.floor(100000 + Math.random() * 900000));
+    const [r] = await executor.query("SELECT id FROM B_QZ_QUIZ WHERE code_pin=?", [pin]);
+    if (!r.length) return pin;
+  }
+  return String(Date.now()).slice(-6);
+};
+
 /* ------------------------------------------------------------------ */
 /* QUIZ                                                                */
 /* ------------------------------------------------------------------ */
@@ -43,18 +126,20 @@ const getAllQuiz = async (req, res, next) => {
     const role = await getRole(userId);
     const restreint = role !== "R_ADMI";
     const Query = `
-      SELECT q.id, q.titre, q.type, q.duree, q.date_fermeture, q.description, q.id_Fiche,
+      SELECT q.id, q.titre, q.code_pin, q.type, q.duree, q.date_fermeture, q.description, q.id_Fiche,
              q.note_passage, q.acces, q.alterner_questions, q.autoriser_machines,
              q.retest_auto, q.nb_retest_max, q.Etat, q.id_createur, q.dateCreation, q.dateModification,
              FCH.titre AS fiche_titre,
              (SELECT GROUP_CONCAT(f2.titre SEPARATOR ', ') FROM B_QZ_QUIZ_FICHE qf
                 JOIN B_FICHE f2 ON f2.id = qf.id_Fiche WHERE qf.id_Quiz = q.id) AS fiches_titres,
+             (SELECT GROUP_CONCAT(st.nom SEPARATOR ', ') FROM B_QZ_QUIZ_SITE qs
+                JOIN B_SITE st ON st.id = qs.id_Site WHERE qs.id_Quiz = q.id) AS sites_titres,
              (SELECT COUNT(*) FROM B_QZ_QUESTION qq WHERE qq.id_Quiz = q.id) AS nb_questions
       FROM B_QZ_QUIZ q
       LEFT JOIN B_FICHE FCH ON FCH.id = q.id_Fiche
-      ${restreint ? "WHERE q.id_createur = ?" : ""}
+      ${restreint ? "WHERE (q.id_createur = ? OR q.id IN (SELECT d.id_Quiz FROM B_QZ_IP_DEMANDE d WHERE d.statut = 'EN_ATTENTE' AND d.id_UTILISATEUR IN (SELECT id_AGENT FROM B_R_SUPERVISEUR_AGENT WHERE id_SUPERVISEUR = ?)))" : ""}
       ORDER BY q.id DESC`;
-    const [resultat] = await db.query(Query, restreint ? [userId] : []);
+    const [resultat] = await db.query(Query, restreint ? [userId, userId] : []);
     return res.status(200).send(resultat);
   } catch (error) {
     console.log(error);
@@ -67,7 +152,7 @@ const getOneQuiz = async (req, res, next) => {
   const userId = req.auth ? req.auth.userId : null;
   try {
     const [quizRows] = await db.query(
-      `SELECT q.id, q.titre, q.type, q.duree, q.date_fermeture, q.description, q.id_Fiche,
+      `SELECT q.id, q.titre, q.code_pin, q.type, q.duree, q.date_fermeture, q.description, q.id_Fiche,
               q.note_passage, q.acces, q.alterner_questions, q.autoriser_machines,
               q.retest_auto, q.nb_retest_max, q.Etat, q.id_createur, q.dateCreation, q.dateModification,
               FCH.titre AS fiche_titre
@@ -81,8 +166,7 @@ const getOneQuiz = async (req, res, next) => {
     }
     const quiz = quizRows[0];
     // Seul le createur (ou un admin) peut ouvrir/gerer ce quiz
-    const role = await getRole(userId);
-    if (role !== "R_ADMI" && quiz.id_createur && quiz.id_createur !== userId) {
+    if (!(await peutVoirDetailQuiz(userId, id))) {
       return res.status(403).json({ message: "Acces non autorise a ce quiz" });
     }
 
@@ -117,6 +201,22 @@ const getOneQuiz = async (req, res, next) => {
     quiz.fiches = fichesRows.map(x => x.id_Fiche);
     quiz.fiches_detail = fichesRows;
 
+    // Sites cibles (n..n)
+    const [sitesRows] = await db.query(
+      `SELECT qs.id_Site, st.nom FROM B_QZ_QUIZ_SITE qs
+       LEFT JOIN B_SITE st ON st.id = qs.id_Site WHERE qs.id_Quiz = ?`,
+      [id]
+    );
+    quiz.sites = sitesRows.map(x => x.id_Site);
+    quiz.sites_detail = sitesRows;
+
+    // Nombre de participants distincts (page detail)
+    const [partRows] = await db.query(
+      "SELECT COUNT(DISTINCT id_UTILISATEUR) AS n FROM B_QZ_TENTATIVE WHERE id_Quiz = ?",
+      [id]
+    );
+    quiz.nb_participants = partRows[0].n;
+
     return res.status(200).send(quiz);
   } catch (error) {
     console.log(error);
@@ -127,7 +227,7 @@ const getOneQuiz = async (req, res, next) => {
 const addQuiz = async (req, res, next) => {
   const {
     titre, type, duree, date_fermeture, note_passage, acces,
-    alterner_questions, autoriser_machines, id_Fiche, fiches, description,
+    alterner_questions, autoriser_machines, id_Fiche, fiches, sites, description,
     retest_auto, nb_retest_max,
   } = req.body;
   if (!titre) {
@@ -137,16 +237,19 @@ const addQuiz = async (req, res, next) => {
   }
   // Liste des fiches associees (n..n) ; compat : id_Fiche simple
   const listeFiches = Array.isArray(fiches) ? fiches : id_Fiche ? [id_Fiche] : [];
+  const listeSites = Array.isArray(sites) ? sites : [];
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
+    const codePin = await genererPinUnique(connection);
     const [r] = await connection.query(
       `INSERT INTO B_QZ_QUIZ
-        (titre, type, duree, date_fermeture, note_passage, acces, alterner_questions, autoriser_machines,
+        (titre, code_pin, type, duree, date_fermeture, note_passage, acces, alterner_questions, autoriser_machines,
          id_Fiche, description, retest_auto, nb_retest_max, Etat, id_createur, dateCreation)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         titre,
+        codePin,
         type || null,
         duree ?? null,
         date_fermeture || null,
@@ -169,8 +272,14 @@ const addQuiz = async (req, res, next) => {
         [r.insertId, idf, new Date()]
       );
     }
+    for (const ids of listeSites) {
+      await connection.query(
+        `INSERT INTO B_QZ_QUIZ_SITE (id_Quiz, id_Site, dateCreation) VALUES (?,?,?)`,
+        [r.insertId, ids, new Date()]
+      );
+    }
     await connection.commit();
-    return res.status(201).json({ message: "Quiz cree avec succes", id: r.insertId });
+    return res.status(201).json({ message: "Quiz cree avec succes", id: r.insertId, code_pin: codePin });
   } catch (error) {
     try { await connection.rollback(); } catch (e) {}
     console.log(error);
@@ -184,7 +293,7 @@ const updateQuiz = async (req, res, next) => {
   const { id } = req.params;
   const {
     titre, type, duree, date_fermeture, note_passage, acces,
-    alterner_questions, autoriser_machines, id_Fiche, fiches, description,
+    alterner_questions, autoriser_machines, id_Fiche, fiches, sites, description,
     retest_auto, nb_retest_max, Etat,
   } = req.body;
   if (!id || !titre) {
@@ -196,6 +305,7 @@ const updateQuiz = async (req, res, next) => {
     return res.status(403).json({ message: "Acces non autorise a ce quiz" });
   }
   const listeFiches = Array.isArray(fiches) ? fiches : id_Fiche ? [id_Fiche] : [];
+  const listeSites = Array.isArray(sites) ? sites : [];
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
@@ -229,6 +339,13 @@ const updateQuiz = async (req, res, next) => {
       await connection.query(
         `INSERT INTO B_QZ_QUIZ_FICHE (id_Quiz, id_Fiche, dateCreation) VALUES (?,?,?)`,
         [id, idf, new Date()]
+      );
+    }
+    await connection.query(`DELETE FROM B_QZ_QUIZ_SITE WHERE id_Quiz=?`, [id]);
+    for (const ids of listeSites) {
+      await connection.query(
+        `INSERT INTO B_QZ_QUIZ_SITE (id_Quiz, id_Site, dateCreation) VALUES (?,?,?)`,
+        [id, ids, new Date()]
       );
     }
     await connection.commit();
@@ -415,7 +532,7 @@ const getQuizForTaking = async (req, res, next) => {
   const userId = req.auth ? req.auth.userId : null;
   try {
     const [quizRows] = await db.query(
-      `SELECT id, titre, description, note_passage, retest_auto, nb_retest_max
+      `SELECT id, titre, description, note_passage, retest_auto, nb_retest_max, duree
        FROM B_QZ_QUIZ WHERE id = ? AND Etat = 'ACTIF'`,
       [id]
     );
@@ -426,6 +543,19 @@ const getQuizForTaking = async (req, res, next) => {
     const roleTake = await getRole(userId);
     if (roleTake === "R_SUP" || roleTake === "R_GB") {
       return res.status(403).json({ message: "Ce profil ne participe pas aux quiz." });
+    }
+    // Restriction par site (si le quiz cible des sites)
+    if (!(await utilisateurDansSiteDuQuiz(userId, id))) {
+      return res.status(403).json({ message: "Ce quiz n'est pas destine a votre site." });
+    }
+    // Restriction par adresse IP (liste blanche du quiz), si definie
+    if (!(await ipAutoriseePourQuiz(id, req))) {
+      await enregistrerDemandeIp(id, userId, req);
+      return res.status(403).json({
+        code: "IP_EN_ATTENTE",
+        message:
+          "Acces refuse : votre adresse IP n'est pas autorisee. Une demande a ete transmise pour autorisation.",
+      });
     }
     const quiz = quizRows[0];
     const [questions] = await db.query(
@@ -460,6 +590,21 @@ const getQuizForTaking = async (req, res, next) => {
     quiz.deja_tente = cnt[0].n > 0;
     quiz.peut_participer = peut;
 
+    // Horodate l'ouverture (date de debut de la tentative). INSERT IGNORE : on ne
+    // reinitialise PAS a chaque rechargement -> le chrono reste base sur le 1er debut.
+    if (peut) {
+      await db.query(
+        "INSERT IGNORE INTO B_QZ_SESSION (id_Quiz, id_UTILISATEUR, date_debut) VALUES (?,?,NOW())",
+        [id, userId]
+      );
+      const [sess] = await db.query(
+        "SELECT TIMESTAMPDIFF(SECOND, date_debut, NOW()) AS ecoule FROM B_QZ_SESSION WHERE id_Quiz=? AND id_UTILISATEUR=?",
+        [id, userId]
+      );
+      // Temps deja ecoule depuis le debut (pour un chrono resistant au rechargement)
+      quiz.temps_ecoule_secondes = sess.length ? Math.max(0, sess[0].ecoule) : 0;
+    }
+
     return res.status(200).send(quiz);
   } catch (error) {
     console.log(error);
@@ -479,6 +624,14 @@ const soumettreQuiz = async (req, res, next) => {
   const roleSub = await getRole(userId);
   if (roleSub === "R_SUP" || roleSub === "R_GB") {
     return res.status(403).json({ message: "Ce profil ne participe pas aux quiz." });
+  }
+  if (!(await ipAutoriseePourQuiz(id, req))) {
+    await enregistrerDemandeIp(id, userId, req);
+    return res.status(403).json({
+      code: "IP_EN_ATTENTE",
+      message:
+        "Acces refuse : votre adresse IP n'est pas autorisee. Une demande a ete transmise pour autorisation.",
+    });
   }
   const connection = await db.getConnection();
   try {
@@ -572,12 +725,20 @@ const soumettreQuiz = async (req, res, next) => {
     }
     const statut = reussi ? "REUSSI" : "ECHEC";
 
+    // Temps reel : date_debut = ouverture (B_QZ_SESSION), date_fin = maintenant
+    const [sess] = await connection.query(
+      "SELECT date_debut FROM B_QZ_SESSION WHERE id_Quiz=? AND id_UTILISATEUR=?",
+      [id, userId]
+    );
+    const dateFin = new Date();
+    const dateDebut = sess.length ? sess[0].date_debut : dateFin;
+
     await connection.beginTransaction();
     const [t] = await connection.query(
       `INSERT INTO B_QZ_TENTATIVE
-        (id_Quiz, id_UTILISATEUR, score, nb_bonnes, nb_total, reussi, num_essai, statut, date_tentative)
-       VALUES (?,?,?,?,?,?,?,?,?)`,
-      [id, userId, score, nbBonnes, nbTotal, reussi ? 1 : 0, numEssai, statut, new Date()]
+        (id_Quiz, id_UTILISATEUR, score, nb_bonnes, nb_total, reussi, num_essai, statut, date_tentative, date_debut, date_fin)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+      [id, userId, score, nbBonnes, nbTotal, reussi ? 1 : 0, numEssai, statut, dateFin, dateDebut, dateFin]
     );
     const tentativeId = t.insertId;
     for (const f of feedback) {
@@ -599,6 +760,12 @@ const soumettreQuiz = async (req, res, next) => {
 
     // Attribution des badges (recompenses) selon les resultats cumules
     const nouveauxBadges = await attribuerBadges(connection, userId);
+
+    // Session de passage consommee
+    await connection.query(
+      "DELETE FROM B_QZ_SESSION WHERE id_Quiz=? AND id_UTILISATEUR=?",
+      [id, userId]
+    );
 
     await connection.commit();
 
@@ -921,6 +1088,329 @@ const autoriserRetest = async (req, res, next) => {
   }
 };
 
+// Resout un quiz a partir de son code PIN (saisi par le conseiller).
+const getQuizByPin = async (req, res, next) => {
+  const { pin } = req.params;
+  const userId = req.auth ? req.auth.userId : null;
+  // Tous les cas metier renvoient 200 + un champ "etat" : l'ErrorInterceptor
+  // global du front redirige sur 403/404/500, ce qui masquerait l'ecran "en attente".
+  if (!pin) {
+    return res.status(200).json({ etat: "PIN_INVALIDE" });
+  }
+  try {
+    const role = await getRole(userId);
+    if (role === "R_SUP" || role === "R_GB") {
+      return res.status(200).json({ etat: "PROFIL_EXCLU" });
+    }
+    const [r] = await db.query(
+      "SELECT id, titre, Etat FROM B_QZ_QUIZ WHERE code_pin=?",
+      [String(pin).trim()]
+    );
+    if (!r.length) {
+      return res.status(200).json({ etat: "PIN_INVALIDE" });
+    }
+    if (r[0].Etat !== "ACTIF") {
+      return res.status(200).json({ etat: "INDISPONIBLE", titre: r[0].titre });
+    }
+    // Restriction par site : si le quiz cible des sites, l'utilisateur doit en faire partie
+    if (!(await utilisateurDansSiteDuQuiz(userId, r[0].id))) {
+      return res.status(200).json({ etat: "HORS_SITE", titre: r[0].titre });
+    }
+    // Controle machine (parametre "autoriser_machines") : si la machine n'est pas
+    // autorisee, on enregistre une demande et on renvoie l'etat "en attente".
+    if (!(await ipAutoriseePourQuiz(r[0].id, req))) {
+      await enregistrerDemandeIp(r[0].id, userId, req);
+      return res.status(200).json({ etat: "EN_ATTENTE", titre: r[0].titre });
+    }
+    return res.status(200).json({ etat: "OK", id: r[0].id, titre: r[0].titre });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Error request" });
+  }
+};
+
+// ============ Rapport : questions ratees (distribution des reponses) ============
+const getRapportQuestionsRatees = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.auth ? req.auth.userId : null;
+  try {
+    if (!(await peutVoirDetailQuiz(userId, id))) {
+      return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+    }
+    // Questions ayant au moins un agent en echec
+    const [questions] = await db.query(
+      `SELECT qq.id, qq.libelle,
+              COUNT(DISTINCT CASE WHEN r.est_correcte = 0 THEN t.id_UTILISATEUR END) AS nb_agents
+       FROM B_QZ_QUESTION qq
+       LEFT JOIN B_QZ_REPONSE r ON r.id_Question = qq.id
+       LEFT JOIN B_QZ_TENTATIVE t ON t.id = r.id_Tentative
+       WHERE qq.id_Quiz = ?
+       GROUP BY qq.id, qq.libelle
+       HAVING nb_agents > 0
+       ORDER BY nb_agents DESC, qq.ordre, qq.id`,
+      [id]
+    );
+    // Distribution des choix par option pour chaque question
+    for (const q of questions) {
+      const [opts] = await db.query(
+        `SELECT o.id, o.libelle, o.est_correcte,
+                (SELECT COUNT(*) FROM B_QZ_REPONSE r
+                   WHERE r.id_Question = o.id_Question AND r.id_Option = o.id) AS nb_choix
+         FROM B_QZ_OPTION o WHERE o.id_Question = ? ORDER BY o.ordre, o.id`,
+        [q.id]
+      );
+      q.options = opts;
+    }
+    return res.status(200).send(questions);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Error request" });
+  }
+};
+
+// ============ Rapport : participants d'un quiz (avec filtres) ============
+const getRapportParticipants = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.auth ? req.auth.userId : null;
+  const { agent, statut, site } = req.query;
+  try {
+    if (!(await peutVoirDetailQuiz(userId, id))) {
+      return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+    }
+    const where = ["t.id_Quiz = ?"];
+    const params = [id];
+    if (agent && String(agent).trim()) {
+      where.push("t.id_UTILISATEUR = ?");
+      params.push(Number(agent));
+    }
+    if (statut === "REUSSI") where.push("t.reussi = 1");
+    else if (statut === "ECHEC") where.push("t.reussi = 0");
+    if (site && String(site).trim()) {
+      where.push("u.id_Site = ?");
+      params.push(Number(site));
+    }
+    const [rows] = await db.query(
+      `SELECT t.id, t.id_UTILISATEUR, u.prenom, u.nom, u.id_Site, st.nom AS site,
+              t.date_debut, t.date_fin, t.date_tentative, t.score, t.reussi, t.num_essai, t.statut,
+              TIMESTAMPDIFF(SECOND, t.date_debut, t.date_fin) AS temps_secondes
+       FROM B_QZ_TENTATIVE t
+       JOIN B_UTILISATEUR u ON u.id = t.id_UTILISATEUR
+       LEFT JOIN B_SITE st ON st.id = u.id_Site
+       WHERE ${where.join(" AND ")}
+       ORDER BY t.id DESC`,
+      params
+    );
+    return res.status(200).send(rows);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Error request" });
+  }
+};
+
+// Detail d'une tentative (pour l'action "oeil") : resultat + conformite par question
+const getTentativeDetail = async (req, res) => {
+  const { tid } = req.params;
+  const userId = req.auth ? req.auth.userId : null;
+  try {
+    const [tr] = await db.query(
+      `SELECT t.id, t.id_Quiz, t.id_UTILISATEUR, u.prenom, u.nom, st.nom AS site,
+              t.score, t.reussi, t.num_essai, t.statut, t.date_debut, t.date_fin,
+              TIMESTAMPDIFF(SECOND, t.date_debut, t.date_fin) AS temps_secondes,
+              q.titre AS quiz_titre
+       FROM B_QZ_TENTATIVE t
+       JOIN B_UTILISATEUR u ON u.id = t.id_UTILISATEUR
+       JOIN B_QZ_QUIZ q ON q.id = t.id_Quiz
+       LEFT JOIN B_SITE st ON st.id = u.id_Site
+       WHERE t.id = ?`,
+      [tid]
+    );
+    if (!tr.length) return res.status(404).json({ message: "Tentative introuvable" });
+    if (!(await peutVoirDetailQuiz(userId, tr[0].id_Quiz))) {
+      return res.status(403).json({ message: "Acces non autorise" });
+    }
+    const [reps] = await db.query(
+      `SELECT r.id_Question, qq.libelle, r.est_correcte
+       FROM B_QZ_REPONSE r JOIN B_QZ_QUESTION qq ON qq.id = r.id_Question
+       WHERE r.id_Tentative = ? ORDER BY qq.ordre, qq.id`,
+      [tid]
+    );
+    return res.status(200).json({ ...tr[0], reponses: reps });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Error request" });
+  }
+};
+
+// ============ Quiz PUBLICS visibles selon le site (sans code PIN) ============
+const getQuizPublics = async (req, res) => {
+  const userId = req.auth ? req.auth.userId : null;
+  try {
+    const role = await getRole(userId);
+    if (role === "R_SUP" || role === "R_GB") return res.status(200).send([]);
+    const [u] = await db.query("SELECT id_Site FROM B_UTILISATEUR WHERE id = ?", [userId]);
+    const userSite = u.length ? u[0].id_Site : null;
+    const [rows] = await db.query(
+      `SELECT q.id, q.titre, q.note_passage, q.duree, q.dateCreation,
+              (SELECT GROUP_CONCAT(st.nom SEPARATOR ', ') FROM B_QZ_QUIZ_SITE qs
+                 JOIN B_SITE st ON st.id = qs.id_Site WHERE qs.id_Quiz = q.id) AS sites_titres,
+              (SELECT COUNT(*) FROM B_QZ_QUESTION qq WHERE qq.id_Quiz = q.id) AS nb_questions,
+              (SELECT COUNT(*) FROM B_QZ_TENTATIVE t WHERE t.id_Quiz = q.id AND t.id_UTILISATEUR = ?) AS nb_essais,
+              (SELECT TIMESTAMPDIFF(SECOND, ss.date_debut, NOW()) FROM B_QZ_SESSION ss
+                 WHERE ss.id_Quiz = q.id AND ss.id_UTILISATEUR = ?) AS temps_ecoule_secondes
+       FROM B_QZ_QUIZ q
+       WHERE q.Etat = 'ACTIF' AND q.acces = 'PUBLIC'
+         AND (SELECT COUNT(*) FROM B_QZ_QUESTION qq WHERE qq.id_Quiz = q.id) > 0
+         AND ( NOT EXISTS (SELECT 1 FROM B_QZ_QUIZ_SITE s WHERE s.id_Quiz = q.id)
+               OR EXISTS (SELECT 1 FROM B_QZ_QUIZ_SITE s WHERE s.id_Quiz = q.id AND s.id_Site = ?) )
+       ORDER BY q.id DESC`,
+      [userId, userId, userSite]
+    );
+    return res.status(200).send(rows);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Error request" });
+  }
+};
+
+// ============ Demandes d'acces IP en attente (validation) ============
+const getQuizIpDemandes = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.auth ? req.auth.userId : null;
+  try {
+    const estGestionnaire = await peutGererQuiz(userId, id); // admin ou createur
+    let scope = "";
+    const params = [id];
+    if (!estGestionnaire) {
+      scope = "AND d.id_UTILISATEUR IN (SELECT id_AGENT FROM B_R_SUPERVISEUR_AGENT WHERE id_SUPERVISEUR = ?)";
+      params.push(userId);
+    }
+    const [rows] = await db.query(
+      "SELECT d.id, d.id_Quiz, d.id_UTILISATEUR, d.adresse_ip, d.statut, d.dateCreation, u.nom, u.prenom, u.nom_utilisateur AS login FROM B_QZ_IP_DEMANDE d JOIN B_UTILISATEUR u ON u.id = d.id_UTILISATEUR WHERE d.id_Quiz = ? AND d.statut = 'EN_ATTENTE' " + scope + " ORDER BY d.dateCreation DESC",
+      params
+    );
+    return res.status(200).send(rows);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Error request" });
+  }
+};
+
+const traiterDemandeIp = async (req, res) => {
+  const { demandeId } = req.params;
+  const { decision } = req.body; // 'AUTORISER' | 'REFUSER'
+  const userId = req.auth ? req.auth.userId : null;
+  if (!["AUTORISER", "REFUSER"].includes(decision)) {
+    return res.status(403).json({ message: "Decision invalide" });
+  }
+  try {
+    const [drows] = await db.query("SELECT * FROM B_QZ_IP_DEMANDE WHERE id = ?", [demandeId]);
+    if (!drows.length) return res.status(404).json({ message: "Demande introuvable" });
+    const dem = drows[0];
+    if (dem.statut !== "EN_ATTENTE") {
+      return res.status(409).json({ message: "Demande deja traitee" });
+    }
+    let autorise = await peutGererQuiz(userId, dem.id_Quiz);
+    if (!autorise) {
+      const [sup] = await db.query(
+        "SELECT 1 FROM B_R_SUPERVISEUR_AGENT WHERE id_SUPERVISEUR = ? AND id_AGENT = ? LIMIT 1",
+        [userId, dem.id_UTILISATEUR]
+      );
+      autorise = sup.length > 0;
+    }
+    if (!autorise) return res.status(403).json({ message: "Acces non autorise" });
+
+    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+    if (decision === "AUTORISER") {
+      await db.query(
+        "INSERT INTO B_QZ_IP_AUTORISEE (id_Quiz, adresse_ip, libelle, dateCreation) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE libelle = VALUES(libelle)",
+        [dem.id_Quiz, dem.adresse_ip, "Demande approuvee", now]
+      );
+      await db.query(
+        "UPDATE B_QZ_IP_DEMANDE SET statut='AUTORISE', dateTraitement=?, id_traitePar=? WHERE id_Quiz=? AND adresse_ip=? AND statut='EN_ATTENTE'",
+        [now, userId, dem.id_Quiz, dem.adresse_ip]
+      );
+      return res.status(200).json({ message: "Acces autorise pour cette adresse IP" });
+    }
+    await db.query(
+      "UPDATE B_QZ_IP_DEMANDE SET statut='REFUSE', dateTraitement=?, id_traitePar=? WHERE id=?",
+      [now, userId, demandeId]
+    );
+    return res.status(200).json({ message: "Demande refusee" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Error request" });
+  }
+};
+
+// ================= Autorisations IP (liste blanche par quiz) =================
+const getQuizIps = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.auth ? req.auth.userId : null;
+  try {
+    if (!(await peutVoirDetailQuiz(userId, id))) {
+      return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+    }
+    const [rows] = await db.query(
+      `SELECT i.id, i.id_Quiz, i.adresse_ip, i.libelle, i.dateCreation,
+              (SELECT GROUP_CONCAT(DISTINCT CONCAT(u.prenom, ' ', u.nom) SEPARATOR ', ')
+                 FROM B_QZ_IP_DEMANDE d
+                 JOIN B_UTILISATEUR u ON u.id = d.id_UTILISATEUR
+                WHERE d.id_Quiz = i.id_Quiz AND d.adresse_ip = i.adresse_ip) AS agents
+       FROM B_QZ_IP_AUTORISEE i
+       WHERE i.id_Quiz = ? ORDER BY i.id`,
+      [id]
+    );
+    return res.status(200).send(rows);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Error request" });
+  }
+};
+
+const addQuizIp = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.auth ? req.auth.userId : null;
+  const { adresse_ip, libelle } = req.body;
+  if (!adresse_ip || !String(adresse_ip).trim()) {
+    return res.status(403).json({ message: "Merci de saisir une adresse IP" });
+  }
+  try {
+    if (!(await peutGererQuiz(userId, id))) {
+      return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+    }
+    const ip = String(adresse_ip).trim();
+    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+    const [r] = await db.query(
+      "INSERT INTO B_QZ_IP_AUTORISEE (id_Quiz, adresse_ip, libelle, dateCreation) VALUES (?,?,?,?)",
+      [id, ip, libelle ? String(libelle).trim() : null, now]
+    );
+    return res.status(201).json({ message: "Adresse IP ajoutee", id: r.insertId });
+  } catch (error) {
+    if (error && error.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({ message: "Cette adresse IP est deja autorisee" });
+    }
+    console.log(error);
+    res.status(500).json({ message: "Error request" });
+  }
+};
+
+const deleteQuizIp = async (req, res) => {
+  const { ipId } = req.params;
+  const userId = req.auth ? req.auth.userId : null;
+  try {
+    const [rows] = await db.query("SELECT id_Quiz FROM B_QZ_IP_AUTORISEE WHERE id = ?", [ipId]);
+    if (!rows.length) return res.status(404).json({ message: "Introuvable" });
+    if (!(await peutGererQuiz(userId, rows[0].id_Quiz))) {
+      return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+    }
+    await db.query("DELETE FROM B_QZ_IP_AUTORISEE WHERE id = ?", [ipId]);
+    return res.status(200).json({ message: "Adresse IP supprimee" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Error request" });
+  }
+};
+
 module.exports = {
   getAllQuiz,
   getOneQuiz,
@@ -934,6 +1424,7 @@ module.exports = {
   // Phase 2 - participation
   getQuizzesDisponibles,
   getQuizForTaking,
+  getQuizByPin,
   soumettreQuiz,
   getMesScores,
   // Phase 3 - notifications
@@ -949,4 +1440,16 @@ module.exports = {
   // Retest superviseur
   getRetestEchecs,
   autoriserRetest,
+  // Autorisations IP
+  getQuizIps,
+  addQuizIp,
+  deleteQuizIp,
+  getQuizIpDemandes,
+  traiterDemandeIp,
+  // Quiz publics (par site)
+  getQuizPublics,
+  // Rapport participants
+  getRapportParticipants,
+  getTentativeDetail,
+  getRapportQuestionsRatees,
 };

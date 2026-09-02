@@ -1,0 +1,197 @@
+<div class="container-fluid p-16">
+  <div class="d-flex align-items-center m-b-16">
+    <button mat-icon-button (click)="retour()" matTooltip="Retour à la liste">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <span class="h5 m-0">Cible &amp; diffusion — {{ sondage?.nom }}</span>
+  </div>
+
+  @if (!modifiable) {
+    <div class="alerte-actif m-b-16">
+      <mat-icon>lock</mat-icon>
+      Ce sondage est <strong>Actif</strong> : la cible ne peut pas être modifiée. Désactivez-le pour
+      la modifier. (La diffusion reste possible.)
+    </div>
+  }
+
+  <!-- Constitution du panel depuis l'annuaire (filtres avancés) -->
+  <mat-card class="m-b-16">
+    <mat-card-content>
+      <h6 class="m-0 m-b-8">Ajouter depuis l'annuaire (filtres)</h6>
+      <div class="filtres">
+        <mat-form-field appearance="outline">
+          <mat-label>Sites</mat-label>
+          <mat-select [(ngModel)]="sitesSel" multiple>
+            @for (s of sites; track s.id) {
+              <mat-option [value]="s.id">{{ s.nom }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Poste / KCR (fonction)</mat-label>
+          <mat-select [(ngModel)]="fonctionsSel" multiple>
+            @for (f of fonctions; track f.id) {
+              <mat-option [value]="f.id">{{ f.nom }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Ancienneté min. (mois)</mat-label>
+          <input matInput type="number" min="0" [(ngModel)]="ancienneteMin" />
+        </mat-form-field>
+        <button mat-flat-button color="primary" (click)="rechercher()">
+          <mat-icon>search</mat-icon> Rechercher
+        </button>
+      </div>
+
+      @if (resultats.length) {
+        <div class="mat-elevation-z0 m-t-8" style="overflow-x: auto">
+          <table mat-table [dataSource]="resultats" class="w-100">
+            <ng-container matColumnDef="sel">
+              <th mat-header-cell *matHeaderCellDef>
+                <mat-checkbox
+                  (change)="toutSelectionner($event.checked)"
+                  [checked]="selection.size === resultats.length && resultats.length > 0"
+                ></mat-checkbox>
+              </th>
+              <td mat-cell *matCellDef="let u">
+                <mat-checkbox
+                  [checked]="estSel(u.id)"
+                  (change)="basculerSel(u.id, $event.checked)"
+                ></mat-checkbox>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="nom">
+              <th mat-header-cell *matHeaderCellDef>Nom</th>
+              <td mat-cell *matCellDef="let u">{{ u.prenom }} {{ u.nom }}</td>
+            </ng-container>
+            <ng-container matColumnDef="fonction">
+              <th mat-header-cell *matHeaderCellDef>Poste</th>
+              <td mat-cell *matCellDef="let u">{{ u.fonction || '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="site">
+              <th mat-header-cell *matHeaderCellDef>Site</th>
+              <td mat-cell *matCellDef="let u">{{ u.site || '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="anciennete">
+              <th mat-header-cell *matHeaderCellDef>Ancienneté</th>
+              <td mat-cell *matCellDef="let u">{{ u.anciennete_mois }} mois</td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="colsResultats"></tr>
+            <tr mat-row *matRowDef="let row; columns: colsResultats"></tr>
+          </table>
+        </div>
+        <div class="m-t-8">
+          <button
+            mat-flat-button
+            color="primary"
+            (click)="ajouterSelection()"
+            [disabled]="!modifiable || !selection.size"
+          >
+            <mat-icon>person_add</mat-icon> Ajouter la sélection ({{ selection.size }})
+          </button>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Import Excel -->
+  <mat-card class="m-b-16">
+    <mat-card-content>
+      <h6 class="m-0 m-b-8">Importer des destinataires (Excel)</h6>
+      <p class="text-muted m-b-8">
+        Colonnes attendues (1re ligne = en-tête) : <strong>Nom, Prénom, Email, Téléphone</strong>.
+      </p>
+      <div class="import-ligne">
+        <input type="file" accept=".xlsx,.xls" (change)="onFile($event)" [disabled]="!modifiable" />
+        <button
+          mat-flat-button
+          color="primary"
+          (click)="importer()"
+          [disabled]="!modifiable || !fichier || importEnCours"
+        >
+          <mat-icon>upload_file</mat-icon> Importer
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Cibles + diffusion -->
+  <mat-card>
+    <mat-card-content>
+      <div class="d-flex align-items-center justify-content-between flex-wrap m-b-8">
+        <h6 class="m-0">Destinataires ({{ cibles.length }})</h6>
+        <div class="diffusion">
+          <span class="text-muted">Diffuser le lien :</span>
+          <button mat-stroked-button color="primary" (click)="diffuser(['email'])" [disabled]="!cibles.length">
+            <mat-icon>mail</mat-icon> Email
+          </button>
+          <button mat-stroked-button color="primary" (click)="diffuser(['sms'])" [disabled]="!cibles.length">
+            <mat-icon>sms</mat-icon> SMS
+          </button>
+          <button mat-flat-button color="primary" (click)="diffuser(['email', 'sms'])" [disabled]="!cibles.length">
+            <mat-icon>send</mat-icon> Email + SMS
+          </button>
+        </div>
+      </div>
+
+      <div class="mat-elevation-z1" style="overflow-x: auto">
+        <table mat-table [dataSource]="cibles" class="w-100">
+          <ng-container matColumnDef="nom">
+            <th mat-header-cell *matHeaderCellDef>Nom</th>
+            <td mat-cell *matCellDef="let c">{{ c.prenom }} {{ c.nom }}</td>
+          </ng-container>
+          <ng-container matColumnDef="email">
+            <th mat-header-cell *matHeaderCellDef>Email</th>
+            <td mat-cell *matCellDef="let c">{{ c.email || '—' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="telephone">
+            <th mat-header-cell *matHeaderCellDef>Téléphone</th>
+            <td mat-cell *matCellDef="let c">{{ c.telephone || '—' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="source">
+            <th mat-header-cell *matHeaderCellDef>Source</th>
+            <td mat-cell *matCellDef="let c">
+              <mat-chip-set>
+                <mat-chip>{{ c.id_UTILISATEUR ? 'Annuaire' : 'Externe' }}</mat-chip>
+              </mat-chip-set>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="envoi">
+            <th mat-header-cell *matHeaderCellDef>Envoyé</th>
+            <td mat-cell *matCellDef="let c">
+              @if (c.date_envoi_email) { <mat-icon class="ok" matTooltip="Email envoyé">mail</mat-icon> }
+              @if (c.date_envoi_sms) { <mat-icon class="ok" matTooltip="SMS envoyé">sms</mat-icon> }
+              @if (!c.date_envoi_email && !c.date_envoi_sms) { <span class="text-muted">—</span> }
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef class="text-right">Action</th>
+            <td mat-cell *matCellDef="let c" class="text-right">
+              <button
+                mat-icon-button
+                color="warn"
+                matTooltip="Retirer"
+                (click)="supprimerCible(c)"
+                [disabled]="!modifiable"
+              >
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="colsCibles"></tr>
+          <tr mat-row *matRowDef="let row; columns: colsCibles"></tr>
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell text-center p-16" [attr.colspan]="colsCibles.length">
+              Aucun destinataire. Ajoutez depuis l'annuaire ou importez un fichier Excel.
+            </td>
+          </tr>
+        </table>
+      </div>
+      <p class="text-muted m-t-8">
+        La diffusion réelle par email/SMS (SMTP / passerelle) sera branchée ultérieurement ; l'envoi
+        est ici tracé par destinataire.
+      </p>
+    </mat-card-content>
+  </mat-card>
+</div>

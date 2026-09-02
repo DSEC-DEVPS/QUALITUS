@@ -29,3 +29,30 @@
   transform: translate(-50%, -50%) !important;
   margin: 0 !important;
 }
+/* =====================================================================
+   Charte : boutons "color=primary" en ORANGE (au lieu du bleu Material).
+   Filled / raised / FAB : fond orange ; Stroked / text / icon : texte orange.
+   ===================================================================== */
+.mat-mdc-unelevated-button.mat-primary,
+.mat-mdc-raised-button.mat-primary,
+.mat-mdc-fab.mat-primary,
+.mat-mdc-mini-fab.mat-primary {
+  --mdc-filled-button-container-color: #ff7900;
+  --mdc-filled-button-label-text-color: #ffffff;
+  --mdc-fab-container-color: #ff7900;
+  background-color: #ff7900 !important;
+  color: #ffffff !important;
+}
+.mat-mdc-outlined-button.mat-primary {
+  --mdc-outlined-button-label-text-color: #ff7900;
+  color: #ff7900 !important;
+  border-color: rgba(255, 121, 0, 0.5) !important;
+}
+.mat-mdc-button.mat-primary {
+  --mdc-text-button-label-text-color: #ff7900;
+  color: #ff7900 !important;
+}
+.mat-mdc-icon-button.mat-primary {
+  --mdc-icon-button-icon-color: #ff7900;
+  color: #ff7900 !important;
+}

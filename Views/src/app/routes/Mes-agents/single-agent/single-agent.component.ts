@@ -59,7 +59,7 @@ export class SingleAgentComponent implements OnInit {
   bn_notification_non_lues = 0;
   statistic_TC!: statistic_TC;
   todayDate!: string | null;
-  details_utilisateur!: detailsUtilisateur;
+  details_utilisateur?: detailsUtilisateur;
   filename!: string;
   dataSource!: MatTableDataSource<Consultation>;
   dataSource_messages!: MatTableDataSource<Commentaire>;
@@ -148,7 +148,9 @@ export class SingleAgentComponent implements OnInit {
   }
   download() {
     const data = this.details_utilisateur;
-    const data2 = this.details_utilisateur;
+    if (!data) {
+      return;
+    }
 
     const ws1: XLSX.WorkSheet = XLSX.utils.json_to_sheet(data.consultations);
     const ws2: XLSX.WorkSheet = XLSX.utils.json_to_sheet(data.commentaires);

@@ -4,6 +4,11 @@
       <mat-icon>arrow_back</mat-icon>
     </button>
     <span class="h5 m-0">{{ quizId ? 'Editer le quiz' : 'Nouveau quiz' }}</span>
+    @if (quiz?.code_pin) {
+      <span class="pin-badge" matTooltip="Code a communiquer aux conseillers pour acceder au quiz">
+        <mat-icon>vpn_key</mat-icon> Code PIN : {{ quiz?.code_pin }}
+      </span>
+    }
   </div>
 
   <!-- En-tete / parametres du quiz -->
@@ -86,6 +91,21 @@
                 }
               </mat-select>
               <mat-hint>Un quiz peut porter sur plusieurs contenus</mat-hint>
+            </mat-form-field>
+          </div>
+
+          <div class="col-sm-12">
+            <mat-form-field appearance="fill" class="w-100">
+              <mat-label>Sites concernés</mat-label>
+              <mat-select formControlName="sites" multiple>
+                @for (s of sites; track s.id) {
+                  <mat-option [value]="s.id">{{ s.nom }}</mat-option>
+                }
+              </mat-select>
+              <mat-hint>
+                Privé : seuls les utilisateurs de ces sites accèdent, via le code PIN.
+                Public : ils voient le quiz sans code PIN. Aucun site = ouvert à tous.
+              </mat-hint>
             </mat-form-field>
           </div>
         </div>

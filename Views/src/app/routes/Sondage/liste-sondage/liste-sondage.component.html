@@ -1,0 +1,79 @@
+<div class="container-fluid p-16">
+  <mat-card>
+    <mat-card-content>
+      <div class="d-flex align-items-center justify-content-between flex-wrap m-b-16">
+        <h5 class="m-0">Sondages du personnel</h5>
+        <button mat-flat-button color="primary" (click)="nouveau()">
+          <mat-icon>add</mat-icon> Nouveau sondage
+        </button>
+      </div>
+
+      <div class="mat-elevation-z1" style="overflow-x: auto">
+        <table mat-table [dataSource]="sondages" class="w-100">
+          <ng-container matColumnDef="id">
+            <th mat-header-cell *matHeaderCellDef>#</th>
+            <td mat-cell *matCellDef="let s">{{ s.id }}</td>
+          </ng-container>
+          <ng-container matColumnDef="nom">
+            <th mat-header-cell *matHeaderCellDef>Nom</th>
+            <td mat-cell *matCellDef="let s">{{ s.nom }}</td>
+          </ng-container>
+          <ng-container matColumnDef="langue">
+            <th mat-header-cell *matHeaderCellDef>Langue</th>
+            <td mat-cell *matCellDef="let s">{{ s.langue }}</td>
+          </ng-container>
+          <ng-container matColumnDef="statut">
+            <th mat-header-cell *matHeaderCellDef>Statut</th>
+            <td mat-cell *matCellDef="let s">
+              <span
+                class="badge"
+                [class.actif]="s.statut === 'ACTIF'"
+                [class.desactif]="s.statut === 'DESACTIF'"
+                >{{ statutLabel(s) }}</span
+              >
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="nb_questions">
+            <th mat-header-cell *matHeaderCellDef>Questions</th>
+            <td mat-cell *matCellDef="let s">{{ s.nb_questions }}</td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef class="text-right">Actions</th>
+            <td mat-cell *matCellDef="let s" class="text-right">
+              <button mat-icon-button color="primary" matTooltip="Éditer" (click)="editer(s)">
+                <mat-icon>edit_note</mat-icon>
+              </button>
+              <button mat-icon-button matTooltip="Cible & diffusion" (click)="cible(s)">
+                <mat-icon>group</mat-icon>
+              </button>
+              <button mat-icon-button matTooltip="Rapport" (click)="rapport(s)">
+                <mat-icon>bar_chart</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                [matTooltip]="s.statut === 'ACTIF' ? 'Désactiver' : 'Activer'"
+                (click)="basculerStatut(s)"
+              >
+                <mat-icon>{{ s.statut === 'ACTIF' ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+              </button>
+              <button mat-icon-button matTooltip="Dupliquer" (click)="dupliquer(s)">
+                <mat-icon>content_copy</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" matTooltip="Supprimer" (click)="supprimer(s)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="cols"></tr>
+          <tr mat-row *matRowDef="let row; columns: cols"></tr>
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell text-center p-16" [attr.colspan]="cols.length">
+              Aucun sondage pour le moment.
+            </td>
+          </tr>
+        </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

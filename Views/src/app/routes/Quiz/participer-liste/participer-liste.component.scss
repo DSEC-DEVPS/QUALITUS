@@ -1,47 +1,110 @@
-.p-16 {
+.p-16 { padding: 16px; }
+.m-b-8 { margin-bottom: 8px; }
+.m-t-8 { margin-top: 8px; }
+.text-center { text-align: center; }
+.w-100 { width: 100%; }
+
+/* Bandeau */
+.banner {
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: 0.5px;
   padding: 16px;
-}
-.m-b-16 {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  background: #fff;
   margin-bottom: 16px;
 }
 
-.quiz-card {
-  height: 100%;
+/* Barre filtres + bouton PIN */
+.barre-filtres {
   display: flex;
-  flex-direction: column;
-}
-
-.quiz-card mat-card-content {
-  flex: 1;
-}
-
-.desc {
-  font-size: 0.85rem;
-  margin: 8px 0;
-}
-.small {
-  font-size: 0.78rem;
-}
-
-mat-icon.ok {
-  color: #1b8a3a;
-}
-
-.statut-ok {
-  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  color: #1b8a3a;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.filtres-dates {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.date-field {
+  width: 180px;
+}
+.btn-pin {
+  font-weight: 600;
+  padding: 4px 22px;
+}
+
+/* Panneau code PIN */
+.pin-card {
+  max-width: 520px;
+  margin: 8px 0 16px;
+}
+.pin-form {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.pin-form mat-form-field {
+  flex: 1;
+  min-width: 220px;
+}
+.pin-form button {
+  margin-top: 6px;
+}
+.attente-bloc {
+  padding: 8px 0;
+}
+.attente-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  color: #f5a623;
+}
+
+/* Liste */
+.liste-titre {
+  margin: 18px 0 12px;
   font-weight: 600;
 }
-.statut-bloque {
-  display: inline-flex;
+.quiz-row {
+  display: flex;
   align-items: center;
-  gap: 4px;
-  color: #b26a00;
-  font-size: 0.85rem;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 8px;
 }
-.ok-chip {
-  --mdc-chip-elevated-container-color: rgba(27, 138, 58, 0.12);
-  --mdc-chip-label-text-color: #1b8a3a;
+.quiz-row:hover {
+  border-color: rgba(63, 81, 181, 0.5);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+.quiz-corps {
+  flex: 1;
+  min-width: 200px;
+}
+.quiz-titre {
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin-bottom: 6px;
+}
+
+.chrono-chip {
+  --mdc-chip-label-text-color: #1565c0;
+  font-weight: 600;
+}
+.chrono-chip.urgent {
+  --mdc-chip-label-text-color: #c62828;
+}
+mat-chip.deja {
+  --mdc-chip-label-text-color: #8a4b00;
 }

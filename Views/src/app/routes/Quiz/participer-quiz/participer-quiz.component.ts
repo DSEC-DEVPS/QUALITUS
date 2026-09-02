@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -26,7 +26,7 @@ import { QuestionAPasser, QuizAPasser, ResultatSoumission } from '../interfaces'
   templateUrl: './participer-quiz.component.html',
   styleUrl: './participer-quiz.component.scss',
 })
-export class ParticiperQuizComponent implements OnInit {
+export class ParticiperQuizComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly quizSrv = inject(QuizService);
@@ -40,26 +40,89 @@ export class ParticiperQuizComponent implements OnInit {
   envoiEnCours = false;
   bloque = false; // deja tente + pas d'autorisation de retest
 
+  // Chrono (regle 1) + cloture automatique (regle 3)
+  tempsRestant = 0; // secondes
+  tempsEcoule = false;
+  private chronoId: ReturnType<typeof setInterval> | null = null;
+
   ngOnInit(): void {
     this.quizId = Number(this.route.snapshot.paramMap.get('id'));
     this.charger();
+  }
+
+  ngOnDestroy(): void {
+    this.arreterChrono();
   }
 
   charger() {
     this.chargement = true;
     this.resultat = null;
     this.choix = {};
+    this.tempsEcoule = false;
+    this.arreterChrono();
     this.quizSrv.getQuizAPasser(this.quizId).subscribe({
       next: q => {
         this.quiz = q;
         this.bloque = q.peut_participer === false;
         this.chargement = false;
+        // Chrono base sur l'heure de debut serveur : temps restant = duree - deja ecoule.
+        // Resiste au rechargement (le serveur ne reinitialise pas le debut).
+        if (!this.bloque && q.duree && q.duree > 0) {
+          const restant = q.duree * 60 - (q.temps_ecoule_secondes || 0);
+          if (restant <= 0) {
+            // Le temps est deja epuise cote serveur -> cloture immediate
+            this.tempsRestant = 0;
+            this.tempsEcoule = true;
+            this.toast.info('Temps écoulé : le quiz est clôturé automatiquement.');
+            this.soumettre(true);
+          } else {
+            this.demarrerChrono(restant);
+          }
+        }
       },
       error: () => {
         this.toast.error('Quiz introuvable');
         this.chargement = false;
       },
     });
+  }
+
+  // --- Chrono ---
+  private demarrerChrono(secondes: number) {
+    this.arreterChrono();
+    this.tempsRestant = secondes;
+    this.chronoId = setInterval(() => {
+      this.tempsRestant--;
+      if (this.tempsRestant <= 0) {
+        this.tempsRestant = 0;
+        this.arreterChrono();
+        this.tempsEcoule = true;
+        this.toast.info('Temps écoulé : le quiz est clôturé automatiquement.');
+        this.soumettre(true); // regle 3 : cloture forcee
+      }
+    }, 1000);
+  }
+  private arreterChrono() {
+    if (this.chronoId) {
+      clearInterval(this.chronoId);
+      this.chronoId = null;
+    }
+  }
+  get chronoLabel(): string {
+    const m = Math.floor(this.tempsRestant / 60);
+    const s = this.tempsRestant % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  // --- Progression (regle 2) ---
+  get nbRepondues(): number {
+    if (!this.quiz) {
+      return 0;
+    }
+    return this.quiz.questions.filter(q => (this.choix[q.id] || []).length > 0).length;
+  }
+  get totalQuestions(): number {
+    return this.quiz ? this.quiz.questions.length : 0;
   }
 
   estQCM(q: QuestionAPasser): boolean {
@@ -93,9 +156,14 @@ export class ParticiperQuizComponent implements OnInit {
     return this.quiz.questions.every(q => (this.choix[q.id] || []).length > 0);
   }
 
-  soumettre() {
-    if (!this.quiz || !this.toutesRepondues) {
-      this.toast.warning('Merci de repondre a toutes les questions');
+  soumettre(forcer = false) {
+    if (!this.quiz || this.envoiEnCours || this.resultat) {
+      return;
+    }
+    // Regle 4 : soumission manuelle refusee si toutes les questions ne sont pas repondues.
+    // (forcer = true lors de la cloture automatique par le chrono, regle 3.)
+    if (!forcer && !this.toutesRepondues) {
+      this.toast.error('Vous devez répondre à toutes les questions avant de soumettre.');
       return;
     }
     const reponses = this.quiz.questions.map(q => ({
@@ -103,6 +171,7 @@ export class ParticiperQuizComponent implements OnInit {
       id_Options: this.choix[q.id] || [],
     }));
     this.envoiEnCours = true;
+    this.arreterChrono();
     this.quizSrv.soumettre(this.quizId, reponses).subscribe({
       next: r => {
         this.resultat = r;

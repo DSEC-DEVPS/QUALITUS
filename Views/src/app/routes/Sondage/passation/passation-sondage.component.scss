@@ -1,0 +1,116 @@
+.passation-wrap {
+  max-width: 720px;
+  margin: 24px auto;
+  padding: 0 16px;
+}
+.w-100 { width: 100%; }
+.text-center { text-align: center; }
+
+.etat-card {
+  margin-top: 40px;
+}
+.etat-icon {
+  font-size: 56px;
+  width: 56px;
+  height: 56px;
+}
+.etat-icon.ok { color: #2e7d32; }
+.etat-icon.ko { color: #c62828; }
+.etat-icon.warn { color: #f5a623; }
+
+.sondage-card .titre {
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+.progress-zone {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.progress-zone mat-progress-bar {
+  flex: 1;
+  height: 10px;
+  border-radius: 6px;
+}
+.progress-label {
+  font-weight: 600;
+  color: #3f51b5;
+  min-width: 40px;
+  text-align: right;
+}
+
+.info-bloc {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  background: rgba(33, 150, 243, 0.08);
+  border-left: 4px solid #2196f3;
+  border-radius: 6px;
+  color: #0d47a1;
+}
+
+.question {
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  margin-bottom: 6px;
+}
+.q-libelle {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.q-libelle .req {
+  color: #c62828;
+  margin-left: 3px;
+}
+.choix-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.curseur {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.curseur .borne {
+  color: #777;
+}
+.curseur .valeur {
+  font-weight: 700;
+  color: #3f51b5;
+  min-width: 24px;
+  text-align: center;
+}
+.classement .hint {
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+.rang-ligne {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 6px;
+  margin-bottom: 6px;
+  background: #fff;
+}
+.rang-ligne .rang {
+  font-weight: 700;
+  color: #3f51b5;
+  width: 22px;
+  text-align: center;
+}
+.rang-ligne .spacer {
+  flex: 1;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20px;
+}

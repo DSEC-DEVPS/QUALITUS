@@ -1,58 +1,114 @@
 <div class="container-fluid p-16">
-  <h5 class="m-b-16">Quiz disponibles</h5>
+  <!-- Bandeau -->
+  <div class="banner">QUIZ DISPONIBLES</div>
 
-  @if (chargement) {
-    <p class="text-muted">Chargement...</p>
-  } @else if (!quizzes.length) {
-    <mat-card><mat-card-content class="text-center text-muted p-16">
-      Aucun quiz disponible pour le moment.
-    </mat-card-content></mat-card>
-  } @else {
-    <div class="row">
-      @for (q of quizzes; track q.id) {
-        <div class="col-sm-6 col-md-4 m-b-16">
-          <mat-card class="quiz-card">
-            <mat-card-content>
-              <div class="d-flex justify-content-between align-items-start">
-                <h6 class="m-0">{{ q.titre }}</h6>
-                @if (q.derniere_reussi === 1) {
-                  <mat-icon class="ok" matTooltip="Deja reussi">verified</mat-icon>
-                }
-              </div>
-              @if (q.description) {
-                <p class="text-muted desc">{{ q.description }}</p>
-              }
-              @if (q.fiche_titre) {
-                <p class="text-muted small">Contenu : {{ q.fiche_titre }}</p>
-              }
-              <mat-chip-set>
-                <mat-chip>{{ q.nb_questions }} question(s)</mat-chip>
-                <mat-chip>Passage {{ q.note_passage }}%</mat-chip>
-                @if (q.nb_essais > 0) {
-                  <mat-chip>{{ q.nb_essais }} essai(s)</mat-chip>
-                }
-                @if (retestAutorise(q) && !estReussi(q)) {
-                  <mat-chip class="ok-chip">Retest autorisé</mat-chip>
-                }
-              </mat-chip-set>
-            </mat-card-content>
-            <mat-card-actions align="end">
-              @if (estReussi(q)) {
-                <span class="statut-ok"><mat-icon>verified</mat-icon> Réussi</span>
-              } @else if (estBloque(q)) {
-                <span class="statut-bloque" matTooltip="Votre superviseur doit autoriser un retest">
-                  <mat-icon>lock</mat-icon> En attente d'autorisation
-                </span>
-              } @else {
-                <button mat-flat-button color="primary" (click)="commencer(q)">
-                  <mat-icon>play_arrow</mat-icon>
-                  {{ q.nb_essais > 0 ? 'Refaire (retest)' : 'Commencer' }}
-                </button>
-              }
-            </mat-card-actions>
-          </mat-card>
-        </div>
+  <!-- Filtres (dates) + acces par code PIN -->
+  <div class="barre-filtres">
+    <div class="filtres-dates">
+      <mat-form-field appearance="outline" class="date-field">
+        <mat-label>Date début</mat-label>
+        <input matInput [matDatepicker]="pickerDebut" [(ngModel)]="dateDebut" readonly (click)="pickerDebut.open()" />
+        <mat-datepicker-toggle matSuffix [for]="pickerDebut" />
+        <mat-datepicker #pickerDebut />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="date-field">
+        <mat-label>Date fin</mat-label>
+        <input matInput [matDatepicker]="pickerFin" [(ngModel)]="dateFin" readonly (click)="pickerFin.open()" />
+        <mat-datepicker-toggle matSuffix [for]="pickerFin" />
+        <mat-datepicker #pickerFin />
+      </mat-form-field>
+      @if (dateDebut || dateFin) {
+        <button mat-icon-button (click)="reinitDates()" matTooltip="Réinitialiser les dates">
+          <mat-icon>restart_alt</mat-icon>
+        </button>
       }
     </div>
+
+    <button mat-stroked-button color="primary" class="btn-pin" (click)="afficherPin = !afficherPin">
+      <mat-icon>lock</mat-icon> Saisir un code PIN
+    </button>
+  </div>
+
+  <!-- Panneau code PIN (deplie a la demande, ou si en attente d'autorisation) -->
+  @if (afficherPin || enAttente) {
+    <mat-card class="pin-card">
+      <mat-card-content>
+        @if (enAttente) {
+          <div class="text-center attente-bloc">
+            <mat-icon class="attente-icon">hourglass_top</mat-icon>
+            <h5 class="m-b-8">En attente d'autorisation</h5>
+            <p class="text-muted">
+              @if (quizEnAttente) {
+                Le quiz « <strong>{{ quizEnAttente }}</strong> » nécessite l'autorisation de votre machine.
+              } @else {
+                Ce quiz nécessite l'autorisation de votre machine.
+              }
+              Une demande a été transmise à votre superviseur. Vous pourrez y accéder une fois votre machine autorisée.
+            </p>
+            <button mat-stroked-button color="primary" (click)="reessayer()" [disabled]="envoi">
+              <mat-icon>refresh</mat-icon> Réessayer
+            </button>
+          </div>
+        } @else {
+          <div class="pin-form">
+            <mat-form-field appearance="outline" class="w-100">
+              <mat-label>Code PIN</mat-label>
+              <input
+                matInput
+                [(ngModel)]="pin"
+                (keyup.enter)="acceder()"
+                maxlength="10"
+                autocomplete="off"
+                placeholder="Ex : 123456"
+              />
+              <mat-icon matPrefix>lock</mat-icon>
+            </mat-form-field>
+            <button mat-flat-button color="primary" (click)="acceder()" [disabled]="envoi || !pin">
+              <mat-icon>login</mat-icon> Accéder au quiz
+            </button>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- Liste des quiz disponibles -->
+  <h6 class="liste-titre">Liste des quiz disponibles</h6>
+
+  @if (publicsFiltres.length) {
+    @for (q of publicsFiltres; track q.id) {
+      <div class="quiz-row">
+        <div class="quiz-corps">
+          <div class="quiz-titre">{{ q.titre }}</div>
+          <div class="quiz-meta">
+            <mat-chip-set>
+              <mat-chip>{{ q.nb_questions }} question(s)</mat-chip>
+              <mat-chip>Seuil {{ q.note_passage }}%</mat-chip>
+              @if (q.duree) { <mat-chip>{{ q.duree }} min</mat-chip> }
+              @if (enCours(q)) {
+                <mat-chip class="chrono-chip" [class.urgent]="tempsRestant(q) <= 60">
+                  <mat-icon matChipAvatar>timer</mat-icon>
+                  Temps restant : {{ tempsRestantLabel(q) }}
+                </mat-chip>
+              } @else if (q.nb_essais) {
+                <mat-chip class="deja">Déjà tenté</mat-chip>
+              }
+            </mat-chip-set>
+          </div>
+        </div>
+        <button mat-flat-button color="primary" (click)="ouvrir(q)">
+          <mat-icon>play_arrow</mat-icon>
+          {{ enCours(q) ? 'Reprendre le quiz' : 'Faire le quiz' }}
+        </button>
+      </div>
+    }
+  } @else {
+    <p class="text-muted p-16 text-center">
+      @if (publics.length) {
+        Aucun quiz ne correspond aux dates sélectionnées.
+      } @else {
+        Aucun quiz disponible pour votre site pour le moment.
+      }
+    </p>
   }
 </div>

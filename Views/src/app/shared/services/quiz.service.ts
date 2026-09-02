@@ -16,6 +16,13 @@ import {
   RapportQuiz,
   RapportQuestion,
   RetestEchec,
+  QuizIp,
+  QuizIpDemande,
+  SiteOption,
+  QuizPublic,
+  RapportParticipant,
+  TentativeDetail,
+  QuestionRatee,
 } from '../../routes/Quiz/interfaces';
 
 /**
@@ -69,12 +76,23 @@ export class QuizService {
     return this.http.get<FicheRecente[]>(`${this.base}/fiches/recentes`);
   }
 
+  /* ----- Sites (pour l'attribution d'un quiz a des sites) ----- */
+  getSites(): Observable<SiteOption[]> {
+    return this.http.get<SiteOption[]>('/api/v1/site/all');
+  }
+  getQuizPublics(): Observable<QuizPublic[]> {
+    return this.http.get<QuizPublic[]>(`${this.base}/participer/publics`);
+  }
+
   /* ----- Phase 2 : participation ----- */
   getDisponibles(): Observable<QuizDisponible[]> {
     return this.http.get<QuizDisponible[]>(`${this.base}/participer/disponibles`);
   }
   getQuizAPasser(id: number): Observable<QuizAPasser> {
     return this.http.get<QuizAPasser>(`${this.base}/participer/${id}`);
+  }
+  getByPin(pin: string): Observable<{ etat: string; id?: number; titre?: string }> {
+    return this.http.get<{ etat: string; id?: number; titre?: string }>(`${this.base}/pin/${pin}`);
   }
   soumettre(
     id: number,
@@ -114,6 +132,22 @@ export class QuizService {
   getRapportQuestions(id: number): Observable<RapportQuestion[]> {
     return this.http.get<RapportQuestion[]>(`${this.base}/rapports/questions/${id}`);
   }
+  getRapportParticipants(
+    id: number,
+    filtres?: { agent?: string; statut?: string; site?: string }
+  ): Observable<RapportParticipant[]> {
+    const p: Record<string, string> = {};
+    if (filtres?.agent) p['agent'] = filtres.agent;
+    if (filtres?.statut) p['statut'] = filtres.statut;
+    if (filtres?.site) p['site'] = filtres.site;
+    return this.http.get<RapportParticipant[]>(`${this.base}/${id}/rapport/participants`, { params: p });
+  }
+  getTentativeDetail(tid: number): Observable<TentativeDetail> {
+    return this.http.get<TentativeDetail>(`${this.base}/tentative/${tid}/detail`);
+  }
+  getQuestionsRatees(id: number): Observable<QuestionRatee[]> {
+    return this.http.get<QuestionRatee[]>(`${this.base}/${id}/rapport/questions-ratees`);
+  }
 
   /* ----- Retest controle par le superviseur ----- */
   getRetestEchecs(): Observable<RetestEchec[]> {
@@ -121,5 +155,24 @@ export class QuizService {
   }
   autoriserRetest(id_Quiz: number, id_UTILISATEUR: number): Observable<message> {
     return this.http.post<message>(`${this.base}/retest/autoriser`, { id_Quiz, id_UTILISATEUR });
+  }
+
+  /* ----- Autorisations IP (liste blanche par quiz) ----- */
+  getIps(id: number): Observable<QuizIp[]> {
+    return this.http.get<QuizIp[]>(`${this.base}/${id}/ip`);
+  }
+  addIp(id: number, body: { adresse_ip: string; libelle?: string }): Observable<message & { id: number }> {
+    return this.http.post<message & { id: number }>(`${this.base}/${id}/ip`, body);
+  }
+  deleteIp(ipId: number): Observable<message> {
+    return this.http.delete<message>(`${this.base}/ip/${ipId}`);
+  }
+
+  /* ----- Demandes d'acces IP en attente ----- */
+  getDemandesIp(id: number): Observable<QuizIpDemande[]> {
+    return this.http.get<QuizIpDemande[]>(`${this.base}/${id}/ip/demandes`);
+  }
+  traiterDemandeIp(demandeId: number, decision: 'AUTORISER' | 'REFUSER'): Observable<message> {
+    return this.http.post<message>(`${this.base}/ip/demande/${demandeId}/traiter`, { decision });
   }
 }

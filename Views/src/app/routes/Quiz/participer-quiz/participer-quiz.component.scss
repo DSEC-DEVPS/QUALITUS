@@ -71,3 +71,49 @@
 .feedback.ko {
   color: #c62828;
 }
+
+/* Barre figee : chrono + progression (reste visible au defilement) */
+.barre-chrono {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  margin-bottom: 12px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.barre-chrono .chrono {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: #1976d2;
+  font-variant-numeric: tabular-nums;
+}
+.barre-chrono .chrono.urgent {
+  color: #c62828;
+  animation: pulse 1s ease-in-out infinite;
+}
+.barre-chrono .progression {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #444;
+  font-weight: 500;
+}
+.barre-chrono mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+@keyframes pulse {
+  50% { opacity: 0.55; }
+}

@@ -3,6 +3,7 @@ import { QuizEnEchecsComponent } from './quiz-en-echecs/quiz-en-echecs.component
 import { QuizEnResetComponent } from './quiz-en-reset/quiz-en-reset.component';
 import { ListeQuizComponent } from './liste-quiz/liste-quiz.component';
 import { EditeurQuizComponent } from './editeur-quiz/editeur-quiz.component';
+import { DetailQuizComponent } from './detail-quiz/detail-quiz.component';
 import { ParticiperListeComponent } from './participer-liste/participer-liste.component';
 import { ParticiperQuizComponent } from './participer-quiz/participer-quiz.component';
 import { MesScoresComponent } from './mes-scores/mes-scores.component';
@@ -18,6 +19,7 @@ export const routes: Routes = [
   { path: 'gestion', component: ListeQuizComponent },
   { path: 'creer', component: EditeurQuizComponent },
   { path: 'editer/:id', component: EditeurQuizComponent },
+  { path: 'detail/:id', component: DetailQuizComponent },
   // Participation (Phase 2)
   { path: 'participer', component: ParticiperListeComponent },
   { path: 'participer/:id', component: ParticiperQuizComponent },

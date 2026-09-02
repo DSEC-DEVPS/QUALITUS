@@ -47,7 +47,7 @@ export class ListeQuizComponent implements OnInit {
   private readonly toast = inject(ToastrService);
 
   dataSource = new MatTableDataSource<Quiz>([]);
-  displayedColumns = ['id', 'titre', 'fiche_titre', 'nb_questions', 'note_passage', 'Etat', 'actions'];
+  displayedColumns = ['id', 'titre', 'code_pin', 'fiche_titre', 'nb_questions', 'note_passage', 'Etat', 'actions'];
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
@@ -82,6 +82,10 @@ export class ListeQuizComponent implements OnInit {
     this.router.navigate(['/mon-espace/quiz/editer', q.id]);
   }
 
+  detail(q: Quiz) {
+    this.router.navigate(['/mon-espace/quiz/detail', q.id]);
+  }
+
   supprimer(q: Quiz) {
     const box = new ConfirmBoxInitializer();
     box.setTitle('Suppression !');
@@ -110,6 +114,7 @@ export class ListeQuizComponent implements OnInit {
     const data = this.dataSource.data.map(q => ({
       Id: q.id,
       Titre: q.titre,
+      'Code PIN': q.code_pin || '',
       Description: q.description || '',
       'Contenu associe': q.fiche_titre || '',
       'Nb questions': q.nb_questions ?? 0,

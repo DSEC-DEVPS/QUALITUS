@@ -31,6 +31,11 @@
             <td mat-cell *matCellDef="let q">{{ q.titre }}</td>
           </ng-container>
 
+          <ng-container matColumnDef="code_pin">
+            <th mat-header-cell *matHeaderCellDef>Code PIN</th>
+            <td mat-cell *matCellDef="let q"><strong class="pin">{{ q.code_pin }}</strong></td>
+          </ng-container>
+
           <ng-container matColumnDef="fiche_titre">
             <th mat-header-cell *matHeaderCellDef>Contenus associes</th>
             <td mat-cell *matCellDef="let q">{{ q.fiches_titres || q.fiche_titre || '—' }}</td>
@@ -56,6 +61,9 @@
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef>Actions</th>
             <td mat-cell *matCellDef="let q">
+              <button mat-icon-button matTooltip="Detail" (click)="detail(q)">
+                <mat-icon>visibility</mat-icon>
+              </button>
               <button mat-icon-button color="primary" matTooltip="Editer" (click)="editer(q)">
                 <mat-icon>edit_note</mat-icon>
               </button>

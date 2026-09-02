@@ -25,7 +25,7 @@ import {
   DisappearanceAnimation,
 } from '@costlydeveloper/ngx-awesome-popup';
 import { QuizService } from '@shared/services/quiz.service';
-import { FicheRecente, Question, Quiz } from '../interfaces';
+import { FicheRecente, Question, Quiz, SiteOption } from '../interfaces';
 import {
   QuestionDialogComponent,
   QuestionDialogData,
@@ -63,6 +63,7 @@ export class EditeurQuizComponent implements OnInit {
   quiz?: Quiz;
   questions: Question[] = [];
   fiches: FicheRecente[] = [];
+  sites: SiteOption[] = [];
   form!: FormGroup;
 
   ngOnInit(): void {
@@ -74,12 +75,18 @@ export class EditeurQuizComponent implements OnInit {
       note_passage: [70, [Validators.required, Validators.min(0), Validators.max(100)]],
       acces: ['PRIVATE'],
       alterner_questions: [0],
-      autoriser_machines: [0],
+      autoriser_machines: [1],
       fiches: [[]],
+      sites: [[]],
     });
 
     this.quizSrv.getFichesRecentes().subscribe({
       next: f => (this.fiches = f),
+      error: () => {},
+    });
+
+    this.quizSrv.getSites().subscribe({
+      next: s => (this.sites = s),
       error: () => {},
     });
 
@@ -108,6 +115,7 @@ export class EditeurQuizComponent implements OnInit {
           alterner_questions: q.alterner_questions ? 1 : 0,
           autoriser_machines: q.autoriser_machines ? 1 : 0,
           fiches: q.fiches || [],
+          sites: q.sites || [],
         });
       },
       error: () => this.toast.error('Quiz introuvable'),
@@ -126,6 +134,7 @@ export class EditeurQuizComponent implements OnInit {
       alterner_questions: v.alterner_questions ? 1 : 0,
       autoriser_machines: v.autoriser_machines ? 1 : 0,
       fiches: v.fiches || [],
+      sites: v.sites || [],
     };
   }
 

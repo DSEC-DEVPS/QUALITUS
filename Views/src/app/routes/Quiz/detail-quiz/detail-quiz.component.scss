@@ -1,0 +1,240 @@
+.p-16 { padding: 16px; }
+.m-b-16 { margin-bottom: 16px; }
+.m-t-8 { margin-top: 8px; }
+.text-right { text-align: right; }
+.flex-spacer { flex: 1 1 auto; }
+
+.entete {
+  .entete-grid {
+    display: grid;
+    grid-template-columns: 1fr 1px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  .entete-sep {
+    background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.18) 0 6px, transparent 6px 12px);
+  }
+
+  .titre {
+    font-weight: 600;
+    color: #5a4a3f;
+    margin: 0 0 8px;
+    line-height: 1.25;
+  }
+  .pin {
+    color: #6b6b6b;
+    margin-bottom: 16px;
+    font-size: 0.95rem;
+  }
+
+  .btn-add-q {
+    --mdc-filled-button-container-color: #f5a623;
+    --mdc-filled-button-label-text-color: #fff;
+    background-color: #f5a623;
+    color: #fff;
+    font-weight: 600;
+    padding: 4px 28px;
+  }
+  .btn-add-q:hover {
+    --mdc-filled-button-container-color: #e0951c;
+    background-color: #e0951c;
+  }
+
+  .meta-row {
+    display: flex;
+    gap: 12px;
+    padding: 6px 0;
+    font-size: 0.95rem;
+  }
+  .meta-row .k {
+    min-width: 190px;
+    color: #4a4a4a;
+    font-weight: 500;
+  }
+  .meta-row .v {
+    color: #8a8a8a;
+  }
+  .meta-row .v.type {
+    color: #2196f3;
+  }
+}
+
+@media (max-width: 768px) {
+  .entete .entete-grid {
+    grid-template-columns: 1fr;
+  }
+  .entete .entete-sep {
+    display: none;
+  }
+}
+
+.cell-libelle {
+  max-width: 640px;
+  white-space: normal;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.hint {
+  color: #6b6b6b;
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+}
+
+.ip-form {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.ip-form mat-form-field {
+  min-width: 220px;
+}
+
+.hint-lock {
+  color: #8a4b00;
+}
+.hint-open {
+  color: #1b5e20;
+}
+
+.demandes-bloc {
+  margin: 4px 0 20px;
+  padding: 12px;
+  border: 1px solid rgba(245, 166, 35, 0.5);
+  border-radius: 8px;
+  background: rgba(245, 166, 35, 0.06);
+}
+.demandes-titre {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  color: #8a4b00;
+  font-weight: 600;
+}
+.demandes-titre mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+.demandes-bloc .login {
+  color: #8a8a8a;
+  font-size: 0.85rem;
+}
+.demandes-bloc .btn-ok {
+  margin-right: 8px;
+}
+
+/* Rapports : sous-onglets participants */
+.filtres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 0;
+}
+.filtres mat-form-field {
+  min-width: 160px;
+}
+.btn-actualiser {
+  --mdc-filled-button-container-color: #43a047;
+  --mdc-filled-button-label-text-color: #fff;
+  background-color: #43a047;
+  color: #fff;
+  font-weight: 600;
+  padding: 4px 24px;
+}
+.btn-actualiser:hover {
+  --mdc-filled-button-container-color: #388e3c;
+  background-color: #388e3c;
+}
+.badge-termine {
+  display: inline-block;
+  padding: 2px 12px;
+  border: 1px solid #43a047;
+  border-radius: 14px;
+  color: #2e7d32;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.badge-termine.ko {
+  border-color: #c62828;
+  color: #c62828;
+}
+.sous-onglets {
+  margin-top: 8px;
+}
+
+/* Rapports : Questions ratée (bar-chart) */
+.ratees {
+  padding: 4px 0;
+}
+.ratees-entete {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  padding: 12px 4px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+.col-n {
+  min-width: 120px;
+  text-align: right;
+}
+.ratee-bloc {
+  padding: 12px 4px 4px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  margin-bottom: 12px;
+}
+.ratee-tete {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.ratee-tete .libelle {
+  flex: 1;
+}
+.ratee-tete .nb {
+  min-width: 120px;
+  text-align: right;
+  font-weight: 600;
+}
+.chart {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+  padding: 14px 16px;
+}
+.chart-ligne {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+.opt-label {
+  min-width: 130px;
+  color: #555;
+  font-size: 0.9rem;
+}
+.bar-zone {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bar {
+  height: 26px;
+  min-width: 2px;
+  background: #e53935; /* rouge = mauvaise reponse choisie */
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+.bar.correct {
+  background: #43a047; /* vert = bonne reponse */
+}
+.bar-val {
+  font-weight: 600;
+  color: #444;
+  min-width: 16px;
+}

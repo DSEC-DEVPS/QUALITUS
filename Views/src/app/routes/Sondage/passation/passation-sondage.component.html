@@ -1,0 +1,144 @@
+<div class="passation-wrap">
+  @if (chargement) {
+    <mat-progress-bar mode="indeterminate" />
+  } @else if (etat === 'INTROUVABLE') {
+    <mat-card class="etat-card">
+      <mat-card-content class="text-center">
+        <mat-icon class="etat-icon ko">error_outline</mat-icon>
+        <h3>Sondage introuvable</h3>
+        <p class="text-muted">Le lien est invalide ou a expiré.</p>
+      </mat-card-content>
+    </mat-card>
+  } @else if (etat === 'INDISPONIBLE') {
+    <mat-card class="etat-card">
+      <mat-card-content class="text-center">
+        <mat-icon class="etat-icon warn">hourglass_empty</mat-icon>
+        <h3>Sondage indisponible</h3>
+        <p class="text-muted">
+          @if (nomIndispo) { « {{ nomIndispo }} » }
+          n'est pas ouvert actuellement.
+        </p>
+      </mat-card-content>
+    </mat-card>
+  } @else if (termine) {
+    <mat-card class="etat-card">
+      <mat-card-content class="text-center">
+        <mat-icon class="etat-icon ok">check_circle</mat-icon>
+        <h3>Merci !</h3>
+        <p class="text-muted">Vos réponses ont bien été enregistrées.</p>
+        @if (mode === 'obligatoire') {
+          <button mat-flat-button color="primary" (click)="continuerApresObligatoire()">
+            <mat-icon>arrow_forward</mat-icon> Accéder à l'application
+          </button>
+        }
+      </mat-card-content>
+    </mat-card>
+  } @else if (sondage) {
+    <mat-card class="sondage-card">
+      <mat-card-content>
+        <h2 class="titre">{{ sondage.nom }}</h2>
+
+        <!-- Barre de progression -->
+        <div class="progress-zone">
+          <mat-progress-bar mode="determinate" [value]="progression" />
+          <div class="progress-label">{{ progression }}%</div>
+        </div>
+
+        <!-- Questions de la page courante (celles dont les conditions sont remplies) -->
+        @for (q of questionsAffichees; track q.id) {
+          @if (q.type === 'INFO') {
+            <div class="info-bloc">
+              <mat-icon>info</mat-icon>
+              <div>{{ q.libelle }}</div>
+            </div>
+          } @else {
+            <div class="question">
+              <div class="q-libelle">
+                {{ q.libelle }}
+                @if (q.obligatoire === 1) { <span class="req">*</span> }
+              </div>
+
+              @switch (q.type) {
+                @case ('CHOIX_UNIQUE') {
+                  <mat-radio-group
+                    class="choix-col"
+                    [ngModel]="choixUnique(q)"
+                    (ngModelChange)="setChoixUnique(q, $event)"
+                  >
+                    @for (o of q.options; track o.id) {
+                      <mat-radio-button [value]="o.id">{{ o.libelle }}</mat-radio-button>
+                    }
+                  </mat-radio-group>
+                }
+                @case ('CHOIX_MULTIPLE') {
+                  <div class="choix-col">
+                    @for (o of q.options; track o.id) {
+                      <mat-checkbox
+                        [checked]="estCoche(q, o.id!)"
+                        (change)="basculer(q, o.id!, $event.checked)"
+                      >
+                        {{ o.libelle }}
+                      </mat-checkbox>
+                    }
+                  </div>
+                }
+                @case ('OUVERTE') {
+                  <mat-form-field appearance="outline" class="w-100">
+                    <mat-label>Votre réponse</mat-label>
+                    <textarea matInput rows="3" [(ngModel)]="reponses[q.id!]"></textarea>
+                  </mat-form-field>
+                }
+                @case ('CURSEUR') {
+                  <div class="curseur">
+                    <span class="borne">{{ q.curseur_min }}</span>
+                    <mat-slider [min]="q.curseur_min || 1" [max]="q.curseur_max || 10" step="1" discrete>
+                      <input matSliderThumb [(ngModel)]="reponses[q.id!]" />
+                    </mat-slider>
+                    <span class="borne">{{ q.curseur_max }}</span>
+                    <span class="valeur">{{ reponses[q.id!] ?? '—' }}</span>
+                  </div>
+                }
+                @case ('CLASSEMENT') {
+                  <div class="classement">
+                    <div class="text-muted hint">Classez du plus important au moins important :</div>
+                    @for (id of ordre(q); track id; let i = $index) {
+                      <div class="rang-ligne">
+                        <span class="rang">{{ i + 1 }}</span>
+                        <span class="rang-lib">{{ optionLibelle(q, id) }}</span>
+                        <span class="spacer"></span>
+                        <button mat-icon-button (click)="monter(q, i)" [disabled]="i === 0">
+                          <mat-icon>arrow_upward</mat-icon>
+                        </button>
+                        <button mat-icon-button (click)="descendre(q, i)" [disabled]="i === ordre(q).length - 1">
+                          <mat-icon>arrow_downward</mat-icon>
+                        </button>
+                      </div>
+                    }
+                  </div>
+                }
+              }
+            </div>
+          }
+        }
+
+        <!-- Navigation -->
+        <div class="nav">
+          @if (afficherRetour) {
+            <button mat-stroked-button (click)="precedent()">
+              <mat-icon>arrow_back</mat-icon> Retour
+            </button>
+          } @else {
+            <span></span>
+          }
+          <button mat-flat-button color="primary" (click)="continuer()" [disabled]="envoi">
+            @if (estDernierePage) {
+              <ng-container><mat-icon>send</mat-icon> Terminer</ng-container>
+            } @else {
+              <ng-container>Continuer <mat-icon>arrow_forward</mat-icon></ng-container>
+            }
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

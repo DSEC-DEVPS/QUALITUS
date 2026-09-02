@@ -1,0 +1,105 @@
+<div class="container-fluid p-16">
+  <div class="d-flex align-items-center m-b-16">
+    <button mat-icon-button (click)="retour()" matTooltip="Retour à la liste">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <span class="h5 m-0">Rapport — {{ rapport?.nom }}</span>
+    <span class="flex-spacer"></span>
+    @if (rapport && rapport.nb_passations) {
+      <button mat-stroked-button color="primary" (click)="exporter()">
+        <mat-icon>download</mat-icon> Exporter Excel
+      </button>
+    }
+  </div>
+
+  @if (chargement) {
+    <p class="text-muted">Chargement…</p>
+  } @else if (rapport) {
+    <mat-card class="m-b-16 synthese">
+      <mat-card-content class="d-flex align-items-center" style="gap: 12px">
+        <mat-icon class="big">groups</mat-icon>
+        <div>
+          <div class="h4 m-0">{{ rapport.nb_passations }}</div>
+          <div class="text-muted">réponse(s) au sondage</div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    @if (!rapport.nb_passations) {
+      <p class="text-muted text-center p-16">Aucune réponse pour le moment.</p>
+    }
+
+    @for (question of rapport.questions; track question.id) {
+      @if (question.type !== 'INFO') {
+        <mat-card class="m-b-12 q-card">
+          <mat-card-content>
+            <div class="q-tete">
+              <div class="q-libelle">{{ question.libelle }}</div>
+              <mat-chip-set><mat-chip>{{ typeLabel(question.type) }}</mat-chip></mat-chip-set>
+            </div>
+
+            @switch (question.type) {
+              @case ('CHOIX_UNIQUE') {
+                <div class="chart">
+                  @for (o of q(question).options; track o.id) {
+                    <div class="bar-ligne">
+                      <span class="bar-label">{{ o.libelle }}</span>
+                      <div class="bar-zone">
+                        <div class="bar" [style.width.%]="largeur(o.nb, q(question).options)"></div>
+                        <span class="bar-val">{{ o.nb }} ({{ pct(o.nb, q(question).total) }}%)</span>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+              @case ('CHOIX_MULTIPLE') {
+                <div class="chart">
+                  @for (o of q(question).options; track o.id) {
+                    <div class="bar-ligne">
+                      <span class="bar-label">{{ o.libelle }}</span>
+                      <div class="bar-zone">
+                        <div class="bar" [style.width.%]="largeur(o.nb, q(question).options)"></div>
+                        <span class="bar-val">{{ o.nb }} ({{ pct(o.nb, q(question).total) }}%)</span>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+              @case ('CLASSEMENT') {
+                <div class="classement">
+                  <div class="text-muted hint">Classement (rang moyen, 1 = le plus important) :</div>
+                  @for (o of q(question).options; track o.id) {
+                    <div class="rang-ligne">
+                      <span class="rang">{{ o.rang_moyen != null ? (o.rang_moyen | number: '1.1-2') : '—' }}</span>
+                      <span class="rang-lib">{{ o.libelle }}</span>
+                      <span class="text-muted">{{ o.nb }} vote(s)</span>
+                    </div>
+                  }
+                </div>
+              }
+              @case ('CURSEUR') {
+                <div class="curseur-stats">
+                  <div class="stat"><span class="v">{{ q(question).moyenne ?? '—' }}</span><span class="k">Moyenne</span></div>
+                  <div class="stat"><span class="v">{{ q(question).mini ?? '—' }}</span><span class="k">Min</span></div>
+                  <div class="stat"><span class="v">{{ q(question).maxi ?? '—' }}</span><span class="k">Max</span></div>
+                  <div class="stat"><span class="v">{{ q(question).nb }}</span><span class="k">Réponses</span></div>
+                </div>
+              }
+              @case ('OUVERTE') {
+                @if (q(question).nb) {
+                  <ul class="ouvertes">
+                    @for (t of q(question).reponses; track $index) {
+                      <li>{{ t }}</li>
+                    }
+                  </ul>
+                } @else {
+                  <p class="text-muted">Aucune réponse.</p>
+                }
+              }
+            }
+          </mat-card-content>
+        </mat-card>
+      }
+    }
+  }
+</div>

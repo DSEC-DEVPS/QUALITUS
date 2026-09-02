@@ -1,0 +1,342 @@
+<div class="container-fluid p-16">
+  <div class="d-flex align-items-center m-b-16">
+    <button mat-icon-button (click)="retour()" matTooltip="Retour a la liste">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <span class="h5 m-0">Detail du quiz</span>
+    <span class="flex-spacer"></span>
+    <button mat-stroked-button color="primary" (click)="editer()">
+      <mat-icon>edit_note</mat-icon> Modifier les parametres
+    </button>
+  </div>
+
+  <!-- En-tete facon maquette : parametres a gauche, meta a droite -->
+  <mat-card class="entete m-b-16">
+    <mat-card-content>
+      <div class="entete-grid">
+        <div class="entete-left">
+          <h3 class="titre">{{ quiz?.titre }}</h3>
+          <div class="pin">PIN: {{ quiz?.code_pin || '—' }}</div>
+          <button mat-flat-button class="btn-add-q" (click)="ajouterQuestion()">
+            Ajouter une question
+          </button>
+        </div>
+
+        <div class="entete-sep"></div>
+
+        <div class="entete-right">
+          <div class="meta-row"><span class="k">Type:</span><span class="v type">{{ quiz?.type || 'Quiz' }}</span></div>
+          <div class="meta-row">
+            <span class="k">Date de cloture:</span>
+            <span class="v">{{ quiz?.date_fermeture ? (quiz?.date_fermeture | date: 'dd-MM-yyyy HH:mm:ss') : '—' }}</span>
+          </div>
+          <div class="meta-row"><span class="k">Duree:</span><span class="v">{{ quiz?.duree ? quiz?.duree + 'Mn' : '—' }}</span></div>
+          <div class="meta-row"><span class="k">Seuil de Reussite:</span><span class="v">{{ quiz?.note_passage }}%</span></div>
+          <div class="meta-row"><span class="k">Nombre de participants:</span><span class="v">{{ quiz?.nb_participants ?? 0 }}</span></div>
+          <div class="meta-row"><span class="k">Total des points:</span><span class="v">{{ totalPoints }}</span></div>
+          <div class="meta-row"><span class="k">Sites:</span><span class="v">{{ sitesLabel }}</span></div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Onglets -->
+  <mat-card>
+    <mat-card-content>
+      <mat-tab-group animationDuration="0ms">
+        <!-- Questions -->
+        <mat-tab label="Questions">
+          <div class="mat-elevation-z0" style="overflow-x: auto">
+            <table mat-table [dataSource]="questions" class="w-100 m-t-8">
+              <ng-container matColumnDef="num">
+                <th mat-header-cell *matHeaderCellDef>#</th>
+                <td mat-cell *matCellDef="let q; let i = index">{{ i + 1 }}</td>
+              </ng-container>
+              <ng-container matColumnDef="libelle">
+                <th mat-header-cell *matHeaderCellDef>Question</th>
+                <td mat-cell *matCellDef="let q" class="cell-libelle">{{ q.libelle }}</td>
+              </ng-container>
+              <ng-container matColumnDef="type">
+                <th mat-header-cell *matHeaderCellDef>Type</th>
+                <td mat-cell *matCellDef="let q">{{ typeLabel(q) }}</td>
+              </ng-container>
+              <ng-container matColumnDef="point">
+                <th mat-header-cell *matHeaderCellDef>Point</th>
+                <td mat-cell *matCellDef="let q">{{ POINT_PAR_QUESTION }}</td>
+              </ng-container>
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef class="text-right">Action</th>
+                <td mat-cell *matCellDef="let q" class="text-right">
+                  <button mat-icon-button (click)="modifierQuestion(q)" matTooltip="Modifier">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" (click)="supprimerQuestion(q)" matTooltip="Supprimer">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="['num', 'libelle', 'type', 'point', 'actions']"></tr>
+              <tr mat-row *matRowDef="let row; columns: ['num', 'libelle', 'type', 'point', 'actions']"></tr>
+              <tr class="mat-row" *matNoDataRow>
+                <td class="mat-cell text-center p-16" colspan="5">
+                  Aucune question. Cliquez sur « Ajouter une question ».
+                </td>
+              </tr>
+            </table>
+          </div>
+        </mat-tab>
+
+        <!-- Rapports -->
+        <mat-tab label="Rapports">
+          <mat-tab-group animationDuration="0ms" class="sous-onglets">
+            <!-- Tous participants -->
+            <mat-tab label="Tous participants">
+              <div class="filtres">
+                <mat-form-field appearance="outline">
+                  <mat-label>ID AGENT</mat-label>
+                  <input matInput [(ngModel)]="filtreAgent" (keyup.enter)="chargerParticipants()" />
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Statut</mat-label>
+                  <mat-select [(ngModel)]="filtreStatut">
+                    <mat-option value="">-- Tous --</mat-option>
+                    <mat-option value="REUSSI">Réussi</mat-option>
+                    <mat-option value="ECHEC">Échec</mat-option>
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Site</mat-label>
+                  <mat-select [(ngModel)]="filtreSite">
+                    <mat-option value="">-- Tous --</mat-option>
+                    @for (s of sitesOptions; track s.id) {
+                      <mat-option [value]="s.id">{{ s.nom }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <button mat-flat-button class="btn-actualiser" (click)="chargerParticipants()">
+                  ACTUALISER
+                </button>
+                <button mat-stroked-button (click)="reinitFiltres()" matTooltip="Réinitialiser">
+                  <mat-icon>restart_alt</mat-icon>
+                </button>
+              </div>
+
+              <div class="mat-elevation-z0" style="overflow-x: auto">
+                <table mat-table [dataSource]="participants" class="w-100">
+                  <ng-container matColumnDef="num">
+                    <th mat-header-cell *matHeaderCellDef>#</th>
+                    <td mat-cell *matCellDef="let p; let i = index">{{ i + 1 }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="nom">
+                    <th mat-header-cell *matHeaderCellDef>Prénom - Nom</th>
+                    <td mat-cell *matCellDef="let p">{{ p.prenom }} {{ p.nom }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="date_debut">
+                    <th mat-header-cell *matHeaderCellDef>Date début</th>
+                    <td mat-cell *matCellDef="let p">{{ p.date_debut ? (p.date_debut | date: 'dd-MM-yyyy HH:mm:ss') : '—' }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="date_fin">
+                    <th mat-header-cell *matHeaderCellDef>Date Fin</th>
+                    <td mat-cell *matCellDef="let p">{{ p.date_fin ? (p.date_fin | date: 'dd-MM-yyyy HH:mm:ss') : '—' }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="statut">
+                    <th mat-header-cell *matHeaderCellDef>Statut</th>
+                    <td mat-cell *matCellDef="let p">
+                      <span class="badge-termine" [class.ko]="!p.reussi">
+                        {{ p.reussi ? 'Terminé' : 'Échec' }}
+                      </span>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="point">
+                    <th mat-header-cell *matHeaderCellDef>Point</th>
+                    <td mat-cell *matCellDef="let p">{{ p.score }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="temps">
+                    <th mat-header-cell *matHeaderCellDef>Temps</th>
+                    <td mat-cell *matCellDef="let p">{{ tempsLabel(p.temps_secondes) }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="site">
+                    <th mat-header-cell *matHeaderCellDef>Site</th>
+                    <td mat-cell *matCellDef="let p">{{ p.site || '—' }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="actions">
+                    <th mat-header-cell *matHeaderCellDef class="text-right">Action</th>
+                    <td mat-cell *matCellDef="let p" class="text-right">
+                      <button mat-icon-button (click)="voirTentative(p)" matTooltip="Voir le détail">
+                        <mat-icon>visibility</mat-icon>
+                      </button>
+                    </td>
+                  </ng-container>
+
+                  <tr mat-header-row *matHeaderRowDef="colsParticipants"></tr>
+                  <tr mat-row *matRowDef="let row; columns: colsParticipants"></tr>
+                  <tr class="mat-row" *matNoDataRow>
+                    <td class="mat-cell text-center p-16" colspan="9">Aucun participant pour le moment.</td>
+                  </tr>
+                </table>
+              </div>
+            </mat-tab>
+
+            <!-- Questions ratée -->
+            <mat-tab label="Questions ratée">
+              <div class="ratees">
+                <div class="ratees-entete">
+                  <span class="col-q">Question</span>
+                  <span class="col-n">Nombre d'agent</span>
+                </div>
+
+                @for (q of questionsRatees; track q.id) {
+                  <div class="ratee-bloc">
+                    <div class="ratee-tete">
+                      <span class="col-q libelle">{{ q.libelle }}</span>
+                      <span class="col-n nb">{{ q.nb_agents }}</span>
+                    </div>
+                    <div class="chart">
+                      @for (o of optionsFausses(q.options); track o.id; let i = $index) {
+                        <div class="chart-ligne">
+                          <span class="opt-label">{{ lettre(i) }}- {{ o.libelle }}</span>
+                          <div class="bar-zone">
+                            <div
+                              class="bar"
+                              [style.width.%]="(o.nb_choix / maxChoix(optionsFausses(q.options))) * 100"
+                            ></div>
+                            <span class="bar-val">{{ o.nb_choix }}</span>
+                          </div>
+                        </div>
+                      } @empty {
+                        <p class="text-muted m-0">Aucune mauvaise réponse enregistrée.</p>
+                      }
+                    </div>
+                  </div>
+                } @empty {
+                  <p class="text-center text-muted p-16">Aucune question ratée pour le moment.</p>
+                }
+              </div>
+            </mat-tab>
+
+            <!-- Actions (export) -->
+            <mat-tab label="Actions">
+              <div class="p-16">
+                <p class="text-muted">Exporter le rapport des participants.</p>
+                <button mat-flat-button color="primary" (click)="exporterParticipants()">
+                  <mat-icon>download</mat-icon> Exporter Excel
+                </button>
+              </div>
+            </mat-tab>
+          </mat-tab-group>
+        </mat-tab>
+
+        <!-- Autorisations IP -->
+        <mat-tab label="Autorisations Ip">
+          <div class="p-16">
+            @if (quiz?.autoriser_machines) {
+              <p class="hint hint-open">
+                « Autoriser les machines à faire le quiz » = <strong>Oui</strong> : toutes les machines peuvent accéder au quiz.
+                La liste d'adresses IP ci-dessous est <strong>ignorée</strong> tant que ce paramètre reste à « Oui ».
+                Passez-le à « Non » (bouton « Modifier les paramètres ») pour activer la restriction.
+              </p>
+            } @else {
+              <p class="hint hint-lock">
+                « Autoriser les machines à faire le quiz » = <strong>Non</strong> :
+                <strong>seules les adresses IP listées ci-dessous</strong> peuvent accéder au quiz.
+                Sans aucune adresse, <strong>aucune machine</strong> ne peut y accéder.
+              </p>
+            }
+
+            @if (demandes.length) {
+              <div class="demandes-bloc">
+                <h6 class="demandes-titre">
+                  <mat-icon>notifications_active</mat-icon>
+                  Demandes d'accès en attente ({{ demandes.length }})
+                </h6>
+                <div class="mat-elevation-z0" style="overflow-x: auto">
+                  <table mat-table [dataSource]="demandes" class="w-100">
+                    <ng-container matColumnDef="agent">
+                      <th mat-header-cell *matHeaderCellDef>Agent</th>
+                      <td mat-cell *matCellDef="let d">
+                        {{ d.prenom }} {{ d.nom }} <span class="login">({{ d.login }})</span>
+                      </td>
+                    </ng-container>
+                    <ng-container matColumnDef="adresse_ip">
+                      <th mat-header-cell *matHeaderCellDef>Adresse IP</th>
+                      <td mat-cell *matCellDef="let d"><strong>{{ d.adresse_ip }}</strong></td>
+                    </ng-container>
+                    <ng-container matColumnDef="dateCreation">
+                      <th mat-header-cell *matHeaderCellDef>Demandé le</th>
+                      <td mat-cell *matCellDef="let d">{{ d.dateCreation | date: 'dd-MM-yyyy HH:mm' }}</td>
+                    </ng-container>
+                    <ng-container matColumnDef="actions">
+                      <th mat-header-cell *matHeaderCellDef class="text-right">Décision</th>
+                      <td mat-cell *matCellDef="let d" class="text-right">
+                        <button mat-flat-button color="primary" class="btn-ok" (click)="traiterDemande(d, 'AUTORISER')">
+                          <mat-icon>check</mat-icon> Autoriser
+                        </button>
+                        <button mat-stroked-button color="warn" (click)="traiterDemande(d, 'REFUSER')">
+                          <mat-icon>close</mat-icon> Refuser
+                        </button>
+                      </td>
+                    </ng-container>
+                    <tr mat-header-row *matHeaderRowDef="colsDemande"></tr>
+                    <tr mat-row *matRowDef="let row; columns: colsDemande"></tr>
+                  </table>
+                </div>
+              </div>
+            }
+
+            <div class="ip-form">
+              <mat-form-field appearance="outline">
+                <mat-label>Adresse IP</mat-label>
+                <input matInput [(ngModel)]="nouvelleIp" placeholder="192.168.1.10" (keyup.enter)="ajouterIp()" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Libelle (optionnel)</mat-label>
+                <input matInput [(ngModel)]="nouvelleIpLibelle" placeholder="Salle A / Plateau" (keyup.enter)="ajouterIp()" />
+              </mat-form-field>
+              <button mat-flat-button color="primary" (click)="ajouterIp()" [disabled]="envoiIp">
+                <mat-icon>add</mat-icon> Autoriser
+              </button>
+            </div>
+
+            <div class="mat-elevation-z0" style="overflow-x: auto">
+              <table mat-table [dataSource]="ips" class="w-100 m-t-8">
+                <ng-container matColumnDef="adresse_ip">
+                  <th mat-header-cell *matHeaderCellDef>Adresse IP</th>
+                  <td mat-cell *matCellDef="let ip"><strong>{{ ip.adresse_ip }}</strong></td>
+                </ng-container>
+                <ng-container matColumnDef="libelle">
+                  <th mat-header-cell *matHeaderCellDef>Libelle</th>
+                  <td mat-cell *matCellDef="let ip">{{ ip.libelle || '—' }}</td>
+                </ng-container>
+                <ng-container matColumnDef="agent">
+                  <th mat-header-cell *matHeaderCellDef>Agent</th>
+                  <td mat-cell *matCellDef="let ip">{{ ip.agents || '—' }}</td>
+                </ng-container>
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef class="text-right">Action</th>
+                  <td mat-cell *matCellDef="let ip" class="text-right">
+                    <button mat-icon-button color="warn" (click)="supprimerIp(ip)" matTooltip="Retirer">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="colsIp"></tr>
+                <tr mat-row *matRowDef="let row; columns: colsIp"></tr>
+                <tr class="mat-row" *matNoDataRow>
+                  <td class="mat-cell text-center p-16" colspan="4">
+                    @if (quiz?.autoriser_machines) {
+                      Paramètre « Autoriser les machines » = Oui : toutes les machines sont autorisées.
+                    } @else {
+                      Aucune adresse autorisée : aucune machine ne peut accéder au quiz.
+                    }
+                  </td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </mat-card-content>
+  </mat-card>
+</div>
