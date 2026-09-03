@@ -1,6 +1,8 @@
 export class Supplementaires {
   id: number;
+  id_Contexte: number;
   contexte: string;
+  type_evaluation: string;
   identifiant_appel: string;
   numero_case: string;
   numero_appel: string;
@@ -14,7 +16,9 @@ export class Supplementaires {
   id_Agent: number;
   constructor() {
     this.id = 0;
+    this.id_Contexte = 0;
     this.contexte = '';
+    this.type_evaluation = 'Supplementaire';
     this.identifiant_appel = '';
     this.numero_case = '';
     this.numero_appel = '';
@@ -33,8 +37,14 @@ export class Supplementaires {
   }
   fromData(data: any) {
     this.id = parseInt(data.id, 10);
+    if (data?.id_Contexte) {
+      this.id_Contexte = parseInt(data.id_Contexte, 10);
+    }
     if (data?.contexte) {
       this.contexte = data.contexte;
+    }
+    if (data?.type_evaluation) {
+      this.type_evaluation = data.type_evaluation;
     }
     if (data?.identifiant_appel) {
       this.identifiant_appel = data.identifiant_appel;

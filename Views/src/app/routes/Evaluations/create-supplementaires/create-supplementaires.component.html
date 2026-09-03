@@ -40,7 +40,11 @@
           <div class="col-sm-6 m-auto">
             <mat-form-field appearance="fill">
               <mat-label>Contexte</mat-label>
-              <input matInput formControlName="contexte" required />
+              <mat-select formControlName="id_Contexte" required>
+                <mat-option class="mt-3" *ngFor="let contexte of contextes" [value]="contexte.id">
+                  {{ contexte.nom }}
+                </mat-option>
+              </mat-select>
             </mat-form-field>
           </div>
 

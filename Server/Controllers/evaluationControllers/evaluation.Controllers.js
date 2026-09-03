@@ -424,546 +424,559 @@ const afficherCalendarsPolicies = async (req, res, next) => {
 /**Fin*/
 
 /** Fonctions liées au supplementaire */
-const createSupplementaire = async (req, res, next) => {
-  const {
-    contexte,
-    identifiant_appel,
-    numero_case,
-    numero_appel,
-    date_appel,
-    dmt,
-    motif_appel,
-    id_Evaluateur,
-    id_Evaluations,
-    id_Agent,
-  } = req.body;
-  await db.query("START TRANSACTION");
-  try {
-    const [[rowCalendars]] = await db.query(
-      `
-      SELECT EXISTS 
-      (SELECT 1 
-      FROM CALENDARS c
-      JOIN B_UTILISATEUR u ON u.id=?
-      WHERE c.id_Site=u.id_Site
-      AND c.etat=1 
-      AND c.annee=YEAR(?) 
-      AND c.numero=MONTH(?)
-      ) as autorise`,
-      [id_Evaluateur, date_appel, date_appel],
-    );
-    console.log(rowCalendars);
 
-    if (rowCalendars.autorise === 0) {
-      return res
-        .status(403)
-        .send({ message: "Période d’évaluation non autorisée pour ce site" });
-    }
-    let programme = "";
-    let site = "";
-    let id_Grille = 0;
-    const date_creation = new Date();
+// const createSupplementaire = async (req, res, next) => {
+//   const {
+//     id_Contexte,
+//     identifiant_appel,
+//     numero_case,
+//     numero_appel,
+//     date_appel,
+//     dmt,
+//     motif_appel,
+//     id_Evaluateur,
+//     id_Evaluations,
+//     id_Agent,
+//   } = req.body;
+//   await db.query("START TRANSACTION");
+//   try {
+//     const [[rowCalendars]] = await db.query(
+//       `
+//       SELECT EXISTS
+//       (SELECT 1
+//       FROM CALENDARS c
+//       JOIN B_UTILISATEUR u ON u.id=?
+//       WHERE c.id_Site=u.id_Site
+//       AND c.etat=1
+//       AND c.annee=YEAR(?)
+//       AND c.numero=MONTH(?)
+//       ) as autorise`,
+//       [id_Evaluateur, date_appel, date_appel],
+//     );
+//     console.log(rowCalendars);
 
-    const Query = `
-    INSERT INTO SUPPLEMENTAIRES 
-    (
-      contexte
-    , identifiant_appel
-    , numero_case
-    , numero_appel
-    , date_appel
-    , date_creation
-    , dmt
-    , motif_appel
-    , statut
-    , id_Evaluateur
-    , id_Evaluations
-    , id_Agent
-    , id_Grille
-    , site
-    , programme
-    , resolution
-    , conclusion
-    , type
-    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
-    const statut = "En cours";
-    if (
-      isNullOrEmpty(id_Agent) ||
-      isNullOrEmpty(id_Evaluations) ||
-      isNullOrEmpty(id_Evaluateur)
-    ) {
-      return res.status(400).send({
-        message:
-          "L'un des identifiants suivants est nul: Agent, Evaluateur, Evaluation ",
-      });
-    }
+//     if (rowCalendars.autorise === 0) {
+//       return res
+//         .status(403)
+//         .send({ message: "Période d’évaluation non autorisée pour ce site" });
+//     }
+//     let programme = "";
+//     let site = "";
+//     let id_Grille = 0;
+//     const date_creation = new Date();
 
-    const [rows] = await db.query(
-      `SELECT 
-            u.id, 
-            p.nom AS programme, 
-            s.nom AS site, 
-            g.id AS id_Grille
-        FROM B_UTILISATEUR u
-        LEFT JOIN B_PROGRAMME p ON p.id = u.id_Programme
-        LEFT JOIN B_SITE s ON s.id = u.id_Site
-        LEFT JOIN B_GRILLE g ON g.id = u.id_Grille
-        WHERE u.id = ?`,
-      [id_Agent],
-    );
-    console.log("agentttttttttttttttttttttttttt");
-    console.log(rows);
-    if (rows.length == 0) {
-      return res.status(400).send({
-        message: "Aucun agent ne correspond à l'identifiant fourni",
-      });
-    }
+//     const Query = `
+//     INSERT INTO EVALUATIONS
+//     (
+//       id_Contexte
+//     , identifiant_appel
+//     , numero_case
+//     , numero_appel
+//     , date_appel
+//     , date_creation
+//     , dmt
+//     , motif_appel
+//     , statut
+//     , id_Evaluateur
+//     , id_Evaluations
+//     , id_Agent
+//     , id_Grille
+//     , site
+//     , programme
+//     , resolution
+//     , conclusion
+//     , type_evaluation
+//     ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
+//     const statut = "En cours";
+//     if (
+//       isNullOrEmpty(id_Agent) ||
+//       isNullOrEmpty(id_Evaluations) ||
+//       isNullOrEmpty(id_Evaluateur)
+//     ) {
+//       return res.status(400).send({
+//         message:
+//           "L'un des identifiants suivants est nul: Agent, Evaluateur, Evaluation ",
+//       });
+//     }
 
-    programme = rows[0].programme || null;
-    site = rows[0].site || null;
-    id_Grille = rows[0].id_Grille || null;
+//     const [rows] = await db.query(
+//       `SELECT
+//             u.id,
+//             p.nom AS programme,
+//             s.nom AS site,
+//             g.id AS id_Grille
+//         FROM B_UTILISATEUR u
+//         LEFT JOIN B_PROGRAMME p ON p.id = u.id_Programme
+//         LEFT JOIN B_SITE s ON s.id = u.id_Site
+//         LEFT JOIN B_GRILLE g ON g.id = u.id_Grille
+//         WHERE u.id = ?`,
+//       [id_Agent],
+//     );
+//     console.log("agentttttttttttttttttttttttttt");
+//     console.log(rows);
+//     if (rows.length == 0) {
+//       return res.status(400).send({
+//         message: "Aucun agent ne correspond à l'identifiant fourni",
+//       });
+//     }
 
-    const resultat = await db.query(Query, [
-      contexte,
-      identifiant_appel,
-      numero_case,
-      numero_appel,
-      new Date(date_appel),
-      date_creation,
-      dmt,
-      motif_appel,
-      statut,
-      id_Evaluateur,
-      id_Evaluations,
-      id_Agent,
-      id_Grille,
-      site,
-      programme,
-      "Oui",
-      "SUCCES",
-      "Supplementaire",
-    ]);
-    console.log(resultat);
-    if (resultat[0].affectedRows > 0) {
-      if (!isNullOrEmpty(id_Grille)) {
-        const id_Supplementaires = resultat[0].insertId;
-        const [listeErreurs] = await db.query(
-          `SELECT * FROM ERREURS WHERE id_Grille=?`,
-          [id_Grille],
-        );
-        // const listeErreurs = erreurs_row[0];
-        if (listeErreurs.length === 0) {
-          return res.status(400).send({
-            message: `La grille d'evaluation de l'agent n'a pas d'erreur associé`,
-          });
-        }
-        console.log("ListeErreurs");
-        console.log(listeErreurs);
+//     programme = rows[0].programme || null;
+//     site = rows[0].site || null;
+//     id_Grille = rows[0].id_Grille || null;
 
-        const values = listeErreurs.map((erreur) => [
-          erreur.id_Categories_Erreurs,
-          erreur.id_Sous_Categories_Erreurs,
-          erreur.items,
-          erreur.sous_items,
-          erreur.referentiels,
-          erreur.poids_items,
-          erreur.score_en_pourcent,
-          erreur.score_sur_vingt,
-          1,
-          id_Supplementaires,
-        ]);
+//     const resultat = await db.query(Query, [
+//       id_Contexte || null,
+//       identifiant_appel,
+//       numero_case,
+//       numero_appel,
+//       new Date(date_appel),
+//       date_creation,
+//       dmt,
+//       motif_appel,
+//       statut,
+//       id_Evaluateur,
+//       id_Evaluations,
+//       id_Agent,
+//       id_Grille,
+//       site,
+//       programme,
+//       "Oui",
+//       "SUCCES",
+//       "Supplementaire",
+//     ]);
+//     console.log(resultat);
+//     if (resultat[0].affectedRows > 0) {
+//       if (!isNullOrEmpty(id_Grille)) {
+//         const id_Supplementaires = resultat[0].insertId;
+//         const [listeErreurs] = await db.query(
+//           `SELECT * FROM ERREURS WHERE id_Grille=?`,
+//           [id_Grille],
+//         );
+//         // const listeErreurs = erreurs_row[0];
+//         if (listeErreurs.length === 0) {
+//           return res.status(400).send({
+//             message: `La grille d'evaluation de l'agent n'a pas d'erreur associé`,
+//           });
+//         }
+//         console.log("ListeErreurs");
+//         console.log(listeErreurs);
 
-        await db.query(
-          `INSERT INTO SUPPLEMENTAIRES_RESULTATS(
-          id_Categories_Erreurs,
-          id_Sous_Categories_Erreurs,
-          items,
-          sous_items,
-          referentiels,
-          poids_items,
-          score_en_pourcent,
-          score_sur_vingt,
-          etat,
-          id_Supplementaires) VALUES ?`,
-          [values],
-        );
-        const [scores] = await db.query(
-          `SELECT 
-              c.id AS id_Categories_Erreurs,
-              c.titre AS categorie_erreur,
-              SUM(er.score_sur_vingt) AS score,
-              SUM(er.etat = 0) AS nombre
-          FROM SUPPLEMENTAIRES_RESULTATS er
-          JOIN CATEGORIES_ERREURS c ON c.id = er.id_Categories_Erreurs
-          WHERE er.id_Supplementaires = ?
-          GROUP BY c.id, c.titre;`,
-          [id_Supplementaires],
-        );
-        console.log("scores");
-        console.log(scores);
-        const valuesScores = scores.map((s) => [
-          s.score,
-          s.nombre,
-          s.id_Categories_Erreurs,
-          s.categorie_erreur,
-          id_Supplementaires,
-        ]);
+//         const values = listeErreurs.map((erreur) => [
+//           erreur.id_Categories_Erreurs,
+//           erreur.id_Sous_Categories_Erreurs,
+//           erreur.items,
+//           erreur.sous_items,
+//           erreur.referentiels,
+//           erreur.poids_items,
+//           erreur.score_en_pourcent,
+//           erreur.score_sur_vingt,
+//           1,
+//           id_Supplementaires,
+//         ]);
 
-        await db.query(
-          `INSERT INTO SCORES_SUPPLEMENTAIRES(score, nombre, id_Categories_Erreurs, categorie_erreur, id_Supplementaires)
-            VALUES ?`,
-          [valuesScores],
-        );
-      }
-    }
-    await db.query("COMMIT");
-    return res.status(201).send({
-      message: "L'évaluation supplementaire a été bien enregistrer",
-      id: resultat[0].insertId,
-    });
-  } catch (error) {
-    await db.query("ROLLBACK");
-    console.log(error);
-    res.status(500).send({
-      message:
-        "La création de l'évaluation supplementaire a été annulée dû a une erreur",
-      errorMessage: error.message,
-      code: error.code,
-      requette: error.sql,
-    });
-  }
-};
-const updateSupplementaires = async (req, res, next) => {
-  const { id } = req.params;
-  try {
-    const Query_Supplementaires = `UPDATE SUPPLEMENTAIRES SET statut='Terminer' WHERE id=?`;
+//         await db.query(
+//           `INSERT INTO EVALUATIONS_RESULTATS(
+//           id_Categories_Erreurs,
+//           id_Sous_Categories_Erreurs,
+//           items,
+//           sous_items,
+//           referentiels,
+//           poids_items,
+//           score_en_pourcent,
+//           score_sur_vingt,
+//           etat,
+//           id_Evaluations) VALUES ?`,
+//           [values],
+//         );
+//         const [scores] = await db.query(
+//           `SELECT
+//               c.id AS id_Categories_Erreurs,
+//               c.titre AS categorie_erreur,
+//               SUM(er.score_sur_vingt) AS score,
+//               SUM(er.etat = 0) AS nombre
+//           FROM EVALUATIONS_RESULTATS er
+//           JOIN CATEGORIES_ERREURS c ON c.id = er.id_Categories_Erreurs
+//           WHERE er.id_Evaluations = ?
+//           GROUP BY c.id, c.titre;`,
+//           [id_Supplementaires],
+//         );
+//         console.log("scores");
+//         console.log(scores);
+//         const valuesScores = scores.map((s) => [
+//           s.score,
+//           s.nombre,
+//           s.id_Categories_Erreurs,
+//           s.categorie_erreur,
+//           id_Supplementaires,
+//         ]);
 
-    if (isNullOrEmpty(id)) {
-      return res
-        .status(401)
-        .send({ message: "L'identifiant est vide", id: id });
-    }
-    const [resultat] = await db.query(Query_Supplementaires, [id]);
-    console.log("Resultat");
-    console.log(resultat);
-    if (resultat.affectedRows > 0) {
-      return res.status(200).send({ message: "Mise a jour ok !" });
-    } else {
-      return res.status(410).send({
-        message: "La ressource que vous essayez de modifier, n'existe plus!",
-      });
-    }
-  } catch (error) {
-    console.log(error);
-    return res
-      .status(500)
-      .send({ message: error.message, code: error.code, requette: error.sql });
-  }
-};
-const deleteSupplementaires = async (req, res, next) => {
-  const { id } = req.params;
-  try {
-    const Query_Supplementaires = `DELETE FROM SUPPLEMENTAIRES WHERE id=?`;
-    const Query_Scores = `DELETE FROM SCORES_SUPPLEMENTAIRES WHERE id_Supplementaires=?`;
-    const Query_Resultats_Supplementaires = `DELETE FROM SUPPLEMENTAIRES_RESULTATS WHERE id_Supplementaires=?`;
+//         await db.query(
+//           `INSERT INTO SCORES(score, nombre, id_Categories_Erreurs, categorie_erreur, id_Evaluations)
+//             VALUES ?`,
+//           [valuesScores],
+//         );
+//       }
+//     }
+//     await db.query("COMMIT");
+//     return res.status(201).send({
+//       message: "L'évaluation supplementaire a été bien enregistrer",
+//       id: resultat[0].insertId,
+//     });
+//   } catch (error) {
+//     await db.query("ROLLBACK");
+//     console.log(error);
+//     res.status(500).send({
+//       message:
+//         "La création de l'évaluation supplementaire a été annulée dû a une erreur",
+//       errorMessage: error.message,
+//       code: error.code,
+//       requette: error.sql,
+//     });
+//   }
+// };
+// const updateSupplementaires = async (req, res, next) => {
+//   const { id } = req.params;
+//   try {
+//     const Query_Supplementaires = `UPDATE EVALUATIONS SET statut='Terminer' WHERE id=? AND id_Evaluations IS NOT NULL`;
 
-    if (isNullOrEmpty(id)) {
-      return res
-        .status(401)
-        .send({ message: "L'identifiant est vide", id: id });
-    }
-    await db.query(Query_Resultats_Supplementaires, [id]);
-    await db.query(Query_Scores, [id]);
-    const [resultat] = await db.query(Query_Supplementaires, [id]);
-    console.log("Resultat");
-    console.log(resultat);
-    if (resultat.affectedRows > 0) {
-      return res.status(200).send({ message: "Suppression ok !" });
-    } else {
-      return res.status(410).send({
-        message: "La ressource que vous essayer de supprimer, n'existe plus!",
-      });
-    }
-  } catch (error) {
-    console.log(error);
-    return res
-      .status(500)
-      .send({ message: error.message, code: error.code, requette: error.sql });
-  }
-};
-const getAllSupplementaires = async (req, res, next) => {
-  const { id, debut, fin } = req.params;
-  console.log(req.params);
-  try {
-    const [supplementaires] = await db.query(
-      `SELECT * FROM SUPPLEMENTAIRES WHERE id_Evaluateur= ? AND DATE_FORMAT(date_creation,'%Y-%m-%d')  BETWEEN DATE_FORMAT(?,'%Y-%m-%d') AND DATE_FORMAT(?,'%Y-%m-%d')`,
-      [id, debut, fin],
-    );
+//     if (isNullOrEmpty(id)) {
+//       return res
+//         .status(401)
+//         .send({ message: "L'identifiant est vide", id: id });
+//     }
+//     const [resultat] = await db.query(Query_Supplementaires, [id]);
+//     console.log("Resultat");
+//     console.log(resultat);
+//     if (resultat.affectedRows > 0) {
+//       return res.status(200).send({ message: "Mise a jour ok !" });
+//     } else {
+//       return res.status(410).send({
+//         message: "La ressource que vous essayez de modifier, n'existe plus!",
+//       });
+//     }
+//   } catch (error) {
+//     console.log(error);
+//     return res
+//       .status(500)
+//       .send({ message: error.message, code: error.code, requette: error.sql });
+//   }
+// };
+// const deleteSupplementaires = async (req, res, next) => {
+//   const { id } = req.params;
+//   try {
+//     const Query_Supplementaires = `DELETE FROM EVALUATIONS WHERE id=? AND id_Evaluations IS NOT NULL`;
+//     const Query_Scores = `DELETE FROM SCORES WHERE id_Evaluations=?`;
+//     const Query_Resultats_Supplementaires = `DELETE FROM EVALUATIONS_RESULTATS WHERE id_Evaluations=?`;
 
-    // console.log(listeEvaluationsResultats);
-    if (supplementaires.length === 0) {
-      res
-        .status(200)
-        .send({ data: supplementaires, message: "Aucune entrée trouvée" });
-    }
+//     if (isNullOrEmpty(id)) {
+//       return res
+//         .status(401)
+//         .send({ message: "L'identifiant est vide", id: id });
+//     }
+//     await db.query(Query_Resultats_Supplementaires, [id]);
+//     await db.query(Query_Scores, [id]);
+//     const [resultat] = await db.query(Query_Supplementaires, [id]);
+//     console.log("Resultat");
+//     console.log(resultat);
+//     if (resultat.affectedRows > 0) {
+//       return res.status(200).send({ message: "Suppression ok !" });
+//     } else {
+//       return res.status(410).send({
+//         message: "La ressource que vous essayer de supprimer, n'existe plus!",
+//       });
+//     }
+//   } catch (error) {
+//     console.log(error);
+//     return res
+//       .status(500)
+//       .send({ message: error.message, code: error.code, requette: error.sql });
+//   }
+// };
+// const getAllSupplementaires = async (req, res, next) => {
+//   const { id, debut, fin } = req.params;
+//   console.log(req.params);
+//   try {
+//     const [supplementaires] = await db.query(
+//       `SELECT e.*, ct.nom AS contexte
+//        FROM EVALUATIONS e
+//        LEFT JOIN CONTEXTES ct ON ct.id = e.id_Contexte
+//        WHERE e.id_Evaluations IS NOT NULL AND e.id_Evaluateur= ? AND DATE_FORMAT(e.date_creation,'%Y-%m-%d')  BETWEEN DATE_FORMAT(?,'%Y-%m-%d') AND DATE_FORMAT(?,'%Y-%m-%d')`,
+//       [id, debut, fin],
+//     );
 
-    res.status(200).send({ data: supplementaires });
-  } catch (error) {
-    console.log(error);
-    return res
-      .status(500)
-      .send({ message: error.message, code: error.code, requette: error.sql });
-  }
-};
-const getAllSupplementairesEnCours = async (req, res, next) => {
-  const { debut, fin } = req.body;
-  console.log(req.params);
-  try {
-    const [supplementaires] = await db.query(
-      `SELECT * FROM SUPPLEMENTAIRES WHERE statut='En cours' AND date_creation BETWEEN ? AND ?`,
-      [debut, fin],
-    );
+//     // console.log(listeEvaluationsResultats);
+//     if (supplementaires.length === 0) {
+//       res
+//         .status(200)
+//         .send({ data: supplementaires, message: "Aucune entrée trouvée" });
+//     }
 
-    // console.log(listeEvaluationsResultats);
-    if (supplementaires.length === 0) {
-      res.status(400).send({ message: "Aucune entrée trouvée" });
-    }
+//     res.status(200).send({ data: supplementaires });
+//   } catch (error) {
+//     console.log(error);
+//     return res
+//       .status(500)
+//       .send({ message: error.message, code: error.code, requette: error.sql });
+//   }
+// };
+// const getAllSupplementairesEnCours = async (req, res, next) => {
+//   const { debut, fin } = req.body;
+//   console.log(req.params);
+//   try {
+//     const [supplementaires] = await db.query(
+//       `SELECT e.*, ct.nom AS contexte
+//        FROM EVALUATIONS e
+//        LEFT JOIN CONTEXTES ct ON ct.id = e.id_Contexte
+//        WHERE e.id_Evaluations IS NOT NULL AND e.statut='En cours' AND e.date_creation BETWEEN ? AND ?`,
+//       [debut, fin],
+//     );
 
-    res.status(200).send(supplementaires);
-  } catch (error) {
-    console.log(error);
-    return res
-      .status(500)
-      .send({ message: error.message, code: error.code, requette: error.sql });
-  }
-};
-const getAllSupplementairesTerminer = async (req, res, next) => {
-  const { debut, fin } = req.body;
-  console.log(req.params);
-  try {
-    const [supplementaires] = await db.query(
-      `SELECT * FROM SUPPLEMENTAIRES WHERE statut='Terminer' AND date_creation BETWEEN ? AND ?`,
-      [debut, fin],
-    );
+//     // console.log(listeEvaluationsResultats);
+//     if (supplementaires.length === 0) {
+//       res.status(400).send({ message: "Aucune entrée trouvée" });
+//     }
 
-    console.log(supplementaires);
-    if (supplementaires.length === 0) {
-      res.status(400).send({ message: "Aucune entrée trouvée" });
-    }
+//     res.status(200).send(supplementaires);
+//   } catch (error) {
+//     console.log(error);
+//     return res
+//       .status(500)
+//       .send({ message: error.message, code: error.code, requette: error.sql });
+//   }
+// };
+// const getAllSupplementairesTerminer = async (req, res, next) => {
+//   const { debut, fin } = req.body;
+//   console.log(req.params);
+//   try {
+//     const [supplementaires] = await db.query(
+//       `SELECT e.*, ct.nom AS contexte
+//        FROM EVALUATIONS e
+//        LEFT JOIN CONTEXTES ct ON ct.id = e.id_Contexte
+//        WHERE e.id_Evaluations IS NOT NULL AND e.statut='Terminer' AND e.date_creation BETWEEN ? AND ?`,
+//       [debut, fin],
+//     );
 
-    res.status(200).send(supplementaires);
-  } catch (error) {
-    console.log(error);
-    return res
-      .status(500)
-      .send({ message: error.message, code: error.code, requette: error.sql });
-  }
-};
-const getSupplementairesById = async (req, res, next) => {
-  const { id } = req.params;
-  console.log(req.params);
-  try {
-    if (isNullOrEmpty(id)) {
-      res.status(400).send({ message: "La valeur de idEvaluations est nulle" });
-    }
-    const [[supplementaire]] = await db.query(
-      `SELECT
-        supp.*,
-        u1.nom    AS evaluateur_nom,
-        u1.prenom AS evaluateur_prenom,
-        u2.nom    AS agent_nom,
-        u2.prenom AS agent_prenom
-        FROM SUPPLEMENTAIRES supp
-      JOIN B_UTILISATEUR u1 ON u1.id = supp.id_Evaluateur
-      JOIN B_UTILISATEUR u2 ON u2.id = supp.id_Agent 
-      WHERE supp.id=?`,
-      [id],
-    );
+//     console.log(supplementaires);
+//     if (supplementaires.length === 0) {
+//       res.status(400).send({ message: "Aucune entrée trouvée" });
+//     }
 
-    console.log(supplementaire);
-    if (supplementaire.length === 0) {
-      res.status(400).send({ message: "Aucune entrée trouvée" });
-    }
+//     res.status(200).send(supplementaires);
+//   } catch (error) {
+//     console.log(error);
+//     return res
+//       .status(500)
+//       .send({ message: error.message, code: error.code, requette: error.sql });
+//   }
+// };
+// const getSupplementairesById = async (req, res, next) => {
+//   const { id } = req.params;
+//   console.log(req.params);
+//   try {
+//     if (isNullOrEmpty(id)) {
+//       res.status(400).send({ message: "La valeur de idEvaluations est nulle" });
+//     }
+//     const [[supplementaire]] = await db.query(
+//       `SELECT
+//         supp.*,
+//         ct.nom    AS contexte,
+//         u1.nom    AS evaluateur_nom,
+//         u1.prenom AS evaluateur_prenom,
+//         u2.nom    AS agent_nom,
+//         u2.prenom AS agent_prenom
+//         FROM EVALUATIONS supp
+//       LEFT JOIN CONTEXTES ct ON ct.id = supp.id_Contexte
+//       JOIN B_UTILISATEUR u1 ON u1.id = supp.id_Evaluateur
+//       JOIN B_UTILISATEUR u2 ON u2.id = supp.id_Agent
+//       WHERE supp.id=? AND supp.id_Evaluations IS NOT NULL`,
+//       [id],
+//     );
 
-    res.status(200).send(supplementaire);
-  } catch (error) {
-    console.log(error);
-    return res
-      .status(500)
-      .send({ message: error.message, code: error.code, requette: error.sql });
-  }
-};
+//     console.log(supplementaire);
+//     if (supplementaire.length === 0) {
+//       res.status(400).send({ message: "Aucune entrée trouvée" });
+//     }
 
-const getAllSupplementairesResultatsByEvaluationsAndCategorie = async (
-  req,
-  res,
-  next,
-) => {
-  const { id } = req.params;
-  console.log(req.params);
-  try {
-    if (isNullOrEmpty(id)) {
-      res.status(400).send({ message: "La valeur de idEvaluations est nulle" });
-    }
-    const [categroiesErreurs] = await db.query(
-      `SELECT c.id AS id, c.titre AS titre FROM CATEGORIES_ERREURS c
-      JOIN SUPPLEMENTAIRES s ON s.id=? AND s.id_Grille=c.id_Grille`,
-      [id],
-    );
-    console.log("categroiesErreurs");
-    console.log(categroiesErreurs);
+//     res.status(200).send(supplementaire);
+//   } catch (error) {
+//     console.log(error);
+//     return res
+//       .status(500)
+//       .send({ message: error.message, code: error.code, requette: error.sql });
+//   }
+// };
 
-    const [listeSupplementairesResultats] = await db.query(
-      `SELECT * FROM SUPPLEMENTAIRES_RESULTATS WHERE id_Supplementaires=?`,
-      [id],
-    );
+// const getAllSupplementairesResultatsByEvaluationsAndCategorie = async (
+//   req,
+//   res,
+//   next,
+// ) => {
+//   const { id } = req.params;
+//   console.log(req.params);
+//   try {
+//     if (isNullOrEmpty(id)) {
+//       res.status(400).send({ message: "La valeur de idEvaluations est nulle" });
+//     }
+//     const [categroiesErreurs] = await db.query(
+//       `SELECT c.id AS id, c.titre AS titre FROM CATEGORIES_ERREURS c
+//       JOIN EVALUATIONS s ON s.id=? AND s.id_Grille=c.id_Grille`,
+//       [id],
+//     );
+//     console.log("categroiesErreurs");
+//     console.log(categroiesErreurs);
 
-    if (listeSupplementairesResultats.length === 0) {
-      res.status(400).send({ message: "Aucune entrée trrouvée" });
-    }
-    const supplementairesResultats = categroiesErreurs.map((cat) => ({
-      id: cat.id,
-      titre: cat.titre,
-      resultats: listeSupplementairesResultats.filter(
-        (r) => r.id_Categories_Erreurs === cat.id,
-      ),
-    }));
-    res.status(200).send(supplementairesResultats);
-  } catch (error) {
-    console.log(error);
-    return res
-      .status(500)
-      .send({ message: error.message, code: error.code, requette: error.sql });
-  }
-};
-const updateSupplementairesResultats = async (req, res) => {
-  const { id, etat, commentaire, id_Supplementaires } = req.body;
-  let conclusions = [];
-  if (isNullOrEmpty(id) || isNullOrEmpty(id_Supplementaires)) {
-    return res.status(400).json({
-      message: "Identifiant résultat ou évaluation supplementaire manquant",
-      id: id,
-      id_Supplementaires: id_Supplementaires,
-    });
-  }
+//     const [listeSupplementairesResultats] = await db.query(
+//       `SELECT * FROM EVALUATIONS_RESULTATS WHERE id_Evaluations=? ORDER BY id ASC`,
+//       [id],
+//     );
 
-  await db.query("START TRANSACTION");
+//     if (listeSupplementairesResultats.length === 0) {
+//       res.status(400).send({ message: "Aucune entrée trrouvée" });
+//     }
+//     const supplementairesResultats = categroiesErreurs.map((cat) => ({
+//       id: cat.id,
+//       titre: cat.titre,
+//       resultats: listeSupplementairesResultats.filter(
+//         (r) => r.id_Categories_Erreurs === cat.id,
+//       ),
+//     }));
+//     res.status(200).send(supplementairesResultats);
+//   } catch (error) {
+//     console.log(error);
+//     return res
+//       .status(500)
+//       .send({ message: error.message, code: error.code, requette: error.sql });
+//   }
+// };
+// const updateSupplementairesResultats = async (req, res) => {
+//   const { id, etat, commentaire, id_Supplementaires } = req.body;
+//   let conclusions = [];
+//   if (isNullOrEmpty(id) || isNullOrEmpty(id_Supplementaires)) {
+//     return res.status(400).json({
+//       message: "Identifiant résultat ou évaluation supplementaire manquant",
+//       id: id,
+//       id_Supplementaires: id_Supplementaires,
+//     });
+//   }
 
-  try {
-    [result] = await db.query(
-      `SELECT id FROM SUPPLEMENTAIRES_RESULTATS WHERE id=?`,
-      [id],
-    );
-    if (result.length === 0) {
-      return res.status(400).json({
-        message:
-          "Identifiant fournit ne correspond a aucun supplementaire résultat",
-        id: id,
-      });
-    }
-    [result1] = await db.query(`SELECT id FROM SUPPLEMENTAIRES WHERE id=?`, [
-      id_Supplementaires,
-    ]);
-    if (result1.length === 0) {
-      return res.status(400).json({
-        message: "Identifiant fournit ne correspond a aucun supplementaire",
-        id_Supplementaires: id_Supplementaires,
-      });
-    }
-    //Update résultat
-    await db.query(
-      `
-      UPDATE SUPPLEMENTAIRES_RESULTATS
-      SET etat = ?, commentaire = ?
-      WHERE id = ? AND id_Supplementaires = ?
-    `,
-      [etat, commentaire, id, id_Supplementaires],
-    );
+//   await db.query("START TRANSACTION");
 
-    //Récupération catégories
-    const [categories] = await db.query(
-      `
-      SELECT DISTINCT ev.id_Categories_Erreurs, cat.seuil 
-      FROM SUPPLEMENTAIRES_RESULTATS ev  
-      JOIN CATEGORIES_ERREURS cat ON cat.id = ev.id_Categories_Erreurs
-      WHERE ev.id_Supplementaires = ?
-    `,
-      [id_Supplementaires],
-    );
-    //Update Scores
-    await db.query(
-      `
-        UPDATE SCORES_SUPPLEMENTAIRES
-        JOIN(
-           SELECT
-              ev.id_Supplementaires AS id_ev,
-              ev.id_Categories_Erreurs AS id_cat,
-              SUM(ev.etat=0) AS nombreEv,
-              SUM(CASE WHEN ev.etat=1 THEN ev.score_sur_vingt ELSE 0 END) AS scoreEv
-            FROM SUPPLEMENTAIRES_RESULTATS ev
-            GROUP BY ev.id_Supplementaires,ev.id_Categories_Erreurs 
-        ) x ON x.id_ev = id_Supplementaires AND x.id_cat = id_Categories_Erreurs
-        SET score = x.scoreEv, nombre = x.nombreEv
-      `,
-    );
-    //Boucle catégories
-    for (let i = 0; i < categories.length; i++) {
-      cat = categories[i];
-      const [[rowPoids]] = await db.query(
-        `
-        SELECT SUM(poids_items) AS poids 
-        FROM SUPPLEMENTAIRES_RESULTATS
-        WHERE etat = 1 AND id_Supplementaires = ? AND id_Categories_Erreurs = ?
-      `,
-        [id_Supplementaires, cat.id_Categories_Erreurs],
-      );
-      console.log("rowPoids");
-      console.log(rowPoids);
+//   try {
+//     [result] = await db.query(
+//       `SELECT id FROM EVALUATIONS_RESULTATS WHERE id=?`,
+//       [id],
+//     );
+//     if (result.length === 0) {
+//       return res.status(400).json({
+//         message:
+//           "Identifiant fournit ne correspond a aucun supplementaire résultat",
+//         id: id,
+//       });
+//     }
+//     [result1] = await db.query(
+//       `SELECT id FROM EVALUATIONS WHERE id=? AND id_Evaluations IS NOT NULL`,
+//       [id_Supplementaires],
+//     );
+//     if (result1.length === 0) {
+//       return res.status(400).json({
+//         message: "Identifiant fournit ne correspond a aucun supplementaire",
+//         id_Supplementaires: id_Supplementaires,
+//       });
+//     }
+//     //Update résultat
+//     await db.query(
+//       `
+//       UPDATE EVALUATIONS_RESULTATS
+//       SET etat = ?, commentaire = ?
+//       WHERE id = ? AND id_Evaluations = ?
+//     `,
+//       [etat, commentaire, id, id_Supplementaires],
+//     );
 
-      const poids = Number(rowPoids.poids || 0);
-      const seuil = Number(cat.seuil || 0);
+//     //Récupération catégories
+//     const [categories] = await db.query(
+//       `
+//       SELECT DISTINCT ev.id_Categories_Erreurs, cat.seuil
+//       FROM EVALUATIONS_RESULTATS ev
+//       JOIN CATEGORIES_ERREURS cat ON cat.id = ev.id_Categories_Erreurs
+//       WHERE ev.id_Evaluations = ?
+//     `,
+//       [id_Supplementaires],
+//     );
+//     //Update Scores
+//     await db.query(
+//       `
+//         UPDATE SCORES
+//         JOIN(
+//            SELECT
+//               ev.id_Evaluations AS id_ev,
+//               ev.id_Categories_Erreurs AS id_cat,
+//               SUM(ev.etat=0) AS nombreEv,
+//               SUM(CASE WHEN ev.etat=1 THEN ev.score_sur_vingt ELSE 0 END) AS scoreEv
+//             FROM EVALUATIONS_RESULTATS ev
+//             GROUP BY ev.id_Evaluations,ev.id_Categories_Erreurs
+//         ) x ON x.id_ev = id_Evaluations AND x.id_cat = id_Categories_Erreurs
+//         SET score = x.scoreEv, nombre = x.nombreEv
+//       `,
+//     );
+//     //Boucle catégories
+//     for (let i = 0; i < categories.length; i++) {
+//       cat = categories[i];
+//       const [[rowPoids]] = await db.query(
+//         `
+//         SELECT SUM(poids_items) AS poids
+//         FROM EVALUATIONS_RESULTATS
+//         WHERE etat = 1 AND id_Evaluations = ? AND id_Categories_Erreurs = ?
+//       `,
+//         [id_Supplementaires, cat.id_Categories_Erreurs],
+//       );
+//       console.log("rowPoids");
+//       console.log(rowPoids);
 
-      console.log("rowPoids");
-      console.log(poids);
-      console.log("seuil");
-      console.log(seuil);
+//       const poids = Number(rowPoids.poids || 0);
+//       const seuil = Number(cat.seuil || 0);
 
-      const conclusion = poids > seuil ? "SUCCES" : "ECHEC";
-      conclusions.push({ conclusion });
-      console.log("conclusion pending");
-      console.log(conclusions);
-      if (i == categories.length - 1) {
-        const hasEchec = conclusions.some((c) => c.conclusion === "ECHEC");
-        const conclusionGlobale = hasEchec ? "ECHEC" : "SUCCES";
-        console.log("hasEchec");
-        console.log(hasEchec);
-        console.log("conclusionGlobale");
-        console.log(conclusionGlobale);
-        conclusions = [];
-        //Update evaluation
-        await db.query(
-          `
-        UPDATE SUPPLEMENTAIRES
-        SET conclusion = ?
-        WHERE id = ?
-      `,
-          [conclusionGlobale, id_Supplementaires],
-        );
-        await db.query("COMMIT");
-      }
-    }
-    return res.status(201).json({ message: "Mise à jour OK" });
-  } catch (error) {
-    await db.query("ROLLBACK");
-    return res.status(500).json({
-      message:
-        "La mise a jour de evaluation supplementaire resultat a été annulée dû a une erreur",
-      message: error.message,
-      code: error.code,
-      requette: error.sql,
-    });
-  }
-};
+//       console.log("rowPoids");
+//       console.log(poids);
+//       console.log("seuil");
+//       console.log(seuil);
+
+//       const conclusion = poids > seuil ? "SUCCES" : "ECHEC";
+//       conclusions.push({ conclusion });
+//       console.log("conclusion pending");
+//       console.log(conclusions);
+//       if (i == categories.length - 1) {
+//         const hasEchec = conclusions.some((c) => c.conclusion === "ECHEC");
+//         const conclusionGlobale = hasEchec ? "ECHEC" : "SUCCES";
+//         console.log("hasEchec");
+//         console.log(hasEchec);
+//         console.log("conclusionGlobale");
+//         console.log(conclusionGlobale);
+//         conclusions = [];
+//         //Update evaluation
+//         await db.query(
+//           `
+//         UPDATE EVALUATIONS
+//         SET conclusion = ?
+//         WHERE id = ?
+//       `,
+//           [conclusionGlobale, id_Supplementaires],
+//         );
+//         await db.query("COMMIT");
+//       }
+//     }
+//     return res.status(201).json({ message: "Mise à jour OK" });
+//   } catch (error) {
+//     await db.query("ROLLBACK");
+//     return res.status(500).json({
+//       message:
+//         "La mise a jour de evaluation supplementaire resultat a été annulée dû a une erreur",
+//       message: error.message,
+//       code: error.code,
+//       requette: error.sql,
+//     });
+//   }
+// };
 
 const getSupplementaireCountByEvaluation = async (req, res) => {
   const { id } = req.params;
@@ -973,7 +986,7 @@ const getSupplementaireCountByEvaluation = async (req, res) => {
     });
   }
   try {
-    const Query = `SELECT COUNT(*) as nombre FROM SUPPLEMENTAIRES WHERE id_Evaluations=?`;
+    const Query = `SELECT COUNT(*) as nombre FROM EVALUATIONS WHERE id_Evaluations=?`;
     const [[nombre]] = await db.query(Query, [id]);
 
     if (!isNullOrEmpty(nombre)) {
@@ -990,22 +1003,30 @@ const getSupplementaireCountByEvaluation = async (req, res) => {
 };
 
 const getAllSupplementairesByEvaluations = async (req, res, next) => {
-  const { id } = req.params;
+  const { id, id_Evaluations } = req.params;
   console.log(req.params);
+  if (isNullOrEmpty(id_Evaluations)) {
+    return res.status(400).send({
+      message: "L'id de l'evaluation est manquante",
+    });
+  }
   try {
-    const [supplementaires] = await db.query(
-      `SELECT * FROM SUPPLEMENTAIRES WHERE id_Evaluations= ?`,
-      [id],
+    const [evaluations] = await db.query(
+      `SELECT e.*, ct.nom AS contexte
+       FROM EVALUATIONS e
+       LEFT JOIN CONTEXTES ct ON ct.id = e.id_Contexte
+       WHERE e.id_Evaluateur= ? AND e.id_Evaluations= ?`,
+      [id, id_Evaluations],
     );
 
     // console.log(listeEvaluationsResultats);
-    if (supplementaires.length === 0) {
+    if (evaluations.length === 0) {
       res
         .status(200)
-        .send({ data: supplementaires, message: "Aucune entrée trouvée" });
+        .send({ data: evaluations, message: "Aucune entrée trouvée" });
     }
 
-    res.status(200).send({ data: supplementaires });
+    res.status(200).send({ data: evaluations });
   } catch (error) {
     console.log(error);
     return res
@@ -1013,13 +1034,40 @@ const getAllSupplementairesByEvaluations = async (req, res, next) => {
       .send({ message: error.message, code: error.code, requette: error.sql });
   }
 };
+// const getAllSupplementairesByEvaluations = async (req, res, next) => {
+//   const { id } = req.params;
+//   console.log(req.params);
+//   try {
+//     const [supplementaires] = await db.query(
+//       `SELECT e.*, ct.nom AS contexte
+//        FROM EVALUATIONS e
+//        LEFT JOIN CONTEXTES ct ON ct.id = e.id_Contexte
+//        WHERE e.id_Evaluations= ?`,
+//       [id],
+//     );
+
+//     // console.log(listeEvaluationsResultats);
+//     if (supplementaires.length === 0) {
+//       res
+//         .status(200)
+//         .send({ data: supplementaires, message: "Aucune entrée trouvée" });
+//     }
+
+//     res.status(200).send({ data: supplementaires });
+//   } catch (error) {
+//     console.log(error);
+//     return res
+//       .status(500)
+//       .send({ message: error.message, code: error.code, requette: error.sql });
+//   }
+// };
 /** Fin */
 
 /** Fonctions liées a l'évaluation */
 
 const createEvaluation = async (req, res, next) => {
   const {
-    contexte,
+    id_Contexte,
     identifiant_appel,
     numero_case,
     numero_appel,
@@ -1058,9 +1106,9 @@ const createEvaluation = async (req, res, next) => {
     let id_Grille = 0;
     const date_creation = new Date();
     const Query = `
-    INSERT INTO EVALUATIONS 
+    INSERT INTO EVALUATIONS
     (
-      contexte
+      id_Contexte
     , identifiant_appel
     , numero_case
     , numero_appel
@@ -1078,8 +1126,7 @@ const createEvaluation = async (req, res, next) => {
     , type_evaluation
     , resolution
     , conclusion
-    , type
-    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
+    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
     const statut = "En cours";
     if (isNullOrEmpty(id_Agent)) {
       return res
@@ -1113,7 +1160,7 @@ const createEvaluation = async (req, res, next) => {
     id_Grille = rows[0].id_Grille || null;
 
     const resultat = await db.query(Query, [
-      contexte,
+      id_Contexte || null,
       identifiant_appel,
       numero_case,
       numero_appel,
@@ -1123,15 +1170,14 @@ const createEvaluation = async (req, res, next) => {
       motif_appel,
       statut,
       id_Evaluateur,
-      id_Evaluations,
+      id_Evaluations || null,
       id_Agent,
       id_Grille,
       site,
       programme,
-      type_evaluation,
+      type_evaluation || "Evaluation",
       "Oui",
       "SUCCES",
-      "Evaluation",
     ]);
     console.log(resultat);
     if (resultat[0].affectedRows > 0) {
@@ -1330,6 +1376,16 @@ const deleteEvaluations = async (req, res, next) => {
         .status(401)
         .send({ message: "L'identifiant est vide", id: id });
     }
+    // Suppression des évaluations supplémentaires rattachées (résultats + scores + lignes)
+    const [enfants] = await db.query(
+      `SELECT id FROM EVALUATIONS WHERE id_Evaluations=?`,
+      [id],
+    );
+    for (const enfant of enfants) {
+      await db.query(Query_Resultats_Supplementaires, [enfant.id]);
+      await db.query(Query_Scores, [enfant.id]);
+      await db.query(Query_Supplementaires, [enfant.id]);
+    }
     await db.query(Query_Resultats_Supplementaires, [id]);
     await db.query(Query_Scores, [id]);
     const [resultat] = await db.query(Query_Supplementaires, [id]);
@@ -1354,7 +1410,10 @@ const getAllEvaluations = async (req, res, next) => {
   console.log(req.params);
   try {
     const [evaluations] = await db.query(
-      `SELECT * FROM EVALUATIONS WHERE id_Evaluateur= ? AND DATE_FORMAT(date_creation,'%Y-%m-%d')  BETWEEN DATE_FORMAT(?,'%Y-%m-%d') AND DATE_FORMAT(?,'%Y-%m-%d')`,
+      `SELECT e.*, ct.nom AS contexte
+       FROM EVALUATIONS e
+       LEFT JOIN CONTEXTES ct ON ct.id = e.id_Contexte
+       WHERE e.id_Evaluateur= ? AND DATE_FORMAT(e.date_creation,'%Y-%m-%d')  BETWEEN DATE_FORMAT(?,'%Y-%m-%d') AND DATE_FORMAT(?,'%Y-%m-%d')`,
       [id, debut, fin],
     );
 
@@ -1378,7 +1437,10 @@ const getAllEvaluationsTerminer = async (req, res, next) => {
   const { debut, fin } = req.body;
   try {
     const [evaluations] = await db.query(
-      `SELECT * FROM EVALUATIONS WHERE statut='Terminer' AND DATE_FORMAT(date_creation,'%Y-%m-%d')  BETWEEN DATE_FORMAT(?,'%Y-%m-%d') AND DATE_FORMAT(?,'%Y-%m-%d')`,
+      `SELECT e.*, ct.nom AS contexte
+       FROM EVALUATIONS e
+       LEFT JOIN CONTEXTES ct ON ct.id = e.id_Contexte
+       WHERE e.id_Evaluations IS NULL AND e.statut='Terminer' AND DATE_FORMAT(e.date_creation,'%Y-%m-%d')  BETWEEN DATE_FORMAT(?,'%Y-%m-%d') AND DATE_FORMAT(?,'%Y-%m-%d')`,
       [debut, fin],
     );
 
@@ -1405,11 +1467,13 @@ const getEvaluationsById = async (req, res, next) => {
     const [[evaluation]] = await db.query(
       `SELECT
         eval.*,
+        ct.nom    AS contexte,
         u1.nom    AS evaluateur_nom,
         u1.prenom AS evaluateur_prenom,
         u2.nom    AS agent_nom,
         u2.prenom AS agent_prenom
       FROM EVALUATIONS eval
+      LEFT JOIN CONTEXTES ct ON ct.id = eval.id_Contexte
       JOIN B_UTILISATEUR u1 ON u1.id = eval.id_Evaluateur
       JOIN B_UTILISATEUR u2 ON u2.id = eval.id_Agent
       WHERE eval.id = ?`,
@@ -2350,32 +2414,32 @@ const getAllScoresByIdEvaluations = async (req, res, next) => {
   }
 };
 
-const getAllScoresByIdSupplementaires = async (req, res, next) => {
-  const { id } = req.params;
-  try {
-    if (isNullOrEmpty(id)) {
-      res
-        .status(400)
-        .send({ message: "La valeur de l'id de l'evaluation est nulle !" });
-    }
+// const getAllScoresByIdSupplementaires = async (req, res, next) => {
+//   const { id } = req.params;
+//   try {
+//     if (isNullOrEmpty(id)) {
+//       res
+//         .status(400)
+//         .send({ message: "La valeur de l'id de l'evaluation est nulle !" });
+//     }
 
-    const [scores] = await db.query(
-      `SELECT * FROM SCORES_SUPPLEMENTAIRES WHERE id_Supplementaires=?`,
-      [id],
-    );
-    console.log("scores");
-    console.log(scores);
-    if (scores.length === 0) {
-      res.status(400).send({ message: "Aucune entrée ne correspond !" });
-    }
-    res.status(200).send(scores);
-  } catch (error) {
-    console.log(error);
-    res
-      .status(500)
-      .send({ message: error.message, code: error.code, requette: error.sql });
-  }
-};
+//     const [scores] = await db.query(
+//       `SELECT * FROM SCORES WHERE id_Evaluations=?`,
+//       [id],
+//     );
+//     console.log("scores");
+//     console.log(scores);
+//     if (scores.length === 0) {
+//       res.status(400).send({ message: "Aucune entrée ne correspond !" });
+//     }
+//     res.status(200).send(scores);
+//   } catch (error) {
+//     console.log(error);
+//     res
+//       .status(500)
+//       .send({ message: error.message, code: error.code, requette: error.sql });
+//   }
+// };
 /** Fin */
 
 /** Fonctions liées au business intelligence */
@@ -3652,8 +3716,6 @@ module.exports = {
   createSousCategoriesErreurs,
   createErreurs,
   updateEvaluationsResultats,
-  createSupplementaire,
-  updateSupplementairesResultats,
   createCalendars,
   createCalendarsPolicies,
   updateCalendars,
@@ -3664,7 +3726,6 @@ module.exports = {
   updateCalendarsPolicies,
   deleteCalendarsBySite,
   deleteCalendarsPolicies,
-  deleteSupplementaires,
   deleteEvaluations,
   updateCategoriesErreurs,
   updateSousCategoriesErreurs,
@@ -3683,21 +3744,14 @@ module.exports = {
   getErreursByGrille,
   getErreursById,
   getAllEvaluationsResultatsByEvaluationsAndCategorie,
-  getAllSupplementairesResultatsByEvaluationsAndCategorie,
   getAllEvaluations,
   getAllEvaluationsTerminer,
   getEvaluationsById,
-  getAllSupplementaires,
-  getAllSupplementairesEnCours,
-  getAllSupplementairesTerminer,
   getSupplementaireCountByEvaluation,
   getAllSupplementairesByEvaluations,
-  getSupplementairesById,
-  updateSupplementaires,
   updateEvaluations,
   terminerEvaluations,
   getAllScoresByIdEvaluations,
-  getAllScoresByIdSupplementaires,
   createBusinessIntelligence,
   updateBusinessIntelligence,
   deleteBusinessIntelligence,

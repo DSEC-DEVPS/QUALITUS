@@ -9,8 +9,6 @@ const {
   createSousCategoriesErreurs,
   createErreurs,
   updateEvaluationsResultats,
-  createSupplementaire,
-  updateSupplementairesResultats,
   createCalendars,
   createCalendarsPolicies,
   updateCalendars,
@@ -21,7 +19,6 @@ const {
   updateCalendarsPolicies,
   deleteCalendarsBySite,
   deleteCalendarsPolicies,
-  deleteSupplementaires,
   deleteEvaluations,
   updateCategoriesErreurs,
   updateSousCategoriesErreurs,
@@ -40,17 +37,11 @@ const {
   getErreursByGrille,
   getErreursById,
   getAllEvaluationsResultatsByEvaluationsAndCategorie,
-  getAllSupplementairesResultatsByEvaluationsAndCategorie,
   getAllEvaluations,
   getAllEvaluationsTerminer,
   getEvaluationsById,
-  getAllSupplementaires,
-  getAllSupplementairesEnCours,
-  getAllSupplementairesTerminer,
   getSupplementaireCountByEvaluation,
   getAllSupplementairesByEvaluations,
-  getSupplementairesById,
-  updateSupplementaires,
   updateEvaluations,
   terminerEvaluations,
   getAllScoresByIdEvaluations,
@@ -83,8 +74,24 @@ const {
   getBI4ById,
   getAllBI,
   getAllBIByGrille,
-  getAllScoresByIdSupplementaires,
 } = require("../../Controllers/evaluationControllers/evaluation.Controllers");
+
+const {
+  createContexte,
+  getAllContextes,
+  getAllContextesActifs,
+  getContexteById,
+  updateContexte,
+  deleteContexte,
+} = require("../../Controllers/evaluationControllers/contexte.Controllers");
+
+// Routes pour les contextes d'évaluation
+router.get("/contextes", auth, getAllContextes);
+router.get("/contextesActifs", auth, getAllContextesActifs);
+router.get("/contextes/:id", auth, getContexteById);
+router.post("/contextes/add", auth, createContexte);
+router.put("/contextes/:id", auth, updateContexte);
+router.delete("/contextes/:id", auth, deleteContexte);
 
 router.post("/calendars/add", auth, createCalendars);
 router.delete("/deleteCalendarsBySite/:id", auth, deleteCalendarsBySite);
@@ -96,31 +103,36 @@ router.get("/calendarsPolicies", auth, afficherCalendarsPolicies);
 router.post("/calendarsPolicies/add", auth, createCalendarsPolicies);
 router.delete("/deleteCalendarsPolicies/:id", auth, deleteCalendarsPolicies);
 router.put("/calendarsPolicies/:id", auth, updateCalendarsPolicies);
-router.get("/supplementaires/:id", auth, getSupplementairesById);
-router.get("/supplementairesAll/:id/:debut/:fin", auth, getAllSupplementaires);
+// router.get("/supplementaires/:id", auth, getSupplementairesById);
+// router.get("/supplementairesAll/:id/:debut/:fin", auth, getAllSupplementaires);
 
-router.get("/supplementairesEnCours", auth, getAllSupplementairesEnCours);
-router.get("/supplementairesTerminer", auth, getAllSupplementairesTerminer);
+// router.get("/supplementairesEnCours", auth, getAllSupplementairesEnCours);
+// router.get("/supplementairesTerminer", auth, getAllSupplementairesTerminer);
 router.get(
   "/supplementairesCountByEvaluation/:id",
   auth,
   getSupplementaireCountByEvaluation,
 );
 router.get(
-  "/supplementairesByEvaluations/:id",
+  "/supplementairesByEvaluations/:id/:id_Evaluations",
   auth,
   getAllSupplementairesByEvaluations,
 );
+// router.get(
+//   "/supplementairesByEvaluations/:id",
+//   auth,
+//   getAllSupplementairesByEvaluations,
+// );
 
-router.post("/supplementaires/add", auth, createSupplementaire);
-router.put("/supplementaires/:id", auth, updateSupplementaires);
-router.delete("/deleteSupplementaires/:id", auth, deleteSupplementaires);
-router.get(
-  "/supplementairesResultats/:id",
-  auth,
-  getAllSupplementairesResultatsByEvaluationsAndCategorie,
-);
-router.put("/supplementairesResultats", auth, updateSupplementairesResultats);
+// router.post("/supplementaires/add", auth, createSupplementaire);
+// router.put("/supplementaires/:id", auth, updateSupplementaires);
+// router.delete("/deleteSupplementaires/:id", auth, deleteSupplementaires);
+// router.get(
+//   "/supplementairesResultats/:id",
+//   auth,
+//   getAllSupplementairesResultatsByEvaluationsAndCategorie,
+// );
+// router.put("/supplementairesResultats", auth, updateSupplementairesResultats);
 router.get("/evaluations/:id", auth, getEvaluationsById);
 router.get("/evaluationsAll/:id/:debut/:fin", auth, getAllEvaluations);
 router.get("/evaluationsTerminer", auth, getAllEvaluationsTerminer);
@@ -164,11 +176,11 @@ router.post("/erreurs/add", auth, createErreurs);
 router.put("/erreurs/:id", auth, updateErreurs);
 router.delete("/erreurs/:id", auth, deleteErreurs);
 router.get("/scoresByIdEvaluations/:id", auth, getAllScoresByIdEvaluations);
-router.get(
-  "/scoresByIdSupplementaires/:id",
-  auth,
-  getAllScoresByIdSupplementaires,
-);
+// router.get(
+//   "/scoresByIdSupplementaires/:id",
+//   auth,
+//   getAllScoresByIdSupplementaires,
+// );
 
 router.get("/bIAll", auth, getAllBI);
 router.get("/bIAll/:id_Grille/:id_Agent", auth, getAllBIByGrille);

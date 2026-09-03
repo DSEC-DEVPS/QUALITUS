@@ -1,9 +1,18 @@
 /**
  MLD DE LA PARTIE EVALUATIONS
  */
+CREATE TABLE IF NOT EXISTS CONTEXTES (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  nom VARCHAR(255) NOT NULL,
+  description TEXT,
+  etat VARCHAR(50) DEFAULT 'ACTIF',
+  date_creation DATETIME,
+  date_modification DATETIME,
+  UNIQUE KEY uq_contexte_nom (nom)
+);
 CREATE TABLE IF NOT EXISTS EVALUATIONS (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  contexte VARCHAR(255),
+  id_Contexte INT UNSIGNED NULL,
   identifiant_appel VARCHAR(255),
   numero_case VARCHAR(255),
   numero_appel VARCHAR(255),
@@ -25,13 +34,16 @@ CREATE TABLE IF NOT EXISTS EVALUATIONS (
   pourquoi4 VARCHAR(255),
   type_evaluation VARCHAR(255),
   id_Evaluateur INT,
-  id_Evaluations INT UNSIGNED IS NULL,
+  id_Evaluations INT UNSIGNED NULL,
   id_Grille INT,
   id_Agent INT,
   FOREIGN KEY(id_Evaluateur) REFERENCES B_UTILISATEUR(id),
   FOREIGN KEY(id_Evaluations) REFERENCES EVALUATIONS(id),
   FOREIGN KEY(id_Agent) REFERENCES B_UTILISATEUR(id),
-  FOREIGN KEY(id_Grille) REFERENCES B_GRILLE(id)
+  FOREIGN KEY(id_Grille) REFERENCES B_GRILLE(id),
+  FOREIGN KEY(id_Contexte) REFERENCES CONTEXTES(id),
+  KEY idx_evaluations_parent (id_Evaluations),
+  KEY idx_evaluations_type (type_evaluation)
 );
 CREATE TABLE IF NOT EXISTS CATEGORIES_ERREURS (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -60,10 +72,10 @@ CREATE TABLE IF NOT EXISTS ERREURS (
   poids_items DECIMAL(30, 12),
   score_en_pourcent DECIMAL(30, 12),
   score_sur_vingt DECIMAL(30, 12),
-  FOREIGN KEY(id_Sous_Categories_Erreurs) REFERENCES SOUS_CATEGORIES_ERREURS(id)
+  FOREIGN KEY(id_Sous_Categories_Erreurs) REFERENCES SOUS_CATEGORIES_ERREURS(id),
+  KEY idx_erreurs_souscat (id_Sous_Categories_Erreurs),
+  KEY idx_erreurs_cat (id_Categories_Erreurs)
 );
-CREATE INDEX idx_erreurs_souscat ON ERREURS(id_Sous_Categories_Erreurs);
-CREATE INDEX idx_erreurs_cat ON ERREURS(id_Categories_Erreurs);
 CREATE TABLE IF NOT EXISTS EVALUATIONS_RESULTATS (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   id_Categories_Erreurs INT,
@@ -77,9 +89,9 @@ CREATE TABLE IF NOT EXISTS EVALUATIONS_RESULTATS (
   commentaire TEXT,
   etat TINYINT(1),
   id_Evaluations INT UNSIGNED,
-  FOREIGN KEY(id_Evaluations) REFERENCES EVALUATIONS(id)
+  FOREIGN KEY(id_Evaluations) REFERENCES EVALUATIONS(id),
+  KEY idx_eval_cat_etat (id_Evaluations, id_Categories_Erreurs, etat)
 );
-CREATE INDEX idx_eval_cat_etat ON EVALUATIONS_RESULTATS(id_Evaluations, id_Categories_Erreurs, etat);
 CREATE TABLE IF NOT EXISTS SCORES (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   score DECIMAL(30, 12),
@@ -87,64 +99,10 @@ CREATE TABLE IF NOT EXISTS SCORES (
   id_Categories_Erreurs INT UNSIGNED,
   categorie_erreur VARCHAR(255),
   id_Evaluations INT UNSIGNED,
-  FOREIGN KEY(id_Evaluations) REFERENCES EVALUATIONS(id)
+  FOREIGN KEY(id_Evaluations) REFERENCES EVALUATIONS(id),
+  KEY idx_scores_eval_cat (id_Evaluations, id_Categories_Erreurs)
 );
-CREATE INDEX idx_scores_eval_cat ON SCORES(id_Evaluations, id_Categories_Erreurs);
--- CREATE TABLE IF NOT EXISTS SUPPLEMENTAIRES (
---   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
---   contexte VARCHAR(255),
---   identifiant_appel VARCHAR(255),
---   numero_case VARCHAR(255),
---   numero_appel VARCHAR(255),
---   date_appel DATETIME,
---   date_evaluations DATETIME,
---   date_creation DATETIME,
---   dmt VARCHAR(255),
---   motif_appel VARCHAR(255),
---   programme VARCHAR(255),
---   site VARCHAR(255),
---   synthese TEXT,
---   avis_agents TEXT,
---   conclusion VARCHAR(255),
---   statut VARCHAR(255),
---   resolution VARCHAR(255),
---   pourquoi1 VARCHAR(255),
---   pourquoi2 VARCHAR(255),
---   pourquoi3 VARCHAR(255),
---   pourquoi4 VARCHAR(255),
---   id_Evaluations INT UNSIGNED,
---   id_Evaluateur INT,
---   id_Grille INT,
---   id_Agent INT,
---   FOREIGN KEY(id_Evaluations) REFERENCES EVALUATIONS(id),
---   FOREIGN KEY(id_Evaluateur) REFERENCES B_UTILISATEUR(id),
---   FOREIGN KEY(id_Agent) REFERENCES B_UTILISATEUR(id),
---   FOREIGN KEY(id_Grille) REFERENCES B_GRILLE(id)
--- );
--- CREATE TABLE IF NOT EXISTS SUPPLEMENTAIRES_RESULTATS (
---   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
---   id_Categories_Erreurs INT,
---   id_Sous_Categories_Erreurs INT,
---   items TEXT NOT NULL,
---   sous_items TEXT NOT NULL,
---   referentiels TEXT NOT NULL,
---   poids_items DECIMAL(30, 12),
---   score_en_pourcent DECIMAL(30, 12),
---   score_sur_vingt DECIMAL(30, 12),
---   commentaire TEXT,
---   etat TINYINT(1),
---   id_Supplementaires INT UNSIGNED,
---   FOREIGN KEY(id_Supplementaires) REFERENCES SUPPLEMENTAIRES(id)
--- );
--- CREATE TABLE IF NOT EXISTS SCORES_SUPPLEMENTAIRES (
---   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
---   score DECIMAL(30, 12),
---   nombre TINYINT UNSIGNED,
---   id_Categories_Erreurs INT UNSIGNED,
---   categorie_erreur VARCHAR(255),
---   id_Supplementaires INT UNSIGNED,
---   FOREIGN KEY(id_Supplementaires) REFERENCES SUPPLEMENTAIRES(id)
--- );
+
 CREATE TABLE IF NOT EXISTS CALENDARS (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   numero INT,
@@ -153,9 +111,9 @@ CREATE TABLE IF NOT EXISTS CALENDARS (
   etat TINYINT(1),
   id_Site INT,
   UNIQUE KEY uq_calendar (id_Site, numero, annee),
-  FOREIGN KEY(id_Site) REFERENCES B_SITE(id)
+  FOREIGN KEY(id_Site) REFERENCES B_SITE(id),
+  KEY idx_calandar_site (id_Site, numero, annee, etat)
 );
-CREATE INDEX idx_calandar_site ON CALENDARS(id_Site, numero, annee, etat);
 CREATE TABLE IF NOT EXISTS CALENDARS_POLICIES (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   mois_courant_et_posterieurs TINYINT(1),
@@ -169,13 +127,8 @@ CREATE TABLE IF NOT EXISTS CALENDARS_POLICIES (
       mois_courant_et_posterieurs + mois_courant + tous_les_mois
     ) = 1
   ),
-  CONSTRAINT fk_calendar_policy_site FOREIGN KEY (id_Site) REFERENCES B_SITE(id)
-);
-CREATE INDEX idx_calandar_policie ON CALENDARS_POLICIES(
-  id_Site,
-  mois_courant_et_posterieurs,
-  mois_courant,
-  tous_les_mois
+  CONSTRAINT fk_calendar_policy_site FOREIGN KEY (id_Site) REFERENCES B_SITE(id),
+  KEY idx_calandar_policie (id_Site, mois_courant_et_posterieurs, mois_courant, tous_les_mois)
 );
 CREATE TABLE IF NOT EXISTS BUSINESS_INTELLIGENCE (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

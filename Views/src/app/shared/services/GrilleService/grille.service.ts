@@ -3,11 +3,10 @@ import { Injectable } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { message } from '@core';
 import { environment } from '@env/environment';
-import { CategorieErreur } from '@shared/interfaces/Grille/CategorieErreur/CategorieErreur';
-import { Erreurs } from '@shared/interfaces/Grille/Erreurs/Erreurs';
-import { SousCategorieErreur } from '@shared/interfaces/Grille/SousCategorieErreur/SousCategorieErreur';
 import { BehaviorSubject, Observable } from 'rxjs';
-
+import { CategorieErreur } from '@shared/interfaces/categorieErreur/CategorieErreur';
+import { SousCategorieErreur } from '@shared/interfaces/sousCategorieErreur/SousCategorieErreur';
+import { Erreurs } from '@shared/interfaces/erreurs/Erreurs';
 @Injectable({
   providedIn: 'root',
 })
@@ -47,5 +46,4 @@ export class GrilleService {
   getAllErreursByCategorie(id: number): Observable<Erreurs[]> {
     return this.http.get<Erreurs[]>(`/api/v1/erreursByCategorie/${id}`);
   }
-
 }

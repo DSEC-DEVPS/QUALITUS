@@ -32,10 +32,11 @@ import {
   DisappearanceAnimation,
 } from '@costlydeveloper/ngx-awesome-popup';
 import { SupplementairesComponent } from '../supplementaires/supplementaires.component';
-import { SupplementaireResultat } from '@shared/interfaces/supplementaires/SupplementaireResultats';
 import { SupplementairesService } from '@shared/services/SupplementairesService/supplementaires.service';
 import { SupplementaireResultatItem } from '@shared/interfaces/supplementaires/SupplementaireResultatItem';
 import { SupplementairesResultat } from '@shared/modeles/supplementaires/SupplementairesResultat';
+import { EvaluationsService } from '@shared/services/EvalutionsService/evaluations.service';
+import { EvaluationResultat } from '@shared/interfaces/evaluations/EvaluationResultat';
 
 @Component({
   selector: 'app-completion-supplementaires',
@@ -64,19 +65,19 @@ import { SupplementairesResultat } from '@shared/modeles/supplementaires/Supplem
   styleUrl: './completion-supplementaires.component.scss',
 })
 export class CompletionSupplementairesComponent {
-  supplementaireId: number = 0;
-  supplementaire: any;
+  evaluationId: number = 0;
+  evaluation: any;
   private readonly route = inject(ActivatedRoute);
   private readonly location = inject(Location);
   private readonly toastSrv = inject(ToastrService);
   fb = inject(FormBuilder);
   readonly dialog = inject(MatDialog);
   destroy$: Subject<boolean> = new Subject<boolean>();
-  supplementaireResultats: SupplementaireResultat[] = [];
+  evaluationtResultats: EvaluationResultat[] = [];
   formGroup = this.fb.group({
     id: [0],
     etat: [0],
-    id_Supplementaires: [0],
+    id_Evaluations: [0],
   });
   formGroupPk = this.fb.group({
     resolution: [''],
@@ -102,32 +103,33 @@ export class CompletionSupplementairesComponent {
   openedCollapseId: number | null = null;
 
   constructor(
-    private supplementaireService: SupplementairesService,
+    private evaluationService: EvaluationsService,
+
     private businessIntelligenceService: BusinessIntelligenceService
   ) {}
   ngOnInit(): void {
-    this.supplementaireId = this.route.snapshot.params['id'];
-    console.log('this.supplementaireId');
-    console.log(this.supplementaireId);
+    this.evaluationId = this.route.snapshot.params['id'];
+    console.log('this.evaluationId');
+    console.log(this.evaluationId);
 
-    if (this.supplementaireId !== 0) {
-      this.loadSupplementaireById();
+    if (this.evaluationId !== 0) {
+      this.loadEvaluationById();
     }
   }
 
-  loadSupplementaireById() {
-    this.supplementaireService.getSupplementairesById(this.supplementaireId).subscribe({
+  loadEvaluationById() {
+    this.evaluationService.getEvaluationsById(this.evaluationId).subscribe({
       next: response => {
-        this.supplementaire = response;
+        this.evaluation = response;
         this.loadEvaluationResultats(response?.id);
         this.loadScores(response.id);
-        console.log(this.supplementaire);
+        console.log(this.evaluation);
         this.formGroupPk.patchValue({
-          resolution: this.supplementaire?.resolution,
-          pourquoi1: this.supplementaire?.pourquoi1,
-          pourquoi2: this.supplementaire?.pourquoi2,
-          pourquoi3: this.supplementaire?.pourquoi3,
-          pourquoi4: this.supplementaire?.pourquoi4,
+          resolution: this.evaluation?.resolution,
+          pourquoi1: this.evaluation?.pourquoi1,
+          pourquoi2: this.evaluation?.pourquoi2,
+          pourquoi3: this.evaluation?.pourquoi3,
+          pourquoi4: this.evaluation?.pourquoi4,
         });
       },
       error: error => {
@@ -142,24 +144,24 @@ export class CompletionSupplementairesComponent {
   }
 
   loadEvaluationResultats(id: number) {
-    this.supplementaireService.getSupplementairesResultats(id).subscribe({
+    this.evaluationService.getEvaluationsResultats(id).subscribe({
       next: response => {
         console.log('response');
         console.log(response);
-        this.supplementaireResultats = response;
+        this.evaluationtResultats = response;
         this.i++;
         if (this.i === 1) {
-          this.selectedItem = this.supplementaireResultats[0];
+          this.selectedItem = this.evaluationtResultats[0];
           this.selectedItemId = this.selectedItem?.id;
-          console.log('this.supplementaireResultats');
-          console.log(this.supplementaireResultats);
+          console.log('this.evaluationtResultats');
+          console.log(this.evaluationtResultats);
         }
         if (this.selectedItem) {
           this.selectedItem =
-            this.supplementaireResultats.find(item => item.id === this.selectedItemId) || null;
+            this.evaluationtResultats.find(item => item.id === this.selectedItemId) || null;
         }
-        console.log('supplementaireResultats');
-        console.log(this.supplementaireResultats);
+        console.log('evaluationtResultats');
+        console.log(this.evaluationtResultats);
       },
       error: error => {
         console.log(error);
@@ -167,7 +169,7 @@ export class CompletionSupplementairesComponent {
     });
   }
   loadScores(id: number) {
-    this.supplementaireService.getSupplementairesScores(id).subscribe({
+    this.evaluationService.getEvaluationsScores(id).subscribe({
       next: response => {
         this.scores = response;
         console.log('this.scores supplementaires ', this.scores);
@@ -194,11 +196,11 @@ export class CompletionSupplementairesComponent {
     console.log(event.source.value);
 
     if (event.source.value === 'Non') {
-      if (!this.supplementaire) {
+      if (!this.evaluation) {
         this.toastSrv.error("L'evaluation n'a pas ete charger !");
       }
-      const id_Grille = this.supplementaire?.id_Grille;
-      const id_Agent = this.supplementaire?.id_Agent;
+      const id_Grille = this.evaluation?.id_Grille;
+      const id_Agent = this.evaluation?.id_Agent;
 
       this.businessIntelligenceService.getAllBIByGrille(id_Grille, id_Agent).subscribe({
         next: response => {
@@ -242,7 +244,7 @@ export class CompletionSupplementairesComponent {
   }
   // openAddDialog(): void {
   //   const dialogRef = this.dialog.open(SupplementairesComponent, {
-  //     data: { id_Evaluations: this.supplementaireId },
+  //     data: { id_Evaluations: this.evaluationId },
   //     height: 'calc(100% - 30px)',
   //     width: 'calc(100% - 30px)',
   //     maxWidth: '100%',
@@ -250,19 +252,15 @@ export class CompletionSupplementairesComponent {
   //   });
   //   dialogRef.afterClosed().subscribe(() => {});
   // }
-  supplementaireResultat: SupplementairesResultat = Object.assign(
-    new SupplementairesResultat(),
+  supplementaireResultat: EvaluationsResultat = Object.assign(
+    new EvaluationsResultat(),
     this.formGroup.value
   );
-  updateSupplementaireResultat(
-    etat: number,
-    updateItem: boolean,
-    data: SupplementaireResultatItem
-  ) {
+  updateSupplementaireResultat(etat: number, updateItem: boolean, data: EvaluationResultatItem) {
     this.formGroup.patchValue({
       id: data?.id,
       etat: etat,
-      id_Supplementaires: data?.id_Supplementaires,
+      id_Evaluations: data?.id_Evaluations,
     });
     this.supplementaireResultat.fromData(this.formGroup.value);
 
@@ -270,11 +268,11 @@ export class CompletionSupplementairesComponent {
       id: this.formGroup.controls['id'].value,
       etat: this.formGroup.controls['etat'].value,
       commentaire: data.commentaire,
-      id_Supplementaires: this.formGroup.controls['id_Supplementaires'].value,
+      id_Evaluations: this.formGroup.controls['id_Evaluations'].value,
     };
 
-    if (this.supplementaire?.statut !== 'Terminer') {
-      this.supplementaireService.updateSupplementaireResultat(raw).subscribe({
+    if (this.evaluation?.statut !== 'Terminer') {
+      this.evaluationService.updateEvaluationResultat(raw).subscribe({
         next: () => {
           // 🔥 mise à jour locale
           data.etat = etat;
@@ -286,7 +284,7 @@ export class CompletionSupplementairesComponent {
             this.openedCollapseId = 0;
           }
 
-          this.loadSupplementaireById();
+          this.loadEvaluationById();
           // this.loadEvaluationResultats(raw.id_Evaluations || 0);
         },
       });
@@ -309,12 +307,12 @@ export class CompletionSupplementairesComponent {
       .pipe(
         tap(value => {
           if (value.success) {
-            this.supplementaireService.terminerSupplementaire(this.supplementaireId).subscribe({
+            this.evaluationService.terminerEvaluation(this.evaluationId).subscribe({
               next: response => {
                 console.log(response);
                 this.toastSrv.success(response?.message);
-                this.loadSupplementaireById();
-                this.loadEvaluationResultats(this.supplementaireId);
+                this.loadEvaluationById();
+                this.loadEvaluationResultats(this.evaluationId);
               },
               error: error => {
                 console.log(error);
@@ -332,7 +330,7 @@ export class CompletionSupplementairesComponent {
       .subscribe();
   }
 
-  onToggleItem(item: SupplementaireResultatItem) {
+  onToggleItem(item: EvaluationResultatItem) {
     this.openedCollapseId = item?.id;
 
     const newEtat = item?.etat === 1 ? 0 : 1;
@@ -340,7 +338,7 @@ export class CompletionSupplementairesComponent {
   }
 
   updateSupplementaire() {
-    if (!this.supplementaire) {
+    if (!this.evaluation) {
       this.toastSrv.error("L'evaluation n'a pas ete charger !");
     }
     const raw = {
@@ -354,10 +352,10 @@ export class CompletionSupplementairesComponent {
     console.log('raw');
     console.log(raw);
 
-    this.supplementaireService.updateSupplementaire(this.supplementaire.id, raw).subscribe({
+    this.evaluationService.updateEvaluation(this.evaluation.id, raw).subscribe({
       next: response => {
         console.log(response);
-        this.loadSupplementaireById();
+        this.loadEvaluationById();
         this.toastSrv.success('Le business intelligence a ete ajouter !');
         this.reinit = false;
       },
@@ -366,20 +364,20 @@ export class CompletionSupplementairesComponent {
       },
     });
   }
-  addCommentaire(data: SupplementaireResultatItem) {
+  addCommentaire(data: EvaluationResultatItem) {
     const raw = {
       id: data.id,
       etat: data.etat,
       commentaire: data.commentaire,
-      id_Supplementaires: data.id_Supplementaires,
+      id_Evaluations: data.id_Evaluations,
     };
 
-    if (this.supplementaire?.statut !== 'Terminer') {
-      this.supplementaireService.updateSupplementaireResultat(raw).subscribe({
+    if (this.evaluation?.statut !== 'Terminer') {
+      this.evaluationService.updateEvaluationResultat(raw).subscribe({
         next: response => {
           console.log(response);
-          this.loadEvaluationResultats(this.supplementaireId);
-          this.loadSupplementaireById();
+          this.loadEvaluationResultats(this.evaluationId);
+          this.loadEvaluationById();
           this.toastSrv.success('Commentaire ajouter !');
         },
         error: error => {

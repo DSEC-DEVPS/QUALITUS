@@ -17,6 +17,8 @@ import { MtxButtonModule } from '@ng-matero/extensions/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { Evaluations } from '@shared/modeles/evaluations/Evaluations';
 import { EvaluationsService } from '@shared/services/EvalutionsService/evaluations.service';
+import { ContexteService } from '@shared/services/ContexteService/contexte.service';
+import { Contexte } from '@shared/modeles/contexte/Contexte';
 import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
 import { LoginService } from '@core';
 import { Router } from '@angular/router';
@@ -59,7 +61,7 @@ export class CreateEvaluationsComponent implements OnInit, AfterViewInit {
 
   formGroup = this.fb.group({
     id: [0, [Validators.required]],
-    contexte: ['', [Validators.required]],
+    id_Contexte: [null as number | null, [Validators.required]],
     identifiant_appel: ['', [Validators.required]],
     numero_case: ['', [Validators.required]],
     numero_appel: ['', [Validators.required]],
@@ -71,6 +73,7 @@ export class CreateEvaluationsComponent implements OnInit, AfterViewInit {
   });
   isSubmitting: any;
   evaluations: Evaluations = new Evaluations();
+  contextes: Contexte[] = [];
   recherche: string = '';
   usernameError: string = '';
   inputStart = false;
@@ -78,6 +81,7 @@ export class CreateEvaluationsComponent implements OnInit, AfterViewInit {
   me: any;
   constructor(
     private evaluationsService: EvaluationsService,
+    private contexteService: ContexteService,
     private cdRef: ChangeDetectorRef,
     private loginService: LoginService
   ) {
@@ -99,6 +103,18 @@ export class CreateEvaluationsComponent implements OnInit, AfterViewInit {
     console.log('this.formGroup.value');
     console.log(this.formGroup.value);
     this.loadMe();
+    this.loadContextes();
+  }
+  loadContextes() {
+    this.contexteService.getAllContextesActifs().subscribe({
+      next: response => {
+        this.contextes = response?.data || [];
+      },
+      error: error => {
+        console.log(error);
+        this.toastSrv.error('Impossible de charger la liste des contextes');
+      },
+    });
   }
   onInputChange(event: Event): void {
     const input = event.target as HTMLInputElement;

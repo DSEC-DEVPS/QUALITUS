@@ -22,6 +22,8 @@ import { Router } from '@angular/router';
 import { SupplementairesComponent } from '../supplementaires/supplementaires.component';
 import { Supplementaires } from '@shared/modeles/supplementaires/Supplementaires';
 import { SupplementairesService } from '@shared/services/SupplementairesService/supplementaires.service';
+import { ContexteService } from '@shared/services/ContexteService/contexte.service';
+import { Contexte } from '@shared/modeles/contexte/Contexte';
 @Component({
   selector: 'app-create-supplementaires',
   standalone: true,
@@ -62,7 +64,7 @@ export class CreateSupplementairesComponent {
 
   formGroup = this.fb.group({
     id: [0, [Validators.required]],
-    contexte: ['', [Validators.required]],
+    id_Contexte: [null as number | null, [Validators.required]],
     identifiant_appel: ['', [Validators.required]],
     numero_case: ['', [Validators.required]],
     numero_appel: ['', [Validators.required]],
@@ -74,6 +76,7 @@ export class CreateSupplementairesComponent {
   });
   isSubmitting: any;
   supplementaires: Supplementaires = new Supplementaires();
+  contextes: Contexte[] = [];
   recherche: string = '';
   usernameError: string = '';
   inputStart = false;
@@ -82,6 +85,7 @@ export class CreateSupplementairesComponent {
   id_Evaluations: number = 0;
   constructor(
     private supplementairesService: SupplementairesService,
+    private contexteService: ContexteService,
     private cdRef: ChangeDetectorRef,
     private loginService: LoginService,
     @Inject(MAT_DIALOG_DATA) data: any
@@ -105,6 +109,18 @@ export class CreateSupplementairesComponent {
     console.log('this.formGroup.value');
     console.log(this.formGroup.value);
     this.loadMe();
+    this.loadContextes();
+  }
+  loadContextes() {
+    this.contexteService.getAllContextesActifs().subscribe({
+      next: response => {
+        this.contextes = response?.data || [];
+      },
+      error: error => {
+        console.log(error);
+        this.toastSrv.error('Impossible de charger la liste des contextes');
+      },
+    });
   }
   onInputChange(event: Event): void {
     const input = event.target as HTMLInputElement;

@@ -101,7 +101,6 @@ export class EvaluationsEnCoursComponent implements OnInit {
 
   constructor(
     private evaluationService: EvaluationsService,
-    private supplementaireService: SupplementairesService,
     private loginService: LoginService
   ) {}
 
@@ -168,43 +167,13 @@ export class EvaluationsEnCoursComponent implements OnInit {
     });
   }
   loadAllData() {
-    forkJoin({
-      // Appel 1 avec sa propre gestion d'erreur
-      evals: this.evaluationService
-        .getEvaluationsByEvaluateur(this.me.id, this.debut, this.fin)
-        .pipe(
-          catchError(error => {
-            console.error('Erreur Evaluations:', error);
-            this.toastSrv.error('Impossible de charger les évaluations standards');
-            return of({ data: [] }); // On retourne un tableau vide pour ne pas casser le forkJoin
-          })
-        ),
-      // Appel 2 avec sa propre gestion d'erreur
-      supps: this.supplementaireService
-        .getSupplementairesByEvaluateur(this.me.id, this.debut, this.fin)
-        .pipe(
-          catchError(error => {
-            console.error('Erreur Supplémentaires:', error);
-            this.toastSrv.error('Impossible de charger les évaluations supplémentaires');
-            return of({ data: [] }); // On retourne un tableau vide pour continuer
-          })
-        ),
-    }).subscribe({
+    this.evaluationService.getEvaluationsByEvaluateur(this.me.id, this.debut, this.fin).subscribe({
       next: results => {
         // On combine ce qui a réussi (si un appel a échoué, son .data sera [])
-        const evaluations = (results.evals?.data || []).map((e: any) => ({
-          ...e,
-          sourceTable: 'EVAL',
-        }));
-        const supplementaires = (results.supps?.data || []).map((s: any) => ({
-          ...s,
-          sourceTable: 'SUPP',
-        }));
-
-        const combinedData = [...evaluations, ...supplementaires];
-        console.log('this.combinedData');
-        console.log(combinedData);
-        this.dataSource = new MatTableDataSource(combinedData);
+        const evaluations = results?.data;
+        console.log('this.evaluations');
+        console.log(evaluations);
+        this.dataSource = new MatTableDataSource(evaluations);
 
         // Réapplication des filtres
 
@@ -219,7 +188,7 @@ export class EvaluationsEnCoursComponent implements OnInit {
           const matchesType =
             searchTerms.type === 'Tous' || !searchTerms.type
               ? true
-              : data.type === searchTerms.type;
+              : data.type_evaluation === searchTerms.type;
 
           return matchesStatut && matchesType;
         };
@@ -227,7 +196,7 @@ export class EvaluationsEnCoursComponent implements OnInit {
         // 2. Appliquer immédiatement le filtre basé sur les valeurs du formulaire
         // Cela filtrera par "En cours" et "Evaluation" (vos valeurs par défaut)
         this.applyFilters();
-        if (combinedData.length === 0) {
+        if (evaluations.length === 0) {
           this.toastSrv.warning('Aucune donnée disponible');
         }
       },
@@ -289,7 +258,7 @@ export class EvaluationsEnCoursComponent implements OnInit {
     this.loadAllData();
   }
   completionEvaluation(id: number, data: any) {
-    if (data.sourceTable === 'EVAL') {
+    if (data?.id_Evaluations == null) {
       this.router.navigateByUrl(`mon-espace/Evaluations/Completion/${id}`);
     } else {
       this.router.navigateByUrl(`mon-espace/Evaluations/Supplementaire/Completion/${id}`);
@@ -312,37 +281,20 @@ export class EvaluationsEnCoursComponent implements OnInit {
       .pipe(
         tap(value => {
           if (value.success) {
-            if (data.sourceTable === 'EVAL') {
-              this.evaluationService.deleteEvaluation(id).subscribe({
-                next: response => {
-                  console.log('delete ' + id + ' ');
-                  console.log('response');
-                  console.log(response);
-                  this.toastSrv.success(response?.message);
-                  // this.loadEvaluations();
-                  this.loadAllData();
-                },
-                error: error => {
-                  console.log('error');
-                  console.log(error);
-                },
-              });
-            } else {
-              this.supplementaireService.deleteSupplementaire(id).subscribe({
-                next: response => {
-                  console.log('delete ' + id + ' ');
-                  console.log('response');
-                  console.log(response);
-                  this.toastSrv.success(response?.message);
-                  // this.loadEvaluations();
-                  this.loadAllData();
-                },
-                error: error => {
-                  console.log('error');
-                  console.log(error);
-                },
-              });
-            }
+            this.evaluationService.deleteEvaluation(id).subscribe({
+              next: response => {
+                console.log('delete ' + id + ' ');
+                console.log('response');
+                console.log(response);
+                this.toastSrv.success(response?.message);
+                // this.loadEvaluations();
+                this.loadAllData();
+              },
+              error: error => {
+                console.log('error');
+                console.log(error);
+              },
+            });
           }
         }),
         catchError(error => {

@@ -104,6 +104,17 @@
       }
     },
     {
+      "route": "mon-espace/Contexte/Liste",
+      "name": "Gestion Contexte",
+      "type": "link",
+      "icon": "category",
+      "permissions": {
+        "only": [
+          "R_ADMI"
+        ]
+      }
+    },
+    {
       "route": "mon-espace/Programme/Liste",
       "name": "Gestion Programme",
       "type": "link",

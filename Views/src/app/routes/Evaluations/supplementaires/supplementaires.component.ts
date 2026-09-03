@@ -28,6 +28,7 @@ import { catchError, debounceTime, distinctUntilChanged, of, Subject, takeUntil,
 import { LoginService } from '@core';
 import { CreateSupplementairesComponent } from '../create-supplementaires/create-supplementaires.component';
 import { SupplementairesService } from '@shared/services/SupplementairesService/supplementaires.service';
+import { EvaluationsService } from '@shared/services/EvalutionsService/evaluations.service';
 
 @Component({
   selector: 'app-supplementaires',
@@ -86,7 +87,7 @@ export class SupplementairesComponent {
     statut: ['En cours'],
   });
   constructor(
-    private supplementairesService: SupplementairesService,
+    private evaluationService: EvaluationsService,
     private loginService: LoginService,
     @Inject(MAT_DIALOG_DATA) data: any
   ) {
@@ -131,28 +132,29 @@ export class SupplementairesComponent {
     console.log('this.id_Evaluations');
     console.log(this.id_Evaluations);
   }
-
   loadSupplementaires() {
     if (this.id_Evaluations) {
-      this.supplementairesService.getSupplementairesByEvaluations(this.id_Evaluations).subscribe({
-        next: response => {
-          this.dataSource = new MatTableDataSource(response?.data);
-          this.onStatutChange(this.formGroup.controls['statut'].value);
-          this.dataSource.filterPredicate = (data, filter) => data.statut === filter;
-          this.listeSupplementaires = response?.data;
-          console.log('this.dataSourcesupp');
-          console.log(this.dataSource);
-          if (!response?.data) {
-            this.toastSrv.warning(response?.message);
+      this.evaluationService
+        .getSupplementairesByEvaluations(this.me.id, this.id_Evaluations)
+        .subscribe({
+          next: response => {
+            this.dataSource = new MatTableDataSource(response?.data);
+            this.onStatutChange(this.formGroup.controls['statut'].value);
+            this.dataSource.filterPredicate = (data, filter) => data.statut === filter;
+            this.listeSupplementaires = response?.data;
+            console.log('this.dataSourcesupp');
+            console.log(this.dataSource);
+            if (!response?.data) {
+              this.toastSrv.warning(response?.message);
+              this.dataSource = new MatTableDataSource();
+            }
+          },
+          error: error => {
+            console.log('Error error', error);
             this.dataSource = new MatTableDataSource();
-          }
-        },
-        error: error => {
-          console.log('Error error', error);
-          this.dataSource = new MatTableDataSource();
-          this.toastSrv.error(error.error);
-        },
-      });
+            this.toastSrv.error(error.error);
+          },
+        });
     } else {
       this.toastSrv.warning("Une erreur est survenue lors de l'ouverture du pop up");
     }
@@ -220,7 +222,7 @@ export class SupplementairesComponent {
       .pipe(
         tap(value => {
           if (value.success) {
-            this.supplementairesService.deleteSupplementaire(id).subscribe({
+            this.evaluationService.deleteEvaluation(id).subscribe({
               next: response => {
                 console.log('delete ' + id + ' ');
                 console.log('response');

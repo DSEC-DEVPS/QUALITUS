@@ -45,6 +45,9 @@ export class EvaluationsService {
   getEvaluationsByEvaluateur(id: number, debut: any, fin: any): Observable<any> {
     return this.http.get<any>(`/api/v1/evaluationsAll/${id}/${debut}/${fin}`);
   }
+  getSupplementairesByEvaluations(id: number, id_Evaluations: number): Observable<any> {
+    return this.http.get<any>(`/api/v1/supplementairesByEvaluations/${id}/${id_Evaluations}`);
+  }
   getEvaluationsByAgent(id: number, debut: any, fin: any): Observable<any> {
     return this.http.get<any>(`/api/v1/evaluationsAll/${id}/${debut}/${fin}`);
   }

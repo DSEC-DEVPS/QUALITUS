@@ -10,7 +10,6 @@ import { LectureFicheComponent } from './routes/Fiche/lecture-fiche/lecture-fich
 import { ExporterComponent } from './routes/exportation/exporter/exporter.component';
 import { ChangedPasswordComponent } from './routes/sessions/changed-password/changed-password.component';
 import { BusinessIntelligenceComponent } from './routes/businessIntelligence/business-intelligence/business-intelligence.component';
-import { EvaluationsItemsComponent } from './routes/Evaluations/evaluations-items/evaluations-items.component';
 
 export const routes: Routes = [
   {
@@ -48,6 +47,10 @@ export const routes: Routes = [
         loadChildren: () => import('./routes/Site/site.routes').then(m => m.routes),
       },
       {
+        path: 'Contexte',
+        loadChildren: () => import('./routes/Contexte/contexte.routes').then(m => m.routes),
+      },
+      {
         path: 'Programme',
         loadChildren: () => import('./routes/Programme/programme.routes').then(m => m.routes),
       },
@@ -83,10 +86,7 @@ export const routes: Routes = [
         path: 'Evaluations',
         loadChildren: () => import('./routes/Evaluations/evaluations.routes').then(m => m.routes),
       },
-      {
-        path: 'EvaluationsItem/:id',
-        component: EvaluationsItemsComponent,
-      },
+
       {
         path: 'BusinessIntelligence',
         component: BusinessIntelligenceComponent,
