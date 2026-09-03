@@ -9,6 +9,7 @@ import { ListeGrilleComponent } from './routes/liste-grille/liste-grille.compone
 import { LectureFicheComponent } from './routes/Fiche/lecture-fiche/lecture-fiche.component';
 import { ExporterComponent } from './routes/exportation/exporter/exporter.component';
 import { ChangedPasswordComponent } from './routes/sessions/changed-password/changed-password.component';
+import { BusinessIntelligenceComponent } from './routes/businessIntelligence/business-intelligence/business-intelligence.component';
 
 export const routes: Routes = [
   {
@@ -46,6 +47,10 @@ export const routes: Routes = [
         loadChildren: () => import('./routes/Site/site.routes').then(m => m.routes),
       },
       {
+        path: 'Contexte',
+        loadChildren: () => import('./routes/Contexte/contexte.routes').then(m => m.routes),
+      },
+      {
         path: 'Programme',
         loadChildren: () => import('./routes/Programme/programme.routes').then(m => m.routes),
       },
@@ -71,6 +76,20 @@ export const routes: Routes = [
       {
         path: 'grille',
         component: ListeGrilleComponent,
+        // loadChildren: () => import('./routes/liste-grille/grille.routes').then(m => m.routes),
+      },
+      {
+        path: 'Calendars',
+        loadChildren: () => import('./routes/calendrier/calendrier.routes').then(m => m.routes),
+      },
+      {
+        path: 'Evaluations',
+        loadChildren: () => import('./routes/Evaluations/evaluations.routes').then(m => m.routes),
+      },
+
+      {
+        path: 'BusinessIntelligence',
+        component: BusinessIntelligenceComponent,
       },
     ],
   },

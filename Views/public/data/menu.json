@@ -6,17 +6,21 @@
       "type": "link",
       "icon": "dashboard",
       "permissions": {
-        "only": ["R_ADMI", "R_GB"]
+        "only": [
+          "R_ADMI",
+          "R_GB"
+        ]
       }
     },
-
     {
       "route": "mon-espace/Utilisateurs/Liste",
       "name": "Utilisateurs",
       "type": "link",
       "icon": "people",
       "permissions": {
-        "only": ["R_ADMI"]
+        "only": [
+          "R_ADMI"
+        ]
       }
     },
     {
@@ -25,7 +29,9 @@
       "type": "link",
       "icon": "people",
       "permissions": {
-        "only": ["R_SUP"]
+        "only": [
+          "R_SUP"
+        ]
       }
     },
     {
@@ -48,7 +54,9 @@
         }
       ],
       "permissions": {
-        "only": ["R_SUP"]
+        "only": [
+          "R_SUP"
+        ]
       }
     },
     {
@@ -57,7 +65,9 @@
       "type": "link",
       "icon": "widgets",
       "permissions": {
-        "only": ["R_ADMI"]
+        "only": [
+          "R_ADMI"
+        ]
       }
     },
     {
@@ -66,7 +76,9 @@
       "type": "link",
       "icon": "settings_backup_restore",
       "permissions": {
-        "only": ["R_RO"]
+        "only": [
+          "R_RO"
+        ]
       }
     },
     {
@@ -75,7 +87,9 @@
       "type": "link",
       "icon": "edit_attributes",
       "permissions": {
-        "only": ["R_RO"]
+        "only": [
+          "R_RO"
+        ]
       }
     },
     {
@@ -84,7 +98,20 @@
       "type": "link",
       "icon": "location_on",
       "permissions": {
-        "only": ["R_ADMI"]
+        "only": [
+          "R_ADMI"
+        ]
+      }
+    },
+    {
+      "route": "mon-espace/Contexte/Liste",
+      "name": "Gestion Contexte",
+      "type": "link",
+      "icon": "category",
+      "permissions": {
+        "only": [
+          "R_ADMI"
+        ]
       }
     },
     {
@@ -93,10 +120,11 @@
       "type": "link",
       "icon": "subtitles",
       "permissions": {
-        "only": ["R_ADMI"]
+        "only": [
+          "R_ADMI"
+        ]
       }
     },
-
     {
       "route": "mon-espace/Fiche",
       "name": "Gestion Contenu",
@@ -109,7 +137,10 @@
           "type": "link",
           "icon": "colorize",
           "permissions": {
-            "only": ["R_ADMI", "R_GB"]
+            "only": [
+              "R_ADMI",
+              "R_GB"
+            ]
           }
         },
         {
@@ -118,17 +149,20 @@
           "type": "link",
           "icon": "colorize",
           "permissions": {
-            "only": ["R_GB"]
+            "only": [
+              "R_GB"
+            ]
           }
         },
-
         {
           "route": "Liste",
           "name": "Liste Fiche",
           "type": "link",
           "icon": "flag",
           "permissions": {
-            "only": ["R_ADMI"]
+            "only": [
+              "R_ADMI"
+            ]
           }
         },
         {
@@ -137,7 +171,9 @@
           "type": "link",
           "icon": "flag",
           "permissions": {
-            "only": ["R_ADMI"]
+            "only": [
+              "R_ADMI"
+            ]
           }
         },
         {
@@ -146,7 +182,9 @@
           "type": "link",
           "icon": "flag",
           "permissions": {
-            "only": ["R_ADMI"]
+            "only": [
+              "R_ADMI"
+            ]
           }
         },
         {
@@ -155,15 +193,20 @@
           "type": "link",
           "icon": "flag",
           "permissions": {
-            "only": ["R_ADMI", "R_GB"]
+            "only": [
+              "R_ADMI",
+              "R_GB"
+            ]
           }
         }
       ],
       "permissions": {
-        "only": ["R_ADMI", "R_GB"]
+        "only": [
+          "R_ADMI",
+          "R_GB"
+        ]
       }
     },
-
     {
       "route": "mon-espace/MaVoixCompte/",
       "name": "Ma Voix",
@@ -175,7 +218,9 @@
           "name": "Liste Motif",
           "type": "link",
           "permissions": {
-            "only": ["R_ADMI"]
+            "only": [
+              "R_ADMI"
+            ]
           }
         },
         {
@@ -183,12 +228,17 @@
           "name": "Ajouter",
           "type": "link",
           "permissions": {
-            "only": ["R_TC"]
+            "only": [
+              "R_TÉLÉ"
+            ]
           }
         }
       ],
       "permissions": {
-        "only": ["R_TC", "R_ADMI"]
+        "only": [
+          "R_TÉLÉ",
+          "R_ADMI"
+        ]
       }
     },
     {
@@ -197,7 +247,9 @@
       "type": "link",
       "icon": "insert_drive_file",
       "permissions": {
-        "only": ["R_GE"]
+        "only": [
+          "R_GE"
+        ]
       }
     },
     {
@@ -206,10 +258,14 @@
       "type": "link",
       "icon": "import_export",
       "permissions": {
-        "only": ["R_ADMI", "R_GB", "R_SUP", "R_GE"]
+        "only": [
+          "R_ADMI",
+          "R_GB",
+          "R_SUP",
+          "R_GE"
+        ]
       }
     },
-
     {
       "route": "mon-espace/ecoutes",
       "name": "ECOUTES",
@@ -227,7 +283,10 @@
               "name": "Evaluation En cours",
               "type": "link",
               "permissions": {
-                "only": ["R_AQ", "R_ADMI"]
+                "only": [
+                  "R_AQ",
+                  "R_ADMI"
+                ]
               }
             },
             {
@@ -235,7 +294,10 @@
               "name": "Mes évaluations",
               "type": "link",
               "permissions": {
-                "only": ["R_AQ", "R_ADMI"]
+                "only": [
+                  "R_AQ",
+                  "R_ADMI"
+                ]
               }
             }
           ]
@@ -251,12 +313,14 @@
               "name": "Mes évaluations",
               "type": "link",
               "permissions": {
-                "only": ["R_AQ", "R_ADMI"]
+                "only": [
+                  "R_AQ",
+                  "R_ADMI"
+                ]
               }
             }
           ]
         },
-
         {
           "route": "calibrage",
           "name": "Calibrage",
@@ -268,7 +332,10 @@
               "name": "Participer",
               "type": "link",
               "permissions": {
-                "only": ["R_AQ", "R_ADMI"]
+                "only": [
+                  "R_AQ",
+                  "R_ADMI"
+                ]
               }
             },
             {
@@ -276,17 +343,21 @@
               "name": "Mes calibrages",
               "type": "link",
               "permissions": {
-                "only": ["R_AQ", "R_ADMI"]
+                "only": [
+                  "R_AQ",
+                  "R_ADMI"
+                ]
               }
             }
           ]
         }
       ],
       "permissions": {
-        "only": ["R_AQ"]
+        "only": [
+          "R_AQ"
+        ]
       }
     },
-
     {
       "route": "mon-espace/quiz",
       "name": "GESTION QUIZ",
@@ -298,7 +369,10 @@
           "name": "Créer un Quiz",
           "type": "link",
           "permissions": {
-            "only": ["R_ADMI", "R_AQ"]
+            "only": [
+              "R_ADMI",
+              "R_AQ"
+            ]
           }
         },
         {
@@ -306,7 +380,10 @@
           "name": "Liste des Quiz",
           "type": "link",
           "permissions": {
-            "only": ["R_ADMI", "R_AQ"]
+            "only": [
+              "R_ADMI",
+              "R_AQ"
+            ]
           }
         },
         {
@@ -314,12 +391,17 @@
           "name": "Parcitipez au Quiz",
           "type": "link",
           "permissions": {
-            "only": ["R_ADMI", "R_AQ"]
+            "only": [
+              "R_ADMI",
+              "R_AQ"
+            ]
           }
         }
       ],
       "permissions": {
-        "only": ["R_AQ"]
+        "only": [
+          "R_AQ"
+        ]
       }
     },
     {
@@ -338,7 +420,10 @@
               "name": "Faire une contre Eval",
               "type": "link",
               "permissions": {
-                "only": ["R_ADMI", "R_AQ"]
+                "only": [
+                  "R_ADMI",
+                  "R_AQ"
+                ]
               }
             },
             {
@@ -346,14 +431,22 @@
               "name": "Gestions",
               "type": "link",
               "permissions": {
-                "only": ["R_ADMI", "R_AQ"]
+                "only": [
+                  "R_ADMI",
+                  "R_AQ"
+                ]
               }
             },
             {
               "route": "ecoutes-validations",
               "name": "Ecoutes Validations",
               "type": "link",
-              "permissions": { "only": ["R_ADMI", "R_AQ"] }
+              "permissions": {
+                "only": [
+                  "R_ADMI",
+                  "R_AQ"
+                ]
+              }
             }
           ]
         },
@@ -361,11 +454,18 @@
           "route": "calibrage",
           "name": "Calibrage",
           "type": "link",
-          "permissions": { "only": ["R_ADMI", "R_AQ"] }
+          "permissions": {
+            "only": [
+              "R_ADMI",
+              "R_AQ"
+            ]
+          }
         }
       ],
       "permissions": {
-        "only": ["R_AQ"]
+        "only": [
+          "R_AQ"
+        ]
       }
     },
     {
@@ -379,7 +479,10 @@
           "name": "Ecoutes",
           "type": "link",
           "permissions": {
-            "only": ["R_ADMI", "R_AQ"]
+            "only": [
+              "R_ADMI",
+              "R_AQ"
+            ]
           }
         },
         {
@@ -387,7 +490,10 @@
           "name": "Contre Evalutation",
           "type": "link",
           "permissions": {
-            "only": ["R_ADMI", "R_AQ"]
+            "only": [
+              "R_ADMI",
+              "R_AQ"
+            ]
           }
         },
         {
@@ -395,21 +501,28 @@
           "name": "Analyse",
           "type": "link",
           "permissions": {
-            "only": ["R_ADMI", "R_AQ"]
+            "only": [
+              "R_ADMI",
+              "R_AQ"
+            ]
           }
         }
       ],
       "permissions": {
-        "only": ["R_AQ"]
+        "only": [
+          "R_AQ"
+        ]
       }
     },
     {
       "route": "mon-espace/grille",
-      "name": "Grille",
+      "name": "Grilles Evaluations",
       "type": "link",
       "icon": "flag",
       "permissions": {
-        "only": ["R_ADMI"]
+        "only": [
+          "R_ADMI"
+        ]
       }
     },
     {
@@ -423,7 +536,10 @@
           "name": "Export",
           "type": "link",
           "permissions": {
-            "only": ["R_ADMI", "R_AQ"]
+            "only": [
+              "R_ADMI",
+              "R_AQ"
+            ]
           }
         },
         {
@@ -431,12 +547,87 @@
           "name": "Sondage",
           "type": "link",
           "permissions": {
-            "only": ["R_ADMI", "R_AQ"]
+            "only": [
+              "R_ADMI",
+              "R_AQ"
+            ]
           }
         }
       ],
       "permissions": {
-        "only": ["R_AQ"]
+        "only": [
+          "R_AQ"
+        ]
+      }
+    },
+    {
+      "route": "mon-espace/Calendars",
+      "name": "Calendrier",
+      "type": "sub",
+      "icon": "event",
+      "children": [
+        {
+          "route": "listeCalendars",
+          "name": "Calendrier",
+          "type": "link",
+          "icon": "colorize",
+          "permissions": {
+            "only": [
+              "R_ADMI"
+            ]
+          }
+        },
+        {
+          "route": "listeCalendarsPolicies",
+          "name": "Politique du calendrier",
+          "type": "link",
+          "icon": "colorize",
+          "permissions": {
+            "only": [
+              "R_ADMI"
+            ]
+          }
+        }
+      ],
+      "permissions": {
+        "only": [
+          "R_ADMI"
+        ]
+      }
+    },
+    {
+      "route": "mon-espace/BusinessIntelligence",
+      "name": "Business Intelligence",
+      "type": "link",
+      "icon": "event",
+      "permissions": {
+        "only": [
+          "R_ADMI"
+        ]
+      }
+    },
+    {
+      "route": "mon-espace/Evaluations",
+      "name": "Evaluations",
+      "type": "sub",
+      "icon": "event",
+      "children": [
+        {
+          "route": "mesEvaluations",
+          "name": "Mes evaluations",
+          "type": "link",
+          "icon": "timeline",
+          "permissions": {
+            "only": [
+              "R_ADMI"
+            ]
+          }
+        }
+      ],
+      "permissions": {
+        "only": [
+          "R_ADMI"
+        ]
       }
     }
   ]

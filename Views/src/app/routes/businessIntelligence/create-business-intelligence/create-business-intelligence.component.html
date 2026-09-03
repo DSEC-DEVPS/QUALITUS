@@ -1,0 +1,56 @@
+<div class="container">
+  <h6>Business Intelligence</h6>
+  <div class="row m-auto justify-content-center register-template">
+    <div class="col-sm-8">
+      <mat-card>
+        <mat-card-content>
+          <form
+            [formGroup]="formGroup"
+            (ngSubmit)="createBusinessIntelligence()"
+            class="form-field-full"
+          >
+            <div class="row">
+              <div class="col-sm-6 m-auto">
+                <mat-form-field appearance="fill">
+                  <mat-label>Nom</mat-label>
+                  <input matInput formControlName="nom" required />
+                </mat-form-field>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-sm-6 m-auto">
+                <mat-form-field appearance="fill">
+                  <mat-label>Site</mat-label>
+                  <mat-select formControlName="id_Site" required>
+                    <mat-option *ngFor="let site of sites" [value]="site.id">
+                      {{ site.nom }}
+                    </mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-sm-6 m-auto">
+                <mat-form-field appearance="fill">
+                  <mat-label>Grille</mat-label>
+                  <mat-select formControlName="id_Grille" required>
+                    <mat-option *ngFor="let grille of grilles" [value]="grille.id">
+                      {{ grille.nom }}
+                    </mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="m-t-8 text-center">
+              <button mat-flat-button [loading]="isSubmitting" [disabled]="formGroup.invalid">
+                Ajouter
+              </button>
+              <button mat-button mat-dialog-close>Annuler</button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

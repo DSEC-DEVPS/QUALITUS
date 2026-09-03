@@ -41,8 +41,11 @@ export class ErrorInterceptor implements HttpInterceptor {
       });
     } else {
       console.error('ERROR', error);
-
-      this.toast.error(this.getMessage(error));
+      if (error.status === 400) {
+        this.toast.warning(error.error.message);
+      } else {
+        this.toast.error(this.getMessage(error));
+      }
       /* if (error.status === STATUS.UNAUTHORIZED) {
         this.toast.error('Login ou Mot de passe incorrect');
       }*/

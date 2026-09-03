@@ -1,0 +1,72 @@
+<div class="container">
+  <h6>Modification de la politique</h6>
+  <div class="row m-auto justify-content-center register-template">
+    <div class="col-sm-8">
+      <mat-card>
+        <mat-card-content class="d-flex justify-content-center">
+          <form
+            [formGroup]="formGroup"
+            (ngSubmit)="updateCalendarsPolicies()"
+            class="form-field-full"
+          >
+            <div class="row">
+              <div class="col-sm-12 m-auto">
+                <label class="mb-2 d-block fw-bold">Période</label>
+                <mat-radio-group>
+                  <mat-radio-button
+                    [checked]="formGroup.value.mois_courant === 1"
+                    (change)="selectMois($event)"
+                    value="mois_courant"
+                  >
+                    Mois courant
+                  </mat-radio-button>
+
+                  <mat-radio-button
+                    [checked]="formGroup.value.mois_courant_et_posterieurs === 1"
+                    (change)="selectMois($event)"
+                    value="mois_courant_et_posterieurs"
+                  >
+                    Mois courant et postérieurs
+                  </mat-radio-button>
+
+                  <mat-radio-button
+                    [checked]="formGroup.value.tous_les_mois === 1"
+                    (change)="selectMois($event)"
+                    value="tous_les_mois"
+                  >
+                    Tous les mois
+                  </mat-radio-button>
+                </mat-radio-group>
+              </div>
+            </div>
+
+            <div class="row mt-3">
+              <div class="col-sm-6 m-auto">
+                <mat-form-field appearance="fill" class="w-100">
+                  <mat-label>Site</mat-label>
+                  <mat-select formControlName="id_Site" required>
+                    <mat-option *ngFor="let site of sites" [value]="site.id">
+                      {{ site.nom }}
+                    </mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="m-t-8 text-center">
+              <button
+                mat-flat-button
+                type="submit"
+                [loading]="isSubmitting"
+                [disabled]="formGroup.invalid"
+              >
+                Ajouter
+              </button>
+              <button mat-button mat-dialog-close>Annuler</button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>
