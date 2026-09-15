@@ -1,0 +1,10 @@
+.lettre-section {
+  .entete { display: flex; align-items: center; justify-content: space-between; }
+  h3 { margin: 0; }
+  h4 { margin: 12px 0 4px; }
+  .corps { line-height: 1.5; }
+  .ok { color: #2e7d32; }
+  .ko { color: #c62828; }
+  .ref { font-size: 0.85rem; color: rgba(0, 0, 0, 0.6); }
+  .attente { color: #e65100; }
+}

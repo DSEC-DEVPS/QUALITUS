@@ -201,6 +201,13 @@ export class UserService {
   getAllGrile(): Observable<grille[]> {
     return this.http.get<grille[]>(`/api/v1/grille/all`);
   }
+  // Grilles d'évaluation actives (socle S2 : rattachement grille -> utilisateur)
+  getEvalGrillesActives(): Observable<{ id: number; nom: string }[]> {
+    return this.http.get<{ id: number; nom: string }[]>(`/api/v1/eval/grille/all?statut=ACTIVE`);
+  }
+  setEvalGrilleUtilisateur(id: number, id_EvalGrille: number | null): Observable<message> {
+    return this.http.put<message>(`/api/v1/utilisateur/${id}/eval-grille`, { id_EvalGrille });
+  }
   /** les requêtes pour la cotégorie */
   addCategorie(formValue: { nom: string }): Observable<message> {
     return this.http.post<message>(`/api/v1/categorie/add`, formValue);

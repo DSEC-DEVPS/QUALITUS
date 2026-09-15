@@ -7,7 +7,7 @@
           <button mat-stroked-button color="primary" (click)="exporter()">
             <mat-icon>download</mat-icon> Exporter Excel
           </button>
-          <button mat-flat-button color="primary" (click)="nouveau()">
+          <button mat-flat-button color="primary" *appCan="'quiz.creer'" (click)="nouveau()">
             <mat-icon>add</mat-icon> Nouveau quiz
           </button>
         </div>
@@ -64,10 +64,10 @@
               <button mat-icon-button matTooltip="Detail" (click)="detail(q)">
                 <mat-icon>visibility</mat-icon>
               </button>
-              <button mat-icon-button color="primary" matTooltip="Editer" (click)="editer(q)">
+              <button mat-icon-button color="primary" matTooltip="Editer" *appCan="'quiz.modifier'" (click)="editer(q)">
                 <mat-icon>edit_note</mat-icon>
               </button>
-              <button mat-icon-button color="warn" matTooltip="Supprimer" (click)="supprimer(q)">
+              <button mat-icon-button color="warn" matTooltip="Supprimer" *appCan="'quiz.supprimer'" (click)="supprimer(q)">
                 <mat-icon>delete</mat-icon>
               </button>
             </td>

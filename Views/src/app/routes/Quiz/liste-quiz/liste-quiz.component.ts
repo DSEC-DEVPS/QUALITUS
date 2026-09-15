@@ -22,10 +22,11 @@ import * as XLSX from 'xlsx';
 import { QuizService } from '@shared/services/quiz.service';
 import { Quiz } from '../interfaces';
 
+import { CanDirective } from '@core/authorization/can.directive';
 @Component({
   selector: 'app-liste-quiz',
   standalone: true,
-  imports: [
+  imports: [CanDirective, 
     MatFormFieldModule,
     MatInputModule,
     MatTableModule,

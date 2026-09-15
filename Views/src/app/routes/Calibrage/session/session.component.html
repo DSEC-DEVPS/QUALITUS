@@ -1,0 +1,124 @@
+<div class="cal-session" *ngIf="session">
+  <!-- Bandeau supérieur -->
+  <div class="bandeau">
+    <button mat-icon-button (click)="retour()"><mat-icon>arrow_back</mat-icon></button>
+    <div class="titre">
+      <strong>{{ session.nom }}</strong>
+      <span class="badge" [attr.data-st]="session.statut">{{ session.statut }}</span>
+    </div>
+    <span class="spacer"></span>
+
+    <!-- actions jauge -->
+    <ng-container *ngIf="role === 'jauge'">
+      <mat-slide-toggle [checked]="session.visibilite" (change)="basculerVisibilite()"
+                        matTooltip="Ouvre/ferme l'accès des participants">
+        Visibilité participants
+      </mat-slide-toggle>
+      <button mat-stroked-button (click)="cloturerReference()" *ngIf="session.statut === 'OUVERTE'">
+        <mat-icon>flag</mat-icon> Clôturer la référence
+      </button>
+      <button mat-flat-button color="primary" (click)="accederResultats()"
+              *ngIf="session.statut === 'RESULTATS_EN_REVISION' || session.statut === 'CLOTUREE'">
+        <mat-icon>analytics</mat-icon> Accéder aux résultats
+      </button>
+    </ng-container>
+
+    <!-- chrono + clôture participant -->
+    <ng-container *ngIf="role === 'participant' && accessible">
+      <span class="chrono" [class.faible]="tempsRestant < 300" *ngIf="!participationClose">
+        <mat-icon>timer</mat-icon> {{ chrono }}
+      </span>
+      <span class="close-tag" *ngIf="participationClose"><mat-icon>lock</mat-icon> Participation close</span>
+      <button mat-flat-button color="primary" (click)="cloturerParticipation()" *ngIf="!participationClose">
+        <mat-icon>done_all</mat-icon> Clôturer ma participation
+      </button>
+    </ng-container>
+  </div>
+
+  <!-- participant sans accès -->
+  <div class="pas-acces" *ngIf="role === 'participant' && !accessible">
+    <mat-icon>lock_clock</mat-icon>
+    <p>La session n'est pas encore accessible. Le jauge ne vous a pas encore ouvert l'accès, ou la session n'est pas ouverte.</p>
+    <button mat-stroked-button (click)="charger()"><mat-icon>refresh</mat-icon> Actualiser</button>
+  </div>
+
+  <div class="corps" *ngIf="role === 'jauge' || accessible">
+    <!-- Section gauche : grille -->
+    <div class="grille-zone">
+      <div *ngIf="!txSel" class="vide">Sélectionnez une transaction.</div>
+      <ng-container *ngIf="txSel">
+        <div class="grille-tete">
+          <h3>Transaction {{ txSel.ordre_passage }} — {{ txSel.identifiant_appel }}</h3>
+          <span class="badge etat" [attr.data-e]="txSel.etat">{{ etatLabel(txSel.etat) }}</span>
+          <span class="lecture" *ngIf="lectureSeule"><mat-icon>visibility</mat-icon> lecture seule</span>
+          <button mat-stroked-button *ngIf="!lectureSeule && txSel.etat !== 'TERMINEE'" (click)="terminerTx(txSel)">
+            <mat-icon>check</mat-icon> Terminer cette transaction
+          </button>
+        </div>
+
+        <div class="cats">
+          <button *ngFor="let c of categories; let i = index" class="cat-chip" [class.actif]="i === catActive" (click)="catActive = i">
+            {{ c.libelle }}
+          </button>
+        </div>
+
+        <div class="erreurs">
+          <div class="erreur" *ngFor="let e of erreursActives" [class.decochee]="!e.coche">
+            <div class="ligne">
+              <mat-checkbox [checked]="e.coche === 1" [disabled]="lectureSeule" (change)="toggle(e)"
+                            matTooltip="Coché = conforme ; décoché = écart constaté"></mat-checkbox>
+              <span class="item" (click)="erreurDepliee = erreurDepliee === e.id ? null : e.id">{{ e.item }}</span>
+              <mat-icon *ngIf="!e.coche" class="ico-ecart" matTooltip="Écart constaté">report_problem</mat-icon>
+              <button mat-icon-button (click)="erreurDepliee = erreurDepliee === e.id ? null : e.id">
+                <mat-icon>{{ erreurDepliee === e.id ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+            </div>
+            <div class="detail" *ngIf="erreurDepliee === e.id">
+              <div class="ref" *ngIf="e.referentiel"><strong>Référentiel :</strong> {{ e.referentiel }}</div>
+              <mat-form-field appearance="outline" class="comm">
+                <mat-label>Commentaire</mat-label>
+                <textarea matInput rows="2" [(ngModel)]="e.commentaire" [disabled]="lectureSeule"
+                          (blur)="enregistrerCommentaire(e)"></textarea>
+              </mat-form-field>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+
+    <!-- Section droite : listes -->
+    <div class="liste-zone">
+      <mat-button-toggle-group *ngIf="role === 'jauge'" [value]="vueJauge" (change)="vueJauge = $event.value" class="switch">
+        <mat-button-toggle value="transactions">Transactions</mat-button-toggle>
+        <mat-button-toggle value="evaluateurs">Évaluateurs</mat-button-toggle>
+      </mat-button-toggle-group>
+
+      <!-- liste transactions (participant + jauge mode transactions) -->
+      <div class="liste" *ngIf="role === 'participant' || vueJauge === 'transactions'">
+        <div class="liste-item" *ngFor="let t of transactions" [class.sel]="txSel?.id === t.id" (click)="selectionner(t)">
+          <span class="ordre">{{ t.ordre_passage }}</span>
+          <span class="lib">{{ t.identifiant_appel }}</span>
+          <span class="badge etat" [attr.data-e]="t.etat">{{ etatLabel(t.etat) }}</span>
+        </div>
+      </div>
+
+      <!-- liste évaluateurs (jauge) -->
+      <div class="liste" *ngIf="role === 'jauge' && vueJauge === 'evaluateurs'">
+        <div class="eval-item" *ngFor="let p of participants">
+          <div>
+            <strong>{{ p.prenom }} {{ p.nom }}</strong>
+            <span class="sub">{{ p.statut_participation }}<span *ngIf="!p.invite"> · non invité</span></span>
+          </div>
+          <button mat-icon-button matTooltip="Réinitialiser (si temps écoulé)" (click)="reinitialiser(p)">
+            <mat-icon>restart_alt</mat-icon>
+          </button>
+        </div>
+        <div class="vide" *ngIf="!participants.length">Aucun participant.</div>
+        <p class="note-ref" [class.ok]="referenceComplete">
+          <mat-icon>{{ referenceComplete ? 'check_circle' : 'pending' }}</mat-icon>
+          Référence {{ referenceComplete ? 'complète' : 'en cours' }}
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

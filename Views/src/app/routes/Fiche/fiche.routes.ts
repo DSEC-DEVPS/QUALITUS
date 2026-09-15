@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { canMatchPermission } from '../../core/authorization/permission.guard';
 import { AjouterFicheComponent } from './ajouter-fiche/ajouter-fiche.component';
 import { ListeCategorieComponent } from './liste-categorie/liste-categorie.component';
 import { ListeSlaComponent } from './liste-sla/liste-sla.component';
@@ -16,8 +17,8 @@ export const routes: Routes = [
   { path: 'ListeSousCategorie', component: ListeSousCategorieComponent },
   { path: 'lecture-fiche/:id', component: LectureFicheComponent },
   { path: 'archives', component: ListeArchiveComponent },
-  { path: 'Ajouter', component: AjouterFicheComponent },
+  { path: 'Ajouter', component: AjouterFicheComponent, canMatch: [canMatchPermission('fiche.creer')] },
   { path: 'details/:id', component: DetailFicheComponent },
-  { path: 'update/:id', component: UpdateFicheComponent },
+  { path: 'update/:id', component: UpdateFicheComponent, canMatch: [canMatchPermission('fiche.modifier')] },
   { path: 'ge-chargement', component: VerificationComponent },
 ];

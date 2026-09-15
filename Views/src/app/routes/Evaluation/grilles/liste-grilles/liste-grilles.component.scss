@@ -1,0 +1,27 @@
+.liste-grilles {
+  padding: 16px;
+
+  .entete {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .form-creation mat-card-content {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .table-grilles { width: 100%; }
+
+  .ligne { cursor: pointer; }
+  .ligne:hover { background: rgba(0, 0, 0, 0.03); }
+
+  .vide { color: rgba(0, 0, 0, 0.6); }
+
+  mat-chip.chip-active { background: #c8e6c9; }
+  mat-chip.chip-brouillon { background: #ffe0b2; }
+}

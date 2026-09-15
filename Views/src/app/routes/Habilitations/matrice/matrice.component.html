@@ -1,0 +1,100 @@
+<div class="matrice-page">
+  <mat-card class="entete">
+    <div class="titre">
+      <div>
+        <h2><mat-icon>admin_panel_settings</mat-icon> Matrice des droits</h2>
+        <p class="sous">Rôle × permission (module / action). Socle commun — S5.</p>
+      </div>
+      <div class="mode">
+        <span class="lbl">Contrôle serveur :</span>
+        <mat-button-toggle-group [value]="mode" (change)="changerMode($event.value)">
+          <mat-button-toggle value="OBSERVATION">
+            <mat-icon>visibility</mat-icon> Observation
+          </mat-button-toggle>
+          <mat-button-toggle value="ACTIF">
+            <mat-icon>lock</mat-icon> Actif
+          </mat-button-toggle>
+        </mat-button-toggle-group>
+      </div>
+    </div>
+    <div class="aide" [class.warn]="mode === 'ACTIF'">
+      <mat-icon>{{ mode === 'ACTIF' ? 'gpp_good' : 'info' }}</mat-icon>
+      <span *ngIf="mode === 'OBSERVATION'">Mode <b>Observation</b> : aucun accès n'est refusé ; les accès qui seraient bloqués sont journalisés ci-dessous.</span>
+      <span *ngIf="mode === 'ACTIF'">Mode <b>Actif</b> : les permissions sont <b>appliquées</b>. Un accès sans droit est refusé (403).</span>
+    </div>
+  </mat-card>
+
+  <mat-tab-group>
+    <!-- Onglet matrice -->
+    <mat-tab label="Matrice">
+      <div *ngIf="chargement" class="vide">Chargement…</div>
+      <div class="table-wrap" *ngIf="matrice && !chargement">
+        <table class="grille">
+          <thead>
+            <tr>
+              <th class="col-perm">Permission</th>
+              <th *ngFor="let r of matrice.roles" class="col-role" [matTooltip]="r.libelle">{{ r.code }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngFor="let g of modules">
+              <tr class="ligne-module">
+                <td class="col-perm mod">{{ g.module }}</td>
+                <td *ngFor="let r of matrice.roles" class="col-role mod">
+                  <button *ngIf="r.code !== 'R_ADMI'" mat-icon-button matTooltip="Tout cocher pour ce rôle"
+                          (click)="toutCocherModule(g.module, r.id, r.code, true)">
+                    <mat-icon>done_all</mat-icon>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngFor="let p of g.permissions">
+                <td class="col-perm">
+                  <span class="act">{{ p.action }}</span>
+                  <span class="code">{{ p.code }}</span>
+                </td>
+                <td *ngFor="let r of matrice.roles" class="col-role">
+                  <mat-checkbox
+                    [checked]="r.code === 'R_ADMI' ? true : estActif(r.id, p.id)"
+                    [disabled]="r.code === 'R_ADMI'"
+                    (change)="basculer(r.id, p.id, r.code)">
+                  </mat-checkbox>
+                </td>
+              </tr>
+            </ng-container>
+          </tbody>
+        </table>
+      </div>
+    </mat-tab>
+
+    <!-- Onglet observation -->
+    <mat-tab label="Journal d'observation">
+      <div class="obs">
+        <div class="obs-tete">
+          <p>Accès qui <b>seraient refusés</b> en mode Actif (regroupés). Utilisez-les pour ajuster la matrice avant activation.</p>
+          <button mat-stroked-button (click)="chargerObservations()"><mat-icon>refresh</mat-icon> Actualiser</button>
+        </div>
+        <table mat-table [dataSource]="observations" *ngIf="observations.length" class="obs-table">
+          <ng-container matColumnDef="permission">
+            <th mat-header-cell *matHeaderCellDef>Permission requise</th>
+            <td mat-cell *matCellDef="let o">{{ o.permission }}</td>
+          </ng-container>
+          <ng-container matColumnDef="role">
+            <th mat-header-cell *matHeaderCellDef>Rôle</th>
+            <td mat-cell *matCellDef="let o">{{ o.role_code || '—' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="occurrences">
+            <th mat-header-cell *matHeaderCellDef>Occurrences</th>
+            <td mat-cell *matCellDef="let o">{{ o.occurrences }}</td>
+          </ng-container>
+          <ng-container matColumnDef="derniere">
+            <th mat-header-cell *matHeaderCellDef>Dernier accès</th>
+            <td mat-cell *matCellDef="let o">{{ o.derniere | date:'dd/MM/yyyy HH:mm' }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="['permission','role','occurrences','derniere']"></tr>
+          <tr mat-row *matRowDef="let row; columns: ['permission','role','occurrences','derniere']"></tr>
+        </table>
+        <div class="vide" *ngIf="!observations.length">Aucune observation pour le moment.</div>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div>

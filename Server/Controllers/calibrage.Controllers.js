@@ -1,894 +1,371 @@
 // =====================================================================
-// Controllers Calibrage : modele de grille d'evaluation hierarchique
-// Niveaux : Categorie d'erreur > Erreur > Item > Sous-Item (+ Referentiel)
-// + Categories de ressources evaluees et leur association au modele
+// MODULE CALIBRAGE — Phase 1 : Préparation d'une session (F.44 / F.45)
+// Création de session, transactions, participants + invitations (socle S6),
+// duplication d'un jeu de transactions, recherche de sessions.
+// Réutilise les grilles Actives du domaine Évaluation.
 // =====================================================================
 const db = require("../config/db");
-const XLSX = require("xlsx");
+const { emit } = require("../utils/notify");
 
-/* ------------------------------------------------------------------ */
-/* MODELE DE GRILLE                                                    */
-/* ------------------------------------------------------------------ */
+const num = (v) => (v === null || v === undefined || v === "" ? 0 : Number(v));
 
-const getAllModeleGrille = async (req, res, next) => {
-  try {
-    const Query = `SELECT id, nom, description, Etat, dateCreation, dateModification
-                   FROM B_MODELE_GRILLE ORDER BY id DESC`;
-    const [resultat] = await db.query(Query);
-    return res.status(200).send(resultat);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
+const withTx = async (fn) => {
+  const conn = await db.getConnection();
+  try { await conn.beginTransaction(); const r = await fn(conn); await conn.commit(); return r; }
+  catch (e) { await conn.rollback(); throw e; } finally { conn.release(); }
 };
 
-// Renvoie le modele + son arbre complet imbrique + les categories de ressources associees
-const getOneModeleGrille = async (req, res, next) => {
-  const { id } = req.params;
+// Garde d'état : la préparation n'est possible qu'en BROUILLON.
+const enBrouillon = (s) => s && s.statut === "BROUILLON";
+
+// ---------------------------------------------------------------------
+// F.44 — Sessions
+// ---------------------------------------------------------------------
+const createSession = async (req, res) => {
+  const { nom, description, date_calibrage, id_site, id_grille, nombre_transactions, duree_minutes } = req.body;
+  if (!nom || !nom.trim() || !date_calibrage || !id_site || !id_grille || !nombre_transactions || !duree_minutes) {
+    return res.status(400).json({ message: "Champs obligatoires manquants (nom, date, site, grille, nombre de transactions, durée)." });
+  }
   try {
-    const [modeleRows] = await db.query(
-      `SELECT id, nom, description, Etat, dateCreation, dateModification
-       FROM B_MODELE_GRILLE WHERE id=?`,
-      [id]
+    const [[g]] = await db.query(
+      "SELECT id, type_ressource_cible, statut FROM b_eval_grille WHERE id=?", [id_grille]
     );
-    if (!modeleRows.length) {
-      return res.status(404).json({ message: "Modele de grille introuvable" });
-    }
-    const modele = modeleRows[0];
-
-    const [categories] = await db.query(
-      `SELECT id, nom, poids, ordre FROM B_MG_CATEGORIE_ERREUR
-       WHERE id_ModeleGrille=? ORDER BY ordre, id`,
-      [id]
-    );
-    const [erreurs] = await db.query(
-      `SELECT e.id, e.id_CategorieErreur, e.nom, e.poids, e.ordre
-       FROM B_MG_ERREUR e
-       JOIN B_MG_CATEGORIE_ERREUR c ON c.id = e.id_CategorieErreur
-       WHERE c.id_ModeleGrille=? ORDER BY e.ordre, e.id`,
-      [id]
-    );
-    const [items] = await db.query(
-      `SELECT i.id, i.id_Erreur, i.nom, i.poids, i.ordre
-       FROM B_MG_ITEM i
-       JOIN B_MG_ERREUR e ON e.id = i.id_Erreur
-       JOIN B_MG_CATEGORIE_ERREUR c ON c.id = e.id_CategorieErreur
-       WHERE c.id_ModeleGrille=? ORDER BY i.ordre, i.id`,
-      [id]
-    );
-    const [sousItems] = await db.query(
-      `SELECT s.id, s.id_Item, s.nom, s.referentiel, s.poids, s.ordre
-       FROM B_MG_SOUS_ITEM s
-       JOIN B_MG_ITEM i ON i.id = s.id_Item
-       JOIN B_MG_ERREUR e ON e.id = i.id_Erreur
-       JOIN B_MG_CATEGORIE_ERREUR c ON c.id = e.id_CategorieErreur
-       WHERE c.id_ModeleGrille=? ORDER BY s.ordre, s.id`,
-      [id]
-    );
-
-    // Regroupement en memoire pour construire l'arbre
-    const sousItemsByItem = {};
-    for (const s of sousItems) {
-      (sousItemsByItem[s.id_Item] = sousItemsByItem[s.id_Item] || []).push(s);
-    }
-    const itemsByErreur = {};
-    for (const it of items) {
-      it.sousItems = sousItemsByItem[it.id] || [];
-      (itemsByErreur[it.id_Erreur] = itemsByErreur[it.id_Erreur] || []).push(it);
-    }
-    const erreursByCategorie = {};
-    for (const e of erreurs) {
-      e.items = itemsByErreur[e.id] || [];
-      (erreursByCategorie[e.id_CategorieErreur] =
-        erreursByCategorie[e.id_CategorieErreur] || []).push(e);
-    }
-    for (const c of categories) {
-      c.erreurs = erreursByCategorie[c.id] || [];
-    }
-    modele.categories = categories;
-
-    const [ressources] = await db.query(
-      `SELECT cr.id, cr.nom, cr.est_robot
-       FROM B_MG_CATEGORIE_RESSOURCE mcr
-       JOIN B_CATEGORIE_RESSOURCE cr ON cr.id = mcr.id_CategorieRessource
-       WHERE mcr.id_ModeleGrille=?`,
-      [id]
-    );
-    modele.categoriesRessources = ressources;
-
-    return res.status(200).send(modele);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
-};
-
-const addModeleGrille = async (req, res, next) => {
-  const { nom, description } = req.body;
-  if (!nom) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
-  try {
-    const [resultat] = await db.query(
-      `INSERT INTO B_MODELE_GRILLE (nom, description, Etat, dateCreation)
-       VALUES (?,?,?,?)`,
-      [nom, description || null, "ACTIF", new Date()]
-    );
-    return res.status(201).json({
-      message: "Modele de grille cree avec succes",
-      id: resultat.insertId,
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
-};
-
-const updateModeleGrille = async (req, res, next) => {
-  const { id } = req.params;
-  const { nom, description, Etat } = req.body;
-  if (!id || !nom) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
-  try {
-    await db.query(
-      `UPDATE B_MODELE_GRILLE
-       SET nom=?, description=?, Etat=?, dateModification=? WHERE id=?`,
-      [nom, description || null, Etat || "ACTIF", new Date(), id]
-    );
-    return res.status(201).json({ message: "Modele de grille modifie" });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
-};
-
-const deleteModeleGrille = async (req, res, next) => {
-  const { id } = req.params;
-  if (!id) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
-  try {
-    // Les FK ON DELETE CASCADE suppriment tout l'arbre + associations
-    await db.query(`DELETE FROM B_MODELE_GRILLE WHERE id=?`, [id]);
-    return res
-      .status(201)
-      .json({ message: "Modele de grille supprime avec succes" });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
-};
-
-/* ------------------------------------------------------------------ */
-/* NIVEAU 1 : CATEGORIE D'ERREUR                                       */
-/* ------------------------------------------------------------------ */
-
-const addCategorieErreur = async (req, res, next) => {
-  const { id_ModeleGrille, nom, poids, ordre } = req.body;
-  if (!id_ModeleGrille || !nom) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
-  try {
-    const [resultat] = await db.query(
-      `INSERT INTO B_MG_CATEGORIE_ERREUR (id_ModeleGrille, nom, poids, ordre, dateCreation)
-       VALUES (?,?,?,?,?)`,
-      [id_ModeleGrille, nom, poids || 0, ordre || 0, new Date()]
-    );
-    return res
-      .status(201)
-      .json({ message: "Categorie d'erreur ajoutee", id: resultat.insertId });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
-};
-
-const updateCategorieErreur = async (req, res, next) => {
-  const { id } = req.params;
-  const { nom, poids, ordre } = req.body;
-  if (!id || !nom) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
-  try {
-    await db.query(
-      `UPDATE B_MG_CATEGORIE_ERREUR SET nom=?, poids=?, ordre=?, dateModification=? WHERE id=?`,
-      [nom, poids || 0, ordre || 0, new Date(), id]
-    );
-    return res.status(201).json({ message: "Categorie d'erreur modifiee" });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
-};
-
-const deleteCategorieErreur = async (req, res, next) => {
-  const { id } = req.params;
-  if (!id) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
-  try {
-    await db.query(`DELETE FROM B_MG_CATEGORIE_ERREUR WHERE id=?`, [id]);
-    return res.status(201).json({ message: "Categorie d'erreur supprimee" });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
-};
-
-/* ------------------------------------------------------------------ */
-/* NIVEAU 2 : ERREUR                                                   */
-/* ------------------------------------------------------------------ */
-
-const addErreur = async (req, res, next) => {
-  const { id_CategorieErreur, nom, poids, ordre } = req.body;
-  if (!id_CategorieErreur || !nom) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
-  try {
-    const [resultat] = await db.query(
-      `INSERT INTO B_MG_ERREUR (id_CategorieErreur, nom, poids, ordre, dateCreation)
-       VALUES (?,?,?,?,?)`,
-      [id_CategorieErreur, nom, poids || 0, ordre || 0, new Date()]
-    );
-    return res
-      .status(201)
-      .json({ message: "Erreur ajoutee", id: resultat.insertId });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
-};
-
-const updateErreur = async (req, res, next) => {
-  const { id } = req.params;
-  const { nom, poids, ordre } = req.body;
-  if (!id || !nom) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
-  try {
-    await db.query(
-      `UPDATE B_MG_ERREUR SET nom=?, poids=?, ordre=?, dateModification=? WHERE id=?`,
-      [nom, poids || 0, ordre || 0, new Date(), id]
-    );
-    return res.status(201).json({ message: "Erreur modifiee" });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
-};
-
-const deleteErreur = async (req, res, next) => {
-  const { id } = req.params;
-  if (!id) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
-  try {
-    await db.query(`DELETE FROM B_MG_ERREUR WHERE id=?`, [id]);
-    return res.status(201).json({ message: "Erreur supprimee" });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
-};
-
-/* ------------------------------------------------------------------ */
-/* NIVEAU 3 : ITEM                                                     */
-/* ------------------------------------------------------------------ */
-
-const addItem = async (req, res, next) => {
-  const { id_Erreur, nom, poids, ordre } = req.body;
-  if (!id_Erreur || !nom) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
-  try {
-    const [resultat] = await db.query(
-      `INSERT INTO B_MG_ITEM (id_Erreur, nom, poids, ordre, dateCreation)
-       VALUES (?,?,?,?,?)`,
-      [id_Erreur, nom, poids || 0, ordre || 0, new Date()]
-    );
-    return res
-      .status(201)
-      .json({ message: "Item ajoute", id: resultat.insertId });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
-};
-
-const updateItem = async (req, res, next) => {
-  const { id } = req.params;
-  const { nom, poids, ordre } = req.body;
-  if (!id || !nom) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
-  try {
-    await db.query(
-      `UPDATE B_MG_ITEM SET nom=?, poids=?, ordre=?, dateModification=? WHERE id=?`,
-      [nom, poids || 0, ordre || 0, new Date(), id]
-    );
-    return res.status(201).json({ message: "Item modifie" });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
-};
-
-const deleteItem = async (req, res, next) => {
-  const { id } = req.params;
-  if (!id) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
-  try {
-    await db.query(`DELETE FROM B_MG_ITEM WHERE id=?`, [id]);
-    return res.status(201).json({ message: "Item supprime" });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
-};
-
-/* ------------------------------------------------------------------ */
-/* NIVEAU 4 : SOUS-ITEM (+ Referentiel)                                */
-/* ------------------------------------------------------------------ */
-
-const addSousItem = async (req, res, next) => {
-  const { id_Item, nom, referentiel, poids, ordre } = req.body;
-  if (!id_Item || !nom) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
-  try {
-    const [resultat] = await db.query(
-      `INSERT INTO B_MG_SOUS_ITEM (id_Item, nom, referentiel, poids, ordre, dateCreation)
-       VALUES (?,?,?,?,?,?)`,
-      [id_Item, nom, referentiel || null, poids || 0, ordre || 0, new Date()]
-    );
-    return res
-      .status(201)
-      .json({ message: "Sous-item ajoute", id: resultat.insertId });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
-};
-
-const updateSousItem = async (req, res, next) => {
-  const { id } = req.params;
-  const { nom, referentiel, poids, ordre } = req.body;
-  if (!id || !nom) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
-  try {
-    await db.query(
-      `UPDATE B_MG_SOUS_ITEM SET nom=?, referentiel=?, poids=?, ordre=?, dateModification=? WHERE id=?`,
-      [nom, referentiel || null, poids || 0, ordre || 0, new Date(), id]
-    );
-    return res.status(201).json({ message: "Sous-item modifie" });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
-};
-
-const deleteSousItem = async (req, res, next) => {
-  const { id } = req.params;
-  if (!id) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
-  try {
-    await db.query(`DELETE FROM B_MG_SOUS_ITEM WHERE id=?`, [id]);
-    return res.status(201).json({ message: "Sous-item supprime" });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
-};
-
-/* ------------------------------------------------------------------ */
-/* CATEGORIES DE RESSOURCES + ASSOCIATION                              */
-/* ------------------------------------------------------------------ */
-
-const getAllCategorieRessource = async (req, res, next) => {
-  try {
-    const [resultat] = await db.query(
-      `SELECT id, nom, est_robot, Etat FROM B_CATEGORIE_RESSOURCE
-       WHERE Etat='ACTIF' ORDER BY nom`
-    );
-    return res.status(200).send(resultat);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
-};
-
-// Remplace l'ensemble des associations d'un modele
-const setCategoriesRessourcesModele = async (req, res, next) => {
-  const { id } = req.params;
-  const { categories } = req.body; // tableau d'ids de categories de ressources
-  if (!id || !Array.isArray(categories)) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
-  const connection = await db.getConnection();
-  try {
-    await connection.beginTransaction();
-    await connection.query(
-      `DELETE FROM B_MG_CATEGORIE_RESSOURCE WHERE id_ModeleGrille=?`,
-      [id]
-    );
-    for (const idCat of categories) {
-      await connection.query(
-        `INSERT INTO B_MG_CATEGORIE_RESSOURCE (id_ModeleGrille, id_CategorieRessource, dateCreation)
-         VALUES (?,?,?)`,
-        [id, idCat, new Date()]
-      );
-    }
-    await connection.commit();
-    return res.status(201).json({ message: "Associations mises a jour" });
-  } catch (error) {
-    await connection.rollback();
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  } finally {
-    connection.release();
-  }
-};
-
-/* ------------------------------------------------------------------ */
-/* PHASE 2 - IMPORT EXCEL (feuilles GRILLE + REGLES)                   */
-/* ------------------------------------------------------------------ */
-
-// Retrouve une feuille par nom (insensible a la casse / aux espaces)
-const findSheet = (workbook, name) => {
-  const target = name.toLowerCase().replace(/\s+/g, "");
-  const found = workbook.SheetNames.find(
-    (n) => n.toLowerCase().replace(/\s+/g, "") === target
-  );
-  return found ? workbook.Sheets[found] : null;
-};
-
-const toNumber = (v) => {
-  if (v === null || v === undefined || v === "") return 0;
-  const n = parseFloat(String(v).replace(",", "."));
-  return isNaN(n) ? 0 : n;
-};
-
-// Parse un objectif type "> 85%" ou "> 99,5%" -> { operateur, valeur }
-const parseObjectif = (txt) => {
-  if (!txt) return { operateur: ">", valeur: null };
-  const m = String(txt).match(/(<=|>=|<|>|=)?\s*([\d.,]+)/);
-  if (!m) return { operateur: ">", valeur: null };
-  return {
-    operateur: m[1] || ">",
-    valeur: parseFloat(m[2].replace(",", ".")),
-  };
-};
-
-const importModeleFromExcel = async (req, res, next) => {
-  if (!req.file) {
-    return res.status(403).json({ message: "Aucun fichier Excel fourni" });
-  }
-  const { nom, description } = req.body;
-  if (!nom) {
-    return res
-      .status(403)
-      .json({ message: "Merci de renseigner le nom du modele" });
-  }
-
-  let workbook;
-  try {
-    workbook = XLSX.read(req.file.buffer, { type: "buffer" });
-  } catch (e) {
-    return res.status(400).json({ message: "Fichier Excel illisible" });
-  }
-
-  const grilleSheet = findSheet(workbook, "GRILLE");
-  if (!grilleSheet) {
-    return res
-      .status(400)
-      .json({ message: "Feuille 'GRILLE' introuvable dans le fichier" });
-  }
-  const rows = XLSX.utils.sheet_to_json(grilleSheet, {
-    header: 1,
-    defval: "",
-    blankrows: false,
-  });
-
-  const connection = await db.getConnection();
-  try {
-    await connection.beginTransaction();
-    const now = new Date();
-
-    const [mod] = await connection.query(
-      `INSERT INTO B_MODELE_GRILLE (nom, description, Etat, dateCreation) VALUES (?,?,?,?)`,
-      [nom, description || null, "ACTIF", now]
-    );
-    const modeleId = mod.insertId;
-
-    // Colonnes de la feuille GRILLE :
-    // 0 Poids Cat.Erreur | 1 Cat.Erreurs | 2 Poids Erreurs | 3 Erreurs
-    // 4 Poids Items | 5 Items | 6 Sous-Items | 7 SCORE% | 8 Score/20 | 9 Referentiel
-    const catMap = new Map(); // catNom -> id
-    const errMap = new Map(); // catId|errNom -> id
-    const itemMap = new Map(); // errId|itemNom -> id
-    let nbSousItems = 0;
-
-    for (let i = 1; i < rows.length; i++) {
-      const r = rows[i];
-      const catNom = String(r[1] || "").trim();
-      const errNom = String(r[3] || "").trim();
-      const itemNom = String(r[5] || "").trim();
-      const sousItemNom = String(r[6] || "").trim();
-      if (!catNom && !errNom && !itemNom && !sousItemNom) continue;
-
-      let catId = catMap.get(catNom);
-      if (catNom && !catId) {
-        const [c] = await connection.query(
-          `INSERT INTO B_MG_CATEGORIE_ERREUR (id_ModeleGrille, nom, poids, ordre, dateCreation) VALUES (?,?,?,?,?)`,
-          [modeleId, catNom, toNumber(r[0]), catMap.size + 1, now]
-        );
-        catId = c.insertId;
-        catMap.set(catNom, catId);
-      }
-
-      const errKey = catId + "|" + errNom;
-      let errId = errMap.get(errKey);
-      if (errNom && !errId) {
-        const [e] = await connection.query(
-          `INSERT INTO B_MG_ERREUR (id_CategorieErreur, nom, poids, ordre, dateCreation) VALUES (?,?,?,?,?)`,
-          [catId, errNom, toNumber(r[2]), errMap.size + 1, now]
-        );
-        errId = e.insertId;
-        errMap.set(errKey, errId);
-      }
-
-      const itemKey = errId + "|" + itemNom;
-      let itemId = itemMap.get(itemKey);
-      if (itemNom && !itemId) {
-        const [it] = await connection.query(
-          `INSERT INTO B_MG_ITEM (id_Erreur, nom, poids, ordre, dateCreation) VALUES (?,?,?,?,?)`,
-          [errId, itemNom, toNumber(r[4]), itemMap.size + 1, now]
-        );
-        itemId = it.insertId;
-        itemMap.set(itemKey, itemId);
-      }
-
-      if (sousItemNom && itemId) {
-        await connection.query(
-          `INSERT INTO B_MG_SOUS_ITEM (id_Item, nom, referentiel, poids, ordre, dateCreation) VALUES (?,?,?,?,?,?)`,
-          [itemId, sousItemNom, String(r[9] || "").trim() || null, toNumber(r[7]), nbSousItems + 1, now]
-        );
-        nbSousItems++;
-      }
-    }
-
-    // Feuille REGLES (facultative) : criteres de reussite / echec
-    const reglesSheet = findSheet(workbook, "REGLES");
-    let nbRegles = 0;
-    if (reglesSheet) {
-      const rr = XLSX.utils.sheet_to_json(reglesSheet, {
-        header: 1,
-        defval: "",
-        blankrows: false,
-      });
-      for (let i = 1; i < rr.length; i++) {
-        const typeEcart = String(rr[i][0] || "").trim();
-        if (!typeEcart) continue;
-        const { operateur, valeur } = parseObjectif(rr[i][1]);
-        await connection.query(
-          `INSERT INTO B_MG_CRITERE_REGLE
-            (id_ModeleGrille, type_ecart, operateur, valeur_objectif, libelle_echec, libelle_reussite, ordre, dateCreation)
-           VALUES (?,?,?,?,?,?,?,?)`,
-          [
-            modeleId,
-            typeEcart,
-            operateur,
-            valeur,
-            String(rr[i][2] || "").trim() || null,
-            String(rr[i][3] || "").trim() || null,
-            nbRegles + 1,
-            now,
-          ]
-        );
-        nbRegles++;
-      }
-    }
-
-    await connection.commit();
-    return res.status(201).json({
-      message: "Import reussi",
-      id: modeleId,
-      resume: {
-        categories: catMap.size,
-        erreurs: errMap.size,
-        items: itemMap.size,
-        sousItems: nbSousItems,
-        regles: nbRegles,
-      },
-    });
-  } catch (error) {
-    await connection.rollback();
-    console.log(error);
-    res.status(500).json({ message: "Echec de l'import Excel" });
-  } finally {
-    connection.release();
-  }
-};
-
-/* ------------------------------------------------------------------ */
-/* PHASE 2 - CRITERES DE REUSSITE / ECHEC (feuille REGLES)             */
-/* ------------------------------------------------------------------ */
-
-const getCriteresByModele = async (req, res, next) => {
-  const { id } = req.params;
-  try {
-    const [resultat] = await db.query(
-      `SELECT id, id_ModeleGrille, type_ecart, operateur, valeur_objectif,
-              libelle_echec, libelle_reussite, ordre
-       FROM B_MG_CRITERE_REGLE WHERE id_ModeleGrille=? ORDER BY ordre, id`,
-      [id]
-    );
-    return res.status(200).send(resultat);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
-};
-
-const addCritereRegle = async (req, res, next) => {
-  const {
-    id_ModeleGrille,
-    type_ecart,
-    operateur,
-    valeur_objectif,
-    libelle_echec,
-    libelle_reussite,
-    ordre,
-  } = req.body;
-  if (!id_ModeleGrille || !type_ecart) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
-  try {
+    if (!g) return res.status(404).json({ message: "Grille introuvable." });
+    if (g.statut !== "ACTIVE") return res.status(400).json({ message: "Seule une grille Active peut être utilisée." });
     const [r] = await db.query(
-      `INSERT INTO B_MG_CRITERE_REGLE
-        (id_ModeleGrille, type_ecart, operateur, valeur_objectif, libelle_echec, libelle_reussite, ordre, dateCreation)
-       VALUES (?,?,?,?,?,?,?,?)`,
-      [
-        id_ModeleGrille,
-        type_ecart,
-        operateur || ">",
-        valeur_objectif ?? null,
-        libelle_echec || null,
-        libelle_reussite || null,
-        ordre || 0,
-        new Date(),
-      ]
+      `INSERT INTO b_cal_session
+        (nom, description, date_calibrage, id_site, id_grille, type_ressource_cible,
+         nombre_transactions, duree_minutes, statut, visibilite, id_jauge, dateCreation)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'BROUILLON', 0, ?, NOW())`,
+      [nom.trim(), description || null, date_calibrage, id_site, id_grille, g.type_ressource_cible,
+       num(nombre_transactions), num(duree_minutes), req.auth.userId]
     );
-    return res.status(201).json({ message: "Critere ajoute", id: r.insertId });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
+    return res.status(201).json({ id: r.insertId, message: "Session créée." });
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors de la création." }); }
 };
 
-const updateCritereRegle = async (req, res, next) => {
-  const { id } = req.params;
-  const {
-    type_ecart,
-    operateur,
-    valeur_objectif,
-    libelle_echec,
-    libelle_reussite,
-    ordre,
-  } = req.body;
-  if (!id || !type_ecart) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
-  try {
-    await db.query(
-      `UPDATE B_MG_CRITERE_REGLE
-       SET type_ecart=?, operateur=?, valeur_objectif=?, libelle_echec=?, libelle_reussite=?, ordre=?, dateModification=?
-       WHERE id=?`,
-      [
-        type_ecart,
-        operateur || ">",
-        valeur_objectif ?? null,
-        libelle_echec || null,
-        libelle_reussite || null,
-        ordre || 0,
-        new Date(),
-        id,
-      ]
-    );
-    return res.status(201).json({ message: "Critere modifie" });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
-};
-
-const deleteCritereRegle = async (req, res, next) => {
-  const { id } = req.params;
-  if (!id) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
-  try {
-    await db.query(`DELETE FROM B_MG_CRITERE_REGLE WHERE id=?`, [id]);
-    return res.status(201).json({ message: "Critere supprime" });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
-};
-
-/* ------------------------------------------------------------------ */
-/* PHASE 2 - BUSINESS INTELLIGENCE : 5 POURQUOI (cascade)              */
-/* ------------------------------------------------------------------ */
-
-// Renvoie toutes les valeurs Pourquoi d'un modele, en arbre (par id_parent)
-const getPourquoiByModele = async (req, res, next) => {
-  const { id } = req.params;
+// Recherche : par site et intervalle de dates ; sessions organisées par l'utilisateur
+// ou auxquelles il participe.
+const getSessions = async (req, res) => {
+  const uid = req.auth.userId;
+  const { id_site, date_debut, date_fin, statut } = req.query;
+  const where = ["(s.id_jauge = ? OR p.id_evaluateur = ?)"];
+  const args = [uid, uid];
+  if (id_site) { where.push("s.id_site = ?"); args.push(id_site); }
+  if (date_debut) { where.push("s.date_calibrage >= ?"); args.push(date_debut); }
+  if (date_fin) { where.push("s.date_calibrage <= ?"); args.push(date_fin); }
+  if (statut) { where.push("s.statut = ?"); args.push(statut); }
   try {
     const [rows] = await db.query(
-      `SELECT id, id_ModeleGrille, niveau, libelle, id_parent, ordre
-       FROM B_MG_POURQUOI WHERE id_ModeleGrille=? ORDER BY niveau, ordre, id`,
-      [id]
+      `SELECT s.id, s.nom, s.date_calibrage, s.statut, s.visibilite, s.id_jauge, s.nombre_transactions,
+              si.nom AS site, gr.nom AS grille,
+              (SELECT COUNT(*) FROM b_cal_participant cp WHERE cp.id_session=s.id) AS nb_participants,
+              (SELECT COUNT(*) FROM b_cal_participant cp WHERE cp.id_session=s.id AND cp.statut_participation='CLOSE') AS nb_termines,
+              (SELECT COUNT(*) FROM b_cal_transaction ct WHERE ct.id_session=s.id) AS nb_transactions_chargees
+         FROM b_cal_session s
+         LEFT JOIN b_cal_participant p ON p.id_session=s.id AND p.id_evaluateur=?
+         LEFT JOIN b_site si ON s.id_site=si.id
+         LEFT JOIN b_eval_grille gr ON s.id_grille=gr.id
+        WHERE ${where.join(" AND ")}
+        GROUP BY s.id
+        ORDER BY s.date_calibrage DESC, s.id DESC`,
+      [uid, ...args]
     );
-    // Construction de l'arbre
-    const byId = new Map();
-    rows.forEach((n) => {
-      n.enfants = [];
-      byId.set(n.id, n);
-    });
-    const racines = [];
-    rows.forEach((n) => {
-      if (n.id_parent && byId.has(n.id_parent)) {
-        byId.get(n.id_parent).enfants.push(n);
-      } else {
-        racines.push(n);
-      }
-    });
-    return res.status(200).send(racines);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
+    return res.status(200).json(rows);
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors du chargement." }); }
 };
 
-const addPourquoi = async (req, res, next) => {
-  const { id_ModeleGrille, niveau, libelle, id_parent, ordre } = req.body;
-  if (!id_ModeleGrille || !niveau || !libelle) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
-  if (niveau < 1 || niveau > 5) {
-    return res.status(403).json({ message: "Le niveau doit etre entre 1 et 5" });
+const getSessionDetail = async (req, res) => {
+  const id = req.params.id;
+  try {
+    const [[s]] = await db.query(
+      `SELECT s.*, si.nom AS site, gr.nom AS grille
+         FROM b_cal_session s
+         LEFT JOIN b_site si ON s.id_site=si.id
+         LEFT JOIN b_eval_grille gr ON s.id_grille=gr.id
+        WHERE s.id=?`, [id]
+    );
+    if (!s) return res.status(404).json({ message: "Session introuvable." });
+    const [participants] = await db.query(
+      `SELECT p.id, p.id_evaluateur, p.invite, p.date_invitation, p.statut_participation, p.date_cloture,
+              u.nom, u.prenom
+         FROM b_cal_participant p
+         LEFT JOIN b_utilisateur u ON p.id_evaluateur=u.id
+        WHERE p.id_session=? ORDER BY u.nom, u.prenom`, [id]
+    );
+    const [[tx]] = await db.query("SELECT COUNT(*) AS n FROM b_cal_transaction WHERE id_session=?", [id]);
+    return res.status(200).json({ session: s, participants, nb_transactions_chargees: tx.n });
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors du chargement." }); }
+};
+
+const updateSession = async (req, res) => {
+  const id = req.params.id;
+  const { nom, description, date_calibrage, id_site, id_grille, nombre_transactions, duree_minutes } = req.body;
+  try {
+    const [[s]] = await db.query("SELECT * FROM b_cal_session WHERE id=?", [id]);
+    if (!s) return res.status(404).json({ message: "Session introuvable." });
+    if (!enBrouillon(s)) return res.status(409).json({ message: "Session non modifiable (déjà ouverte ou close)." });
+    let type = s.type_ressource_cible;
+    if (id_grille && id_grille !== s.id_grille) {
+      const [[g]] = await db.query("SELECT type_ressource_cible, statut FROM b_eval_grille WHERE id=?", [id_grille]);
+      if (!g) return res.status(404).json({ message: "Grille introuvable." });
+      if (g.statut !== "ACTIVE") return res.status(400).json({ message: "Seule une grille Active peut être utilisée." });
+      type = g.type_ressource_cible;
+    }
+    await db.query(
+      `UPDATE b_cal_session SET nom=?, description=?, date_calibrage=?, id_site=?, id_grille=?,
+              type_ressource_cible=?, nombre_transactions=?, duree_minutes=?, dateModification=NOW()
+        WHERE id=?`,
+      [nom != null ? nom : s.nom, description !== undefined ? description : s.description,
+       date_calibrage || s.date_calibrage, id_site || s.id_site, id_grille || s.id_grille,
+       type, nombre_transactions != null ? num(nombre_transactions) : s.nombre_transactions,
+       duree_minutes != null ? num(duree_minutes) : s.duree_minutes, id]
+    );
+    return res.status(200).json({ message: "Session mise à jour." });
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
+};
+
+const deleteSession = async (req, res) => {
+  const id = req.params.id;
+  try {
+    const [[s]] = await db.query("SELECT statut FROM b_cal_session WHERE id=?", [id]);
+    if (!s) return res.status(404).json({ message: "Session introuvable." });
+    if (!enBrouillon(s)) return res.status(409).json({ message: "Seule une session en brouillon peut être supprimée." });
+    await db.query("DELETE FROM b_cal_session WHERE id=?", [id]); // cascade transactions/participants
+    return res.status(200).json({ message: "Session supprimée." });
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
+};
+
+// F.44 C — ouverture : nb transactions atteint + au moins un participant invité
+const ouvrirSession = async (req, res) => {
+  const id = req.params.id;
+  try {
+    const out = await withTx(async (conn) => {
+      const [[s]] = await conn.query("SELECT * FROM b_cal_session WHERE id=?", [id]);
+      if (!s) return { notFound: true };
+      if (s.statut !== "BROUILLON") return { deja: true };
+      const [[tx]] = await conn.query("SELECT COUNT(*) AS n FROM b_cal_transaction WHERE id_session=?", [id]);
+      if (tx.n < s.nombre_transactions) return { txManquantes: { chargees: tx.n, attendues: s.nombre_transactions } };
+      const [[inv]] = await conn.query("SELECT COUNT(*) AS n FROM b_cal_participant WHERE id_session=? AND invite=1", [id]);
+      if (inv.n < 1) return { sansInvite: true };
+      await conn.query("UPDATE b_cal_session SET statut='OUVERTE', dateOuverture=NOW(), dateModification=NOW() WHERE id=?", [id]);
+      return { ok: true };
+    });
+    if (out.notFound) return res.status(404).json({ message: "Session introuvable." });
+    if (out.deja) return res.status(409).json({ message: "Session déjà ouverte ou close." });
+    if (out.txManquantes) return res.status(409).json({ message: `Transactions insuffisantes : ${out.txManquantes.chargees}/${out.txManquantes.attendues}.` });
+    if (out.sansInvite) return res.status(409).json({ message: "Au moins un participant doit être invité avant l'ouverture." });
+    return res.status(200).json({ message: "Session ouverte." });
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors de l'ouverture." }); }
+};
+
+// ---------------------------------------------------------------------
+// F.44 B — Participants
+// ---------------------------------------------------------------------
+const getEvaluateursDisponibles = async (req, res) => {
+  const id = req.params.id;
+  try {
+    const [[s]] = await db.query("SELECT id_site, id_jauge FROM b_cal_session WHERE id=?", [id]);
+    if (!s) return res.status(404).json({ message: "Session introuvable." });
+    const [rows] = await db.query(
+      `SELECT u.id, u.nom, u.prenom, u.nom_utilisateur
+         FROM b_utilisateur u
+        WHERE u.id_Site=? AND u.id<>? AND u.status='ACTIF'
+        ORDER BY u.nom, u.prenom`, [s.id_site, s.id_jauge]
+    );
+    return res.status(200).json(rows);
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
+};
+
+// Remplace la liste des participants (tant que BROUILLON). Conserve invitations existantes.
+const setParticipants = async (req, res) => {
+  const id = req.params.id;
+  const { ids } = req.body; // liste d'id_evaluateur
+  if (!Array.isArray(ids)) return res.status(400).json({ message: "Liste d'évaluateurs attendue." });
+  try {
+    const out = await withTx(async (conn) => {
+      const [[s]] = await conn.query("SELECT statut, id_jauge FROM b_cal_session WHERE id=?", [id]);
+      if (!s) return { notFound: true };
+      if (s.statut !== "BROUILLON") return { locked: true };
+      const cibles = ids.filter((x) => Number(x) !== s.id_jauge);
+      const [existants] = await conn.query("SELECT id_evaluateur FROM b_cal_participant WHERE id_session=?", [id]);
+      const setExist = new Set(existants.map((x) => x.id_evaluateur));
+      const setCible = new Set(cibles.map(Number));
+      // suppressions
+      for (const e of existants) if (!setCible.has(e.id_evaluateur))
+        await conn.query("DELETE FROM b_cal_participant WHERE id_session=? AND id_evaluateur=?", [id, e.id_evaluateur]);
+      // ajouts
+      for (const e of setCible) if (!setExist.has(e))
+        await conn.query(
+          "INSERT INTO b_cal_participant (id_session, id_evaluateur, invite, statut_participation, dateCreation) VALUES (?, ?, 0, 'NON_COMMENCEE', NOW())",
+          [id, e]
+        );
+      return { ok: true };
+    });
+    if (out.notFound) return res.status(404).json({ message: "Session introuvable." });
+    if (out.locked) return res.status(409).json({ message: "Participants non modifiables (session ouverte)." });
+    return res.status(200).json({ message: "Participants mis à jour." });
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
+};
+
+const removeParticipant = async (req, res) => {
+  const { id, pid } = req.params;
+  try {
+    const [[s]] = await db.query("SELECT statut FROM b_cal_session WHERE id=?", [id]);
+    if (!s) return res.status(404).json({ message: "Session introuvable." });
+    const [[p]] = await db.query("SELECT statut_participation FROM b_cal_participant WHERE id=? AND id_session=?", [pid, id]);
+    if (!p) return res.status(404).json({ message: "Participant introuvable." });
+    // F.44 : une fois ouverte, un participant ayant commencé ne peut plus être retiré
+    if (s.statut !== "BROUILLON" && p.statut_participation !== "NON_COMMENCEE") {
+      return res.status(409).json({ message: "Ce participant a commencé : retrait impossible." });
+    }
+    await db.query("DELETE FROM b_cal_participant WHERE id=?", [pid]);
+    return res.status(200).json({ message: "Participant retiré." });
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
+};
+
+// F.44 8bis/8ter — invitation explicite (tous ou une partie), relance possible
+const inviterParticipants = async (req, res) => {
+  const id = req.params.id;
+  const { ids } = req.body; // ids de b_cal_participant ; si absent -> non encore invités
+  try {
+    const [[s]] = await db.query("SELECT id, nom, date_calibrage FROM b_cal_session WHERE id=?", [id]);
+    if (!s) return res.status(404).json({ message: "Session introuvable." });
+    let q = "SELECT id, id_evaluateur FROM b_cal_participant WHERE id_session=?";
+    const args = [id];
+    if (Array.isArray(ids) && ids.length) { q += ` AND id IN (${ids.map(() => "?").join(",")})`; args.push(...ids); }
+    else { q += " AND invite=0"; }
+    const [cibles] = await db.query(q, args);
+    if (cibles.length === 0) return res.status(200).json({ message: "Aucun participant à inviter.", invites: 0 });
+    for (const p of cibles) {
+      await db.query("UPDATE b_cal_participant SET invite=1, date_invitation=NOW() WHERE id=?", [p.id]);
+      await emit(db, {
+        id_utilisateur: p.id_evaluateur,
+        titre: "Invitation à un calibrage",
+        message: `Vous êtes convié(e) à la session de calibrage « ${s.nom} ».`,
+        type: "CALIBRAGE", nature_objet: "CALIBRAGE", id_objet: id,
+        url: `/mon-espace/calibrage/session/${id}`,
+      });
+    }
+    return res.status(200).json({ message: `Invitation envoyée à ${cibles.length} participant(s).`, invites: cibles.length });
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors de l'invitation." }); }
+};
+
+// ---------------------------------------------------------------------
+// F.45 — Transactions
+// ---------------------------------------------------------------------
+const addTransaction = async (req, res) => {
+  const id = req.params.id;
+  const { identifiant_appel, descriptif, numero_case, numero_appel, date_appel, motif_appel, ordre_passage } = req.body;
+  if (!identifiant_appel || !identifiant_appel.trim() || !descriptif || !descriptif.trim() || ordre_passage == null) {
+    return res.status(400).json({ message: "Identifiant d'appel, descriptif et ordre de passage sont obligatoires." });
   }
   try {
+    const [[s]] = await db.query("SELECT statut FROM b_cal_session WHERE id=?", [id]);
+    if (!s) return res.status(404).json({ message: "Session introuvable." });
+    if (!enBrouillon(s)) return res.status(409).json({ message: "Le jeu de transactions est figé (session ouverte)." });
+    const [[dup]] = await db.query(
+      "SELECT id FROM b_cal_transaction WHERE id_session=? AND identifiant_appel=?", [id, identifiant_appel.trim()]
+    );
+    if (dup) return res.status(409).json({ message: "Cette transaction est déjà chargée dans la session." });
     const [r] = await db.query(
-      `INSERT INTO B_MG_POURQUOI (id_ModeleGrille, niveau, libelle, id_parent, ordre, dateCreation)
-       VALUES (?,?,?,?,?,?)`,
-      [id_ModeleGrille, niveau, libelle, id_parent || null, ordre || 0, new Date()]
+      `INSERT INTO b_cal_transaction
+        (id_session, identifiant_appel, descriptif, numero_case, numero_appel, date_appel, motif_appel, ordre_passage, dateCreation)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [id, identifiant_appel.trim(), descriptif.trim(), numero_case || null, numero_appel || null,
+       date_appel || null, motif_appel || null, num(ordre_passage)]
     );
-    return res.status(201).json({ message: "Valeur ajoutee", id: r.insertId });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
+    return res.status(201).json({ id: r.insertId, message: "Transaction ajoutée." });
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
 
-const updatePourquoi = async (req, res, next) => {
-  const { id } = req.params;
-  const { libelle, ordre } = req.body;
-  if (!id || !libelle) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
+const getTransactions = async (req, res) => {
+  const id = req.params.id;
   try {
-    await db.query(`UPDATE B_MG_POURQUOI SET libelle=?, ordre=? WHERE id=?`, [
-      libelle,
-      ordre || 0,
-      id,
-    ]);
-    return res.status(201).json({ message: "Valeur modifiee" });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
+    const [rows] = await db.query(
+      "SELECT * FROM b_cal_transaction WHERE id_session=? ORDER BY ordre_passage, id", [id]
+    );
+    return res.status(200).json(rows);
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
 
-const deletePourquoi = async (req, res, next) => {
-  const { id } = req.params;
-  if (!id) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
-  }
+const updateTransaction = async (req, res) => {
+  const tid = req.params.tid;
+  const { identifiant_appel, descriptif, numero_case, numero_appel, date_appel, motif_appel, ordre_passage } = req.body;
   try {
-    // La FK auto-referente ON DELETE CASCADE supprime les enfants du sous-arbre
-    await db.query(`DELETE FROM B_MG_POURQUOI WHERE id=?`, [id]);
-    return res.status(201).json({ message: "Valeur supprimee" });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error request" });
-  }
+    const [[t]] = await db.query(
+      "SELECT t.*, s.statut FROM b_cal_transaction t JOIN b_cal_session s ON t.id_session=s.id WHERE t.id=?", [tid]
+    );
+    if (!t) return res.status(404).json({ message: "Transaction introuvable." });
+    if (t.statut !== "BROUILLON") return res.status(409).json({ message: "Le jeu de transactions est figé (session ouverte)." });
+    if (identifiant_appel && identifiant_appel.trim() !== t.identifiant_appel) {
+      const [[dup]] = await db.query(
+        "SELECT id FROM b_cal_transaction WHERE id_session=? AND identifiant_appel=? AND id<>?",
+        [t.id_session, identifiant_appel.trim(), tid]
+      );
+      if (dup) return res.status(409).json({ message: "Un autre enregistrement porte déjà cet identifiant d'appel." });
+    }
+    await db.query(
+      `UPDATE b_cal_transaction SET identifiant_appel=?, descriptif=?, numero_case=?, numero_appel=?,
+              date_appel=?, motif_appel=?, ordre_passage=? WHERE id=?`,
+      [identifiant_appel != null ? identifiant_appel.trim() : t.identifiant_appel,
+       descriptif != null ? descriptif : t.descriptif, numero_case !== undefined ? numero_case : t.numero_case,
+       numero_appel !== undefined ? numero_appel : t.numero_appel, date_appel !== undefined ? date_appel : t.date_appel,
+       motif_appel !== undefined ? motif_appel : t.motif_appel,
+       ordre_passage != null ? num(ordre_passage) : t.ordre_passage, tid]
+    );
+    return res.status(200).json({ message: "Transaction mise à jour." });
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
+};
+
+const deleteTransaction = async (req, res) => {
+  const tid = req.params.tid;
+  try {
+    const [[t]] = await db.query(
+      "SELECT s.statut FROM b_cal_transaction t JOIN b_cal_session s ON t.id_session=s.id WHERE t.id=?", [tid]
+    );
+    if (!t) return res.status(404).json({ message: "Transaction introuvable." });
+    if (t.statut !== "BROUILLON") return res.status(409).json({ message: "Le jeu de transactions est figé (session ouverte)." });
+    await db.query("DELETE FROM b_cal_transaction WHERE id=?", [tid]);
+    return res.status(200).json({ message: "Transaction supprimée." });
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
+};
+
+// F.45 B — duplication du jeu de transactions d'une autre session
+const dupliquerTransactions = async (req, res) => {
+  const id = req.params.id;
+  const { id_source } = req.body;
+  if (!id_source) return res.status(400).json({ message: "Session source obligatoire." });
+  try {
+    const out = await withTx(async (conn) => {
+      const [[s]] = await conn.query("SELECT statut FROM b_cal_session WHERE id=?", [id]);
+      if (!s) return { notFound: true };
+      if (s.statut !== "BROUILLON") return { locked: true };
+      const [src] = await conn.query("SELECT * FROM b_cal_transaction WHERE id_session=? ORDER BY ordre_passage, id", [id_source]);
+      let n = 0;
+      for (const t of src) {
+        const [[dup]] = await conn.query(
+          "SELECT id FROM b_cal_transaction WHERE id_session=? AND identifiant_appel=?", [id, t.identifiant_appel]
+        );
+        if (dup) continue; // évite les doublons
+        await conn.query(
+          `INSERT INTO b_cal_transaction
+            (id_session, identifiant_appel, descriptif, numero_case, numero_appel, date_appel, motif_appel, ordre_passage, dateCreation)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+          [id, t.identifiant_appel, t.descriptif, t.numero_case, t.numero_appel, t.date_appel, t.motif_appel, t.ordre_passage]
+        );
+        n++;
+      }
+      return { n };
+    });
+    if (out.notFound) return res.status(404).json({ message: "Session introuvable." });
+    if (out.locked) return res.status(409).json({ message: "Le jeu de transactions est figé (session ouverte)." });
+    return res.status(200).json({ message: `${out.n} transaction(s) dupliquée(s).`, dupliquees: out.n });
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors de la duplication." }); }
 };
 
 module.exports = {
-  // Modele
-  getAllModeleGrille,
-  getOneModeleGrille,
-  addModeleGrille,
-  updateModeleGrille,
-  deleteModeleGrille,
-  // Categorie d'erreur
-  addCategorieErreur,
-  updateCategorieErreur,
-  deleteCategorieErreur,
-  // Erreur
-  addErreur,
-  updateErreur,
-  deleteErreur,
-  // Item
-  addItem,
-  updateItem,
-  deleteItem,
-  // Sous-item
-  addSousItem,
-  updateSousItem,
-  deleteSousItem,
-  // Categories de ressources
-  getAllCategorieRessource,
-  setCategoriesRessourcesModele,
-  // Phase 2 - Import Excel
-  importModeleFromExcel,
-  // Phase 2 - Criteres de reussite / echec
-  getCriteresByModele,
-  addCritereRegle,
-  updateCritereRegle,
-  deleteCritereRegle,
-  // Phase 2 - 5 Pourquoi
-  getPourquoiByModele,
-  addPourquoi,
-  updatePourquoi,
-  deletePourquoi,
+  createSession, getSessions, getSessionDetail, updateSession, deleteSession, ouvrirSession,
+  getEvaluateursDisponibles, setParticipants, removeParticipant, inviterParticipants,
+  addTransaction, getTransactions, updateTransaction, deleteTransaction, dupliquerTransactions,
 };

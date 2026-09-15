@@ -1,0 +1,82 @@
+<div class="plan-action">
+  <div class="entete">
+    <h3>Plan d'action</h3>
+    <button mat-stroked-button color="primary" (click)="afficherForm = !afficherForm"><mat-icon>add</mat-icon> Ajouter une action</button>
+  </div>
+
+  @if (afficherForm) {
+    <div class="form">
+      <mat-form-field appearance="outline"><mat-label>Action</mat-label>
+        <mat-select [(ngModel)]="nouvelle.id_action" name="act">
+          @for (a of actions; track a.id) { <mat-option [value]="a.id">{{ a.libelle }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Porteur</mat-label>
+        <mat-select [(ngModel)]="nouvelle.id_porteur" name="por">
+          @for (u of users; track u.id) { <mat-option [value]="u.id">{{ u.nom }} {{ u.prenom }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Contributeurs</mat-label>
+        <mat-select [(ngModel)]="nouvelle.contributeurs" name="contrib" multiple>
+          @for (u of users; track u.id) { <mat-option [value]="u.id">{{ u.nom }} {{ u.prenom }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Date début</mat-label>
+        <input matInput [matDatepicker]="pickerDd" [(ngModel)]="nouvelle.date_debut" name="dd" /><mat-datepicker-toggle matSuffix [for]="pickerDd"></mat-datepicker-toggle><mat-datepicker #pickerDd></mat-datepicker></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Date attendue</mat-label>
+        <input matInput [matDatepicker]="pickerDa" [(ngModel)]="nouvelle.date_attendue" name="da" /><mat-datepicker-toggle matSuffix [for]="pickerDa"></mat-datepicker-toggle><mat-datepicker #pickerDa></mat-datepicker></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Statut</mat-label>
+        <mat-select [(ngModel)]="nouvelle.id_statut" name="st">
+          @for (s of statuts; track s.id) { <mat-option [value]="s.id">{{ s.libelle }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>KPI</mat-label>
+        <mat-select [(ngModel)]="nouvelle.id_kpi" name="kpi">
+          @for (k of kpis; track k.id) { <mat-option [value]="k.id">{{ k.libelle }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="plein"><mat-label>Commentaire</mat-label>
+        <input matInput [(ngModel)]="nouvelle.commentaire" name="com" /></mat-form-field>
+      <button mat-raised-button color="primary" (click)="ajouter()">Enregistrer</button>
+    </div>
+  }
+
+  @if (lignes.length === 0) {
+    <p class="vide">Aucune action pour le moment.</p>
+  } @else {
+    <table mat-table [dataSource]="lignes" class="table">
+      <ng-container matColumnDef="action">
+        <th mat-header-cell *matHeaderCellDef>Action</th>
+        <td mat-cell *matCellDef="let l">{{ l.action_libelle || '—' }}<br /><small>{{ l.commentaire }}</small></td>
+      </ng-container>
+      <ng-container matColumnDef="porteur">
+        <th mat-header-cell *matHeaderCellDef>Porteur</th>
+        <td mat-cell *matCellDef="let l">{{ l.porteur_nom ? (l.porteur_nom + ' ' + l.porteur_prenom) : '—' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="echeance">
+        <th mat-header-cell *matHeaderCellDef>Échéance</th>
+        <td mat-cell *matCellDef="let l">{{ l.date_attendue ? (l.date_attendue | date: 'dd/MM/yyyy') : '—' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="statut">
+        <th mat-header-cell *matHeaderCellDef>Statut</th>
+        <td mat-cell *matCellDef="let l">
+          <mat-form-field appearance="outline" class="mini">
+            <mat-select [(ngModel)]="l.id_statut" (selectionChange)="changerStatut(l)" [name]="'stl' + l.id">
+              @for (s of statuts; track s.id) { <mat-option [value]="s.id">{{ s.libelle }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="kpi">
+        <th mat-header-cell *matHeaderCellDef>KPI</th>
+        <td mat-cell *matCellDef="let l">{{ l.kpi_libelle || '—' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let l"><button mat-icon-button color="warn" (click)="supprimer(l)"><mat-icon>delete</mat-icon></button></td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
+      <tr mat-row *matRowDef="let row; columns: colonnes"></tr>
+    </table>
+  }
+</div>

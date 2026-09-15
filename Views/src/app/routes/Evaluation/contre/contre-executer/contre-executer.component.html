@@ -1,0 +1,94 @@
+<div class="contre-executer">
+  <button mat-button (click)="retour()"><mat-icon>arrow_back</mat-icon> Retour</button>
+
+  @if (detail) {
+    <mat-card class="entete">
+      <mat-card-content>
+        <div class="ligne">
+          <span>Contre-évaluation de <strong>{{ detail.contre.evaluateur_nom }} {{ detail.contre.evaluateur_prenom }}</strong>
+            — agent {{ detail.contre.agent_nom }} {{ detail.contre.agent_prenom }} — grille {{ detail.contre.grille }}</span>
+          <span class="spacer"></span>
+          <mat-chip [class.echec]="detail.conclusion_live === 'ECHEC'" [class.succes]="detail.conclusion_live === 'SUCCES'">
+            {{ detail.conclusion_live === 'SUCCES' ? 'Succès' : 'Échec' }}{{ terminee ? '' : ' (en cours)' }}
+          </mat-chip>
+          @if (terminee) { <span class="badge">Terminée</span> }
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <div class="colonnes">
+      <div class="col-gauche">
+        <mat-card>
+          <mat-card-content>
+            <div class="barre-cat">
+              @for (c of detail.categories; track c.id) {
+                <button class="cat-chip" [class.active]="categorieActive?.id === c.id" [class.ko]="!c.reussite" (click)="select(c)">
+                  {{ c.libelle }} — {{ c.score_obtenu | number: '1.0-2' }}/{{ c.seuil_reussite | number: '1.0-2' }}
+                </button>
+              }
+            </div>
+
+            @if (categorieActive) {
+              <table class="comp">
+                <tr><th>Item</th><th>Initiale</th><th>Contre</th><th></th></tr>
+                @for (e of categorieActive.erreurs; track e.id) {
+                  <tr [class.ecart]="e.ecart">
+                    <td>
+                      <span class="item" (click)="toggleDepli(e)">{{ e.item }}</span>
+                      @if (depliee === e.id) {
+                        <div class="detail-err">
+                          @if (e.referentiel) { <div class="ref"><strong>Réf. :</strong> {{ e.referentiel }}</div> }
+                          <mat-form-field appearance="outline" class="plein">
+                            <mat-label>Commentaire</mat-label>
+                            <textarea matInput rows="2" [(ngModel)]="e.commentaire" [disabled]="terminee" (blur)="enregistrerCommentaire(e)" [name]="'c'+e.id"></textarea>
+                          </mat-form-field>
+                        </div>
+                      }
+                    </td>
+                    <td class="ct">
+                      @if (e.coche_initiale === 1) { <mat-icon class="ok" matTooltip="Conforme (initiale)">check</mat-icon> }
+                      @else if (e.coche_initiale === 0) { <mat-icon class="ko" matTooltip="Écart (initiale)">close</mat-icon> }
+                      @else { — }
+                    </td>
+                    <td class="ct">
+                      <mat-checkbox [checked]="e.coche === 1" [disabled]="terminee" (change)="onToggle(e)"></mat-checkbox>
+                    </td>
+                    <td class="ct">@if (e.ecart) { <mat-icon class="diff" matTooltip="Écart avec l'évaluation initiale">compare_arrows</mat-icon> }</td>
+                  </tr>
+                }
+              </table>
+            }
+          </mat-card-content>
+        </mat-card>
+      </div>
+
+      <div class="col-droite">
+        <mat-card>
+          <mat-card-content>
+            <h3>Résolution & clôture</h3>
+            <mat-radio-group [(ngModel)]="detail.contre.resolution" (change)="enregistrerResolution()" [disabled]="terminee" name="res">
+              <mat-radio-button value="OUI">Résolu</mat-radio-button>
+              <mat-radio-button value="NON">Non résolu</mat-radio-button>
+            </mat-radio-group>
+            <mat-form-field appearance="outline" class="plein">
+              <mat-label>Synthèse</mat-label>
+              <textarea matInput rows="3" [(ngModel)]="detail.contre.synthese" [disabled]="terminee" (blur)="enregistrerResolution()" name="syn"></textarea>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="plein">
+              <mat-label>Date de visibilité (obligatoire)</mat-label>
+              <input matInput [matDatepicker]="pickerVis" [(ngModel)]="detail.contre.date_visibilite" [disabled]="terminee" (dateChange)="enregistrerResolution()" name="vis" /><mat-datepicker-toggle matSuffix [for]="pickerVis"></mat-datepicker-toggle><mat-datepicker #pickerVis></mat-datepicker>
+            </mat-form-field>
+            @if (!terminee) {
+              <button mat-raised-button color="primary" [disabled]="!detail.contre.date_visibilite" (click)="terminer()">
+                <mat-icon>done_all</mat-icon> Terminer
+              </button>
+            } @else {
+              <div class="fin">Conclusion : <strong>{{ detail.contre.conclusion === 'SUCCES' ? 'Succès' : 'Échec' }}</strong>
+                — visible le {{ detail.contre.date_visibilite | date: 'dd/MM/yyyy' }}</div>
+            }
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+  }
+</div>

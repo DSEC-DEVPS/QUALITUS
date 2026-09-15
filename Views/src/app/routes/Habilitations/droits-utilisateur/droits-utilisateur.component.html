@@ -1,0 +1,59 @@
+<div class="droits-page">
+  <mat-card class="entete">
+    <h2><mat-icon>manage_accounts</mat-icon> Droits complémentaires par utilisateur</h2>
+    <p class="sous">Autoriser ou refuser une permission au-delà du rôle. « Hériter » = comportement du rôle. Socle commun — S5.</p>
+
+    <mat-form-field appearance="outline" class="search">
+      <mat-label>Rechercher un utilisateur</mat-label>
+      <input matInput [ngModel]="terme" (ngModelChange)="chercher($event)" placeholder="Nom, prénom, identifiant…" />
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+
+    <div class="resultats" *ngIf="resultats.length">
+      <button class="res" *ngFor="let u of resultats" (click)="choisir(u)">
+        <span class="nom">{{ u.prenom }} {{ u.nom }}</span>
+        <span class="meta">{{ u.role || '—' }} · {{ u.fonction || '' }}</span>
+      </button>
+    </div>
+  </mat-card>
+
+  <mat-card *ngIf="selection" class="detail">
+    <div class="user-tete">
+      <div>
+        <strong>{{ selection.prenom }} {{ selection.nom }}</strong>
+        <span class="role">Rôle : {{ selection.role || '—' }}</span>
+      </div>
+      <div class="legende">
+        <span><mat-icon class="ok">check_circle</mat-icon> effectif</span>
+        <span><mat-icon class="ko">cancel</mat-icon> refusé</span>
+      </div>
+    </div>
+
+    <div class="admin-note" *ngIf="admin">
+      <mat-icon>gpp_good</mat-icon> Cet utilisateur est administrateur (R_ADMI) : toutes les permissions sont accordées, les dérogations sont sans effet.
+    </div>
+
+    <div class="table-wrap" *ngIf="!admin">
+      <ng-container *ngFor="let g of modules">
+        <div class="module-titre">{{ g.module }}</div>
+        <div class="ligne" *ngFor="let it of g.items">
+          <div class="info">
+            <span class="lib">{{ it.libelle }}</span>
+            <span class="code">{{ it.code }}</span>
+          </div>
+          <div class="par-role" [class.oui]="it.parRole">
+            {{ it.parRole ? 'accordé par le rôle' : 'non accordé par le rôle' }}
+          </div>
+          <mat-button-toggle-group [value]="etat(it)" (change)="changer(it, $event.value)" class="toggle">
+            <mat-button-toggle value="DENY" matTooltip="Refuser">Refuser</mat-button-toggle>
+            <mat-button-toggle value="NONE" matTooltip="Hériter du rôle">Hériter</mat-button-toggle>
+            <mat-button-toggle value="GRANT" matTooltip="Autoriser">Autoriser</mat-button-toggle>
+          </mat-button-toggle-group>
+          <mat-icon class="eff" [class.ok]="it.effectif" [class.ko]="!it.effectif">
+            {{ it.effectif ? 'check_circle' : 'cancel' }}
+          </mat-icon>
+        </div>
+      </ng-container>
+    </div>
+  </mat-card>
+</div>

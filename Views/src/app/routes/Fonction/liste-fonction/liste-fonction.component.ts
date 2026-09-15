@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, ViewChild } from '@angular/core';
+import { CanDirective } from '@core/authorization/can.directive';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { fonction } from '@core';
@@ -30,7 +31,7 @@ import { catchError, of, Subject, takeUntil, tap } from 'rxjs';
 @Component({
   selector: 'app-liste-fonction',
   standalone: true,
-  imports: [
+  imports: [CanDirective, 
     MatButtonModule,
     MatTooltipModule,
     MatIconModule,

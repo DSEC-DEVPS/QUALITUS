@@ -14,6 +14,7 @@
         <div class="col-sm-4 text-end p-0">
           <mat-icon
             class="add_icon"
+            *appCan="'utilisateur.creer'"
             matTooltip="Ajouter"
             matTooltipPosition="above"
             (click)="openDialog()"
@@ -93,6 +94,7 @@
               >
               <mat-icon
                 class="edit_icon"
+                *appCan="'utilisateur.modifier'"
                 matTooltip="editer"
                 matTooltipPosition="above"
                 (click)="openDialog_update('50ms', '4ms', element.id)"
@@ -101,6 +103,7 @@
               <mat-icon
                 (click)="deleteSomething(element.id)"
                 class="delete_icon"
+                *appCan="'utilisateur.supprimer'"
                 matTooltip="supprimer"
                 matTooltipPosition="above"
                 >delete_forever</mat-icon

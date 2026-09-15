@@ -1,0 +1,43 @@
+<div class="calendrier">
+  <h2>Périodes d'évaluation par site</h2>
+
+  <mat-card>
+    <mat-card-content class="barre">
+      <mat-form-field appearance="outline">
+        <mat-label>Site</mat-label>
+        <mat-select [(ngModel)]="idSite" (selectionChange)="charger()" name="site">
+          @for (s of sites; track s.id) { <mat-option [value]="s.id">{{ s.nom }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+
+      @if (idSite) {
+        <mat-form-field appearance="outline">
+          <mat-label>Politique de fermeture</mat-label>
+          <mat-select [(ngModel)]="politique" (selectionChange)="changerPolitique()" name="pol">
+            @for (p of politiques; track p.key) { <mat-option [value]="p.key">{{ p.label }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <button mat-raised-button color="primary" (click)="generer()"><mat-icon>event</mat-icon> Générer l'année</button>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  @if (idSite && mois.length) {
+    <mat-card>
+      <mat-card-content>
+        <div class="grille-mois">
+          @for (m of mois; track m.id) {
+            <div class="mois" [class.ouvert]="m.etat === 'OUVERT'">
+              <div class="nom">{{ m.libelle }} {{ m.annee }}</div>
+              <mat-slide-toggle [checked]="m.etat === 'OUVERT'" (change)="basculerMois(m)">
+                {{ m.etat === 'OUVERT' ? 'Ouvert' : 'Fermé' }}
+              </mat-slide-toggle>
+            </div>
+          }
+        </div>
+      </mat-card-content>
+    </mat-card>
+  } @else if (idSite) {
+    <p class="vide">Aucun calendrier pour ce site. Cliquez sur « Générer l'année ».</p>
+  }
+</div>

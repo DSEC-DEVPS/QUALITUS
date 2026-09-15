@@ -1,0 +1,21 @@
+.arbo-admin {
+  padding: 16px;
+  mat-card { margin-bottom: 16px; }
+  .titre { display: block; margin-bottom: 8px; font-weight: 600; }
+  .ligne { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .grand { flex: 1 1 240px; min-width: 200px; }
+  .petit { width: 100px; }
+  .vide { color: rgba(0, 0, 0, 0.6); }
+
+  .liste-arbo { list-style: none; margin: 0; padding: 0; }
+  .liste-arbo li { padding: 8px; border-radius: 4px; cursor: pointer; }
+  .liste-arbo li:hover { background: rgba(0, 0, 0, 0.03); }
+  .liste-arbo li.active { background: #e3f2fd; }
+
+  .ajout-option { margin-bottom: 12px; }
+  .niveau-bloc { margin-top: 8px; }
+  .niveau-bloc h4 { margin: 8px 0 4px; }
+  .option-ligne { display: flex; align-items: center; gap: 12px; padding: 2px 8px; }
+  .option-ligne .parent { font-size: 0.8rem; color: rgba(0, 0, 0, 0.55); }
+  .option-ligne .spacer { flex: 1 1 auto; }
+}

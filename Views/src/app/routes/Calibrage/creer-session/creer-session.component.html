@@ -1,0 +1,53 @@
+<div class="cal-creer">
+  <mat-card>
+    <h2><mat-icon>add_task</mat-icon> Nouvelle session de calibrage</h2>
+
+    <div class="grille-form">
+      <mat-form-field appearance="outline" class="plein"><mat-label>Nom</mat-label>
+        <input matInput [(ngModel)]="model.nom" name="nom" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="plein"><mat-label>Description</mat-label>
+        <textarea matInput rows="2" [(ngModel)]="model.description" name="desc"></textarea>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline"><mat-label>Date du calibrage</mat-label>
+        <input matInput [matDatepicker]="pd" [(ngModel)]="model.date_calibrage" name="date" />
+        <mat-datepicker-toggle matSuffix [for]="pd"></mat-datepicker-toggle><mat-datepicker #pd></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline"><mat-label>Site</mat-label>
+        <mat-select [(ngModel)]="model.id_site" name="site" required>
+          <mat-option *ngFor="let s of sites" [value]="s.id">{{ s.nom }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline"><mat-label>Grille d'évaluation (Active)</mat-label>
+        <mat-select [(ngModel)]="model.id_grille" name="grille" required>
+          <mat-option *ngFor="let g of grilles" [value]="g.id">{{ g.nom }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline"><mat-label>Nombre de transactions</mat-label>
+        <input matInput type="number" min="1" [(ngModel)]="model.nombre_transactions" name="nbtx" required />
+      </mat-form-field>
+
+      <div class="duree">
+        <span class="lbl">Durée de participation :</span>
+        <mat-form-field appearance="outline" class="petit"><mat-label>Heures</mat-label>
+          <input matInput type="number" min="0" [(ngModel)]="model.duree_heures" name="dh" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="petit"><mat-label>Minutes</mat-label>
+          <input matInput type="number" min="0" max="59" [(ngModel)]="model.duree_minutes_reste" name="dm" />
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button mat-button (click)="annuler()">Annuler</button>
+      <button mat-flat-button color="primary" [disabled]="!valide() || envoi" (click)="creer()">
+        <mat-icon>save</mat-icon> Créer et préparer
+      </button>
+    </div>
+  </mat-card>
+</div>

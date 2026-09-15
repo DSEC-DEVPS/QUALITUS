@@ -1,0 +1,35 @@
+<div class="notifications">
+  <div class="entete">
+    <h2>Notifications</h2>
+    <button mat-stroked-button (click)="toutLire()" [disabled]="!notifications.length">
+      <mat-icon>done_all</mat-icon> Tout marquer comme lu
+    </button>
+  </div>
+
+  <mat-card>
+    <mat-card-content>
+      @if (chargement) {
+        <p>Chargement…</p>
+      } @else if (notifications.length === 0) {
+        <p class="vide">Aucune notification.</p>
+      } @else {
+        <div class="liste">
+          @for (n of notifications; track n.id) {
+            <div class="notif" [class.non-lu]="!n.lu" (click)="ouvrir(n)">
+              <mat-icon class="ico">{{ n.lu ? 'mark_email_read' : 'mark_email_unread' }}</mat-icon>
+              <div class="corps">
+                <div class="titre">{{ n.titre }}
+                  @if (n.conclusion === 'ECHEC') { <span class="tag echec">Échec</span> }
+                  @else if (n.conclusion === 'SUCCES') { <span class="tag succes">Succès</span> }
+                </div>
+                <div class="msg">{{ n.message }}</div>
+                <div class="date">{{ n.dateCreation | date: 'dd/MM/yyyy HH:mm' }}</div>
+              </div>
+              @if (n.id_evaluation) { <mat-icon class="chevron">chevron_right</mat-icon> }
+            </div>
+          }
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

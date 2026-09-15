@@ -1,0 +1,42 @@
+<div class="coaching-section">
+  <h3>Coaching — cause racine (5 pourquoi)</h3>
+
+  @if (!eligible) {
+    <p class="info">Le coaching concerne les évaluations conclues en échec.</p>
+  } @else {
+    @if (estTermine) { <p class="badge-ok">Coaching terminé</p> }
+
+    @for (n of niveaux; track n) {
+      <div class="niveau">
+        <mat-form-field appearance="outline" class="select">
+          <mat-label>{{ n }}ᵉ pourquoi</mat-label>
+          <mat-select [(ngModel)]="selection[n]" (selectionChange)="onSelect(n)"
+                      [disabled]="estTermine || (n > 1 && !selection[n-1])" [name]="'cn' + n">
+            @for (o of options[n]; track o.id) {
+              <mat-option [value]="o.id">{{ o.libelle }}@if (o.etat === 'EN_ATTENTE') { <em> (en attente)</em> }</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        @if (!estTermine) {
+          @if (!propositionOuverte[n]) {
+            <button mat-button type="button" (click)="ouvrirProposition(n)"><mat-icon>add</mat-icon> Proposer</button>
+          } @else {
+            <mat-form-field appearance="outline" class="prop">
+              <mat-label>Nouvelle option</mat-label>
+              <input matInput [(ngModel)]="nouvelleOption[n]" [name]="'cp' + n" />
+            </mat-form-field>
+            <button mat-stroked-button color="primary" type="button" (click)="proposer(n)">Proposer</button>
+            <button mat-button type="button" (click)="propositionOuverte[n] = false">Annuler</button>
+          }
+        }
+      </div>
+    }
+
+    @if (!estTermine) {
+      <div class="actions">
+        <button mat-raised-button color="primary" (click)="enregistrer()"><mat-icon>save</mat-icon> Enregistrer</button>
+        <button mat-stroked-button (click)="terminer()"><mat-icon>done_all</mat-icon> Terminer le coaching</button>
+      </div>
+    }
+  }
+</div>

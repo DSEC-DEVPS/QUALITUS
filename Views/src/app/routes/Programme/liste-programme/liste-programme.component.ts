@@ -34,10 +34,11 @@ import {
 import { catchError, of, Subject, takeUntil, tap } from 'rxjs';
 import { UpdateProgrammeComponent } from '../update-programme/update-programme.component';
 import { ToastrService } from 'ngx-toastr';
+import { CanDirective } from '@core/authorization/can.directive';
 @Component({
   selector: 'app-table-overview-example',
   standalone: true,
-  imports: [
+  imports: [CanDirective, 
     MatFormFieldModule,
     MatInputModule,
     MatTableModule,

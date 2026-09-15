@@ -17,10 +17,11 @@ import {
 import { SondageService } from '@shared/services/sondage.service';
 import { Sondage } from '../interfaces';
 
+import { CanDirective } from '@core/authorization/can.directive';
 @Component({
   selector: 'app-liste-sondage',
   standalone: true,
-  imports: [
+  imports: [CanDirective, 
     MatCardModule,
     MatTableModule,
     MatButtonModule,

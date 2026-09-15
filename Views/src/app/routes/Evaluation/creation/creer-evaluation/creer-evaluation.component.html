@@ -1,0 +1,116 @@
+<div class="creer-evaluation">
+  <button mat-button (click)="retour()"><mat-icon>arrow_back</mat-icon> Retour</button>
+  <h2>Créer une évaluation</h2>
+
+  <mat-card>
+    <mat-card-content>
+      <div class="section">
+        <label class="lbl">Type de ressource</label>
+        <mat-radio-group [(ngModel)]="model.type_ressource" (change)="onTypeChange()" name="type">
+          <mat-radio-button value="HUMAINE">Humaine</mat-radio-button>
+          <mat-radio-button value="AUTOMATISEE">Automatisée</mat-radio-button>
+        </mat-radio-group>
+      </div>
+
+      @if (model.type_ressource === 'HUMAINE') {
+        <div class="section grille-cols">
+          <mat-form-field appearance="outline">
+            <mat-label>Agent</mat-label>
+            <mat-select [(ngModel)]="model.id_agent" (selectionChange)="onAgentChange()" name="agent">
+              @for (a of agents; track a.id) {
+                <mat-option [value]="a.id">{{ a.nom }} {{ a.prenom }} ({{ a.login }})</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>… ou saisir le login</mat-label>
+            <input matInput [(ngModel)]="loginSaisi" name="loginSaisi" (blur)="resoudreLogin()" (keyup.enter)="resoudreLogin()" />
+            @if (agentTrouve) { <mat-hint>{{ agentTrouve.nom }} {{ agentTrouve.prenom }}</mat-hint> }
+          </mat-form-field>
+          @if (resolution) {
+            @if (resolution.ok && resolution.grille) {
+              <div class="grille-resolue ok"><mat-icon>check_circle</mat-icon> Grille appliquée : <strong>{{ resolution.grille.nom }}</strong> (lecture seule)</div>
+            } @else {
+              <div class="grille-resolue ko"><mat-icon>error</mat-icon> {{ resolution.message }}</div>
+            }
+          }
+        </div>
+      }
+
+      @if (model.type_ressource === 'AUTOMATISEE') {
+        <div class="section grille-cols">
+          <mat-form-field appearance="outline">
+            <mat-label>Grille d'évaluation</mat-label>
+            <mat-select [(ngModel)]="model.id_grille" name="grille">
+              @for (g of grillesAuto; track g.id) { <mat-option [value]="g.id">{{ g.nom }}</mat-option> }
+            </mat-select>
+            @if (grillesAuto.length === 0) { <mat-hint>Aucune grille Active de type Automatisée.</mat-hint> }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Nature de la ressource</mat-label>
+            <mat-select [(ngModel)]="model.id_nature_ressource" name="nature">
+              @for (n of natures; track n.id) { <mat-option [value]="n.id">{{ n.libelle }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+        </div>
+      }
+
+      <div class="section grille-cols">
+        <mat-form-field appearance="outline">
+          <mat-label>Contexte</mat-label>
+          <mat-select [(ngModel)]="model.id_contexte" name="contexte">
+            @for (c of contextes; track c.id) { <mat-option [value]="c.id">{{ c.libelle }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Date d'appel</mat-label>
+          <input matInput [matDatepicker]="pickerDateAppel" [(ngModel)]="model.date_appel" name="dateAppel" /><mat-datepicker-toggle matSuffix [for]="pickerDateAppel"></mat-datepicker-toggle><mat-datepicker #pickerDateAppel></mat-datepicker>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Identifiant d'appel</mat-label>
+          <input matInput [(ngModel)]="model.identifiant_appel" name="idAppel" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Numéro de case</mat-label>
+          <input matInput [(ngModel)]="model.numero_case" name="numCase" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Numéro d'appel</mat-label>
+          <input matInput [(ngModel)]="model.numero_appel" name="numAppel" />
+        </mat-form-field>
+      </div>
+
+      <div class="section dmt">
+        <label class="lbl">Durée moyenne de traitement (DMT)</label>
+        <div class="dmt-champs">
+          <mat-form-field appearance="outline" class="petit"><mat-label>Heures</mat-label>
+            <input matInput type="number" min="0" [(ngModel)]="model.dmt_h" name="dmth" /></mat-form-field>
+          <mat-form-field appearance="outline" class="petit"><mat-label>Minutes</mat-label>
+            <input matInput type="number" min="0" max="59" [(ngModel)]="model.dmt_m" name="dmtm" /></mat-form-field>
+          <mat-form-field appearance="outline" class="petit"><mat-label>Secondes</mat-label>
+            <input matInput type="number" min="0" max="59" [(ngModel)]="model.dmt_s" name="dmts" /></mat-form-field>
+        </div>
+      </div>
+
+      <div class="section">
+        <mat-form-field appearance="outline" class="plein">
+          <mat-label>Motif d'appel</mat-label>
+          <textarea matInput rows="3" [(ngModel)]="model.motif_appel" name="motif"></textarea>
+        </mat-form-field>
+      </div>
+
+      <div class="section">
+        <mat-checkbox [(ngModel)]="model.afficher_grille" name="afficher">
+          Afficher la grille d'évaluation après enregistrement (enchaîner sur l'exécution)
+        </mat-checkbox>
+      </div>
+
+      <div class="actions">
+        <button mat-raised-button color="primary" [disabled]="!peutSoumettre || envoi" (click)="soumettre()">
+          <mat-icon>save</mat-icon> Créer l'évaluation
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

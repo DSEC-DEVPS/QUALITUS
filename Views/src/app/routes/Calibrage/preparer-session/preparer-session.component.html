@@ -1,0 +1,188 @@
+<div class="cal-prep" *ngIf="session">
+  <div class="tete">
+    <button mat-icon-button (click)="retour()"><mat-icon>arrow_back</mat-icon></button>
+    <div>
+      <h2>{{ session.nom }}</h2>
+      <span class="badge" [attr.data-st]="session.statut">{{ session.statut }}</span>
+      <span class="info">{{ transactions.length }} / {{ session.nombre_transactions }} transactions ·
+        {{ participants.length }} participant(s)</span>
+    </div>
+    <span class="spacer"></span>
+    <button mat-flat-button color="primary" *ngIf="brouillon" (click)="ouvrir()">
+      <mat-icon>lock_open</mat-icon> Ouvrir la session
+    </button>
+  </div>
+
+  <div class="lecture-seule" *ngIf="!brouillon">
+    <mat-icon>info</mat-icon> La session est {{ session.statut }} : la préparation n'est plus modifiable.
+  </div>
+
+  <mat-accordion multi>
+    <!-- Paramètres -->
+    <mat-expansion-panel expanded>
+      <mat-expansion-panel-header><mat-panel-title><mat-icon>settings</mat-icon> Paramètres</mat-panel-title></mat-expansion-panel-header>
+      <div class="form">
+        <mat-form-field appearance="outline" class="plein"><mat-label>Nom</mat-label>
+          <input matInput [(ngModel)]="session.nom" [disabled]="!brouillon" name="nom" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="plein"><mat-label>Description</mat-label>
+          <textarea matInput rows="2" [(ngModel)]="session.description" [disabled]="!brouillon" name="desc"></textarea>
+        </mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Date</mat-label>
+          <input matInput [matDatepicker]="pd" [(ngModel)]="session.date_calibrage" [disabled]="!brouillon" name="date" />
+          <mat-datepicker-toggle matSuffix [for]="pd"></mat-datepicker-toggle><mat-datepicker #pd></mat-datepicker>
+        </mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Site</mat-label>
+          <mat-select [(ngModel)]="session.id_site" [disabled]="!brouillon" name="site">
+            <mat-option *ngFor="let s of sites" [value]="s.id">{{ s.nom }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Grille (Active)</mat-label>
+          <mat-select [(ngModel)]="session.id_grille" [disabled]="!brouillon" name="grille">
+            <mat-option *ngFor="let g of grilles" [value]="g.id">{{ g.nom }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Nombre de transactions</mat-label>
+          <input matInput type="number" min="1" [(ngModel)]="session.nombre_transactions" [disabled]="!brouillon" name="nbtx" />
+        </mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Durée (minutes)</mat-label>
+          <input matInput type="number" min="1" [(ngModel)]="session.duree_minutes" [disabled]="!brouillon" name="dm" />
+        </mat-form-field>
+      </div>
+      <div class="actions" *ngIf="brouillon">
+        <button mat-flat-button color="primary" (click)="enregistrerParams()"><mat-icon>save</mat-icon> Enregistrer</button>
+      </div>
+    </mat-expansion-panel>
+
+    <!-- Transactions -->
+    <mat-expansion-panel expanded>
+      <mat-expansion-panel-header>
+        <mat-panel-title><mat-icon>list_alt</mat-icon> Transactions ({{ transactions.length }}/{{ session.nombre_transactions }})</mat-panel-title>
+      </mat-expansion-panel-header>
+
+      <table mat-table [dataSource]="transactions" *ngIf="transactions.length" class="tab">
+        <ng-container matColumnDef="ordre">
+          <th mat-header-cell *matHeaderCellDef>Ordre</th>
+          <td mat-cell *matCellDef="let t">{{ t.ordre_passage }}</td>
+        </ng-container>
+        <ng-container matColumnDef="identifiant">
+          <th mat-header-cell *matHeaderCellDef>Identifiant d'appel</th>
+          <td mat-cell *matCellDef="let t">{{ t.identifiant_appel }}</td>
+        </ng-container>
+        <ng-container matColumnDef="descriptif">
+          <th mat-header-cell *matHeaderCellDef>Descriptif</th>
+          <td mat-cell *matCellDef="let t" class="tronque">{{ t.descriptif }}</td>
+        </ng-container>
+        <ng-container matColumnDef="date">
+          <th mat-header-cell *matHeaderCellDef>Date d'appel</th>
+          <td mat-cell *matCellDef="let t">{{ t.date_appel ? (t.date_appel | date: 'dd/MM/yyyy') : '—' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let t">
+            <button mat-icon-button *ngIf="brouillon" (click)="editerTx(t)" matTooltip="Modifier"><mat-icon>edit</mat-icon></button>
+            <button mat-icon-button *ngIf="brouillon" color="warn" (click)="supprimerTx(t)" matTooltip="Supprimer"><mat-icon>delete</mat-icon></button>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="colonnesTx"></tr>
+        <tr mat-row *matRowDef="let row; columns: colonnesTx"></tr>
+      </table>
+      <div class="vide" *ngIf="!transactions.length">Aucune transaction chargée.</div>
+
+      <!-- Ajout / édition + duplication (brouillon) -->
+      <div class="ajout-tx" *ngIf="brouillon">
+        <h4>{{ txEditId ? 'Modifier la transaction' : 'Ajouter une transaction' }}</h4>
+        <div class="form">
+          <mat-form-field appearance="outline"><mat-label>Identifiant d'appel *</mat-label>
+            <input matInput [(ngModel)]="txForm.identifiant_appel" name="tid" />
+          </mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Ordre de passage *</mat-label>
+            <input matInput type="number" [(ngModel)]="txForm.ordre_passage" name="tord" />
+          </mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Numéro de case</mat-label>
+            <input matInput [(ngModel)]="txForm.numero_case" name="tcase" />
+          </mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Numéro d'appel</mat-label>
+            <input matInput [(ngModel)]="txForm.numero_appel" name="tnum" />
+          </mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Date d'appel</mat-label>
+            <input matInput [matDatepicker]="pt" [(ngModel)]="txForm.date_appel" name="tdate" />
+            <mat-datepicker-toggle matSuffix [for]="pt"></mat-datepicker-toggle><mat-datepicker #pt></mat-datepicker>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="plein"><mat-label>Descriptif du problème et synthèse de résolution *</mat-label>
+            <textarea matInput rows="2" [(ngModel)]="txForm.descriptif" name="tdesc"></textarea>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="plein"><mat-label>Motif d'appel</mat-label>
+            <textarea matInput rows="2" [(ngModel)]="txForm.motif_appel" name="tmotif"></textarea>
+          </mat-form-field>
+        </div>
+        <div class="actions">
+          <button mat-button *ngIf="txEditId" (click)="annulerTx()">Annuler</button>
+          <button mat-flat-button color="primary" (click)="enregistrerTx()">
+            <mat-icon>{{ txEditId ? 'save' : 'add' }}</mat-icon> {{ txEditId ? 'Enregistrer' : 'Ajouter' }}
+          </button>
+        </div>
+        <div class="dup">
+          <mat-form-field appearance="outline"><mat-label>Dupliquer depuis une session</mat-label>
+            <mat-select [(ngModel)]="sourceDup" name="src">
+              <mat-option *ngFor="let s of autresSessions" [value]="s.id">{{ s.nom }} ({{ s.nb_transactions_chargees }} tx)</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <button mat-stroked-button (click)="dupliquer()"><mat-icon>content_copy</mat-icon> Dupliquer le jeu</button>
+        </div>
+      </div>
+    </mat-expansion-panel>
+
+    <!-- Participants -->
+    <mat-expansion-panel expanded>
+      <mat-expansion-panel-header>
+        <mat-panel-title><mat-icon>groups</mat-icon> Participants ({{ participants.length }})</mat-panel-title>
+      </mat-expansion-panel-header>
+
+      <table mat-table [dataSource]="participants" *ngIf="participants.length" class="tab">
+        <ng-container matColumnDef="nom">
+          <th mat-header-cell *matHeaderCellDef>Évaluateur</th>
+          <td mat-cell *matCellDef="let p">{{ p.prenom }} {{ p.nom }}</td>
+        </ng-container>
+        <ng-container matColumnDef="invite">
+          <th mat-header-cell *matHeaderCellDef>Invitation</th>
+          <td mat-cell *matCellDef="let p">
+            <span *ngIf="p.invite" class="ok"><mat-icon>check</mat-icon> {{ p.date_invitation | date: 'dd/MM HH:mm' }}</span>
+            <span *ngIf="!p.invite" class="ko">Non invité</span>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="etat">
+          <th mat-header-cell *matHeaderCellDef>État</th>
+          <td mat-cell *matCellDef="let p">{{ p.statut_participation }}</td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let p">
+            <button mat-icon-button matTooltip="Inviter / relancer" (click)="relancer(p)"><mat-icon>send</mat-icon></button>
+            <button mat-icon-button color="warn" matTooltip="Retirer" (click)="retirer(p)"><mat-icon>person_remove</mat-icon></button>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="['nom','invite','etat','actions']"></tr>
+        <tr mat-row *matRowDef="let row; columns: ['nom','invite','etat','actions']"></tr>
+      </table>
+
+      <div class="actions" *ngIf="participants.length">
+        <button mat-flat-button color="primary" (click)="inviterTous()"><mat-icon>mark_email_read</mat-icon> Inviter les non-invités</button>
+      </div>
+
+      <!-- Sélection depuis le site (brouillon) -->
+      <div class="selection" *ngIf="brouillon">
+        <h4>Évaluateurs du site</h4>
+        <div class="liste-dispo">
+          <mat-checkbox *ngFor="let e of disponibles"
+                        [checked]="estSelectionne(e.id)"
+                        (change)="bascule(e.id, $event.checked)">
+            {{ e.prenom }} {{ e.nom }}
+          </mat-checkbox>
+          <div class="vide" *ngIf="!disponibles.length">Aucun évaluateur sur ce site.</div>
+        </div>
+        <button mat-flat-button color="primary" (click)="enregistrerParticipants()"><mat-icon>save</mat-icon> Enregistrer les participants</button>
+      </div>
+    </mat-expansion-panel>
+  </mat-accordion>
+</div>

@@ -1,0 +1,61 @@
+<div class="creer-masse">
+  <button mat-button (click)="retour()"><mat-icon>arrow_back</mat-icon> Retour</button>
+  <h2>Création en masse (ressources humaines)</h2>
+
+  <mat-card>
+    <mat-card-content>
+      <div class="grille-cols">
+        <mat-form-field appearance="outline">
+          <mat-label>Contexte</mat-label>
+          <mat-select [(ngModel)]="commun.id_contexte" name="contexte">
+            @for (c of contextes; track c.id) { <mat-option [value]="c.id">{{ c.libelle }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Date d'appel</mat-label>
+          <input matInput [matDatepicker]="pickerDateAppel" [(ngModel)]="commun.date_appel" name="dateAppel" /><mat-datepicker-toggle matSuffix [for]="pickerDateAppel"></mat-datepicker-toggle><mat-datepicker #pickerDateAppel></mat-datepicker>
+        </mat-form-field>
+      </div>
+
+      <mat-form-field appearance="outline" class="plein">
+        <mat-label>Motif d'appel (commun)</mat-label>
+        <textarea matInput rows="2" [(ngModel)]="commun.motif_appel" name="motif"></textarea>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="plein">
+        <mat-label>Agents à évaluer</mat-label>
+        <mat-select [(ngModel)]="agentsSelectionnes" name="agents" multiple>
+          @for (a of agents; track a.id) {
+            <mat-option [value]="a.id">
+              {{ a.nom }} {{ a.prenom }} ({{ a.login }})
+              @if (!a.id_grille) { — sans grille } @else if (a.grille_statut !== 'ACTIVE') { — grille non active }
+            </mat-option>
+          }
+        </mat-select>
+        <mat-hint>{{ agentsSelectionnes.length }} agent(s) sélectionné(s)</mat-hint>
+      </mat-form-field>
+
+      <div class="actions">
+        <button mat-raised-button color="primary" [disabled]="!peutSoumettre || envoi" (click)="soumettre()">
+          <mat-icon>playlist_add</mat-icon> Créer les évaluations
+        </button>
+      </div>
+
+      @if (compteRendu) {
+        <div class="compte-rendu">
+          <h3>Compte rendu — {{ compteRendu.message }}</h3>
+          @if (compteRendu.crees.length) {
+            <div class="bloc ok"><strong>{{ compteRendu.crees.length }} créée(s)</strong>
+              <ul>@for (c of compteRendu.crees; track c.index) { <li>{{ nomAgent(agentsSelectionnes[c.index]) }} → évaluation #{{ c.id }}</li> }</ul>
+            </div>
+          }
+          @if (compteRendu.rejetes.length) {
+            <div class="bloc ko"><strong>{{ compteRendu.rejetes.length }} rejetée(s)</strong>
+              <ul>@for (r of compteRendu.rejetes; track r.index) { <li>{{ nomAgent(agentsSelectionnes[r.index]) }} : {{ r.motif }}</li> }</ul>
+            </div>
+          }
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

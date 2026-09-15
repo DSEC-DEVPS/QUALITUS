@@ -1,0 +1,11 @@
+.bi-section {
+  h3 { margin-top: 0; }
+  .info { color: rgba(0, 0, 0, 0.6); }
+  .depart { margin-bottom: 12px; }
+  .niveau { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .select { flex: 1 1 260px; min-width: 220px; }
+  .prop { flex: 1 1 220px; }
+  .badge-attente {
+    padding: 1px 8px; font-size: 0.72rem; color: #8a6d3b; background: #fcf8e3; border-radius: 10px;
+  }
+}

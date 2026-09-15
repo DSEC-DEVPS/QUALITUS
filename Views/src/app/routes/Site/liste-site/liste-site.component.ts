@@ -1,4 +1,5 @@
 import { Component, AfterViewInit, ViewChild, OnInit, inject } from '@angular/core';
+import { CanDirective } from '@core/authorization/can.directive';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { PageHeaderComponent } from '@shared';
@@ -31,7 +32,7 @@ import { catchError, of, Subject, takeUntil, tap } from 'rxjs';
 @Component({
   selector: 'app-liste-site',
   standalone: true,
-  imports: [
+  imports: [CanDirective, 
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,

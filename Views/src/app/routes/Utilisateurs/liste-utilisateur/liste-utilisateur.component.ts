@@ -22,6 +22,7 @@ import { TitleCasePipe } from '@angular/common';
 import { MatIcon, MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { AjouterUtilisateurComponent } from '../ajouter-utilisateur/ajouter-utilisateur.component';
+import { CanDirective } from '@core/authorization/can.directive';
 import * as ExcelJS from 'exceljs';
 import * as XLSX from 'xlsx';
 import {
@@ -57,6 +58,7 @@ import {
     MatTooltipModule,
     MatIcon,
     TitleCasePipe,
+    CanDirective,
   ],
   templateUrl: './liste-utilisateur.component.html',
   styleUrl: './liste-utilisateur.component.scss',

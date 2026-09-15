@@ -1,0 +1,17 @@
+.liste-evaluations {
+  padding: 16px;
+  .entete { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+  .entete-actions { display: flex; align-items: center; gap: 8px; }
+  .filtres mat-card-content {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; align-items: center;
+  }
+  .filtres .btns { grid-column: 1 / -1; display: flex; gap: 8px; }
+  .table-eval { width: 100%; }
+  .ligne { cursor: pointer; }
+  .ligne:hover { background: rgba(0, 0, 0, 0.03); }
+  .ligne.inactive { opacity: 0.5; }
+  .vide { color: rgba(0, 0, 0, 0.6); }
+  .ico-sup { font-size: 16px; width: 16px; height: 16px; vertical-align: middle; color: #6a1b9a; }
+  mat-chip.chip-succes { background: #c8e6c9; }
+  mat-chip.chip-echec { background: #ffcdd2; }
+}

@@ -1,0 +1,31 @@
+.contre-executer {
+  padding: 16px;
+  .entete .ligne { display: flex; align-items: center; gap: 12px; }
+  .entete .spacer { flex: 1 1 auto; }
+  .entete .badge { padding: 2px 8px; font-size: 0.75rem; background: #e0e0e0; border-radius: 10px; }
+  mat-chip.succes { background: #c8e6c9; }
+  mat-chip.echec { background: #ffcdd2; }
+  mat-card { margin-bottom: 16px; }
+
+  .colonnes { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 900px) { .colonnes { grid-template-columns: 1fr; } }
+
+  .barre-cat { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .cat-chip { padding: 6px 10px; border: 1px solid #cfd8dc; border-radius: 8px; background: #fff; cursor: pointer; font-size: 0.85rem; }
+  .cat-chip.active { border-color: #1976d2; box-shadow: 0 0 0 2px rgba(25,118,210,0.15); }
+  .cat-chip.ko { border-left: 4px solid #e53935; }
+
+  .comp { width: 100%; border-collapse: collapse; }
+  .comp th, .comp td { text-align: left; padding: 6px; border-bottom: 1px solid #eee; vertical-align: top; }
+  .comp .ct { text-align: center; width: 70px; }
+  .comp tr.ecart { background: #fff8e1; }
+  .comp .item { cursor: pointer; }
+  .comp .ref { font-size: 0.85rem; color: rgba(0,0,0,0.6); margin-bottom: 6px; }
+  .ok { color: #2e7d32; }
+  .ko { color: #c62828; }
+  .diff { color: #e65100; }
+  .plein { width: 100%; }
+  h3 { margin-top: 0; }
+  .fin { padding: 8px; background: #e8f5e9; border-radius: 4px; }
+  mat-radio-button { margin-right: 16px; }
+}

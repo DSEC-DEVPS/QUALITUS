@@ -1,0 +1,87 @@
+<div class="contre-liste">
+  <div class="entete">
+    <h2>Contre-évaluations</h2>
+    <button mat-raised-button color="primary" (click)="afficherAssistant = !afficherAssistant">
+      <mat-icon>add</mat-icon> Nouvelle contre-évaluation
+    </button>
+  </div>
+
+  @if (afficherAssistant) {
+    <mat-card class="assistant">
+      <mat-card-content>
+        <span class="titre">Site → Évaluateur → Évaluation terminée</span>
+        <div class="ligne">
+          <mat-form-field appearance="outline">
+            <mat-label>Site</mat-label>
+            <mat-select [(ngModel)]="idSite" (selectionChange)="onSite()" name="site">
+              @for (s of sites; track s.id) { <mat-option [value]="s.id">{{ s.nom }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Évaluateur</mat-label>
+            <mat-select [(ngModel)]="idEvaluateur" (selectionChange)="onEvaluateur()" name="ev" [disabled]="!idSite">
+              @for (e of evaluateurs; track e.id) { <mat-option [value]="e.id">{{ e.nom }} {{ e.prenom }} ({{ e.login }})</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="grand">
+            <mat-label>Évaluation</mat-label>
+            <mat-select [(ngModel)]="idEvaluation" name="eval" [disabled]="!idEvaluateur">
+              @for (e of evaluations; track e.id) {
+                <mat-option [value]="e.id">#{{ e.id }} — {{ e.agent_nom }} {{ e.agent_prenom }} — {{ e.date_appel ? (e.date_appel | date: 'dd/MM/yyyy') : '' }} ({{ e.conclusion }})</mat-option>
+              }
+            </mat-select>
+            @if (idEvaluateur && evaluations.length === 0) { <mat-hint>Aucune évaluation contre-évaluable.</mat-hint> }
+          </mat-form-field>
+          <button mat-raised-button color="primary" (click)="creer()">Créer</button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <mat-card>
+    <mat-card-content>
+      @if (liste.length === 0) {
+        <p class="vide">Aucune contre-évaluation.</p>
+      } @else {
+        <table mat-table [dataSource]="liste" class="table">
+          <ng-container matColumnDef="evaluateur">
+            <th mat-header-cell *matHeaderCellDef>Évaluateur contrôlé</th>
+            <td mat-cell *matCellDef="let c">{{ c.evaluateur_nom }} {{ c.evaluateur_prenom }}</td>
+          </ng-container>
+          <ng-container matColumnDef="agent">
+            <th mat-header-cell *matHeaderCellDef>Agent</th>
+            <td mat-cell *matCellDef="let c">{{ c.agent_nom }} {{ c.agent_prenom }}</td>
+          </ng-container>
+          <ng-container matColumnDef="appel">
+            <th mat-header-cell *matHeaderCellDef>Éval. #</th>
+            <td mat-cell *matCellDef="let c">#{{ c.id_evaluation_initiale }}</td>
+          </ng-container>
+          <ng-container matColumnDef="statut">
+            <th mat-header-cell *matHeaderCellDef>Statut</th>
+            <td mat-cell *matCellDef="let c">{{ c.statut }}</td>
+          </ng-container>
+          <ng-container matColumnDef="conclusion">
+            <th mat-header-cell *matHeaderCellDef>Conclusion</th>
+            <td mat-cell *matCellDef="let c">
+              @if (c.conclusion === 'SUCCES') { <mat-chip class="chip-succes">Succès</mat-chip> }
+              @else if (c.conclusion === 'ECHEC') { <mat-chip class="chip-echec">Échec</mat-chip> }
+              @else { — }
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="visibilite">
+            <th mat-header-cell *matHeaderCellDef>Visibilité</th>
+            <td mat-cell *matCellDef="let c">{{ c.date_visibilite ? (c.date_visibilite | date: 'dd/MM/yyyy') : '—' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let c" (click)="$event.stopPropagation()">
+              <button mat-icon-button title="Désactiver" (click)="desactiver(c, $event)"><mat-icon>block</mat-icon></button>
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
+          <tr mat-row *matRowDef="let row; columns: colonnes" class="ligne" (click)="ouvrir(row)"></tr>
+        </table>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

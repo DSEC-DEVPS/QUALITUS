@@ -1,0 +1,48 @@
+.cal-session { padding: 12px 16px; }
+.bandeau { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid #eee; }
+.bandeau .titre { display: flex; align-items: center; gap: 8px; }
+.bandeau .spacer { flex: 1; }
+.badge { padding: 2px 8px; border-radius: 10px; font-size: 12px; background: #eceff1; }
+.badge[data-st="OUVERTE"] { background: #e3f2fd; color: #1565c0; }
+.badge[data-st="RESULTATS_EN_REVISION"] { background: #fff4e5; color: #b26a00; }
+.badge[data-st="CLOTUREE"] { background: #e8f5e9; color: #2e7d32; }
+.badge.etat[data-e="EN_COURS"] { background: #e3f2fd; color: #1565c0; }
+.badge.etat[data-e="TERMINEE"] { background: #e8f5e9; color: #2e7d32; }
+.chrono { display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 18px; }
+.chrono.faible { color: #c62828; }
+.close-tag { display: inline-flex; align-items: center; gap: 4px; color: rgba(0,0,0,.6); }
+.pas-acces { text-align: center; padding: 48px; color: rgba(0,0,0,.6); }
+.pas-acces mat-icon { font-size: 48px; height: 48px; width: 48px; opacity: .5; }
+
+.corps { display: flex; gap: 16px; margin-top: 12px; align-items: flex-start; }
+.grille-zone { flex: 1 1 auto; min-width: 0; }
+.liste-zone { flex: 0 0 320px; }
+
+.grille-tete { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.grille-tete h3 { margin: 0; font-size: 16px; }
+.grille-tete .lecture { display: inline-flex; align-items: center; gap: 4px; color: rgba(0,0,0,.5); font-size: 12px; }
+.cats { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.cat-chip { border: 1px solid #ddd; background: #fff; border-radius: 16px; padding: 4px 12px; cursor: pointer; font-size: 13px; }
+.cat-chip.actif { background: #1565c0; color: #fff; border-color: #1565c0; }
+.erreurs { display: flex; flex-direction: column; }
+.erreur { border-bottom: 1px solid #f0f0f0; padding: 4px 0; }
+.erreur.decochee { background: #fff5f5; }
+.erreur .ligne { display: flex; align-items: center; gap: 8px; }
+.erreur .item { flex: 1; cursor: pointer; }
+.ico-ecart { color: #c62828; }
+.detail { padding: 8px 0 8px 34px; }
+.detail .ref { font-size: 13px; color: rgba(0,0,0,.7); margin-bottom: 8px; }
+.detail .comm { width: 100%; max-width: 560px; }
+
+.switch { margin-bottom: 12px; width: 100%; }
+.liste { border: 1px solid #eee; border-radius: 6px; overflow: hidden; }
+.liste-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; cursor: pointer; border-bottom: 1px solid #f2f2f2; }
+.liste-item:hover { background: #f5f7fa; }
+.liste-item.sel { background: #e3f2fd; }
+.liste-item .ordre { font-weight: 600; width: 22px; }
+.liste-item .lib { flex: 1; }
+.eval-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid #f2f2f2; }
+.eval-item .sub { display: block; font-size: 12px; color: rgba(0,0,0,.55); }
+.note-ref { display: flex; align-items: center; gap: 6px; padding: 10px; color: #b26a00; font-size: 13px; }
+.note-ref.ok { color: #2e7d32; }
+.vide { padding: 16px; text-align: center; color: rgba(0,0,0,.5); }

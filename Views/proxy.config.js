@@ -25,14 +25,14 @@
 const PROXY_CONFIG = {
   // Proxy pour l'API principale
   '/api/**': {
-    target: 'http://localhost:3000',  // backend Node.js
+    target: 'http://127.0.0.1:3000',  // backend Node.js
     changeOrigin: true,
     secure: false,
     logLevel: 'debug'
   },
   // Proxy pour le dossier chargements
   '/chargements/**': {
-    target: 'http://localhost:3000',  // backend Node.js
+    target: 'http://127.0.0.1:3000',  // backend Node.js
     changeOrigin: true,
     secure: false,
     logLevel: 'debug'

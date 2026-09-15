@@ -1,0 +1,16 @@
+.validation {
+  padding: 16px;
+  .vide { color: rgba(0, 0, 0, 0.6); }
+  .opt { margin-bottom: 12px; }
+  .entete { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .entete .meta { margin-left: 8px; font-size: 0.85rem; color: rgba(0, 0, 0, 0.55); }
+  .src { display: inline-block; margin-right: 8px; padding: 1px 8px; font-size: 0.72rem; border-radius: 10px; color: #fff; }
+  .src.bi { background: #1976d2; }
+  .src.co { background: #6a1b9a; }
+  .entete .contexte { font-size: 0.85rem; color: rgba(0, 0, 0, 0.55); }
+  .proposeur { margin: 4px 0 8px; font-size: 0.85rem; color: rgba(0, 0, 0, 0.6); }
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .reform { flex: 1 1 260px; min-width: 200px; }
+  .rejet { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 8px; }
+  .motif { flex: 1 1 260px; min-width: 200px; }
+}

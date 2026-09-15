@@ -3,6 +3,8 @@ import { AuthService, User } from '@core/authentication';
 import { NgxPermissionsService, NgxRolesService } from 'ngx-permissions';
 import { switchMap, tap } from 'rxjs';
 import { Menu, MenuService } from './menu.service';
+import { MENU } from './menu-data';
+import { PermissionsService } from '../authorization/permissions.service';
 
 @Injectable({
   providedIn: 'root',
@@ -12,6 +14,7 @@ export class StartupService {
   private readonly menuService = inject(MenuService);
   private readonly permissonsService = inject(NgxPermissionsService);
   private readonly rolesService = inject(NgxRolesService);
+  private readonly permissionsService = inject(PermissionsService);
 
   /**
    * Load the application only after get the menu or other essential informations
@@ -26,6 +29,7 @@ export class StartupService {
           tap(user => {
             this.setPermissions(user), console.log(user);
           }),
+          switchMap(() => this.permissionsService.load()),
           switchMap(() => this.authService.menu()),
           tap(menu => this.setMenu(menu))
         )
@@ -37,8 +41,10 @@ export class StartupService {
   }
 
   private setMenu(menu: Menu[]) {
-    this.menuService.addNamespace(menu, 'menu');
-    this.menuService.set(menu);
+    // Le backend n'expose pas de menu (/me/menu) : on charge le menu statique.
+    // `menu` (issu de authService.menu()) est ignoré tant qu'il est vide.
+    const menuData = menu && menu.length > 0 ? menu : MENU;
+    this.menuService.set(menuData);
   }
 
   private setPermissions(user: User) {

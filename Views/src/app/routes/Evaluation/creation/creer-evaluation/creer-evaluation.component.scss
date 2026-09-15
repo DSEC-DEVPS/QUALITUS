@@ -1,0 +1,14 @@
+.creer-evaluation {
+  padding: 16px;
+  .section { margin-bottom: 16px; }
+  .lbl { display: block; margin-bottom: 8px; font-weight: 600; }
+  mat-radio-button { margin-right: 24px; }
+  .grille-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; align-items: center; }
+  .plein { width: 100%; }
+  .grille-resolue { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 4px; }
+  .grille-resolue.ok { color: #2e7d32; background: #e8f5e9; }
+  .grille-resolue.ko { color: #b71c1c; background: #ffebee; }
+  .dmt-champs { display: flex; gap: 12px; }
+  .petit { width: 110px; }
+  .actions { margin-top: 8px; }
+}

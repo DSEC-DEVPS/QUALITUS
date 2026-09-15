@@ -1,0 +1,12 @@
+.calendrier {
+  padding: 16px;
+  mat-card { margin-bottom: 16px; }
+  .barre { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+  .grille-mois { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .mois {
+    padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; border-left: 4px solid #bdbdbd;
+    &.ouvert { border-left-color: #43a047; background: #f1f8e9; }
+    .nom { font-weight: 600; margin-bottom: 6px; }
+  }
+  .vide { color: rgba(0, 0, 0, 0.6); }
+}

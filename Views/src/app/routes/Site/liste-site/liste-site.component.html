@@ -6,7 +6,7 @@
           <input matInput (keyup)="applyFilter($event)" placeholder="Site" #input />
         </div>
         <div class="col-sm-6 text-end p-0">
-          <mat-icon (click)="openDialog()" class="add_icon">add_circle </mat-icon>
+          <mat-icon (click)="openDialog()" class="add_icon" *appCan="'site.creer'">add_circle </mat-icon>
           <mat-icon
             (click)="download()"
             class="download_icon"
@@ -58,14 +58,14 @@
                 >remove_red_eye</mat-icon
               >
               <mat-icon
-                class="mat_icon_edit"
+                class="mat_icon_edit" *appCan="'site.modifier'"
                 matTooltip="supprimer"
                 matTooltipPosition="above"
                 (click)="openDialog_update(element.id)"
                 >edit</mat-icon
               >
               <mat-icon
-                class="delete_icon"
+                class="delete_icon" *appCan="'site.supprimer'"
                 matTooltip="supprimer"
                 matTooltipPosition="above"
                 (click)="delete_site(element.id)"

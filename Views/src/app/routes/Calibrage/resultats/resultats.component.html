@@ -1,0 +1,106 @@
+<div class="cal-res" *ngIf="role">
+  <div class="tete">
+    <button mat-icon-button (click)="retour()"><mat-icon>arrow_back</mat-icon></button>
+    <h2><mat-icon>analytics</mat-icon> Résultats du calibrage</h2>
+    <span class="badge" [attr.data-st]="statut">{{ statut }}</span>
+    <span class="spacer"></span>
+    <button mat-flat-button color="primary" *ngIf="modifiable" (click)="valider()">
+      <mat-icon>verified</mat-icon> Valider la session
+    </button>
+  </div>
+
+  <div class="provisoire" *ngIf="provisoire">
+    <mat-icon>info</mat-icon> Résultats <b>provisoires</b> : la référence comme les constats peuvent encore évoluer jusqu'à la validation.
+  </div>
+
+  <!-- Tableau croisé (jauge) -->
+  <mat-card *ngIf="estJauge">
+    <h3>Tableau croisé</h3>
+    <div class="table-wrap">
+      <table class="croise">
+        <thead>
+          <tr>
+            <th class="col-eval">Évaluateur</th>
+            <th *ngFor="let t of transactions" class="col-tx" [matTooltip]="t.identifiant_appel">T{{ t.ordre_passage }}</th>
+            <th class="col-concl">Conclusion</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of participants">
+            <td class="col-eval"><button class="lien" (click)="ouvrirConfrontation(p, null)">{{ p.prenom }} {{ p.nom }}</button></td>
+            <td *ngFor="let t of transactions" class="cell">
+              <button class="pastille" [attr.data-c]="cellule(p.id_evaluateur, t.id)" (click)="ouvrirConfrontation(p, t.id)">
+                {{ cellule(p.id_evaluateur, t.id) === 'SUCCES' ? '✓' : '✗' }}
+              </button>
+            </td>
+            <td class="col-concl"><span class="badge concl" [attr.data-c]="global[p.id_evaluateur]">{{ global[p.id_evaluateur] }}</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </mat-card>
+
+  <!-- Vue participant : sa conclusion -->
+  <mat-card *ngIf="!estJauge && participants.length">
+    <h3>Ma conclusion</h3>
+    <p>Conclusion globale : <span class="badge concl" [attr.data-c]="global[participants[0].id_evaluateur]">{{ global[participants[0].id_evaluateur] }}</span></p>
+  </mat-card>
+
+  <!-- Confrontation -->
+  <mat-card *ngIf="selPid" class="confront">
+    <div class="conf-tete">
+      <h3>Confrontation — {{ selNom }}</h3>
+      <button mat-button *ngIf="estJauge" (click)="fermerConfrontation()"><mat-icon>close</mat-icon> Fermer</button>
+    </div>
+    <p class="legende"><span class="dot ref"></span> Référence (jauge) &nbsp; <span class="dot part"></span> Participant &nbsp; <mat-icon class="ico-div">report_problem</mat-icon> divergence</p>
+
+    <mat-accordion multi>
+      <mat-expansion-panel *ngFor="let t of txAffichees()" [expanded]="focusTx === t.transaction.id || txAffichees().length === 1">
+        <mat-expansion-panel-header>
+          <mat-panel-title>T{{ t.transaction.ordre_passage }} — {{ t.transaction.identifiant_appel }}</mat-panel-title>
+          <mat-panel-description>
+            <span class="badge concl" [attr.data-c]="t.conclusion">{{ t.conclusion }}</span>
+          </mat-panel-description>
+        </mat-expansion-panel-header>
+
+        <div *ngFor="let cat of t.categories" class="cat-bloc">
+          <div class="cat-tete">{{ cat.libelle }}
+            <span class="cat-score" [class.ko]="!cat.satisfaite">conformité {{ cat.score_conformite | number:'1.0-1' }} / seuil {{ cat.comparateur }} {{ cat.seuil }}</span>
+          </div>
+          <div class="err" *ngFor="let e of cat.erreurs" [class.divergente]="!e.conforme">
+            <div class="err-ligne">
+              <mat-checkbox class="chk ref" [checked]="e.reference.coche === 1" [disabled]="!modifiable" (change)="toggleCote(t, e, 'REFERENCE')"
+                            matTooltip="Constat de la référence (jauge)"></mat-checkbox>
+              <mat-checkbox class="chk part" [checked]="e.participant?.coche === 1" [disabled]="!modifiable" (change)="toggleCote(t, e, 'PARTICIPANT')"
+                            matTooltip="Constat du participant"></mat-checkbox>
+              <span class="item">{{ e.item }}</span>
+              <mat-icon *ngIf="!e.conforme" class="ico-div" matTooltip="Divergence">report_problem</mat-icon>
+              <span class="trace" *ngIf="e.participant?.modifie_par || e.reference.modifie_par" matTooltip="Constat corrigé pendant la révision"><mat-icon>history</mat-icon></span>
+            </div>
+            <div class="err-detail">
+              <div class="ref-txt" *ngIf="e.referentiel"><strong>Référentiel :</strong> {{ e.referentiel }}</div>
+              <div class="comm" *ngIf="e.participant?.commentaire"><strong>Commentaire participant :</strong> {{ e.participant.commentaire }}</div>
+              <mat-form-field appearance="outline" class="appr">
+                <mat-label>Appréciation du jauge</mat-label>
+                <textarea matInput rows="2" [(ngModel)]="e.reference.appreciation_jauge" [disabled]="!modifiable"
+                          (blur)="enregistrerAppreciation(t, e)"></textarea>
+              </mat-form-field>
+            </div>
+          </div>
+        </div>
+      </mat-expansion-panel>
+    </mat-accordion>
+  </mat-card>
+
+  <!-- Conclusions de session -->
+  <mat-card>
+    <h3>Conclusions de la session</h3>
+    <mat-form-field appearance="outline" class="plein">
+      <mat-label>Constats d'ensemble, décisions d'harmonisation…</mat-label>
+      <textarea matInput rows="3" [(ngModel)]="conclusions" [disabled]="!modifiable"></textarea>
+    </mat-form-field>
+    <div class="actions" *ngIf="modifiable">
+      <button mat-stroked-button (click)="enregistrerConclusions()"><mat-icon>save</mat-icon> Enregistrer</button>
+    </div>
+  </mat-card>
+</div>

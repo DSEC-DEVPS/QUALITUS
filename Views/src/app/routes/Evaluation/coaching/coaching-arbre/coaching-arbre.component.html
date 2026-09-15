@@ -1,0 +1,50 @@
+<div class="coaching-arbre">
+  <h2>Arbre de coaching (5 pourquoi — unique)</h2>
+
+  <mat-card>
+    <mat-card-content>
+      <div class="ligne">
+        <mat-form-field appearance="outline" class="petit">
+          <mat-label>Niveau</mat-label>
+          <mat-select [(ngModel)]="nouvelle.niveau" name="niv">
+            @for (n of niveaux; track n) { <mat-option [value]="n">{{ n }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        @if (nouvelle.niveau > 1) {
+          <mat-form-field appearance="outline">
+            <mat-label>Parent (niveau {{ nouvelle.niveau - 1 }})</mat-label>
+            <mat-select [(ngModel)]="nouvelle.id_parent" name="par">
+              @for (p of parentsPossibles(); track p.id) { <mat-option [value]="p.id">{{ p.libelle }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+        }
+        <mat-form-field appearance="outline" class="grand">
+          <mat-label>Libellé de l'option</mat-label>
+          <input matInput [(ngModel)]="nouvelle.libelle" name="lib" />
+        </mat-form-field>
+        <button mat-raised-button color="primary" (click)="ajouter()"><mat-icon>add</mat-icon> Ajouter</button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card>
+    <mat-card-content>
+      @for (n of niveaux; track n) {
+        @if (optionsDuNiveau(n).length) {
+          <div class="niveau-bloc">
+            <h4>Niveau {{ n }}</h4>
+            @for (o of optionsDuNiveau(n); track o.id) {
+              <div class="option-ligne">
+                <span>{{ o.libelle }}</span>
+                @if (n > 1) { <span class="parent">↳ {{ libelleParent(o) }}</span> }
+                <span class="spacer"></span>
+                <button mat-icon-button color="warn" (click)="supprimer(o)"><mat-icon>delete</mat-icon></button>
+              </div>
+            }
+          </div>
+        }
+      }
+      @if (options.length === 0) { <p class="vide">Aucune option définie.</p> }
+    </mat-card-content>
+  </mat-card>
+</div>

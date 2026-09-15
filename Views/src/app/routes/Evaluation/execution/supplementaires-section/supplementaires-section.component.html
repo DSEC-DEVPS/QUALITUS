@@ -1,0 +1,27 @@
+<div class="supplementaires">
+  <div class="entete">
+    <h3>Évaluations supplémentaires</h3>
+    <button mat-stroked-button color="primary" (click)="creer()"><mat-icon>add</mat-icon> Créer une supplémentaire</button>
+  </div>
+
+  @if (data) {
+    <p class="compteur">
+      Réalisées : <strong>{{ data.realisees }}</strong> / attendues : <strong>{{ data.attendues ?? '—' }}</strong>
+      @if (data.attendues !== null && data.realisees < data.attendues) { <span class="manque">— {{ data.attendues - data.realisees }} restante(s)</span> }
+    </p>
+    @if (data.supplementaires.length === 0) {
+      <p class="vide">Aucune évaluation supplémentaire.</p>
+    } @else {
+      <ul class="liste">
+        @for (s of data.supplementaires; track s.id) {
+          <li (click)="ouvrir(s.id)">
+            Évaluation #{{ s.id }} — {{ s.statut }}
+            @if (s.conclusion === 'SUCCES') { <span class="tag succes">Succès</span> }
+            @else if (s.conclusion === 'ECHEC') { <span class="tag echec">Échec</span> }
+            <mat-icon>chevron_right</mat-icon>
+          </li>
+        }
+      </ul>
+    }
+  }
+</div>

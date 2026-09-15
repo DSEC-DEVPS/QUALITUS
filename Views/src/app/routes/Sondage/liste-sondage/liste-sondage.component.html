@@ -3,7 +3,7 @@
     <mat-card-content>
       <div class="d-flex align-items-center justify-content-between flex-wrap m-b-16">
         <h5 class="m-0">Sondages du personnel</h5>
-        <button mat-flat-button color="primary" (click)="nouveau()">
+        <button mat-flat-button color="primary" *appCan="'sondage.creer'" (click)="nouveau()">
           <mat-icon>add</mat-icon> Nouveau sondage
         </button>
       </div>
@@ -40,7 +40,7 @@
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef class="text-right">Actions</th>
             <td mat-cell *matCellDef="let s" class="text-right">
-              <button mat-icon-button color="primary" matTooltip="Éditer" (click)="editer(s)">
+              <button mat-icon-button color="primary" matTooltip="Éditer" *appCan="'sondage.modifier'" (click)="editer(s)">
                 <mat-icon>edit_note</mat-icon>
               </button>
               <button mat-icon-button matTooltip="Cible & diffusion" (click)="cible(s)">
@@ -59,7 +59,7 @@
               <button mat-icon-button matTooltip="Dupliquer" (click)="dupliquer(s)">
                 <mat-icon>content_copy</mat-icon>
               </button>
-              <button mat-icon-button color="warn" matTooltip="Supprimer" (click)="supprimer(s)">
+              <button mat-icon-button color="warn" matTooltip="Supprimer" *appCan="'sondage.supprimer'" (click)="supprimer(s)">
                 <mat-icon>delete</mat-icon>
               </button>
             </td>

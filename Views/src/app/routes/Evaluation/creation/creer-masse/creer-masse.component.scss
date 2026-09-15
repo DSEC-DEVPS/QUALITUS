@@ -1,0 +1,11 @@
+.creer-masse {
+  padding: 16px;
+  .grille-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .plein { width: 100%; }
+  .actions { margin: 8px 0 16px; }
+  .compte-rendu { margin-top: 16px; }
+  .compte-rendu .bloc { padding: 8px 12px; margin-top: 8px; border-radius: 4px; }
+  .compte-rendu .bloc ul { margin: 4px 0 0; padding-left: 18px; }
+  .compte-rendu .bloc.ok { background: #e8f5e9; }
+  .compte-rendu .bloc.ko { background: #ffebee; }
+}

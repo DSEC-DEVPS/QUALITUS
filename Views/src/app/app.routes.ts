@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { canMatchPermission } from './core/authorization/permission.guard';
 import { authGuard } from '@core';
 import { sondageObligatoireGuard } from './routes/Sondage/sondage-obligatoire.guard';
 import { AdminLayoutComponent } from '@theme/admin-layout/admin-layout.component';
@@ -70,10 +71,6 @@ export const routes: Routes = [
       },
       { path: 'quiz', loadChildren: () => import('./routes/Quiz/quiz.routes').then(m => m.routes) },
       {
-        path: 'calibrage',
-        loadChildren: () => import('./routes/Calibrage/calibrage.routes').then(m => m.routes),
-      },
-      {
         path: 'evaluation',
         loadChildren: () => import('./routes/Evaluation/evaluation.routes').then(m => m.routes),
       },
@@ -84,6 +81,15 @@ export const routes: Routes = [
       {
         path: 'grille',
         component: ListeGrilleComponent,
+      },
+      {
+        path: 'habilitations',
+        canMatch: [canMatchPermission('habilitation.lire')],
+        loadChildren: () => import('./routes/Habilitations/habilitations.routes').then(m => m.routes),
+      },
+      {
+        path: 'calibrage',
+        loadChildren: () => import('./routes/Calibrage/calibrage.routes').then(m => m.routes),
       },
     ],
   },

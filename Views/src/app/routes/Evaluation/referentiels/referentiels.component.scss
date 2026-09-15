@@ -1,0 +1,15 @@
+.referentiels {
+  padding: 16px;
+  .types { margin-bottom: 16px; flex-wrap: wrap; }
+  .ajout { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .ajout .lib { flex: 1 1 240px; }
+  .ajout .desc { flex: 1 1 260px; }
+  .ajout .ord { width: 90px; }
+  .table { width: 100%; }
+  .edit { width: 100%; }
+  .mini { width: 80px; }
+  .edit ::ng-deep .mat-mdc-form-field-subscript-wrapper,
+  .mini ::ng-deep .mat-mdc-form-field-subscript-wrapper { display: none; }
+  td.inactif { opacity: 0.5; }
+  .vide { color: rgba(0, 0, 0, 0.6); }
+}

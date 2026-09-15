@@ -54,6 +54,7 @@ export class AjouterUtilisateurComponent implements OnInit {
   table_programme!: programme[];
   table_site!: site[];
   table_grille!: grille[];
+  table_eval_grille: { id: number; nom: string }[] = [];
   ngOnInit() {
     this.snapForm = this.fb.group({
       nom: [null, [Validators.required]],
@@ -67,7 +68,8 @@ export class AjouterUtilisateurComponent implements OnInit {
       id_Fonction: [null, [Validators.required]],
       id_Site: [null, [Validators.required]],
       id_Programme: [null, [Validators.required]],
-      id_Grille: [null, [Validators.required]],
+      // id_Grille (legacy b_grille) déprécié — la grille d'évaluation est id_EvalGrille
+      id_EvalGrille: [null],
     });
     this.userService.getAllFonction().subscribe({
       next: fonctions => {
@@ -93,9 +95,9 @@ export class AjouterUtilisateurComponent implements OnInit {
         console.log(error);
       },
     });
-    this.userService.getAllGrile().subscribe({
-      next: grile => {
-        this.table_grille = grile;
+    this.userService.getEvalGrillesActives().subscribe({
+      next: g => {
+        this.table_eval_grille = g || [];
       },
       error: error => {
         console.log(error);
@@ -134,11 +136,11 @@ export class AjouterUtilisateurComponent implements OnInit {
         : '';
   }
   onSelectionChanged({ value }: any) {
+    // La grille d'évaluation ne concerne pas certaines fonctions
     if (value == 1 || value == 2) {
-      console.log('La value est :' + value);
-      this.snapForm.get('id_Grille')?.disable();
+      this.snapForm.get('id_EvalGrille')?.disable();
     } else {
-      this.snapForm.get('id_Grille')?.enable();
+      this.snapForm.get('id_EvalGrille')?.enable();
     }
   }
   onNoClick(): void {

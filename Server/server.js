@@ -34,9 +34,21 @@ app.use("/chargements", express.static(path.join(__dirname, "chargements")));
 /** routes */
 
 app.use("/api/v1", require("./Routes/baseco.Routes"));
-app.use("/api/v1", require("./Routes/calibrage.Routes"));
 app.use("/api/v1", require("./Routes/quiz.Routes"));
-app.use("/api/v1", require("./Routes/evaluation.Routes"));
+app.use("/api/v1", require("./Routes/evalGrille.Routes"));
+app.use("/api/v1", require("./Routes/evalInstance.Routes"));
+app.use("/api/v1", require("./Routes/evalExecution.Routes"));
+app.use("/api/v1", require("./Routes/evalBI.Routes"));
+app.use("/api/v1", require("./Routes/evalAdmin.Routes"));
+app.use("/api/v1", require("./Routes/evalSuites.Routes"));
+app.use("/api/v1", require("./Routes/evalCoaching.Routes"));
+app.use("/api/v1", require("./Routes/evalCalendrier.Routes"));
+app.use("/api/v1", require("./Routes/evalContre.Routes"));
+app.use("/api/v1", require("./Routes/evalRapport.Routes"));
+app.use("/api/v1", require("./Routes/habilitation.Routes")); // socle S5
+app.use("/api/v1", require("./Routes/calibrage.Routes")); // module calibrage
+app.use("/api/v1", require("./Routes/calibrageExec.Routes")); // calibrage - deroulement
+app.use("/api/v1", require("./Routes/calibrageResultats.Routes")); // calibrage - resultats
 app.use("/api/v1", require("./Routes/sondage.Routes"));
 /*app.get("/{*test}", (req, res) => {
   res.sendFile(path.join(__dirname + "/Frontend/index.html"));

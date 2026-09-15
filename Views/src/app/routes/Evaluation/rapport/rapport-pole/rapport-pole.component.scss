@@ -1,0 +1,16 @@
+.rapport-pole {
+  padding: 16px;
+  mat-card { margin-bottom: 16px; }
+  .filtres mat-card-content { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; align-items: center; }
+  .table { width: 100%; }
+  .vide { color: rgba(0, 0, 0, 0.6); }
+  small { color: rgba(0, 0, 0, 0.55); }
+  mat-chip.crit { background: #ffe0b2; font-size: 0.72rem; margin: 2px; }
+  .drill { padding: 8px 16px; background: rgba(0, 0, 0, 0.02); }
+  .drill ul { list-style: none; margin: 4px 0 0; padding: 0; }
+  .drill li { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; }
+  .drill li:hover { color: #1976d2; }
+  .drill li mat-icon { margin-left: auto; }
+  .drill .tag { padding: 1px 8px; font-size: 0.72rem; background: #ffcdd2; border-radius: 10px; }
+  .ligne-detail td { padding: 0; }
+}

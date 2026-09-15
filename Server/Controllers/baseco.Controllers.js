@@ -167,6 +167,7 @@ const addUtilisateur = async (req, res, next) => {
     id_Site,
     id_Programme,
     id_Grille,
+    id_EvalGrille,
   } = req.body;
 
   if (
@@ -180,19 +181,20 @@ const addUtilisateur = async (req, res, next) => {
     !adresse ||
     !id_Fonction ||
     !id_Site ||
-    !id_Programme ||
-    !id_Grille
+    !id_Programme
+    // S5/socle : id_Grille (b_grille) est DÉPRÉCIÉ (ancien système d'évaluation).
+    // La grille d'évaluation du cahier est id_EvalGrille (b_eval_grille). Plus obligatoire.
   ) {
     return res
       .status(403)
       .json({ message: "Veuillez bien renseigner les parametres." });
   }
   try {
-    const Query = `INSERT INTO B_UTILISATEUR (nom,prenom,nom_utilisateur,genre,email,telephone,ville,adresse,password,id_Fonction,id_Site,id_Programme,id_Grille,status,dateCreation) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
+    const Query = `INSERT INTO B_UTILISATEUR (nom,prenom,nom_utilisateur,genre,email,telephone,ville,adresse,password,id_Fonction,id_Site,id_Programme,id_Grille,id_EvalGrille,status,dateCreation) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
     const statut = "ACTIF";
+    const dateCreation = new Date();
     const password = nom_utilisateur + "Orange" + dateCreation.getFullYear();
     const passwordHast = await bcrypt.hash(password, 10);
-    const dateCreation = new Date();
     const resutlat = await db.query(Query, [
       nom,
       prenom,
@@ -206,7 +208,8 @@ const addUtilisateur = async (req, res, next) => {
       id_Fonction,
       id_Site,
       id_Programme,
-      id_Grille,
+      id_Grille || null, // déprécié (legacy b_grille)
+      id_EvalGrille || null,
       statut,
       dateCreation,
     ]);
@@ -253,10 +256,12 @@ const getDetailsUtilisateur = async (req, res, next) => {
       .json({ message: "Merci de bien renseigner les parametres" });
   }
   try {
-    const Query = `SELECT UT.id, UT.nom,UT.prenom,UT.telephone,UT.email,FCT.nom as Fonction,st.nom as Site,pr.nom as Programme from
+    const Query = `SELECT UT.id, UT.nom,UT.prenom,UT.telephone,UT.email,FCT.nom as Fonction,st.nom as Site,pr.nom as Programme,
+     UT.id_EvalGrille, egr.nom as EvalGrille from
      B_UTILISATEUR UT INNER JOIN B_FONCTION FCT
-      on UT.id_Fonction=FCT.id 
+      on UT.id_Fonction=FCT.id
       INNER JOIN B_SITE st on UT.id_Site=st.id INNER JOIN B_PROGRAMME pr on UT.id_Programme=pr.id
+      LEFT JOIN b_eval_grille egr on UT.id_EvalGrille=egr.id
     where UT.id=?`;
     const Query2 = `SELECT count(*) nb_consultation, fch.id,fch.titre,fch.url, UT.nom_utilisateur as Gestionnaire,max(ht.dateConsultation) as dateConsultation from B_HISTORIQUE ht INNER JOIN B_FICHE fch on ht.id_FICHE=fch.id INNER JOIN B_UTILISATEUR UT on fch.id_gestionnaire=UT.id where ht.id_UTILISATEUR=? GROUP BY fch.id`;
     const Query3 = `SELECT fch.id,fch.titre,ct.message,fch.url,UT.nom_utilisateur as Gestionnaire,ct.dateCommentaire  from B_COMMENTAIRE ct INNER JOIN B_FICHE fch on ct.id_FICHE=fch.id INNER JOIN  B_UTILISATEUR UT on fch.id_gestionnaire=UT.id where ct.id_UTILISATEUR=?`;
@@ -297,7 +302,7 @@ const updateUtilisateur = async (req, res, next) => {
     !id_Fonction ||
     !id_Site ||
     !id_Programme ||
-    !id_Grille ||
+    // id_Grille déprécié (legacy) : plus obligatoire
     !statut
   ) {
     return res
@@ -347,6 +352,26 @@ const deleteUtilisateur = async (req, res, next) => {
     throw error;
   }
 };
+// Socle S2 : rattacher/changer la grille d'évaluation d'un utilisateur
+const setEvalGrilleUtilisateur = async (req, res, next) => {
+  const { id } = req.params;
+  const { id_EvalGrille } = req.body;
+  if (!id) {
+    return res.status(403).json({ message: "Utilisateur non spécifié." });
+  }
+  try {
+    await db.query(`UPDATE B_UTILISATEUR SET id_EvalGrille=?, dateModification=? WHERE id=?`, [
+      id_EvalGrille || null,
+      new Date(),
+      id,
+    ]);
+    return res.status(200).json({ message: "Grille d'évaluation mise à jour." });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: "Error request" });
+  }
+};
+
 const update_utilisateur = async (req, res, next) => {
   const { id } = req.params;
   const { ETAT } = req.body;
@@ -882,16 +907,12 @@ const deleteFonction = async (req, res, next) => {
 const update_Fonction = async (req, res, next) => {
   const { nom } = req.body;
   const id = req.params.id;
-  const Role_Associe = RoleFormatter(nom);
-  const Permissions_Associe = PermissionsFormatter(nom);
   try {
-    const Query = `UPDATE B_FONCTION SET nom=?,Role_Associe=?,Permissions_Associe=? where id=?`;
-    const resultat = await db.query(Query, [
-      nom,
-      Role_Associe,
-      Permissions_Associe,
-      id,
-    ]);
+    // S5 (socle, Étape 1) : le code de rôle (Role_Associe) est IMMUABLE.
+    // Un renommage ne doit pas altérer le code sur lequel s'appuie la
+    // matrice des droits. On ne met à jour que le libellé.
+    const Query = `UPDATE B_FONCTION SET nom=? where id=?`;
+    const resultat = await db.query(Query, [nom, id]);
     return res.status(201).json({ message: "La mise à jour est effective." });
   } catch (error) {
     console.log(error);
@@ -2029,7 +2050,10 @@ const deleteProgramme = async (req, res, next) => {
 /*controlleurs sur les fonctionnalités de  MA_VOIX_COMPTE*/
 
 const addGrille = async (req, res, next) => {
-  const { nom } = req.body;
+    // ⚠ DÉPRÉCIÉ (socle S5) : b_grille = ancien système de grilles d'évaluation.
+  // La grille d'évaluation du cahier est b_eval_grille (module Évaluation).
+  // Conservé pour compatibilité des données ; ne plus utiliser pour de nouvelles évaluations.
+const { nom } = req.body;
   if (!nom) {
     return res
       .status(403)
@@ -3799,6 +3823,7 @@ module.exports = {
   updateUtilisateur,
   deleteUtilisateur,
   update_utilisateur,
+  setEvalGrilleUtilisateur,
   addSla,
   getAllSla,
   getSlaById,

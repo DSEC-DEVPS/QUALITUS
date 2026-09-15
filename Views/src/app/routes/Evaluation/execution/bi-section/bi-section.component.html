@@ -1,0 +1,44 @@
+<div class="bi-section">
+  <h3>Business Intelligence — analyse des causes</h3>
+
+  @if (resolution !== 'NON') {
+    <p class="info">Renseignée uniquement lorsque la résolution est « Non ».</p>
+  } @else if (chargee && !arbo) {
+    <p class="info">Aucune arborescence définie pour ce couple grille / site : l’évaluation peut être terminée sans cette analyse.</p>
+  } @else if (arbo) {
+    <p class="depart">Point de départ : <strong>{{ arbo.point_depart_libelle }}</strong></p>
+
+    @for (n of niveaux; track n) {
+      <div class="niveau">
+        <mat-form-field appearance="outline" class="select">
+          <mat-label>{{ n }}ᵉ pourquoi</mat-label>
+          <mat-select [(ngModel)]="selection[n]" (selectionChange)="onSelect(n)"
+                      [disabled]="terminee || (n > 1 && !selection[n-1])" [name]="'niv' + n">
+            @for (o of options[n]; track o.id) {
+              <mat-option [value]="o.id">{{ o.libelle }}@if (o.etat === 'EN_ATTENTE') { <em> (en attente)</em> }</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        @if (!terminee) {
+          @if (!propositionOuverte[n]) {
+            <button mat-button type="button" (click)="ouvrirProposition(n)"><mat-icon>add</mat-icon> Proposer</button>
+          } @else {
+            <mat-form-field appearance="outline" class="prop">
+              <mat-label>Nouvelle option</mat-label>
+              <input matInput [(ngModel)]="nouvelleOption[n]" [name]="'prop' + n" />
+            </mat-form-field>
+            <button mat-stroked-button color="primary" type="button" (click)="proposer(n)">Valider la proposition</button>
+            <button mat-button type="button" (click)="propositionOuverte[n] = false">Annuler</button>
+          }
+        }
+
+        @if (estEnAttente(n)) { <span class="badge-attente">en attente de validation</span> }
+      </div>
+    }
+
+    @if (!terminee) {
+      <button mat-raised-button color="primary" (click)="enregistrer()"><mat-icon>save</mat-icon> Enregistrer l’analyse</button>
+    }
+  }
+</div>

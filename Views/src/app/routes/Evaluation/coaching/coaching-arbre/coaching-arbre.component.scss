@@ -1,0 +1,13 @@
+.coaching-arbre {
+  padding: 16px;
+  mat-card { margin-bottom: 16px; }
+  .ligne { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .grand { flex: 1 1 240px; min-width: 200px; }
+  .petit { width: 100px; }
+  .niveau-bloc { margin-top: 8px; }
+  .niveau-bloc h4 { margin: 8px 0 4px; }
+  .option-ligne { display: flex; align-items: center; gap: 12px; padding: 2px 8px; }
+  .option-ligne .parent { font-size: 0.8rem; color: rgba(0, 0, 0, 0.55); }
+  .option-ligne .spacer { flex: 1 1 auto; }
+  .vide { color: rgba(0, 0, 0, 0.6); }
+}

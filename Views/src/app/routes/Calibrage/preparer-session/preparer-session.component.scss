@@ -1,0 +1,27 @@
+.cal-prep { padding: 16px; }
+.tete { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.tete h2 { margin: 0; display: inline-block; }
+.tete .info { margin-left: 12px; color: rgba(0,0,0,.6); font-size: 13px; }
+.tete .spacer { flex: 1; }
+.badge { padding: 2px 8px; border-radius: 10px; font-size: 12px; background: #eceff1; margin-left: 8px; }
+.badge[data-st="OUVERTE"] { background: #e3f2fd; color: #1565c0; }
+.badge[data-st="RESULTATS_EN_REVISION"] { background: #fff4e5; color: #b26a00; }
+.badge[data-st="CLOTUREE"] { background: #e8f5e9; color: #2e7d32; }
+.lecture-seule { display: flex; align-items: center; gap: 8px; background: #fff4e5; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; font-size: 13px; }
+mat-panel-title { display: flex; align-items: center; gap: 8px; }
+.form { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 8px; }
+.form mat-form-field { width: 240px; }
+.form .plein { width: 100%; }
+.actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.tab { width: 100%; }
+.tronque { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vide { padding: 16px; text-align: center; color: rgba(0,0,0,.5); }
+.ajout-tx { margin-top: 16px; border-top: 1px solid #eee; padding-top: 12px; }
+.ajout-tx h4, .selection h4 { margin: 0 0 8px; }
+.dup { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.dup mat-form-field { width: 320px; }
+.selection { margin-top: 16px; border-top: 1px solid #eee; padding-top: 12px; }
+.liste-dispo { display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow-y: auto; margin-bottom: 12px; }
+.ok { color: #2e7d32; display: inline-flex; align-items: center; gap: 4px; }
+.ok mat-icon { font-size: 18px; height: 18px; width: 18px; }
+.ko { color: rgba(0,0,0,.5); }

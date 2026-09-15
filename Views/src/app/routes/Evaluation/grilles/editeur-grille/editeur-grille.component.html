@@ -1,0 +1,225 @@
+<div class="editeur-grille">
+  <button mat-button (click)="retour()"><mat-icon>arrow_back</mat-icon> Retour</button>
+
+  @if (chargement && !detail) { <p>Chargement…</p> }
+
+  @if (detail) {
+    <!-- EN-TÊTE -->
+    <mat-card class="entete">
+      <mat-card-content>
+        <div class="ligne-entete">
+          <mat-form-field appearance="outline" class="champ-nom">
+            <mat-label>Nom de la grille</mat-label>
+            <input matInput [(ngModel)]="detail.grille.nom" (blur)="enregistrerEntete()" name="nom" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Type de ressource cible</mat-label>
+            <mat-select [(ngModel)]="detail.grille.type_ressource_cible" (selectionChange)="enregistrerEntete()" name="type">
+              <mat-option value="HUMAINE">Humaine</mat-option>
+              <mat-option value="AUTOMATISEE">Automatisée</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <div class="bloc-mode">
+            <span>Mode : <strong>{{ estManuel ? 'Manuel' : 'Automatique' }}</strong></span>
+            <button mat-stroked-button (click)="basculerMode()">
+              <mat-icon>swap_horiz</mat-icon> Passer en {{ estManuel ? 'Automatique' : 'Manuel' }}
+            </button>
+          </div>
+
+          <mat-chip [class.chip-active]="detail.grille.statut === 'ACTIVE'" [class.chip-brouillon]="detail.grille.statut === 'BROUILLON'">
+            {{ detail.grille.statut === 'ACTIVE' ? 'Active' : 'Brouillon' }}
+          </mat-chip>
+
+          @if (detail.grille.statut === 'BROUILLON') {
+            <button mat-raised-button color="primary" [disabled]="!detail.activable" (click)="activer()" matTooltip="Nécessite cohérence des poids et complétude">
+              <mat-icon>play_circle</mat-icon> Activer
+            </button>
+          } @else {
+            <button mat-stroked-button (click)="desactiver()"><mat-icon>pause_circle</mat-icon> Repasser en brouillon</button>
+          }
+
+          <button mat-button (click)="toggleArchives()">
+            <mat-icon>{{ afficherArchives ? 'visibility_off' : 'visibility' }}</mat-icon>
+            {{ afficherArchives ? 'Masquer' : 'Afficher' }} les archivés
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- CONTRÔLES -->
+    <mat-card class="controles" [class.ok]="detail.coherence.ok && detail.completude.ok">
+      <mat-card-content>
+        <div class="cumul-grille">
+          Somme des poids des catégories :
+          <strong [class.ecart]="!detail.coherence.ok">{{ detail.cumul_categories | number: '1.0-2' }} / 100</strong>
+        </div>
+        @if (!detail.coherence.ok) {
+          <div class="alerte">
+            <mat-icon>error</mat-icon>
+            <div><strong>Cohérence des poids non satisfaite :</strong>
+              <ul>
+                @for (e of detail.coherence.ecarts; track $index) {
+                  <li>[{{ e.niveau }}] « {{ e.parent }} » : obtenu {{ e.obtenu | number: '1.0-2' }}, attendu {{ e.attendu | number: '1.0-2' }}</li>
+                }
+              </ul>
+            </div>
+          </div>
+        }
+        @if (!detail.completude.ok) {
+          <div class="alerte">
+            <mat-icon>rule</mat-icon>
+            <div><strong>Complétude non atteinte :</strong>
+              <ul>
+                @for (m of detail.completude.manques; track $index) { <li>« {{ m.element }} » : {{ m.detail }}</li> }
+              </ul>
+            </div>
+          </div>
+        }
+        @if (detail.coherence.ok && detail.completude.ok) {
+          <div class="succes"><mat-icon>check_circle</mat-icon> Grille cohérente et complète — activable.</div>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <!-- AJOUT CATÉGORIE -->
+    <mat-card class="form-ajout">
+      <mat-card-content>
+        <span class="titre-form">Ajouter une catégorie d’erreur</span>
+        <div class="ligne-form">
+          <mat-form-field appearance="outline" class="grand"><mat-label>Libellé</mat-label>
+            <input matInput [(ngModel)]="nouvelleCategorie.libelle" name="ncatlib" /></mat-form-field>
+          <mat-form-field appearance="outline" class="petit"><mat-label>Poids</mat-label>
+            <input matInput type="number" [(ngModel)]="nouvelleCategorie.poids" name="ncatpoids" /></mat-form-field>
+          <mat-form-field appearance="outline" class="petit"><mat-label>Seuil</mat-label>
+            <input matInput type="number" [(ngModel)]="nouvelleCategorie.seuil_reussite" name="ncatseuil" /></mat-form-field>
+          <mat-form-field appearance="outline" class="petit"><mat-label>Comparateur</mat-label>
+            <mat-select [(ngModel)]="nouvelleCategorie.comparateur" name="ncatcomp">
+              <mat-option value="&gt;">&gt;</mat-option><mat-option value="&gt;=">&gt;=</mat-option>
+            </mat-select></mat-form-field>
+          <mat-checkbox [(ngModel)]="nouvelleCategorie.critique" name="ncatcrit">Critique</mat-checkbox>
+          <button mat-raised-button color="primary" (click)="ajouterCategorie()"><mat-icon>add</mat-icon> Ajouter</button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- CATÉGORIES -->
+    <mat-accordion multi>
+      @for (c of detail.categories; track c.id) {
+        <mat-expansion-panel [class.archive]="c.etat === 'ARCHIVE'">
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              {{ c.libelle }}
+              @if (c.critique) { <mat-icon class="ico-critique" matTooltip="Catégorie critique">priority_high</mat-icon> }
+              @if (c.etat === 'ARCHIVE') { <span class="badge-archive">archivée</span> }
+            </mat-panel-title>
+            <mat-panel-description>
+              poids {{ c.poids | number: '1.0-2' }} · seuil {{ c.comparateur }} {{ c.seuil_reussite | number: '1.0-2' }}
+              · sous-cat. {{ c.cumul_sous_categories | number: '1.0-2' }} / 100
+            </mat-panel-description>
+          </mat-expansion-panel-header>
+
+          <div class="ligne-form edition-cat">
+            <mat-form-field appearance="outline" class="grand"><mat-label>Libellé</mat-label>
+              <input matInput [(ngModel)]="c.libelle" (blur)="enregistrerCategorie(c)" [name]="'catlib' + c.id" /></mat-form-field>
+            <mat-form-field appearance="outline" class="petit"><mat-label>Poids</mat-label>
+              <input matInput type="number" [(ngModel)]="c.poids" (blur)="enregistrerCategorie(c)" [name]="'catpoids' + c.id" /></mat-form-field>
+            <mat-form-field appearance="outline" class="petit"><mat-label>Seuil</mat-label>
+              <input matInput type="number" [(ngModel)]="c.seuil_reussite" (blur)="enregistrerCategorie(c)" [name]="'catseuil' + c.id" /></mat-form-field>
+            <mat-form-field appearance="outline" class="petit"><mat-label>Comparateur</mat-label>
+              <mat-select [(ngModel)]="c.comparateur" (selectionChange)="enregistrerCategorie(c)" [name]="'catcomp' + c.id">
+                <mat-option value="&gt;">&gt;</mat-option><mat-option value="&gt;=">&gt;=</mat-option>
+              </mat-select></mat-form-field>
+            <mat-checkbox [(ngModel)]="c.critique" (change)="enregistrerCategorie(c)" [name]="'catcrit' + c.id">Critique</mat-checkbox>
+            <span class="spacer"></span>
+            @if (c.etat === 'ARCHIVE') {
+              <button mat-icon-button color="primary" matTooltip="Réactiver" (click)="reactiverCategorie(c)"><mat-icon>unarchive</mat-icon></button>
+            } @else {
+              <button mat-icon-button matTooltip="Archiver" (click)="archiverCategorie(c)"><mat-icon>archive</mat-icon></button>
+            }
+            <button mat-icon-button color="warn" matTooltip="Supprimer" (click)="supprimerCategorie(c)"><mat-icon>delete</mat-icon></button>
+          </div>
+
+          @for (sc of c.sous_categories; track sc.id) {
+            <div class="sous-cat" [class.archive]="sc.etat === 'ARCHIVE'">
+              <div class="ligne-form">
+                <mat-form-field appearance="outline" class="grand"><mat-label>Sous-catégorie</mat-label>
+                  <input matInput [(ngModel)]="sc.libelle" (blur)="enregistrerSousCat(sc)" [name]="'sclib' + sc.id" /></mat-form-field>
+                @if (estManuel) {
+                  <mat-form-field appearance="outline" class="petit"><mat-label>Poids saisi</mat-label>
+                    <input matInput type="number" [(ngModel)]="sc.poids_saisi" (blur)="enregistrerSousCat(sc)" [name]="'scpoids' + sc.id" /></mat-form-field>
+                } @else {
+                  <span class="poids-calc">poids {{ sc.poids_applique | number: '1.0-2' }}</span>
+                }
+                <span class="cumul">erreurs {{ sc.cumul_erreurs | number: '1.0-2' }} / {{ sc.poids_applique | number: '1.0-2' }}</span>
+                <span class="spacer"></span>
+                @if (sc.etat === 'ARCHIVE') {
+                  <button mat-icon-button color="primary" matTooltip="Réactiver" (click)="reactiverSousCat(sc)"><mat-icon>unarchive</mat-icon></button>
+                } @else {
+                  <button mat-icon-button matTooltip="Archiver" (click)="archiverSousCat(sc)"><mat-icon>archive</mat-icon></button>
+                }
+                <button mat-icon-button color="warn" matTooltip="Supprimer" (click)="supprimerSousCat(sc)"><mat-icon>delete</mat-icon></button>
+              </div>
+
+              <div class="erreurs">
+                @for (e of sc.erreurs; track e.id) {
+                  <div class="ligne-erreur" [class.archive]="e.etat === 'ARCHIVE'">
+                    <mat-form-field appearance="outline" class="grand"><mat-label>Item</mat-label>
+                      <input matInput [(ngModel)]="e.item" (blur)="enregistrerErreur(e)" [name]="'eitem' + e.id" /></mat-form-field>
+                    <mat-form-field appearance="outline" class="moyen"><mat-label>Sous-item</mat-label>
+                      <input matInput [(ngModel)]="e.sous_item" (blur)="enregistrerErreur(e)" [name]="'esous' + e.id" /></mat-form-field>
+                    <mat-form-field appearance="outline" class="grand"><mat-label>Référentiel</mat-label>
+                      <input matInput [(ngModel)]="e.referentiel" (blur)="enregistrerErreur(e)" [name]="'eref' + e.id" /></mat-form-field>
+                    @if (estManuel) {
+                      <mat-form-field appearance="outline" class="petit"><mat-label>Poids saisi</mat-label>
+                        <input matInput type="number" [(ngModel)]="e.poids_saisi" (blur)="enregistrerErreur(e)" [name]="'epoids' + e.id" /></mat-form-field>
+                    } @else {
+                      <span class="poids-calc">poids {{ e.poids_applique | number: '1.0-2' }}</span>
+                    }
+                    <span class="score" matTooltip="Score sur 20">{{ e.score_sur20 | number: '1.0-2' }}/20</span>
+                    <span class="spacer"></span>
+                    @if (e.etat === 'ARCHIVE') {
+                      <button mat-icon-button color="primary" matTooltip="Réactiver" (click)="reactiverErreur(e)"><mat-icon>unarchive</mat-icon></button>
+                    } @else {
+                      <button mat-icon-button matTooltip="Archiver" (click)="archiverErreur(e)"><mat-icon>archive</mat-icon></button>
+                    }
+                    <button mat-icon-button color="warn" matTooltip="Supprimer" (click)="supprimerErreur(e)"><mat-icon>delete</mat-icon></button>
+                  </div>
+                }
+
+                @if (formErreur[sc.id]) {
+                  <div class="ligne-erreur ajout">
+                    <mat-form-field appearance="outline" class="grand"><mat-label>Nouvel item</mat-label>
+                      <input matInput [(ngModel)]="formErreur[sc.id].item" [name]="'neitem' + sc.id" /></mat-form-field>
+                    <mat-form-field appearance="outline" class="moyen"><mat-label>Sous-item</mat-label>
+                      <input matInput [(ngModel)]="formErreur[sc.id].sous_item" [name]="'nesous' + sc.id" /></mat-form-field>
+                    <mat-form-field appearance="outline" class="grand"><mat-label>Référentiel</mat-label>
+                      <input matInput [(ngModel)]="formErreur[sc.id].referentiel" [name]="'neref' + sc.id" /></mat-form-field>
+                    @if (estManuel) {
+                      <mat-form-field appearance="outline" class="petit"><mat-label>Poids</mat-label>
+                        <input matInput type="number" [(ngModel)]="formErreur[sc.id].poids_saisi" [name]="'nepoids' + sc.id" /></mat-form-field>
+                    }
+                    <button mat-stroked-button color="primary" (click)="ajouterErreur(sc)"><mat-icon>add</mat-icon> Erreur</button>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          @if (formSousCat[c.id]) {
+            <div class="ligne-form ajout-sc">
+              <mat-form-field appearance="outline" class="grand"><mat-label>Nouvelle sous-catégorie</mat-label>
+                <input matInput [(ngModel)]="formSousCat[c.id].libelle" [name]="'nsclib' + c.id" /></mat-form-field>
+              @if (estManuel) {
+                <mat-form-field appearance="outline" class="petit"><mat-label>Poids</mat-label>
+                  <input matInput type="number" [(ngModel)]="formSousCat[c.id].poids_saisi" [name]="'nscpoids' + c.id" /></mat-form-field>
+              }
+              <button mat-stroked-button color="primary" (click)="ajouterSousCat(c)"><mat-icon>add</mat-icon> Sous-catégorie</button>
+            </div>
+          }
+        </mat-expansion-panel>
+      }
+    </mat-accordion>
+  }
+</div>

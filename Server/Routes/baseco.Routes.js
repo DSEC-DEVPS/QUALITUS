@@ -1,4 +1,5 @@
 const express = require("express");
+const { permission } = require("../middlewares/permission");
 const auth = require("./../middlewares/auth");
 const multer = require("./../middlewares/multer-config");
 const router = express.Router();
@@ -84,6 +85,7 @@ const {
   getAllFicheByIdCategorieAndIdSousCategorie,
   change_password,
   update_utilisateur,
+  setEvalGrilleUtilisateur,
   getOneFonction,
   update_Fonction,
   getOneCatgorie,
@@ -126,13 +128,14 @@ router.post("/login", login);
 
 //Routes pour les utilisateurs**/
 
-router.get("/utilisateur/all", auth, getAllUtilisateur);
-router.get("/utilisateur/:id", auth, getOneUtilisateur);
-router.get("/utilisateur/details/:id", auth, getDetailsUtilisateur);
-router.post("/utilisateur/addUser", auth, addUtilisateur);
-router.put("/utilisateur/update/:id", auth, updateUtilisateur);
-router.delete("/utilisateur/delete/:id", auth, deleteUtilisateur);
-router.put("/update_utilisateur/:id", auth, update_utilisateur);
+router.get("/utilisateur/all", auth, permission("UTILISATEUR","LIRE"), getAllUtilisateur);
+router.get("/utilisateur/:id", auth, permission("UTILISATEUR","LIRE"), getOneUtilisateur);
+router.get("/utilisateur/details/:id", auth, permission("UTILISATEUR","LIRE"), getDetailsUtilisateur);
+router.post("/utilisateur/addUser", auth, permission("UTILISATEUR","CREER"), addUtilisateur);
+router.put("/utilisateur/update/:id", auth, permission("UTILISATEUR","MODIFIER"), updateUtilisateur);
+router.delete("/utilisateur/delete/:id", auth, permission("UTILISATEUR","SUPPRIMER"), deleteUtilisateur);
+router.put("/update_utilisateur/:id", auth, permission("UTILISATEUR","MODIFIER"), update_utilisateur);
+router.put("/utilisateur/:id/eval-grille", auth, permission("UTILISATEUR","MODIFIER"), setEvalGrilleUtilisateur);
 /** fin de Routes pour les utilisateurs */
 //Routes pour les SLA**/
 
@@ -176,25 +179,25 @@ router.post("historique/add", auth, addHistorique);
 /** fin de Routes pour les HISTORIQUE */
 //Routes pour les SITE**/
 
-router.get("/site/all", auth, getAllSite);
-router.get("/details_site/:id", auth, getDeatilsSite);
-router.get("/site/:id", auth, getOneSite);
-router.delete("/delete_site/:id", auth, deleteSite);
-router.put("/site/:id", auth, updateSite);
-router.post("/site/add", auth, addSite);
+router.get("/site/all", auth, permission("SITE","LIRE"), getAllSite);
+router.get("/details_site/:id", auth, permission("SITE","LIRE"), getDeatilsSite);
+router.get("/site/:id", auth, permission("SITE","LIRE"), getOneSite);
+router.delete("/delete_site/:id", auth, permission("SITE","SUPPRIMER"), deleteSite);
+router.put("/site/:id", auth, permission("SITE","MODIFIER"), updateSite);
+router.post("/site/add", auth, permission("SITE","CREER"), addSite);
 /** fin de Routes pour les SITE */
 //Routes pour les Programme**/
 
-router.get("/programme/all", auth, getAllProgramme);
-router.get("/details_programme/:id", auth, getDetailsProgramme);
-router.get("/programme/:id", auth, getOneProgramme);
-router.put("/programme/:id", auth, updateProgramme);
-router.delete("/programme/:id", auth, deleteProgramme);
-router.post("/programme/add", auth, addProgramme);
+router.get("/programme/all", auth, permission("PROGRAMME","LIRE"), getAllProgramme);
+router.get("/details_programme/:id", auth, permission("PROGRAMME","LIRE"), getDetailsProgramme);
+router.get("/programme/:id", auth, permission("PROGRAMME","LIRE"), getOneProgramme);
+router.put("/programme/:id", auth, permission("PROGRAMME","MODIFIER"), updateProgramme);
+router.delete("/programme/:id", auth, permission("PROGRAMME","SUPPRIMER"), deleteProgramme);
+router.post("/programme/add", auth, permission("PROGRAMME","CREER"), addProgramme);
 /** fin de Routes pour les Programme */
 //Routes pour les Notification**/
 
-router.get("/notification/all", auth, getAllNotification);
+router.get("/notification/all", auth, permission("NOTIFICATION","LIRE"), getAllNotification);
 router.post("/notification/add", addNotification);
 /** fin de Routes pour les Notifications */
 //Routes pour les Programme**/
@@ -224,11 +227,11 @@ router.delete("/motif_ma_voix_compte/:id", auth, deleteMotifMaVoixCompte);
 /** fin de Routes pour les Programme */
 //Routes pour les fonctions**/
 
-router.get("/fonction/all", auth, getAllFonction);
-router.get("/fonction_id/:id", auth, getOneFonction);
-router.post("/fonction/add", auth, addFonction);
-router.delete("/fonction/:id", auth, deleteFonction);
-router.put("/fonction_update/:id", auth, update_Fonction);
+router.get("/fonction/all", auth, permission("FONCTION","LIRE"), getAllFonction);
+router.get("/fonction_id/:id", auth, permission("FONCTION","LIRE"), getOneFonction);
+router.post("/fonction/add", auth, permission("FONCTION","CREER"), addFonction);
+router.delete("/fonction/:id", auth, permission("FONCTION","SUPPRIMER"), deleteFonction);
+router.put("/fonction_update/:id", auth, permission("FONCTION","MODIFIER"), update_Fonction);
 /** fin de Routes pour les fonction */
 //Routes pour les Questionnaire**/
 router.get("/questionnaire/all", auth, getAllQuestionnaire);
@@ -239,30 +242,30 @@ router.get("/reponse_questionnaire/all", auth, getAllReponseByFiche);
 router.post("/reponse_questionnaire/add", auth, addReponseQuestionnaire);
 /** fin de Routes pour les Reponse Questionnaire */
 //Routes pour les Programme**/
-router.get("/programme/all", auth, getAllProgramme);
-router.post("/programme/add", auth, addProgramme);
-router.put("/programme/:id", auth, updateProgramme);
-router.delete("/programme/:id", auth, deleteProgramme);
+router.get("/programme/all", auth, permission("PROGRAMME","LIRE"), getAllProgramme);
+router.post("/programme/add", auth, permission("PROGRAMME","CREER"), addProgramme);
+router.put("/programme/:id", auth, permission("PROGRAMME","MODIFIER"), updateProgramme);
+router.delete("/programme/:id", auth, permission("PROGRAMME","SUPPRIMER"), deleteProgramme);
 /** fin de routes pour les Programme */
 //Routes pour les Grille*/
-router.get("/grille/all", auth, getAllGrille);
-router.get("/grille_by_grille/:id", auth, getOneGrile);
-router.post("/grille/add", auth, addGrille);
-router.put("/grille/:id", auth, updateGrille);
-router.delete("/grille/:id", auth, deleteGrille);
+router.get("/grille/all", auth, permission("GRILLE","LIRE"), getAllGrille);
+router.get("/grille_by_grille/:id", auth, permission("GRILLE","LIRE"), getOneGrile);
+router.post("/grille/add", auth, permission("GRILLE","CREER"), addGrille);
+router.put("/grille/:id", auth, permission("GRILLE","MODIFIER"), updateGrille);
+router.delete("/grille/:id", auth, permission("GRILLE","SUPPRIMER"), deleteGrille);
 /** fin de routes pour les Grille */
 
 //Routes pour les Grille**/
-router.get("/fiche/all", auth, getAllFiche);
-router.get("/fiche_Archive/all", auth, getAllFiche_Archive);
-router.get("/fiche_by_gestionnaire/all", auth, getAllFicheByGestionnaire);
-router.get("/fiche_by_id_Fiche/:id", auth, getAllFicheByIDFiche);
-router.get("/excel_fiche_by_id_Fiche/:id", auth, getExcelFile);
-router.get("/fiche_export/all", auth, exportFiche);
-router.get("/one_fiche/:id", auth, getOneFiche);
-router.post("/fiche/add", auth, multer.single("file"), addFiche);
-router.put("/fiche/update/:id", auth,multer.single("file"), updateFiche);
-router.delete("/fiche/:id", auth, deleteFiche);
+router.get("/fiche/all", auth, permission("FICHE","LIRE"), getAllFiche);
+router.get("/fiche_Archive/all", auth, permission("FICHE","LIRE"), getAllFiche_Archive);
+router.get("/fiche_by_gestionnaire/all", auth, permission("FICHE","LIRE"), getAllFicheByGestionnaire);
+router.get("/fiche_by_id_Fiche/:id", auth, permission("FICHE","LIRE"), getAllFicheByIDFiche);
+router.get("/excel_fiche_by_id_Fiche/:id", auth, permission("FICHE","LIRE"), getExcelFile);
+router.get("/fiche_export/all", auth, permission("FICHE","LIRE"), exportFiche);
+router.get("/one_fiche/:id", auth, permission("FICHE","LIRE"), getOneFiche);
+router.post("/fiche/add", auth, permission("FICHE","CREER"), multer.single("file"), addFiche);
+router.put("/fiche/update/:id", auth, permission("FICHE","MODIFIER"), multer.single("file"), updateFiche);
+router.delete("/fiche/:id", auth, permission("FICHE","SUPPRIMER"), deleteFiche);
 router.post(
   "/fiche_id_categorie_and_id_sous_cateogorie",
   auth,
@@ -279,9 +282,9 @@ router.get(
   auth,
   getAllArchiveByGestionnaire
 );
-router.get("/archive_by_gestionnaire/all", auth, getAllArchive);
-router.put("/restore_archive/:id", auth, restore_archive);
-router.put("/archive_fiche/:id", auth, archive_fiche);
+router.get("/archive_by_gestionnaire/all", auth, permission("FICHE","LIRE"), getAllArchive);
+router.put("/restore_archive/:id", auth, permission("FICHE","MODIFIER"), restore_archive);
+router.put("/archive_fiche/:id", auth, permission("FICHE","MODIFIER"), archive_fiche);
 /**fin de routes archives */
 /**Routes pour les Archive */
 router.get("/agents_by_RO/all", auth, getAllAgentByRo);
@@ -308,9 +311,9 @@ router.post("/export_ma_voix_compte", auth, export_ma_voix_compte);
 /**Routes pour utilité et exactitude */
 router.post("/reponse_utilite/:id", auth, reponse_utilite);
 router.post("/reponse_exactitude/:id", auth, reponse_exactitude);
-router.get("/export_dashboard/all", auth, getAllDashboard);
+router.get("/export_dashboard/all", auth, permission("REPORTING","LIRE"), getAllDashboard);
 router.get("/export_statistique_par_site", getStatistique_par_site);
-router.get("/export_dashboard_amin/all", auth, getAllDashboard_admin);
+router.get("/export_dashboard_amin/all", auth, permission("REPORTING","LIRE"), getAllDashboard_admin);
 /** fin d routes pour utilité et exactitude */
 router.post("/resultat_controle_actif",auth, controle_actif);
 router.post("/resultat_controle_m_1", auth,controle_m_1);
@@ -319,7 +322,7 @@ router.get("/hello", async (req, res, next) => {
 });
 /** Routes pour   Controle et reporting*/
 router.post("/add_controle", auth, addControle);
-router.get("/get_reporting", auth, getReporting);
+router.get("/get_reporting", auth, permission("REPORTING","LIRE"), getReporting);
 
 /***** les notifications */
 
@@ -328,25 +331,25 @@ router.get("/get_reporting", auth, getReporting);
  * GET /api/notifications
  * Récupère toutes les notifications de l'utilisateur connecté
  */
-router.get('/notifications',auth, getAllNotification);
+router.get('/notifications', auth, permission("NOTIFICATION","LIRE"), getAllNotification);
 
 /**
  * PATCH /api/notifications/:id/read
  * Marque une notification spécifique comme lue
  */
-router.patch('/notifications/:id/read',auth,redOneNotifcation);
+router.patch('/notifications/:id/read', auth, permission("NOTIFICATION","LIRE"), redOneNotifcation);
 
 /**
  * PATCH /api/notifications/read-all
  * Marque plusieurs notifications comme lues
  */
-router.patch('/notifications/read-all',auth, redAllNotification);
+router.patch('/notifications/read-all', auth, permission("NOTIFICATION","LIRE"), redAllNotification);
 
 /**
  * POST /api/notifications
  * Crée une nouvelle notification (appelé quand une fiche est ajoutée)
  */
-router.post('/notifications', auth,createNotification);
+router.post('/notifications', auth, permission("NOTIFICATION","CREER"), createNotification);
 
 
 

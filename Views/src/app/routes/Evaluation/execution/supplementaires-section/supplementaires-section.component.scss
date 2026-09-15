@@ -1,0 +1,14 @@
+.supplementaires {
+  .entete { display: flex; align-items: center; justify-content: space-between; }
+  h3 { margin: 0; }
+  .compteur { margin: 8px 0; }
+  .manque { color: #e65100; }
+  .vide { color: rgba(0, 0, 0, 0.6); }
+  .liste { list-style: none; margin: 0; padding: 0; }
+  .liste li { display: flex; align-items: center; gap: 8px; padding: 8px; border-bottom: 1px solid #eee; cursor: pointer; }
+  .liste li:hover { background: rgba(0, 0, 0, 0.03); }
+  .liste li mat-icon { margin-left: auto; color: rgba(0, 0, 0, 0.4); }
+  .tag { padding: 1px 8px; font-size: 0.7rem; border-radius: 10px; }
+  .tag.succes { background: #c8e6c9; }
+  .tag.echec { background: #ffcdd2; }
+}

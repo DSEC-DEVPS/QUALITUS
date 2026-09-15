@@ -55,6 +55,24 @@
               </ul>
             </div>
           </div>
+
+          <div class="row mt-2">
+            <div class="col-12">
+              <span class="title d-block mb-1">Grille d'évaluation :</span>
+              <mat-form-field appearance="outline" style="width: 100%">
+                <mat-label>Grille d'évaluation</mat-label>
+                <mat-select [(ngModel)]="idEvalGrilleSel">
+                  <mat-option [value]="null">— Aucune —</mat-option>
+                  @for (g of table_eval_grille; track g.id) {
+                    <mat-option [value]="g.id">{{ g.nom }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <button mat-raised-button color="primary" (click)="enregistrerEvalGrille()">
+                <mat-icon>save</mat-icon> Enregistrer la grille
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

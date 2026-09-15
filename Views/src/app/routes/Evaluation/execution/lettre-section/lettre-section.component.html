@@ -1,0 +1,49 @@
+<div class="lettre-section">
+  @if (lettre) {
+    <div class="entete">
+      <h3>{{ lettre.type === 'FELICITATION' ? 'Lettre de félicitation' : 'Lettre de débriefing' }}</h3>
+      <button mat-stroked-button (click)="imprimer()"><mat-icon>print</mat-icon> Imprimer</button>
+    </div>
+
+    <div class="corps">
+      <p>Bonjour <strong>{{ lettre.agent.prenom }} {{ lettre.agent.nom }}</strong>,</p>
+      <p>
+        Évaluation du {{ lettre.date_evaluation ? (lettre.date_evaluation | date: 'dd/MM/yyyy') : '' }}
+        @if (lettre.contexte) { — contexte : {{ lettre.contexte }} }
+        @if (lettre.identifiant_appel) { — appel : {{ lettre.identifiant_appel }} }
+      </p>
+
+      <h4>Scores par catégorie</h4>
+      <ul>
+        @for (s of lettre.scores; track s.categorie) {
+          <li>{{ s.categorie }} : <strong>{{ s.score | number: '1.0-2' }}</strong> / seuil {{ s.seuil | number: '1.0-2' }}
+            @if (s.reussite) { <span class="ok">✓</span> } @else { <span class="ko">✗ seuil non atteint</span> }
+          </li>
+        }
+      </ul>
+
+      @if (lettre.constats.length) {
+        <h4>{{ lettre.type === 'FELICITATION' ? 'Points de vigilance' : 'Écarts constatés' }}</h4>
+        <ul>
+          @for (c of lettre.constats; track $index) {
+            <li><strong>{{ c.item }}</strong> ({{ c.categorie }})
+              @if (c.commentaire) { — {{ c.commentaire }} }
+              @if (c.referentiel) { <div class="ref">Réf. : {{ c.referentiel }}</div> }
+            </li>
+          }
+        </ul>
+      }
+
+      @if (lettre.synthese) { <h4>Synthèse</h4><p>{{ lettre.synthese }}</p> }
+
+      @if (lettre.type === 'DEBRIEFING') {
+        <h4>Cause racine (coaching)</h4>
+        @if (lettre.cause_racine.length) {
+          <ol>@for (c of lettre.cause_racine; track c.niveau) { <li>{{ c.libelle }}</li> }</ol>
+        } @else { <p class="attente">Coaching pas encore renseigné.</p> }
+      }
+
+      @if (lettre.avis_agent) { <h4>Avis de l'agent</h4><p><em>{{ lettre.avis_agent }}</em></p> }
+    </div>
+  }
+</div>

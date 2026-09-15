@@ -124,16 +124,14 @@
               </div>
               <div class="col-sm-6">
                 <mat-form-field appearance="fill">
-                  <mat-label>Grille Evaluation</mat-label>
-                  <mat-select required formControlName="id_Grille" required>
-                    <mat-option *ngFor="let item of table_grille" [value]="item.id">{{
-                      item.nom | titlecase
+                  <mat-label>Grille d'évaluation</mat-label>
+                  <mat-select formControlName="id_EvalGrille">
+                    <mat-option [value]="null">— Aucune —</mat-option>
+                    <mat-option *ngFor="let item of table_eval_grille" [value]="item.id">{{
+                      item.nom
                     }}</mat-option>
                   </mat-select>
-
-                  @if (snapForm.get('id_Grille')?.invalid) {
-                    <mat-error>{{ 'Ce champ est obligatoire' }}</mat-error>
-                  }
+                  <mat-hint>Grille active appliquée à l'agent lors des évaluations</mat-hint>
                 </mat-form-field>
               </div>
             </div>

@@ -1,0 +1,47 @@
+<div class="validation">
+  <h2>Validation des options proposées</h2>
+
+  @if (chargement) {
+    <p>Chargement…</p>
+  } @else if (options.length === 0) {
+    <p class="vide">Aucune option en attente de validation.</p>
+  } @else {
+    @for (o of options; track k(o)) {
+      <mat-card class="opt">
+        <mat-card-content>
+          <div class="entete">
+            <div>
+              <span class="src" [class.bi]="o.source === 'BI'" [class.co]="o.source === 'COACHING'">{{ o.source === 'BI' ? 'BI' : 'Coaching' }}</span>
+              <strong>{{ o.libelle }}</strong>
+              <span class="meta">niveau {{ o.niveau }} @if (o.parent_libelle) { · sous « {{ o.parent_libelle }} » }</span>
+            </div>
+            <span class="contexte">{{ o.contexte }} · évaluation #{{ o.id_evaluation }}</span>
+          </div>
+          <p class="proposeur">Proposé par {{ o.proposeur }} le {{ o.dateCreation | date: 'dd/MM/yyyy' }}</p>
+
+          <div class="actions">
+            <mat-form-field appearance="outline" class="reform">
+              <mat-label>Reformulation (optionnelle)</mat-label>
+              <input matInput [(ngModel)]="reformulation[k(o)]" [name]="'ref' + k(o)" />
+            </mat-form-field>
+            <button mat-raised-button color="primary" (click)="valider(o)"><mat-icon>check</mat-icon> Valider</button>
+            @if (!rejetOuvert[k(o)]) {
+              <button mat-stroked-button color="warn" (click)="rejetOuvert[k(o)] = true"><mat-icon>close</mat-icon> Rejeter</button>
+            }
+          </div>
+
+          @if (rejetOuvert[k(o)]) {
+            <div class="rejet">
+              <mat-form-field appearance="outline" class="motif">
+                <mat-label>Motif de rejet</mat-label>
+                <input matInput [(ngModel)]="motifRejet[k(o)]" [name]="'mot' + k(o)" />
+              </mat-form-field>
+              <button mat-raised-button color="warn" (click)="rejeter(o)">Confirmer le rejet</button>
+              <button mat-button (click)="rejetOuvert[k(o)] = false">Annuler</button>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+</div>

@@ -1,0 +1,14 @@
+.cal-liste { padding: 16px; }
+.tete { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+.tete h2 { display: flex; align-items: center; gap: 8px; margin: 0; }
+.tete .sous { margin: 4px 0 0; color: rgba(0,0,0,.6); font-size: 13px; max-width: 640px; }
+.filtres { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 16px 0; }
+.filtres mat-form-field { width: 200px; }
+.tab { width: 100%; }
+.ligne { cursor: pointer; }
+.ligne:hover { background: #f5f7fa; }
+.vide { padding: 24px; text-align: center; color: rgba(0,0,0,.5); }
+.badge { padding: 2px 8px; border-radius: 10px; font-size: 12px; background: #eceff1; }
+.badge[data-st="OUVERTE"] { background: #e3f2fd; color: #1565c0; }
+.badge[data-st="RESULTATS_EN_REVISION"] { background: #fff4e5; color: #b26a00; }
+.badge[data-st="CLOTUREE"] { background: #e8f5e9; color: #2e7d32; }
