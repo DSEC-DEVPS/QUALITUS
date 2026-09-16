@@ -1,6 +1,7 @@
 services:
   db:
     image: mysql:8
+    command: --lower-case-table-names=1
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}

@@ -9,9 +9,12 @@
 -- migrations (UPDATE/INSERT SELECT sur des donnees deja existantes) ne
 -- sont pas reprises : elles servent uniquement a mettre a niveau une
 -- base existante et ne sont pas necessaires lors d'une creation neuve.
--- Les donnees de reference/seed utiles au fonctionnement sont conservees.
--- Inclut desormais : module Evaluation (cahier) + socle S5 habilitations
--- (matrice des droits) avec seed permissions/roles. Le fichier legacy_eval_backup.sql
+-- Les donnees de reference/seed utiles au fonctionnement sont conservees.
+
+-- Inclut desormais : module Evaluation (cahier) + socle S5 habilitations
+
+-- (matrice des droits) avec seed permissions/roles. Le fichier legacy_eval_backup.sql
+
 -- reste SEPARE (sauvegarde de l'ancien module supprime, a ne PAS rejouer).
 -- =====================================================================
 
@@ -945,11 +948,13 @@ USE QUALITUS;
 -- 1. RÉFÉRENTIELS + PARAMÈTRE SYSTÈME
 CREATE TABLE IF NOT EXISTS b_eval_ref_contexte (
   id INT AUTO_INCREMENT PRIMARY KEY, libelle VARCHAR(150) NOT NULL,
+  description VARCHAR(255) DEFAULT NULL, ordre INT DEFAULT 0,
   etat VARCHAR(10) DEFAULT 'ACTIF', dateCreation DATETIME DEFAULT NULL, dateModification DATETIME DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS b_eval_ref_nature_ressource (
   id INT AUTO_INCREMENT PRIMARY KEY, libelle VARCHAR(100) NOT NULL,
+  description VARCHAR(255) DEFAULT NULL, ordre INT DEFAULT 0,
   etat VARCHAR(10) DEFAULT 'ACTIF', dateCreation DATETIME DEFAULT NULL, dateModification DATETIME DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -960,16 +965,19 @@ CREATE TABLE IF NOT EXISTS b_eval_ref_type_evaluation (
 
 CREATE TABLE IF NOT EXISTS b_eval_ref_action_pa (
   id INT AUTO_INCREMENT PRIMARY KEY, libelle VARCHAR(150) NOT NULL,
+  description VARCHAR(255) DEFAULT NULL, ordre INT DEFAULT 0,
   etat VARCHAR(10) DEFAULT 'ACTIF', dateCreation DATETIME DEFAULT NULL, dateModification DATETIME DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS b_eval_ref_statut_pa (
   id INT AUTO_INCREMENT PRIMARY KEY, libelle VARCHAR(60) NOT NULL,
+  description VARCHAR(255) DEFAULT NULL, ordre INT DEFAULT 0,
   etat VARCHAR(10) DEFAULT 'ACTIF', dateCreation DATETIME DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS b_eval_ref_kpi (
   id INT AUTO_INCREMENT PRIMARY KEY, libelle VARCHAR(150) NOT NULL,
+  description VARCHAR(255) DEFAULT NULL, ordre INT DEFAULT 0,
   etat VARCHAR(10) DEFAULT 'ACTIF', dateCreation DATETIME DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
