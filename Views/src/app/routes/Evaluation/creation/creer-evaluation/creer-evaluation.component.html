@@ -13,20 +13,16 @@
       </div>
 
       @if (model.type_ressource === 'HUMAINE') {
-        <div class="section grille-cols">
-          <mat-form-field appearance="outline">
-            <mat-label>Agent</mat-label>
-            <mat-select [(ngModel)]="model.id_agent" (selectionChange)="onAgentChange()" name="agent">
-              @for (a of agents; track a.id) {
-                <mat-option [value]="a.id">{{ a.nom }} {{ a.prenom }} ({{ a.login }})</mat-option>
+        <div class="section">
+          <mat-form-field appearance="outline" class="plein">
+            <mat-label>Agent — sélectionner ou saisir (nom / login)</mat-label>
+            <input matInput [matAutocomplete]="autoAgent" [(ngModel)]="agentRecherche" name="agentRech" placeholder="Nom, prénom ou login…" (ngModelChange)="onAgentTexteChange()" />
+            <mat-autocomplete #autoAgent="matAutocomplete" (optionSelected)="selectionAgent($event.option.value)">
+              @for (a of agentsFiltres; track a.id) {
+                <mat-option [value]="a">{{ a.nom }} {{ a.prenom }} ({{ a.login }})</mat-option>
               }
-            </mat-select>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>… ou saisir le login</mat-label>
-            <input matInput [(ngModel)]="loginSaisi" name="loginSaisi" (blur)="resoudreLogin()" (keyup.enter)="resoudreLogin()" />
-            @if (agentTrouve) { <mat-hint>{{ agentTrouve.nom }} {{ agentTrouve.prenom }}</mat-hint> }
+            </mat-autocomplete>
+            <mat-icon matSuffix>person_search</mat-icon>
           </mat-form-field>
           @if (resolution) {
             @if (resolution.ok && resolution.grille) {

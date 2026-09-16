@@ -73,16 +73,31 @@
           <ng-container matColumnDef="expand">
             <td mat-cell *matCellDef="let a" [attr.colspan]="colonnes.length">
               <div class="drill">
-                <strong>Historique des évaluations en échec :</strong>
-                <ul>
-                  @for (e of a.evaluations; track e.id) {
-                    <li (click)="ouvrirEval(e.id)">
+                <strong>Plans d'action des évaluations en échec :</strong>
+                @for (e of a.evaluations; track e.id) {
+                  <div class="eval-bloc">
+                    <div class="eval-tete" (click)="ouvrirEval(e.id)">
                       Évaluation #{{ e.id }} — {{ e.date_appel ? (e.date_appel | date: 'dd/MM/yyyy') : '' }}
                       @if (e.critiques_decochees >= 3) { <span class="tag">{{ e.critiques_decochees }} erreurs critiques</span> }
                       <mat-icon>chevron_right</mat-icon>
-                    </li>
-                  }
-                </ul>
+                    </div>
+                    @if (e.plans && e.plans.length) {
+                      <ul class="plans">
+                        @for (p of e.plans; track $index) {
+                          <li>
+                            <mat-icon class="ico">task_alt</mat-icon>
+                            <span class="act">{{ p.action || '—' }}</span>
+                            @if (p.statut) { <span class="statut">{{ p.statut }}</span> }
+                            @if (p.date_attendue) { <span class="date">éch. {{ p.date_attendue | date: 'dd/MM/yyyy' }}</span> }
+                            @if (p.porteur) { <span class="porteur">{{ p.porteur }}</span> }
+                          </li>
+                        }
+                      </ul>
+                    } @else {
+                      <p class="aucun-plan">Aucun plan d'action rattaché.</p>
+                    }
+                  </div>
+                }
               </div>
             </td>
           </ng-container>

@@ -56,3 +56,14 @@
   --mdc-icon-button-icon-color: #ff7900;
   color: #ff7900 !important;
 }
+
+
+/* QUALITUS: bouton enregistrer — désactivé = fond clair, actif = fond foncé */
+button.mat-mdc-raised-button.mat-mdc-button-disabled,
+button.mat-mdc-unelevated-button.mat-mdc-button-disabled,
+button.mat-mdc-raised-button:disabled,
+button.mat-mdc-unelevated-button:disabled {
+  background-color: #e6e8eb !important;
+  color: rgba(0, 0, 0, 0.4) !important;
+  box-shadow: none !important;
+}

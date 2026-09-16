@@ -37,7 +37,13 @@ export const appConfig: ApplicationConfig = {
       withInMemoryScrolling({ scrollPositionRestoration: 'enabled', anchorScrolling: 'enabled' }),
       withComponentInputBinding()
     ),
-    provideToastr(),
+    provideToastr({
+      // Évite les toasts en double (ex. intercepteur global + handler de composant
+      // affichant le même message d'erreur). Un message identique déjà visible
+      // n'est pas ré-empilé ; son minuteur est réarmé.
+      preventDuplicates: true,
+      resetTimeoutOnDuplicate: true,
+    }),
     provideTranslateService({
       loader: {
         provide: TranslateLoader,

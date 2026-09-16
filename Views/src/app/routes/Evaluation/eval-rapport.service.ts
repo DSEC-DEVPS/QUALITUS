@@ -12,7 +12,10 @@ export interface AgentPole {
   superviseur: string;
   criteres: string[];
   nb_evaluations: number;
-  evaluations: { id: number; date_appel: string; critiques_decochees: number }[];
+  evaluations: {
+    id: number; date_appel: string; critiques_decochees: number;
+    plans?: { action: string | null; statut: string | null; date_attendue: string | null; kpi: string | null; commentaire: string | null; porteur: string | null }[];
+  }[];
 }
 
 export interface FiltresRapport {

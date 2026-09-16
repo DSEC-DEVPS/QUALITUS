@@ -49,6 +49,31 @@ const getRapportAgentsPole = async (req, res) => {
     const critMap = {};
     crit.forEach((x) => (critMap[x.id_evaluation] = x.n));
 
+    // Plans d'action rattachés aux évaluations en échec
+    const evalIds = evals.map((e) => e.id);
+    const planMap = {};
+    if (evalIds.length) {
+      const [plans] = await db.query(
+        `SELECT pl.id_evaluation, pa.libelle AS action, st.libelle AS statut,
+                pl.date_attendue, pl.commentaire, k.libelle AS kpi,
+                u.nom AS porteur_nom, u.prenom AS porteur_prenom
+           FROM b_eval_plan_action_ligne pl
+           LEFT JOIN b_eval_ref_action_pa pa ON pl.id_action=pa.id
+           LEFT JOIN b_eval_ref_statut_pa st ON pl.id_statut=st.id
+           LEFT JOIN b_eval_ref_kpi k ON pl.id_kpi=k.id
+           LEFT JOIN b_utilisateur u ON pl.id_porteur=u.id
+          WHERE pl.id_evaluation IN (?)
+          ORDER BY pl.id`, [evalIds]
+      );
+      plans.forEach((p) => {
+        (planMap[p.id_evaluation] ||= []).push({
+          action: p.action, statut: p.statut, date_attendue: p.date_attendue,
+          kpi: p.kpi, commentaire: p.commentaire,
+          porteur: `${p.porteur_nom || ""} ${p.porteur_prenom || ""}`.trim() || null,
+        });
+      });
+    }
+
     // superviseur par agent
     const [sups] = await db.query(
       `SELECT r.id_AGENT, u.nom, u.prenom FROM b_r_superviseur_agent r LEFT JOIN b_utilisateur u ON r.id_SUPERVISEUR=u.id`
@@ -67,7 +92,7 @@ const getRapportAgentsPole = async (req, res) => {
         };
       }
       const a = parAgent[e.id_agent];
-      a.evaluations.push({ id: e.id, date_appel: e.date_appel, critiques_decochees: critMap[e.id] || 0 });
+      a.evaluations.push({ id: e.id, date_appel: e.date_appel, critiques_decochees: critMap[e.id] || 0, plans: planMap[e.id] || [] });
       const ml = moisLabel(e.date_appel);
       a.mois[ml] = (a.mois[ml] || 0) + 1;
       if ((critMap[e.id] || 0) >= 3) a.critique3 = true;

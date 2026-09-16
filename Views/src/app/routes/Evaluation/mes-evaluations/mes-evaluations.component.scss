@@ -1,0 +1,11 @@
+.mes-eval { padding: 16px; }
+.tete h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }
+.filtres { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px; }
+.filtres mat-form-field { width: 180px; }
+.tab { width: 100%; }
+.ligne { cursor: pointer; }
+.ligne:hover { background: #f5f7fa; }
+.vide { padding: 24px; text-align: center; color: rgba(0,0,0,.5); }
+.badge { padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+.badge[data-c="SUCCES"] { background: #e8f5e9; color: #2e7d32; }
+.badge[data-c="ECHEC"] { background: #ffebee; color: #c62828; }

@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { canMatchPermission } from '../../core/authorization/permission.guard';
 import { ListeEvaluationsComponent } from './consultation/liste-evaluations/liste-evaluations.component';
+import { MesEvaluationsComponent } from './mes-evaluations/mes-evaluations.component';
 import { RapportPoleComponent } from './rapport/rapport-pole/rapport-pole.component';
 import { ContreListeComponent } from './contre/contre-liste/contre-liste.component';
 import { ContreExecuterComponent } from './contre/contre-executer/contre-executer.component';
@@ -19,6 +20,7 @@ import { CalendrierComponent } from './calendrier/calendrier.component';
 export const routes: Routes = [
   { path: '', redirectTo: 'evaluations', pathMatch: 'full' },
   { path: 'evaluations', component: ListeEvaluationsComponent },
+  { path: 'mes-evaluations', component: MesEvaluationsComponent },
   { path: 'grilles', component: ListeGrillesComponent },
   { path: 'grilles/editeur/:id', component: EditeurGrilleComponent, canMatch: [canMatchPermission('grille.modifier')] },
   { path: 'creation/unitaire', component: CreerEvaluationCahierComponent, canMatch: [canMatchPermission('evaluation.creer')] },

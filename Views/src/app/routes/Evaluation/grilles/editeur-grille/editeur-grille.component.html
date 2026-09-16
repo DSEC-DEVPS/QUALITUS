@@ -152,7 +152,6 @@
                 } @else {
                   <span class="poids-calc">poids {{ sc.poids_applique | number: '1.0-2' }}</span>
                 }
-                <span class="cumul">erreurs {{ sc.cumul_erreurs | number: '1.0-2' }} / {{ sc.poids_applique | number: '1.0-2' }}</span>
                 <span class="spacer"></span>
                 @if (sc.etat === 'ARCHIVE') {
                   <button mat-icon-button color="primary" matTooltip="Réactiver" (click)="reactiverSousCat(sc)"><mat-icon>unarchive</mat-icon></button>
@@ -177,7 +176,6 @@
                     } @else {
                       <span class="poids-calc">poids {{ e.poids_applique | number: '1.0-2' }}</span>
                     }
-                    <span class="score" matTooltip="Score sur 20">{{ e.score_sur20 | number: '1.0-2' }}/20</span>
                     <span class="spacer"></span>
                     @if (e.etat === 'ARCHIVE') {
                       <button mat-icon-button color="primary" matTooltip="Réactiver" (click)="reactiverErreur(e)"><mat-icon>unarchive</mat-icon></button>

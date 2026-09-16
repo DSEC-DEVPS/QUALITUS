@@ -29,21 +29,26 @@
 
   <mat-card>
     <mat-card-content>
-      @for (n of niveaux; track n) {
-        @if (optionsDuNiveau(n).length) {
-          <div class="niveau-bloc">
-            <h4>Niveau {{ n }}</h4>
-            @for (o of optionsDuNiveau(n); track o.id) {
-              <div class="option-ligne">
-                <span>{{ o.libelle }}</span>
-                @if (n > 1) { <span class="parent">↳ {{ libelleParent(o) }}</span> }
-                <span class="spacer"></span>
-                <button mat-icon-button color="warn" (click)="supprimer(o)"><mat-icon>delete</mat-icon></button>
-              </div>
-            }
-          </div>
+      <mat-accordion multi>
+        @for (n of niveaux; track n) {
+          @if (optionsDuNiveau(n).length) {
+            <mat-expansion-panel expanded>
+              <mat-expansion-panel-header>
+                <mat-panel-title>Niveau {{ n }}</mat-panel-title>
+                <mat-panel-description>{{ optionsDuNiveau(n).length }} option(s)</mat-panel-description>
+              </mat-expansion-panel-header>
+              @for (o of optionsDuNiveau(n); track o.id) {
+                <div class="option-ligne">
+                  <span>{{ o.libelle }}</span>
+                  @if (n > 1) { <span class="parent">↳ {{ libelleParent(o) }}</span> }
+                  <span class="spacer"></span>
+                  <button mat-icon-button color="warn" (click)="supprimer(o)"><mat-icon>delete</mat-icon></button>
+                </div>
+              }
+            </mat-expansion-panel>
+          }
         }
-      }
+      </mat-accordion>
       @if (options.length === 0) { <p class="vide">Aucune option définie.</p> }
     </mat-card-content>
   </mat-card>

@@ -474,6 +474,20 @@
           }
         },
         {
+          "route": "mes-evaluations",
+          "name": "Mes évaluations",
+          "type": "link",
+          "icon": "fact_check",
+          "permissions": {
+            "only": [
+              "R_TC",
+              "R_AF",
+              "R_GE",
+              "R_GB"
+            ]
+          }
+        },
+        {
           "route": "creation/unitaire",
           "name": "Créer une évaluation",
           "type": "link",

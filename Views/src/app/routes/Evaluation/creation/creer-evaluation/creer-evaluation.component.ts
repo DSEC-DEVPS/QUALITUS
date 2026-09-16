@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { ToastrService } from 'ngx-toastr';
@@ -24,7 +25,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
   standalone: true,
   imports: [MatDatepickerModule, 
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatSelectModule, MatRadioModule, MatCheckboxModule,
+    MatFormFieldModule, MatInputModule, MatSelectModule, MatAutocompleteModule, MatRadioModule, MatCheckboxModule,
   ],
   templateUrl: './creer-evaluation.component.html',
   styleUrl: './creer-evaluation.component.scss',
@@ -44,6 +45,7 @@ export class CreerEvaluationComponent implements OnInit {
   envoi = false;
   loginSaisi = '';
   agentTrouve?: AgentEvaluable;
+  agentRecherche = '';
 
   model = {
     type_ressource: 'HUMAINE' as 'HUMAINE' | 'AUTOMATISEE',
@@ -67,8 +69,29 @@ export class CreerEvaluationComponent implements OnInit {
     this.grilleService.getGrilles({ statut: 'ACTIVE', type_ressource_cible: 'AUTOMATISEE' }).subscribe({ next: g => (this.grillesAuto = g) });
   }
 
+  get agentsFiltres(): AgentEvaluable[] {
+    const q = (this.agentRecherche || '').trim().toLowerCase();
+    if (!q) return this.agents;
+    return this.agents.filter(a => (`${a.nom} ${a.prenom} ${a.login}`).toLowerCase().includes(q));
+  }
+
+  selectionAgent(a: AgentEvaluable): void {
+    this.model.id_agent = a.id;
+    this.agentRecherche = `${a.nom} ${a.prenom} (${a.login})`;
+    this.onAgentChange();
+  }
+
+  // Si le texte ne correspond plus à l'agent sélectionné, on invalide la sélection
+  onAgentTexteChange(): void {
+    if (this.agentTrouve) {
+      const label = `${this.agentTrouve.nom} ${this.agentTrouve.prenom} (${this.agentTrouve.login})`;
+      if (this.agentRecherche !== label) { this.model.id_agent = null; this.resolution = undefined; this.agentTrouve = undefined; }
+    }
+  }
+
   onTypeChange(): void {
     this.model.id_agent = null;
+    this.agentRecherche = '';
     this.model.id_grille = null;
     this.model.id_nature_ressource = null;
     this.resolution = undefined;
