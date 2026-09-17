@@ -4,7 +4,7 @@
       <div class="d-flex align-items-center justify-content-between flex-wrap m-b-16">
         <h5 class="m-0">Gestion des quiz</h5>
         <div class="d-flex" style="gap: 8px">
-          <button mat-stroked-button color="primary" (click)="exporter()">
+          <button mat-flat-button color="primary" (click)="exporter()">
             <mat-icon>download</mat-icon> Exporter Excel
           </button>
           <button mat-flat-button color="primary" *appCan="'quiz.creer'" (click)="nouveau()">

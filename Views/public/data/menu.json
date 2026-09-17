@@ -35,31 +35,6 @@
       }
     },
     {
-      "route": "mon-espace/quiz",
-      "name": "Quiz",
-      "type": "sub",
-      "icon": "widgets",
-      "children": [
-        {
-          "route": "quiz-en-echecs",
-          "name": "Quiz en echecs",
-          "type": "link",
-          "icon": "colorize"
-        },
-        {
-          "route": "Quiz-en-reset",
-          "name": "Quiz en retest",
-          "type": "link",
-          "icon": "flag"
-        }
-      ],
-      "permissions": {
-        "only": [
-          "R_SUP"
-        ]
-      }
-    },
-    {
       "route": "mon-espace/Fonction/Liste",
       "name": "Gestion Fonction",
       "type": "link",
@@ -293,55 +268,18 @@
     },
     {
       "route": "mon-espace/quiz",
-      "name": "GESTION QUIZ",
-      "type": "sub",
-      "icon": "insert_drive_file",
-      "children": [
-        {
-          "route": "creer-un-quiz",
-          "name": "Créer un Quiz",
-          "type": "link",
-          "permissions": {
-            "only": [
-              "R_ADMI",
-              "R_AQ"
-            ]
-          }
-        },
-        {
-          "route": "liste-des-quiz",
-          "name": "Liste des Quiz",
-          "type": "link",
-          "permissions": {
-            "only": [
-              "R_ADMI",
-              "R_AQ"
-            ]
-          }
-        },
-        {
-          "route": "participer-au-quiz",
-          "name": "Parcitipez au Quiz",
-          "type": "link",
-          "permissions": {
-            "only": [
-              "R_ADMI",
-              "R_AQ"
-            ]
-          }
-        }
-      ],
-      "permissions": {
-        "only": [
-          "R_AQ"
-        ]
-      }
-    },
-    {
-      "route": "mon-espace/quiz",
-      "name": "Gestion Quiz",
+      "name": "Quiz",
       "type": "sub",
       "icon": "quiz",
+      "permissions": {
+        "only": [
+          "R_ADMI",
+          "R_AQ",
+          "R_GB",
+          "R_SUP",
+          "R_TC"
+        ]
+      },
       "children": [
         {
           "route": "creer",
@@ -352,7 +290,8 @@
             "only": [
               "R_ADMI",
               "R_GB",
-              "R_SUP"
+              "R_SUP",
+              "R_AQ"
             ]
           }
         },
@@ -365,7 +304,8 @@
             "only": [
               "R_ADMI",
               "R_GB",
-              "R_SUP"
+              "R_SUP",
+              "R_AQ"
             ]
           }
         },
@@ -381,22 +321,7 @@
               "R_SUP"
             ]
           }
-        }
-      ],
-      "permissions": {
-        "only": [
-          "R_ADMI",
-          "R_GB",
-          "R_SUP"
-        ]
-      }
-    },
-    {
-      "route": "mon-espace/quiz",
-      "name": "Mes Quiz",
-      "type": "sub",
-      "icon": "school",
-      "children": [
+        },
         {
           "route": "participer",
           "name": "Participer",
@@ -405,7 +330,8 @@
           "permissions": {
             "only": [
               "R_TC",
-              "R_ADMI"
+              "R_ADMI",
+              "R_AQ"
             ]
           }
         },
@@ -444,15 +370,32 @@
               "R_ADMI"
             ]
           }
+        },
+        {
+          "route": "quiz-en-echecs",
+          "name": "Quiz en echecs",
+          "type": "link",
+          "icon": "trending_down",
+          "permissions": {
+            "only": [
+              "R_SUP",
+              "R_ADMI"
+            ]
+          }
+        },
+        {
+          "route": "Quiz-en-reset",
+          "name": "Quiz en retest",
+          "type": "link",
+          "icon": "restart_alt",
+          "permissions": {
+            "only": [
+              "R_SUP",
+              "R_ADMI"
+            ]
+          }
         }
-      ],
-      "permissions": {
-        "only": [
-          "R_TC",
-          "R_SUP",
-          "R_ADMI"
-        ]
-      }
+      ]
     },
     {
       "route": "mon-espace/evaluation",

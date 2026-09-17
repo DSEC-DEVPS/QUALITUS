@@ -1,13 +1,16 @@
-<div class="cal-res" *ngIf="role">
-  <div class="tete">
+<div class="cal-page cal-res" *ngIf="role">
+  <mat-card class="cal-panel"><mat-card-header class="cal-band cal-header">
     <button mat-icon-button (click)="retour()"><mat-icon>arrow_back</mat-icon></button>
-    <h2><mat-icon>analytics</mat-icon> Résultats du calibrage</h2>
-    <span class="badge" [attr.data-st]="statut">{{ statut }}</span>
-    <span class="spacer"></span>
-    <button mat-flat-button color="primary" *ngIf="modifiable" (click)="valider()">
-      <mat-icon>verified</mat-icon> Valider la session
-    </button>
-  </div>
+    <span class="cal-ic"><mat-icon>analytics</mat-icon></span>
+    <div class="cal-tt">
+      <h2>Résultats du calibrage <span class="cal-badge" [attr.data-st]="statut">{{ statut }}</span></h2>
+    </div>
+    <div class="cal-actions">
+      <button mat-flat-button color="primary" *ngIf="modifiable" (click)="valider()">
+        <mat-icon>verified</mat-icon> Valider la session
+      </button>
+    </div>
+  </mat-card-header><mat-card-content>
 
   <div class="provisoire" *ngIf="provisoire">
     <mat-icon>info</mat-icon> Résultats <b>provisoires</b> : la référence comme les constats peuvent encore évoluer jusqu'à la validation.
@@ -33,7 +36,7 @@
                 {{ cellule(p.id_evaluateur, t.id) === 'SUCCES' ? '✓' : '✗' }}
               </button>
             </td>
-            <td class="col-concl"><span class="badge concl" [attr.data-c]="global[p.id_evaluateur]">{{ global[p.id_evaluateur] }}</span></td>
+            <td class="col-concl"><span class="cal-badge" [attr.data-c]="global[p.id_evaluateur]">{{ global[p.id_evaluateur] }}</span></td>
           </tr>
         </tbody>
       </table>
@@ -43,7 +46,7 @@
   <!-- Vue participant : sa conclusion -->
   <mat-card *ngIf="!estJauge && participants.length">
     <h3>Ma conclusion</h3>
-    <p>Conclusion globale : <span class="badge concl" [attr.data-c]="global[participants[0].id_evaluateur]">{{ global[participants[0].id_evaluateur] }}</span></p>
+    <p>Conclusion globale : <span class="cal-badge" [attr.data-c]="global[participants[0].id_evaluateur]">{{ global[participants[0].id_evaluateur] }}</span></p>
   </mat-card>
 
   <!-- Confrontation -->
@@ -59,7 +62,7 @@
         <mat-expansion-panel-header>
           <mat-panel-title>T{{ t.transaction.ordre_passage }} — {{ t.transaction.identifiant_appel }}</mat-panel-title>
           <mat-panel-description>
-            <span class="badge concl" [attr.data-c]="t.conclusion">{{ t.conclusion }}</span>
+            <span class="cal-badge" [attr.data-c]="t.conclusion">{{ t.conclusion }}</span>
           </mat-panel-description>
         </mat-expansion-panel-header>
 
@@ -103,4 +106,5 @@
       <button mat-stroked-button (click)="enregistrerConclusions()"><mat-icon>save</mat-icon> Enregistrer</button>
     </div>
   </mat-card>
+</mat-card-content></mat-card>
 </div>

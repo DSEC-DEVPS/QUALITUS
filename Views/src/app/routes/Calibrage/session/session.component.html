@@ -1,12 +1,12 @@
-<div class="cal-session" *ngIf="session">
+<div class="cal-page cal-session" *ngIf="session">
   <!-- Bandeau supérieur -->
-  <div class="bandeau">
+  <mat-card class="cal-panel"><mat-card-header class="cal-band cal-header">
     <button mat-icon-button (click)="retour()"><mat-icon>arrow_back</mat-icon></button>
-    <div class="titre">
-      <strong>{{ session.nom }}</strong>
-      <span class="badge" [attr.data-st]="session.statut">{{ session.statut }}</span>
+    <span class="cal-ic"><mat-icon>tune</mat-icon></span>
+    <div class="cal-tt">
+      <h2>{{ session.nom }} <span class="cal-badge" [attr.data-st]="session.statut">{{ session.statut }}</span></h2>
     </div>
-    <span class="spacer"></span>
+    <div class="cal-actions">
 
     <!-- actions jauge -->
     <ng-container *ngIf="role === 'jauge'">
@@ -33,7 +33,8 @@
         <mat-icon>done_all</mat-icon> Clôturer ma participation
       </button>
     </ng-container>
-  </div>
+    </div>
+  </mat-card-header><mat-card-content>
 
   <!-- participant sans accès -->
   <div class="pas-acces" *ngIf="role === 'participant' && !accessible">
@@ -49,7 +50,7 @@
       <ng-container *ngIf="txSel">
         <div class="grille-tete">
           <h3>Transaction {{ txSel.ordre_passage }} — {{ txSel.identifiant_appel }}</h3>
-          <span class="badge etat" [attr.data-e]="txSel.etat">{{ etatLabel(txSel.etat) }}</span>
+          <span class="cal-badge" [attr.data-e]="txSel.etat">{{ etatLabel(txSel.etat) }}</span>
           <span class="lecture" *ngIf="lectureSeule"><mat-icon>visibility</mat-icon> lecture seule</span>
           <button mat-stroked-button *ngIf="!lectureSeule && txSel.etat !== 'TERMINEE'" (click)="terminerTx(txSel)">
             <mat-icon>check</mat-icon> Terminer cette transaction
@@ -98,7 +99,7 @@
         <div class="liste-item" *ngFor="let t of transactions" [class.sel]="txSel?.id === t.id" (click)="selectionner(t)">
           <span class="ordre">{{ t.ordre_passage }}</span>
           <span class="lib">{{ t.identifiant_appel }}</span>
-          <span class="badge etat" [attr.data-e]="t.etat">{{ etatLabel(t.etat) }}</span>
+          <span class="cal-badge" [attr.data-e]="t.etat">{{ etatLabel(t.etat) }}</span>
         </div>
       </div>
 
@@ -121,4 +122,5 @@
       </div>
     </div>
   </div>
+</mat-card-content></mat-card>
 </div>

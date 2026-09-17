@@ -1,9 +1,1 @@
-.cal-creer { padding: 16px; max-width: 760px; }
-.cal-creer h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; }
-.grille-form { display: flex; flex-wrap: wrap; gap: 12px; }
-.grille-form mat-form-field { width: 240px; }
-.grille-form .plein { width: 100%; }
-.duree { display: flex; align-items: center; gap: 12px; width: 100%; flex-wrap: wrap; }
-.duree .lbl { font-size: 13px; color: rgba(0,0,0,.7); }
-.duree .petit { width: 120px; }
-.actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+/* Mise en page commune : voir styles.scss (.cal-page, .cal-header, .cal-form, .cal-duree) */

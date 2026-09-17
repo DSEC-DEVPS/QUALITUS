@@ -1,17 +1,17 @@
-<div class="cal-prep" *ngIf="session">
-  <div class="tete">
+<div class="cal-page cal-prep" *ngIf="session">
+  <mat-card class="cal-panel"><mat-card-header class="cal-band cal-header">
     <button mat-icon-button (click)="retour()"><mat-icon>arrow_back</mat-icon></button>
-    <div>
-      <h2>{{ session.nom }}</h2>
-      <span class="badge" [attr.data-st]="session.statut">{{ session.statut }}</span>
-      <span class="info">{{ transactions.length }} / {{ session.nombre_transactions }} transactions ·
-        {{ participants.length }} participant(s)</span>
+    <span class="cal-ic"><mat-icon>fact_check</mat-icon></span>
+    <div class="cal-tt">
+      <h2>{{ session.nom }} <span class="cal-badge" [attr.data-st]="session.statut">{{ session.statut }}</span></h2>
+      <p class="info">{{ transactions.length }} / {{ session.nombre_transactions }} transactions · {{ participants.length }} participant(s)</p>
     </div>
-    <span class="spacer"></span>
-    <button mat-flat-button color="primary" *ngIf="brouillon" (click)="ouvrir()">
-      <mat-icon>lock_open</mat-icon> Ouvrir la session
-    </button>
-  </div>
+    <div class="cal-actions">
+      <button mat-flat-button color="primary" *ngIf="brouillon" (click)="ouvrir()">
+        <mat-icon>lock_open</mat-icon> Ouvrir la session
+      </button>
+    </div>
+  </mat-card-header><mat-card-content>
 
   <div class="lecture-seule" *ngIf="!brouillon">
     <mat-icon>info</mat-icon> La session est {{ session.statut }} : la préparation n'est plus modifiable.
@@ -185,4 +185,5 @@
       </div>
     </mat-expansion-panel>
   </mat-accordion>
+</mat-card-content></mat-card>
 </div>

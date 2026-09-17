@@ -1,4 +1,6 @@
 <div class="executer">
+  <mat-card class="cal-panel"><mat-card-header class="cal-band"><span class="cal-band-title"><mat-icon>assignment_turned_in</mat-icon> Exécution de l'évaluation</span></mat-card-header><mat-card-content>
+
   <button mat-button (click)="retour()"><mat-icon>arrow_back</mat-icon> Retour</button>
 
   @if (chargement && !detail) { <p>Chargement…</p> }
@@ -196,4 +198,5 @@
       </mat-card>
     }
   }
+</mat-card-content></mat-card>
 </div>

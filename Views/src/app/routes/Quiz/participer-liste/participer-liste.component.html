@@ -24,7 +24,7 @@
       }
     </div>
 
-    <button mat-stroked-button color="primary" class="btn-pin" (click)="afficherPin = !afficherPin">
+    <button mat-flat-button color="primary" class="btn-pin" (click)="afficherPin = !afficherPin">
       <mat-icon>lock</mat-icon> Saisir un code PIN
     </button>
   </div>
@@ -45,7 +45,7 @@
               }
               Une demande a été transmise à votre superviseur. Vous pourrez y accéder une fois votre machine autorisée.
             </p>
-            <button mat-stroked-button color="primary" (click)="reessayer()" [disabled]="envoi">
+            <button mat-flat-button color="primary" (click)="reessayer()" [disabled]="envoi">
               <mat-icon>refresh</mat-icon> Réessayer
             </button>
           </div>
@@ -73,7 +73,7 @@
   }
 
   <!-- Liste des quiz disponibles -->
-  <h6 class="liste-titre">Liste des quiz disponibles</h6>
+  <h6 class="liste-titre">Liste des quiz publics disponibles</h6>
 
   @if (publicsFiltres.length) {
     @for (q of publicsFiltres; track q.id) {

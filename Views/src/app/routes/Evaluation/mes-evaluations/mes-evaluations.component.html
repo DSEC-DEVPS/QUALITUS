@@ -1,68 +1,81 @@
-<div class="mes-eval">
-  <mat-card>
-    <div class="tete">
-      <h2><mat-icon>fact_check</mat-icon> Mes évaluations</h2>
+<div class="cal-page">
+  <mat-card class="cal-panel"><mat-card-header class="cal-band cal-header">
+    <span class="cal-ic"><mat-icon>fact_check</mat-icon></span>
+    <div class="cal-tt">
+      <h2>Mes évaluations</h2>
+      <p>Consultez vos évaluations et leurs résultats.</p>
     </div>
+  </mat-card-header><mat-card-content>
 
-    <div class="filtres">
-      <mat-form-field appearance="outline"><mat-label>Du</mat-label>
-        <input matInput [matDatepicker]="pd" [(ngModel)]="filtres.date_debut" name="dd" />
-        <mat-datepicker-toggle matSuffix [for]="pd"></mat-datepicker-toggle><mat-datepicker #pd></mat-datepicker>
-      </mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Au</mat-label>
-        <input matInput [matDatepicker]="pf" [(ngModel)]="filtres.date_fin" name="df" />
-        <mat-datepicker-toggle matSuffix [for]="pf"></mat-datepicker-toggle><mat-datepicker #pf></mat-datepicker>
-      </mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Conclusion</mat-label>
-        <mat-select [(ngModel)]="filtres.conclusion" name="cc">
-          <mat-option [value]="undefined">Toutes</mat-option>
-          <mat-option value="SUCCES">Succès</mat-option>
-          <mat-option value="ECHEC">Échec</mat-option>
-        </mat-select>
-      </mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Statut</mat-label>
-        <mat-select [(ngModel)]="filtres.statut" name="st">
-          <mat-option [value]="undefined">Tous</mat-option>
-          <mat-option value="TERMINE">Terminée</mat-option>
-          <mat-option value="NON_TERMINE">En cours</mat-option>
-        </mat-select>
-      </mat-form-field>
-      <button mat-raised-button color="primary" (click)="charger()"><mat-icon>search</mat-icon> Filtrer</button>
+  <div class="cal-toolbar">
+    <mat-form-field appearance="outline"><mat-label>Du</mat-label>
+      <input matInput [matDatepicker]="pd" [(ngModel)]="filtres.date_debut" name="dd" />
+      <mat-datepicker-toggle matSuffix [for]="pd"></mat-datepicker-toggle><mat-datepicker #pd></mat-datepicker>
+    </mat-form-field>
+    <mat-form-field appearance="outline"><mat-label>Au</mat-label>
+      <input matInput [matDatepicker]="pf" [(ngModel)]="filtres.date_fin" name="df" />
+      <mat-datepicker-toggle matSuffix [for]="pf"></mat-datepicker-toggle><mat-datepicker #pf></mat-datepicker>
+    </mat-form-field>
+    <mat-form-field appearance="outline"><mat-label>Conclusion</mat-label>
+      <mat-select [(ngModel)]="filtres.conclusion" name="cc">
+        <mat-option [value]="undefined">Toutes</mat-option>
+        <mat-option value="SUCCES">Succès</mat-option>
+        <mat-option value="ECHEC">Échec</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline"><mat-label>Statut</mat-label>
+      <mat-select [(ngModel)]="filtres.statut" name="st">
+        <mat-option [value]="undefined">Tous</mat-option>
+        <mat-option value="TERMINE">Terminée</mat-option>
+        <mat-option value="NON_TERMINE">En cours</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <div class="cal-tb-actions">
+      <button mat-flat-button color="primary" (click)="charger()"><mat-icon>search</mat-icon> Filtrer</button>
       <button mat-button (click)="reinitialiser()">Réinitialiser</button>
     </div>
+  </div>
 
-    <div class="vide" *ngIf="chargement">Chargement…</div>
-    <table mat-table [dataSource]="evaluations" *ngIf="!chargement && evaluations.length" class="tab">
-      <ng-container matColumnDef="date_appel">
-        <th mat-header-cell *matHeaderCellDef>Date d'appel</th>
-        <td mat-cell *matCellDef="let e">{{ e.date_appel ? (e.date_appel | date: 'dd/MM/yyyy') : '—' }}</td>
-      </ng-container>
-      <ng-container matColumnDef="grille">
-        <th mat-header-cell *matHeaderCellDef>Grille</th>
-        <td mat-cell *matCellDef="let e">{{ e.grille }}</td>
-      </ng-container>
-      <ng-container matColumnDef="type_evaluation">
-        <th mat-header-cell *matHeaderCellDef>Type</th>
-        <td mat-cell *matCellDef="let e">{{ e.type_evaluation }}</td>
-      </ng-container>
-      <ng-container matColumnDef="statut">
-        <th mat-header-cell *matHeaderCellDef>Statut</th>
-        <td mat-cell *matCellDef="let e">{{ e.statut === 'TERMINE' ? 'Terminée' : 'En cours' }}</td>
-      </ng-container>
-      <ng-container matColumnDef="conclusion">
-        <th mat-header-cell *matHeaderCellDef>Conclusion</th>
-        <td mat-cell *matCellDef="let e">
-          <span class="badge" [attr.data-c]="e.conclusion" *ngIf="e.conclusion">{{ e.conclusion === 'SUCCES' ? 'Succès' : 'Échec' }}</span>
-          <span *ngIf="!e.conclusion">—</span>
-        </td>
-      </ng-container>
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef></th>
-        <td mat-cell *matCellDef="let e"><button mat-icon-button title="Consulter" (click)="ouvrir(e)"><mat-icon>visibility</mat-icon></button></td>
-      </ng-container>
-      <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
-      <tr mat-row *matRowDef="let row; columns: colonnes" (click)="ouvrir(row)" class="ligne"></tr>
-    </table>
-    <div class="vide" *ngIf="!chargement && !evaluations.length">Aucune évaluation.</div>
+  <mat-card class="cal-card" appearance="outlined">
+    <mat-card-content>
+      <div class="cal-empty" *ngIf="chargement"><mat-icon>hourglass_empty</mat-icon><span>Chargement…</span></div>
+
+      <table mat-table [dataSource]="evaluations" *ngIf="!chargement && evaluations.length" class="cal-table">
+        <ng-container matColumnDef="date_appel">
+          <th mat-header-cell *matHeaderCellDef>Date d'appel</th>
+          <td mat-cell *matCellDef="let e">{{ e.date_appel ? (e.date_appel | date: 'dd/MM/yyyy') : '—' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="grille">
+          <th mat-header-cell *matHeaderCellDef>Grille</th>
+          <td mat-cell *matCellDef="let e">{{ e.grille }}</td>
+        </ng-container>
+        <ng-container matColumnDef="type_evaluation">
+          <th mat-header-cell *matHeaderCellDef>Type</th>
+          <td mat-cell *matCellDef="let e">{{ e.type_evaluation }}</td>
+        </ng-container>
+        <ng-container matColumnDef="statut">
+          <th mat-header-cell *matHeaderCellDef>Statut</th>
+          <td mat-cell *matCellDef="let e">{{ e.statut === 'TERMINE' ? 'Terminée' : 'En cours' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="conclusion">
+          <th mat-header-cell *matHeaderCellDef>Conclusion</th>
+          <td mat-cell *matCellDef="let e">
+            <span class="cal-badge" [attr.data-c]="e.conclusion" *ngIf="e.conclusion">{{ e.conclusion === 'SUCCES' ? 'Succès' : 'Échec' }}</span>
+            <span *ngIf="!e.conclusion">—</span>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let e"><button mat-icon-button title="Consulter" (click)="ouvrir(e)"><mat-icon>visibility</mat-icon></button></td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
+        <tr mat-row *matRowDef="let row; columns: colonnes" (click)="ouvrir(row)" class="cal-row-link"></tr>
+      </table>
+
+      <div class="cal-empty" *ngIf="!chargement && !evaluations.length">
+        <mat-icon>fact_check</mat-icon><span>Aucune évaluation</span>
+      </div>
+    </mat-card-content>
   </mat-card>
+</mat-card-content></mat-card>
 </div>

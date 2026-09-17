@@ -1,4 +1,6 @@
 <div class="editeur-grille">
+  <mat-card class="cal-panel"><mat-card-header class="cal-band"><span class="cal-band-title"><mat-icon>grid_view</mat-icon> Éditeur de grille</span></mat-card-header><mat-card-content>
+
   <button mat-button (click)="retour()"><mat-icon>arrow_back</mat-icon> Retour</button>
 
   @if (chargement && !detail) { <p>Chargement…</p> }
@@ -220,4 +222,5 @@
       }
     </mat-accordion>
   }
+</mat-card-content></mat-card>
 </div>

@@ -1,5 +1,7 @@
 <div class="referentiels">
-  <h2>Référentiels d'évaluation</h2>
+  <mat-card class="cal-panel"><mat-card-header class="cal-band"><span class="cal-band-title"><mat-icon>list_alt</mat-icon> Référentiels d'évaluation</span></mat-card-header><mat-card-content>
+
+  
 
   <mat-button-toggle-group [value]="typeActif" class="types">
     @for (t of types; track t.key) {
@@ -58,4 +60,5 @@
       }
     </mat-card-content>
   </mat-card>
+</mat-card-content></mat-card>
 </div>

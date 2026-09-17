@@ -1,75 +1,84 @@
-<div class="cal-liste">
+<div class="cal-page">
   <mat-card>
-    <div class="tete">
-      <div>
-        <h2><mat-icon>tune</mat-icon> Sessions de calibrage</h2>
-        <p class="sous">Harmonisation des évaluateurs : chaque participant évalue les mêmes transactions, confrontées à la référence du jauge.</p>
+    <mat-card-header class="cal-band">
+      <span class="cal-band-title"><mat-icon>tune</mat-icon> Sessions de calibrage</span>
+      <span class="cal-band-actions">
+        <button mat-flat-button (click)="creer()" *appCan="'calibrage.organiser'">
+          <mat-icon>add</mat-icon> Nouvelle session
+        </button>
+      </span>
+    </mat-card-header>
+
+    <mat-card-content>
+      <p class="cal-desc">Harmonisation des évaluateurs : chaque participant examine les mêmes transactions, confrontées à la référence du jauge.</p>
+
+      <div class="cal-filtres-row">
+        <mat-form-field appearance="outline"><mat-label>Site</mat-label>
+          <mat-select [(ngModel)]="filtres.id_site" name="site">
+            <mat-option [value]="null">Tous</mat-option>
+            <mat-option *ngFor="let s of sites" [value]="s.id">{{ s.nom }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Du</mat-label>
+          <input matInput [matDatepicker]="pd" [(ngModel)]="filtres.date_debut" name="dd" />
+          <mat-datepicker-toggle matSuffix [for]="pd"></mat-datepicker-toggle><mat-datepicker #pd></mat-datepicker>
+        </mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Au</mat-label>
+          <input matInput [matDatepicker]="pf" [(ngModel)]="filtres.date_fin" name="df" />
+          <mat-datepicker-toggle matSuffix [for]="pf"></mat-datepicker-toggle><mat-datepicker #pf></mat-datepicker>
+        </mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Statut</mat-label>
+          <mat-select [(ngModel)]="filtres.statut" name="st">
+            <mat-option [value]="undefined">Tous</mat-option>
+            <mat-option *ngFor="let s of statuts" [value]="s.v">{{ s.l }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <span class="sp">
+          <button mat-flat-button color="primary" (click)="charger()"><mat-icon>search</mat-icon> Rechercher</button>
+          <button mat-button (click)="reinitialiser()">Réinitialiser</button>
+        </span>
       </div>
-      <button mat-flat-button color="primary" (click)="creer()" *appCan="'calibrage.organiser'">
-        <mat-icon>add</mat-icon> Nouvelle session
-      </button>
-    </div>
 
-    <div class="filtres">
-      <mat-form-field appearance="outline"><mat-label>Site</mat-label>
-        <mat-select [(ngModel)]="filtres.id_site" name="site">
-          <mat-option [value]="null">Tous</mat-option>
-          <mat-option *ngFor="let s of sites" [value]="s.id">{{ s.nom }}</mat-option>
-        </mat-select>
-      </mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Du</mat-label>
-        <input matInput [matDatepicker]="pd" [(ngModel)]="filtres.date_debut" name="dd" />
-        <mat-datepicker-toggle matSuffix [for]="pd"></mat-datepicker-toggle><mat-datepicker #pd></mat-datepicker>
-      </mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Au</mat-label>
-        <input matInput [matDatepicker]="pf" [(ngModel)]="filtres.date_fin" name="df" />
-        <mat-datepicker-toggle matSuffix [for]="pf"></mat-datepicker-toggle><mat-datepicker #pf></mat-datepicker>
-      </mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Statut</mat-label>
-        <mat-select [(ngModel)]="filtres.statut" name="st">
-          <mat-option [value]="undefined">Tous</mat-option>
-          <mat-option *ngFor="let s of statuts" [value]="s.v">{{ s.l }}</mat-option>
-        </mat-select>
-      </mat-form-field>
-      <button mat-raised-button color="primary" (click)="charger()"><mat-icon>search</mat-icon> Rechercher</button>
-      <button mat-button (click)="reinitialiser()">Réinitialiser</button>
-    </div>
+      <div class="cal-empty" *ngIf="chargement"><mat-icon>hourglass_empty</mat-icon><span>Chargement…</span></div>
 
-    <div class="vide" *ngIf="chargement">Chargement…</div>
-    <table mat-table [dataSource]="sessions" *ngIf="!chargement && sessions.length" class="tab">
-      <ng-container matColumnDef="nom">
-        <th mat-header-cell *matHeaderCellDef>Nom</th>
-        <td mat-cell *matCellDef="let s">{{ s.nom }}</td>
-      </ng-container>
-      <ng-container matColumnDef="date">
-        <th mat-header-cell *matHeaderCellDef>Date</th>
-        <td mat-cell *matCellDef="let s">{{ s.date_calibrage | date: 'dd/MM/yyyy' }}</td>
-      </ng-container>
-      <ng-container matColumnDef="site">
-        <th mat-header-cell *matHeaderCellDef>Site</th>
-        <td mat-cell *matCellDef="let s">{{ s.site }}</td>
-      </ng-container>
-      <ng-container matColumnDef="grille">
-        <th mat-header-cell *matHeaderCellDef>Grille</th>
-        <td mat-cell *matCellDef="let s">{{ s.grille }}</td>
-      </ng-container>
-      <ng-container matColumnDef="statut">
-        <th mat-header-cell *matHeaderCellDef>Statut</th>
-        <td mat-cell *matCellDef="let s"><span class="badge" [attr.data-st]="s.statut">{{ libelleStatut(s.statut) }}</span></td>
-      </ng-container>
-      <ng-container matColumnDef="participants">
-        <th mat-header-cell *matHeaderCellDef>Participants</th>
-        <td mat-cell *matCellDef="let s">{{ s.nb_termines }} / {{ s.nb_participants }} terminés</td>
-      </ng-container>
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef></th>
-        <td mat-cell *matCellDef="let s">
-          <button mat-icon-button matTooltip="Ouvrir" (click)="ouvrirSession(s)"><mat-icon>chevron_right</mat-icon></button>
-        </td>
-      </ng-container>
-      <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
-      <tr mat-row *matRowDef="let row; columns: colonnes" (click)="ouvrirSession(row)" class="ligne"></tr>
-    </table>
-    <div class="vide" *ngIf="!chargement && !sessions.length">Aucune session.</div>
+      <table mat-table [dataSource]="sessions" *ngIf="!chargement && sessions.length" class="cal-table">
+        <ng-container matColumnDef="nom">
+          <th mat-header-cell *matHeaderCellDef>Nom</th>
+          <td mat-cell *matCellDef="let s"><strong>{{ s.nom }}</strong></td>
+        </ng-container>
+        <ng-container matColumnDef="date">
+          <th mat-header-cell *matHeaderCellDef>Date</th>
+          <td mat-cell *matCellDef="let s">{{ s.date_calibrage | date: 'dd/MM/yyyy' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="site">
+          <th mat-header-cell *matHeaderCellDef>Site</th>
+          <td mat-cell *matCellDef="let s">{{ s.site }}</td>
+        </ng-container>
+        <ng-container matColumnDef="grille">
+          <th mat-header-cell *matHeaderCellDef>Grille</th>
+          <td mat-cell *matCellDef="let s">{{ s.grille }}</td>
+        </ng-container>
+        <ng-container matColumnDef="statut">
+          <th mat-header-cell *matHeaderCellDef>Statut</th>
+          <td mat-cell *matCellDef="let s"><span class="cal-badge" [attr.data-st]="s.statut">{{ libelleStatut(s.statut) }}</span></td>
+        </ng-container>
+        <ng-container matColumnDef="participants">
+          <th mat-header-cell *matHeaderCellDef>Participants</th>
+          <td mat-cell *matCellDef="let s">{{ s.nb_termines }} / {{ s.nb_participants }} terminés</td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let s"><button mat-icon-button matTooltip="Ouvrir" (click)="ouvrirSession(s)"><mat-icon>chevron_right</mat-icon></button></td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
+        <tr mat-row *matRowDef="let row; columns: colonnes" (click)="ouvrirSession(row)" class="cal-row-link"></tr>
+      </table>
+
+      <div class="cal-empty" *ngIf="!chargement && !sessions.length">
+        <mat-icon>tune</mat-icon>
+        <span>Aucune session de calibrage</span>
+        <span class="cal-empty-sub" *appCan="'calibrage.organiser'">Cliquez sur « Nouvelle session » pour en créer une.</span>
+      </div>
+    </mat-card-content>
   </mat-card>
 </div>

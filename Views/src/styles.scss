@@ -67,3 +67,177 @@ button.mat-mdc-unelevated-button:disabled {
   color: rgba(0, 0, 0, 0.4) !important;
   box-shadow: none !important;
 }
+
+
+/* ===== Calibrage — mise en page commune (harmonisation) ===== */
+.cal-page { padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
+/* Bandeau d'en-tête orange plein (charte QUALITUS) */
+.cal-header { display: flex; align-items: center; gap: 16px; margin-bottom: 0; flex-wrap: wrap; background: #ff8e36; color: #fff; border-radius: 12px 12px 0 0; padding: 14px 20px; }
+.cal-header .cal-ic { flex: 0 0 auto; width: 46px; height: 46px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,.22); color: #fff; }
+.cal-header .cal-ic mat-icon { font-size: 26px; width: 26px; height: 26px; }
+.cal-header .cal-tt { flex: 1 1 260px; min-width: 0; }
+.cal-header .cal-tt h1, .cal-header .cal-tt h2 { margin: 0; font-size: 22px; font-weight: 500; line-height: 1.2; color: #fff; }
+.cal-header .cal-tt p { margin: 6px 0 0; color: rgba(255,255,255,.92); font-size: 13px; max-width: 680px; line-height: 1.5; }
+.cal-header .cal-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.cal-header .cal-actions .mat-mdc-button { color: #fff; }
+.cal-header .cal-actions .mat-mdc-unelevated-button, .cal-header .cal-actions .mat-mdc-raised-button { background: #fff !important; color: #ff8e36 !important; box-shadow: none; }
+.cal-header .cal-actions .mat-mdc-outlined-button { color: #fff; border-color: rgba(255,255,255,.6); }
+/* cal-header — en-têtes riches (détails : retour, chrono, toggle, badges) */
+.cal-header .mat-mdc-icon-button { color: #fff; }
+.cal-header .cal-actions .mat-mdc-icon-button { color: #fff; }
+.cal-header > .mat-mdc-button, .cal-header .mat-mdc-slide-toggle { color: #fff; }
+.cal-header .chrono, .cal-header .close-tag, .cal-header .info, .cal-header .lecture, .cal-header strong { color: #fff !important; }
+.cal-header .spacer { flex: 1; }
+.cal-header .cal-actions .mat-mdc-outlined-button, .cal-header .cal-actions .mat-mdc-stroked-button { color: #fff; border-color: rgba(255,255,255,.6); }
+
+
+.cal-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px 16px 2px; background: #f7f8fa; border: 1px solid #eceef1; border-radius: 12px; margin-bottom: 16px; }
+.cal-toolbar mat-form-field { width: 190px; }
+.cal-toolbar .cal-tb-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; padding-bottom: 12px; }
+
+.cal-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 56px 16px; color: rgba(0,0,0,.45); text-align: center; }
+.cal-empty mat-icon { font-size: 46px; width: 46px; height: 46px; opacity: .45; }
+.cal-empty .cal-empty-sub { font-size: 13px; color: rgba(0,0,0,.4); }
+
+.cal-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; background: #eceff1; color: #546e7a; white-space: nowrap; }
+.cal-badge[data-st="OUVERTE"] { background: #e3f2fd; color: #1565c0; }
+.cal-badge[data-st="RESULTATS_EN_REVISION"] { background: #fff1e6; color: #b26a00; }
+.cal-badge[data-st="CLOTUREE"] { background: #e8f5e9; color: #2e7d32; }
+.cal-badge[data-c="SUCCES"] { background: #e8f5e9; color: #2e7d32; }
+.cal-badge[data-c="ECHEC"] { background: #ffebee; color: #c62828; }
+.cal-badge[data-e="EN_COURS"] { background: #e3f2fd; color: #1565c0; }
+.cal-badge[data-e="TERMINEE"] { background: #e8f5e9; color: #2e7d32; }
+
+.cal-card { border-radius: 14px !important; }
+.cal-table { width: 100%; }
+.cal-table .mat-mdc-header-cell { background: #f7f8fa; font-weight: 500; color: rgba(0,0,0,.7); }
+.cal-row-link { cursor: pointer; transition: background .12s; }
+.cal-row-link:hover { background: #f5f7fa; }
+
+@media (max-width: 640px) {
+  .cal-page { padding: 14px; }
+  .cal-toolbar mat-form-field { width: 100%; }
+  .cal-toolbar .cal-tb-actions { margin-left: 0; width: 100%; }
+}
+
+/* Calibrage — formulaires & divers partagés */
+.cal-page.cal-narrow { max-width: 860px; }
+.cal-form { display: flex; flex-wrap: wrap; gap: 14px; }
+.cal-form mat-form-field { width: 240px; }
+.cal-form .plein { width: 100%; }
+.cal-form .petit { width: 130px; }
+.cal-duree { display: flex; align-items: center; gap: 12px; width: 100%; flex-wrap: wrap; }
+.cal-duree .lbl { font-size: 13px; color: rgba(0,0,0,.6); }
+.cal-card-actions { padding: 8px 16px 16px !important; gap: 8px; }
+
+
+/* ===== Dialogues Material — modernisation globale ===== */
+.mat-mdc-dialog-surface {
+  border-radius: 16px !important;
+  overflow: hidden;
+}
+.mat-mdc-dialog-container .container { padding: 20px 24px 8px; min-width: 300px; }
+/* Titre de dialogue harmonisé (h4/h5/h6 ou mat-dialog-title) */
+.mat-mdc-dialog-container h4,
+.mat-mdc-dialog-container h5,
+.mat-mdc-dialog-container h6,
+.mat-mdc-dialog-container [mat-dialog-title] {
+  font-size: 18px !important;
+  font-weight: 500 !important;
+  text-align: left !important;
+  margin: 0 0 14px !important;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eceef1;
+  color: rgba(0, 0, 0, 0.87);
+}
+/* Aplatir la carte interne (évite l'effet carte-dans-modal) */
+.mat-mdc-dialog-container mat-card,
+.mat-mdc-dialog-container .mat-mdc-card {
+  box-shadow: none !important;
+  border: none !important;
+  background: transparent !important;
+}
+.mat-mdc-dialog-container .mat-mdc-card-content { padding: 0 !important; }
+/* Zone d'actions alignée à droite avec espace */
+.mat-mdc-dialog-container mat-dialog-actions,
+.mat-mdc-dialog-container .mat-mdc-dialog-actions {
+  padding: 12px 0 4px !important;
+  gap: 8px;
+  justify-content: flex-end;
+}
+/* Boutons pleins un peu plus arrondis dans les dialogues */
+.mat-mdc-dialog-container .mat-mdc-unelevated-button,
+.mat-mdc-dialog-container .mat-mdc-raised-button { border-radius: 10px; }
+
+
+/* ===== Police globale — Poppins (charte QUALITUS) ===== */
+html, body { font-family: 'Poppins', 'Helvetica Neue', Roboto, Arial, sans-serif; }
+body, .mat-typography,
+.mat-mdc-button, .mat-mdc-raised-button, .mat-mdc-unelevated-button, .mat-mdc-outlined-button,
+.mat-mdc-icon-button, .mat-mdc-fab, .mat-mdc-mini-fab,
+.mat-mdc-card, .mat-mdc-form-field, .mat-mdc-input-element, .mat-mdc-select, .mat-mdc-select-panel,
+.mat-mdc-option, .mat-mdc-menu-item, .mat-mdc-table, .mat-mdc-cell, .mat-mdc-header-cell,
+.mat-mdc-dialog-container, .mat-mdc-tab, .mat-mdc-chip, .mat-mdc-slide-toggle,
+.mat-expansion-panel-header, .mat-expansion-panel, .mat-toolbar, .mat-mdc-tooltip,
+input, textarea, select, button, h1, h2, h3, h4, h5, h6 {
+  font-family: 'Poppins', 'Helvetica Neue', Roboto, Arial, sans-serif;
+}
+/* Les polices d'icônes ne doivent JAMAIS être remplacées */
+mat-icon, .material-icons, .mat-icon, i.material-icons {
+  font-family: 'Material Icons' !important;
+}
+
+
+/* ===== Cartes semi-transparentes (fond de bureau visible à travers, comme Utilisateurs) ===== */
+.mat-mdc-card {
+  --mdc-elevated-card-container-color: #ffffff9a;
+  --mdc-outlined-card-container-color: #ffffff9a;
+  background-color: #ffffff9a !important;
+}
+/* Les dialogues restent opaques (lisibilité) — la carte interne d'un dialogue demeure transparente */
+.mat-mdc-dialog-container .mat-mdc-card,
+.mat-mdc-dialog-container mat-card {
+  background-color: transparent !important;
+}
+
+
+/* ===== Bandeau attaché — raccord au contenu (style historique) ===== */
+.cal-header + .cal-toolbar { border-radius: 0; border-top-width: 0; margin-bottom: 0; }
+.cal-header + .mat-mdc-card, .cal-toolbar + .mat-mdc-card,
+.cal-header + .provisoire, .cal-header + .lecture-seule {
+  border-top-left-radius: 0 !important; border-top-right-radius: 0 !important; margin-top: 0;
+}
+/* le panneau (bandeau + contenu) est séparé du reste par un espace unique en bas de la carte */
+.cal-page > .mat-mdc-card { margin-bottom: 16px; }
+
+
+/* ===== Bandeau orange réutilisable (identique Utilisateurs) : mat-card-header dans la carte ===== */
+.mat-mdc-card-header.cal-band {
+  background-color: #ff8e36;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 20px;
+  border-radius: 12px 12px 0 0;
+}
+.cal-band .cal-band-title { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 500; color: #fff; margin: 0; }
+.cal-band .cal-band-title mat-icon { font-size: 26px; width: 26px; height: 26px; }
+.cal-band .cal-band-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.cal-band .cal-band-actions .mat-mdc-unelevated-button, .cal-band .cal-band-actions .mat-mdc-raised-button { background: #fff !important; color: #ff8e36 !important; box-shadow: none; }
+.cal-band .cal-band-actions .mat-mdc-button, .cal-band .cal-band-actions .mat-mdc-icon-button, .cal-band .cal-band-actions .mat-mdc-slide-toggle { color: #fff; }
+.cal-band .cal-band-actions .mat-mdc-outlined-button, .cal-band .cal-band-actions .mat-mdc-stroked-button { color: #fff; border-color: rgba(255,255,255,.6); }
+/* la carte qui porte le bandeau : le contenu vient juste dessous, coins bas arrondis */
+.cal-band + .mat-mdc-card-content { padding-top: 16px; }
+.cal-desc { color: rgba(0,0,0,.6); font-size: 13px; margin: 0 0 12px; }
+.cal-filtres-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px; }
+.cal-filtres-row mat-form-field { width: 190px; }
+.cal-filtres-row .sp { margin-left: auto; display: flex; gap: 8px; }
+
+/* Panneau à bandeau : carte porteuse + cartes internes aplaties */
+.cal-panel { border-radius: 12px; overflow: hidden; }
+.cal-panel > .mat-mdc-card-content { padding: 16px 20px; }
+.cal-panel .mat-mdc-card { background: transparent !important; box-shadow: none !important; border: none !important; }
+.cal-panel .mat-mdc-card-content { padding-left: 0; padding-right: 0; }

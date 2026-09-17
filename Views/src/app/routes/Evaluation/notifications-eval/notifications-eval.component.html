@@ -1,6 +1,8 @@
 <div class="notifications">
+  <mat-card class="cal-panel"><mat-card-header class="cal-band"><span class="cal-band-title"><mat-icon>notifications</mat-icon> Notifications</span></mat-card-header><mat-card-content>
+
   <div class="entete">
-    <h2>Notifications</h2>
+    
     <button mat-stroked-button (click)="toutLire()" [disabled]="!notifications.length">
       <mat-icon>done_all</mat-icon> Tout marquer comme lu
     </button>
@@ -32,4 +34,5 @@
       }
     </mat-card-content>
   </mat-card>
+</mat-card-content></mat-card>
 </div>

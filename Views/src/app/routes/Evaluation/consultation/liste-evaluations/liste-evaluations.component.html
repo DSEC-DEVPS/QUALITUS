@@ -1,7 +1,8 @@
 <div class="liste-evaluations">
-  <div class="entete">
-    <h2>Évaluations</h2>
-    <div class="entete-actions">
+  <mat-card class="cal-panel"><mat-card-header class="cal-band cal-header">
+    <span class="cal-ic"><mat-icon>fact_check</mat-icon></span>
+    <div class="cal-tt"><h2>Évaluations</h2></div>
+    <div class="cal-actions">
       <button mat-button (click)="afficherFiltres = !afficherFiltres"><mat-icon>filter_list</mat-icon> Filtres</button>
       @if (selection.size > 0) {
         <button mat-stroked-button color="warn" (click)="desactiverSelection()">
@@ -12,7 +13,7 @@
         <mat-icon>add</mat-icon> Créer une évaluation
       </a>
     </div>
-  </div>
+  </mat-card-header><mat-card-content>
 
   @if (afficherFiltres) {
     <mat-card class="filtres">
@@ -144,4 +145,5 @@
       }
     </mat-card-content>
   </mat-card>
+</mat-card-content></mat-card>
 </div>
