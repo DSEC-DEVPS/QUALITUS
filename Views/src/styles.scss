@@ -241,3 +241,21 @@ mat-icon, .material-icons, .mat-icon, i.material-icons {
 .cal-panel > .mat-mdc-card-content { padding: 16px 20px; }
 .cal-panel .mat-mdc-card { background: transparent !important; box-shadow: none !important; border: none !important; }
 .cal-panel .mat-mdc-card-content { padding-left: 0; padding-right: 0; }
+
+
+/* ===== Correctifs bandeau + formulaires ===== */
+/* Le bandeau orange remplit la carte jusqu'aux bords (pas de liseré) et colle au contenu */
+.cal-panel { padding: 0 !important; }
+.cal-panel > .mat-mdc-card-header.cal-band { margin: 0 !important; border-radius: 12px 12px 0 0; }
+.cal-panel > .mat-mdc-card-content { padding: 16px 20px 20px !important; }
+.cal-band + .mat-mdc-card-content { padding-top: 16px !important; }
+
+/* Formulaires — champs pleine largeur et bien espacés dans les dialogues */
+.mat-mdc-dialog-container mat-form-field { width: 100%; }
+.mat-mdc-dialog-container .row > [class^='col-'] { margin-bottom: 4px; }
+
+/* Formulaires de page : grille régulière et lisible */
+.cal-form { display: flex; flex-wrap: wrap; gap: 14px 16px; align-items: flex-start; }
+.cal-form mat-form-field { flex: 1 1 240px; width: auto; min-width: 220px; }
+.cal-form .plein { flex-basis: 100%; width: 100%; }
+.cal-form .petit { flex: 0 0 130px; min-width: 0; }
