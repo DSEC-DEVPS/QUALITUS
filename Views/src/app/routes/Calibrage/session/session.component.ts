@@ -43,6 +43,7 @@ export class SessionComponent implements OnInit, OnDestroy {
   private timer: any = null;
 
   vueJauge: 'transactions' | 'evaluateurs' = 'transactions';
+  rafraichissement = false;
 
   txSel: any = null;
   categories: any[] = [];
@@ -113,6 +114,26 @@ export class SessionComponent implements OnInit, OnDestroy {
     });
   }
   get erreursActives(): any[] { return this.categories[this.catActive]?.erreurs || []; }
+
+  // Jauge : à chaque bascule transactions/évaluateurs, recharger l'état courant
+  // (avancement des évaluateurs, états des transactions) sans rafraîchir la page.
+  changerVue(v: 'transactions' | 'evaluateurs'): void {
+    this.vueJauge = v;
+    this.rafraichir();
+  }
+  rafraichir(): void {
+    this.rafraichissement = true;
+    this.service.getTravail(this.id).subscribe({
+      next: d => {
+        this.session = d.session;
+        this.transactions = d.transactions || [];
+        this.participants = d.participants || [];
+        this.referenceComplete = !!d.reference_complete;
+        this.rafraichissement = false;
+      },
+      error: () => { this.rafraichissement = false; },
+    });
+  }
 
   toggle(err: any): void {
     if (this.lectureSeule) return;

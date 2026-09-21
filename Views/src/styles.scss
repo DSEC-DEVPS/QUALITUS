@@ -188,8 +188,10 @@ mat-icon, .material-icons, .mat-icon, i.material-icons {
 }
 
 
-/* ===== Cartes semi-transparentes (fond de bureau visible à travers, comme Utilisateurs) ===== */
-.mat-mdc-card {
+/* ===== Cartes semi-transparentes (fond de bureau visible à travers, comme Utilisateurs) =====
+   On exclut les cartes qui portent leur propre couleur (KPI du dashboard : bg-azure-50,
+   bg-blue-50, bg-orange-50…) pour ne pas écraser leur fond. */
+.mat-mdc-card:not([class*='bg-']) {
   --mdc-elevated-card-container-color: #ffffff9a;
   --mdc-outlined-card-container-color: #ffffff9a;
   background-color: #ffffff9a !important;

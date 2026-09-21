@@ -97,18 +97,6 @@ const createDatabase = async () => {
         dateCreation DATETIME,
         dateModification DATETIME)`;
 
-  const query_Grille = `CREATE TABLE IF NOT EXISTS B_GRILLE (
-        id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
-        nom VARCHAR(50),
-        seuil_charte INT,
-        seuil_client INT,
-        seuil_activite FLOAT,
-        seuil_conformite FLOAT,
-        url LONGTEXT,
-        Etat VARCHAR(50),
-        dateCreation DATETIME,
-        dateModification DATETIME)`;
-
   const query_UTILISATEUR = `CREATE TABLE IF NOT EXISTS B_UTILISATEUR (
        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
        nom VARCHAR(100),
@@ -124,7 +112,7 @@ const createDatabase = async () => {
        id_Fonction INT,
        id_Site INT,
        id_Programme INT,
-       id_Grille INT,
+       id_EvalGrille INT,
        status VARCHAR(50),
        dateCreation DATETIME,
        dateModification DATETIME,
@@ -133,8 +121,7 @@ const createDatabase = async () => {
        UNIQUE(nom_utilisateur),
         FOREIGN KEY(id_Fonction) REFERENCES B_FONCTION(id),
        FOREIGN KEY(id_Site) REFERENCES B_SITE(id),
-       FOREIGN KEY(id_Programme) REFERENCES B_PROGRAMME(id),
-       FOREIGN KEY(id_Grille) REFERENCES B_GRILLE(id)
+       FOREIGN KEY(id_Programme) REFERENCES B_PROGRAMME(id)
        )`;
 
   const query_MOTIF_MA_VOIX_COMPTE = `CREATE TABLE IF NOT EXISTS B_MOTIF_MA_VOIX_COMPTE 
@@ -300,7 +287,6 @@ const createDatabase = async () => {
     await mysqlPool.query(query_Fonction);
     await mysqlPool.query(query_Programme);
     await mysqlPool.query(query_SITE);
-    await mysqlPool.query(query_Grille);
     await mysqlPool.query(query_UTILISATEUR);
     await mysqlPool.query(query_MOTIF_MA_VOIX_COMPTE);
     await mysqlPool.query(query_MA_VOIX_COMPTE);

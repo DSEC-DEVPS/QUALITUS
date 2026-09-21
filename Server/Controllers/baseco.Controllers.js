@@ -19,14 +19,15 @@ const sign_in = async (req, res, next) => {
     id_Fonction,
     id_Site,
     id_Programme,
-    id_Grille,
+    id_EvalGrille,
   } = req.body;
   try {
     const Query =
       "SELECT * FROM B_UTILISATEUR WHERE email=? or nom_utilisateur=? ";
     const resultat = await db.query(Query, [email, nom_utilisateur]);
     if (resultat[0] <= 0) {
-      const Query = `INSERT INTO B_UTILISATEUR (nom,prenom,nom_utilisateur,genre,email,telephone,ville,adresse,password,default_password,id_Fonction,id_Site,id_Programme,id_Grille,status,dateCreation) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
+      // Grille d'évaluation unique = b_eval_grille (colonne id_EvalGrille).
+      const Query = `INSERT INTO B_UTILISATEUR (nom,prenom,nom_utilisateur,genre,email,telephone,ville,adresse,password,default_password,id_Fonction,id_Site,id_Programme,id_EvalGrille,status,dateCreation) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
       const statut = "ACTIF";
       const dateCreation = new Date();
       const password = nom_utilisateur + "Orange" + dateCreation.getFullYear();
@@ -46,7 +47,7 @@ const sign_in = async (req, res, next) => {
         id_Fonction,
         id_Site,
         id_Programme,
-        id_Grille,
+        id_EvalGrille || null,
         statut,
         dateCreation,
       ]);
@@ -166,7 +167,6 @@ const addUtilisateur = async (req, res, next) => {
     id_Fonction,
     id_Site,
     id_Programme,
-    id_Grille,
     id_EvalGrille,
   } = req.body;
 
@@ -182,15 +182,14 @@ const addUtilisateur = async (req, res, next) => {
     !id_Fonction ||
     !id_Site ||
     !id_Programme
-    // S5/socle : id_Grille (b_grille) est DÉPRÉCIÉ (ancien système d'évaluation).
-    // La grille d'évaluation du cahier est id_EvalGrille (b_eval_grille). Plus obligatoire.
+    // Grille d'évaluation = id_EvalGrille (b_eval_grille), non obligatoire.
   ) {
     return res
       .status(403)
       .json({ message: "Veuillez bien renseigner les parametres." });
   }
   try {
-    const Query = `INSERT INTO B_UTILISATEUR (nom,prenom,nom_utilisateur,genre,email,telephone,ville,adresse,password,id_Fonction,id_Site,id_Programme,id_Grille,id_EvalGrille,status,dateCreation) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
+    const Query = `INSERT INTO B_UTILISATEUR (nom,prenom,nom_utilisateur,genre,email,telephone,ville,adresse,password,id_Fonction,id_Site,id_Programme,id_EvalGrille,status,dateCreation) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
     const statut = "ACTIF";
     const dateCreation = new Date();
     const password = nom_utilisateur + "Orange" + dateCreation.getFullYear();
@@ -208,7 +207,6 @@ const addUtilisateur = async (req, res, next) => {
       id_Fonction,
       id_Site,
       id_Programme,
-      id_Grille || null, // déprécié (legacy b_grille)
       id_EvalGrille || null,
       statut,
       dateCreation,
@@ -225,7 +223,7 @@ const getAllUtilisateur = async (req, res, next) => {
   left join B_FONCTION Ft on UT.id_Fonction=Ft.id
   left join B_SITE St on UT.id_Site=St.id 
   left join B_PROGRAMME Pr on UT.id_Programme=Pr.id
-  left join B_GRILLE Gr on UT.id_Grille=Gr.id ORDER BY dateCreation DESC`;
+  left join b_eval_grille Gr on UT.id_EvalGrille=Gr.id ORDER BY dateCreation DESC`;
   try {
     const [resultat] = await db.query(Query);
     return res.status(200).send(resultat);
@@ -288,7 +286,7 @@ const updateUtilisateur = async (req, res, next) => {
     id_Fonction,
     id_Site,
     id_Programme,
-    id_Grille,
+    id_EvalGrille,
     statut,
   } = req.body;
   if (
@@ -302,7 +300,7 @@ const updateUtilisateur = async (req, res, next) => {
     !id_Fonction ||
     !id_Site ||
     !id_Programme ||
-    // id_Grille déprécié (legacy) : plus obligatoire
+    // id_EvalGrille (grille d'évaluation) : non obligatoire
     !statut
   ) {
     return res
@@ -311,7 +309,7 @@ const updateUtilisateur = async (req, res, next) => {
   }
   try {
     const Query = `UPDATE B_UTILISATEUR SET (prenom=?,nom=?,userName=?,email=?,tel=?,id_Role=?,id_Fonction=?,
-      id_Site=?,id_Programme=?,id_Grille=?,statut=?,dateModification=?) where id=?`;
+      id_Site=?,id_Programme=?,id_EvalGrille=?,statut=?,dateModification=?) where id=?`;
     const dateCreationModif = new Date();
     const resultat = await db.query(Query, [
       prenom,
@@ -323,7 +321,7 @@ const updateUtilisateur = async (req, res, next) => {
       id_Fonction,
       id_Site,
       id_Programme,
-      id_Grille,
+      id_EvalGrille,
       statut,
       dateCreationModif,
     ]);
@@ -2050,9 +2048,8 @@ const deleteProgramme = async (req, res, next) => {
 /*controlleurs sur les fonctionnalités de  MA_VOIX_COMPTE*/
 
 const addGrille = async (req, res, next) => {
-    // ⚠ DÉPRÉCIÉ (socle S5) : b_grille = ancien système de grilles d'évaluation.
-  // La grille d'évaluation du cahier est b_eval_grille (module Évaluation).
-  // Conservé pour compatibilité des données ; ne plus utiliser pour de nouvelles évaluations.
+  // Grille unique = b_eval_grille (module Évaluation). Les anciennes routes /grille/*
+  // opèrent désormais sur b_eval_grille (b_grille supprimée).
 const { nom } = req.body;
   if (!nom) {
     return res
@@ -2060,7 +2057,7 @@ const { nom } = req.body;
       .json({ message: "Merci de bien renseigner les parametres" });
   }
   try {
-    const Query = `INSERT INTO B_GRILLE (nom,Etat,dateCreation) VALUES (?,?,?)`;
+    const Query = `INSERT INTO b_eval_grille (nom,etat,dateCreation) VALUES (?,?,?)`;
     const ETAT = "ACTIF";
     const dateCreation = new Date();
     const resultat = await db.query(Query, [nom, ETAT, dateCreation]);
@@ -2073,7 +2070,7 @@ const { nom } = req.body;
 };
 const getAllGrille = async (req, res, next) => {
   try {
-    const Query = `SELECT id,nom from B_GRILLE`;
+    const Query = `SELECT id,nom from b_eval_grille where etat='ACTIF' ORDER BY nom`;
     const [resultat] = await db.query(Query);
     return res.status(200).send(resultat);
   } catch (error) {
@@ -2083,7 +2080,7 @@ const getAllGrille = async (req, res, next) => {
 const getOneGrile = async (req, res, next) => {
   const { id } = req.params;
   try {
-    const Query = `SELECT * from B_GRILLE where id=?`;
+    const Query = `SELECT * from b_eval_grille where id=?`;
     const [resultat] = await db.query(Query, [id]);
     return res.status(200).send(resultat[0]);
   } catch (error) {
@@ -2100,7 +2097,7 @@ const updateGrille = async (req, res, next) => {
       .json({ message: "Merci de bien renseigner les parametres" });
   }
   try {
-    const Query = `UPDATE B_GRILLE SET nom=?,dateModification=? WHERE id=? `;
+    const Query = `UPDATE b_eval_grille SET nom=?,dateModification=? WHERE id=? `;
     const dateModif = new Date();
     const resultat = await db.query(Query, [nom, dateModif, id]);
     return res.status(201).json({ message: "La Grille a été bien modifiée" });
@@ -2116,8 +2113,8 @@ const deleteGrille = async (req, res, next) => {
       .json({ message: "Merci de bien renseigner les parametres" });
   }
   try {
-    const Query = `DELETE  from B_GRILLE WHERE id=? `;
-    const resultat = await db.query(Query, [id]);
+    const Query = `UPDATE b_eval_grille SET etat='INACTIF', dateModification=? WHERE id=? `;
+    const resultat = await db.query(Query, [new Date(), id]);
     return res
       .status(201)
       .json({ message: "Vous avez supprimer cette grille avec succes" });

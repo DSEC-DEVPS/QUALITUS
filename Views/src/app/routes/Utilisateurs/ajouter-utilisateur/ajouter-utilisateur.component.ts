@@ -20,7 +20,7 @@ import { MtxButtonModule } from '@ng-matero/extensions/button';
 import { ToastrService } from 'ngx-toastr';
 import { MatDialogClose, MatDialogRef } from '@angular/material/dialog';
 import { CommonModule, TitleCasePipe } from '@angular/common';
-import { fonction, grille, programme, site } from '@core';
+import { fonction, programme, site } from '@core';
 @Component({
   selector: 'app-forms-elements',
   templateUrl: './ajouter-utilisateur.component.html',
@@ -53,7 +53,6 @@ export class AjouterUtilisateurComponent implements OnInit {
   table_fonction!: fonction[];
   table_programme!: programme[];
   table_site!: site[];
-  table_grille!: grille[];
   table_eval_grille: { id: number; nom: string }[] = [];
   ngOnInit() {
     this.snapForm = this.fb.group({

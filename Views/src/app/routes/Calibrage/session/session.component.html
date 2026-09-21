@@ -89,7 +89,7 @@
 
     <!-- Section droite : listes -->
     <div class="liste-zone">
-      <mat-button-toggle-group *ngIf="role === 'jauge'" [value]="vueJauge" (change)="vueJauge = $event.value" class="switch">
+      <mat-button-toggle-group *ngIf="role === 'jauge'" [value]="vueJauge" (change)="changerVue($event.value)" class="switch">
         <mat-button-toggle value="transactions">Transactions</mat-button-toggle>
         <mat-button-toggle value="evaluateurs">Évaluateurs</mat-button-toggle>
       </mat-button-toggle-group>
@@ -105,6 +105,11 @@
 
       <!-- liste évaluateurs (jauge) -->
       <div class="liste" *ngIf="role === 'jauge' && vueJauge === 'evaluateurs'">
+        <div class="liste-refresh">
+          <button mat-stroked-button (click)="rafraichir()" [disabled]="rafraichissement">
+            <mat-icon>{{ rafraichissement ? 'hourglass_empty' : 'refresh' }}</mat-icon> Actualiser
+          </button>
+        </div>
         <div class="eval-item" *ngFor="let p of participants">
           <div>
             <strong>{{ p.prenom }} {{ p.nom }}</strong>

@@ -49,18 +49,7 @@ CREATE TABLE IF NOT EXISTS B_PROGRAMME (
   dateModification DATETIME
 );
 
-CREATE TABLE IF NOT EXISTS B_GRILLE (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  nom VARCHAR(50),
-  seuil_charte INT,
-  seuil_client INT,
-  seuil_activite FLOAT,
-  seuil_conformite FLOAT,
-  url LONGTEXT,
-  Etat VARCHAR(50),
-  dateCreation DATETIME,
-  dateModification DATETIME
-);
+-- B_GRILLE (ancien système) supprimée : la grille unique est b_eval_grille (module Évaluation).
 
 CREATE TABLE IF NOT EXISTS B_UTILISATEUR (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -77,7 +66,6 @@ CREATE TABLE IF NOT EXISTS B_UTILISATEUR (
   id_Fonction INT,
   id_Site INT,
   id_Programme INT,
-  id_Grille INT,
   id_EvalGrille INT,
   status VARCHAR(50),
   dateCreation DATETIME,
@@ -87,8 +75,8 @@ CREATE TABLE IF NOT EXISTS B_UTILISATEUR (
   UNIQUE(nom_utilisateur),
   FOREIGN KEY(id_Fonction) REFERENCES B_FONCTION(id),
   FOREIGN KEY(id_Site) REFERENCES B_SITE(id),
-  FOREIGN KEY(id_Programme) REFERENCES B_PROGRAMME(id),
-  FOREIGN KEY(id_Grille) REFERENCES B_GRILLE(id)
+  FOREIGN KEY(id_Programme) REFERENCES B_PROGRAMME(id)
+  -- Grille unique : id_EvalGrille -> b_eval_grille (FK ajoutée après création de b_eval_grille)
 );
 
 CREATE TABLE IF NOT EXISTS B_MOTIF_MA_VOIX_COMPTE (
@@ -347,22 +335,9 @@ INSERT INTO B_FONCTION (nom, Role_Associe, Permissions_Associe, Etat, dateCreati
 ('Agent Qualité','R_AQ', 'canAdd,canDelete,canEdit,canRead', 'ACTIF', NOW());
 INSERT INTO B_PROGRAMME (nom, description, Etat, dateCreation) VALUES
 ('7414','Description du programme 7414', 'ACTIF', NOW());  
-INSERT INTO B_GRILLE (nom, Etat, dateCreation) VALUES
-('GRILLE EVALUATION RS', 'ACTIF', NOW()); 
 INSERT INTO B_UTILISATEUR (nom, prenom, nom_utilisateur,genre,email,
-telephone,ville,adresse,password,default_password,id_Fonction ,id_Site,id_Programme,id_Grille,status,dateCreation) VALUES
-('sidibe', 'Diakalia', 'sidibe', 'homme', 'diacksidibe500@gamil.com', 73462937, 'Bamako', '1 rue de la Paix', '$2b$10$T8/EB3/e8CQLus6oG849yesRz1nm23kCMX9yZtBHNjLVczg6ncxAu', '$2b$10$T8/EB3/e8CQLus6oG849yesRz1nm23kCMX9yZtBHNjLVczg6ncxAu', 1, 1, 1, 1, 'ACTIF', NOW());
-INSERT INTO B_GRILLE (nom,Etat,dateCreation) VALUES 
-('GRILLE EVALUATION SCGP', 'ACTIF', NOW()),
-('GRILLE EVALUATION BO', 'ACTIF', NOW()),
-('GRILLE EVALUATION RS', 'ACTIF', NOW()),
-('GRILLE EVALUATION CC 7414', 'ACTIF', NOW()),
-('GRILLE EVALUATION BO 7414', 'ACTIF', NOW()),
-('GRILLE EVALUATION EMAIL', 'ACTIF', NOW()),
-('GRILLE EVALUATION TO 7444', 'ACTIF', NOW()),
-('GRILLE EVALUATION BO 7444', 'ACTIF', NOW()),
-('GRILLE EVALUATION EMAIL 7444', 'ACTIF', NOW()),
-('SONDAGE','ACTIF',NOW());
+telephone,ville,adresse,password,default_password,id_Fonction ,id_Site,id_Programme,status,dateCreation) VALUES
+('sidibe', 'Diakalia', 'sidibe', 'homme', 'diacksidibe500@gamil.com', 73462937, 'Bamako', '1 rue de la Paix', '$2b$10$T8/EB3/e8CQLus6oG849yesRz1nm23kCMX9yZtBHNjLVczg6ncxAu', '$2b$10$T8/EB3/e8CQLus6oG849yesRz1nm23kCMX9yZtBHNjLVczg6ncxAu', 1, 1, 1, 'ACTIF', NOW());
 INSERT INTO B_SLA (source, type, delai, priorite, Etat, dateCreationSla) VALUES
 ('Marketing', 'Promo Recharge', 15, 'P1', 'ACTIF', NOW()),
 ('Marketing', 'Autres Promos', 60, 'P3', 'ACTIF', NOW()),
@@ -994,6 +969,10 @@ CREATE TABLE IF NOT EXISTS b_eval_grille (
   dateCreation DATETIME DEFAULT NULL, dateModification DATETIME DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Grille unique : rattachement utilisateur -> b_eval_grille (créée ci-dessus)
+ALTER TABLE B_UTILISATEUR
+  ADD CONSTRAINT fk_utilisateur_eval_grille FOREIGN KEY (id_EvalGrille) REFERENCES b_eval_grille(id);
+
 CREATE TABLE IF NOT EXISTS b_eval_categorie_erreur (
   id INT AUTO_INCREMENT PRIMARY KEY, id_grille INT NOT NULL, libelle VARCHAR(200) NOT NULL,
   poids DECIMAL(12,6) DEFAULT 0, seuil_reussite DECIMAL(12,6) DEFAULT 0, comparateur VARCHAR(2) DEFAULT '>',
@@ -1073,8 +1052,10 @@ CREATE TABLE IF NOT EXISTS b_eval_bi_option (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS b_evaluation_bi (
-  id INT AUTO_INCREMENT PRIMARY KEY, id_evaluation INT NOT NULL, niveau INT NOT NULL, libelle VARCHAR(255) NOT NULL,
-  FOREIGN KEY (id_evaluation) REFERENCES b_evaluation(id)
+  id INT AUTO_INCREMENT PRIMARY KEY, id_evaluation INT NOT NULL, niveau INT NOT NULL,
+  id_option INT DEFAULT NULL, libelle VARCHAR(255) NOT NULL,
+  FOREIGN KEY (id_evaluation) REFERENCES b_evaluation(id),
+  FOREIGN KEY (id_option) REFERENCES b_eval_bi_option(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 5. COACHING — arborescence unique (F.39quinquies A)
@@ -1093,8 +1074,10 @@ CREATE TABLE IF NOT EXISTS b_eval_coaching_option (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS b_eval_coaching_niveau (
-  id INT AUTO_INCREMENT PRIMARY KEY, id_coaching INT NOT NULL, niveau INT NOT NULL, libelle VARCHAR(255) NOT NULL,
-  FOREIGN KEY (id_coaching) REFERENCES b_eval_coaching(id)
+  id INT AUTO_INCREMENT PRIMARY KEY, id_coaching INT NOT NULL, niveau INT NOT NULL,
+  id_option INT DEFAULT NULL, libelle VARCHAR(255) NOT NULL,
+  FOREIGN KEY (id_coaching) REFERENCES b_eval_coaching(id),
+  FOREIGN KEY (id_option) REFERENCES b_eval_coaching_option(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 6. PLAN D'ACTION (F.39quinquies B)

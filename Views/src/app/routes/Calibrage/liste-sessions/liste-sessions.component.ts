@@ -66,8 +66,16 @@ export class ListeSessionsComponent implements OnInit {
 
   creer(): void { this.router.navigate(['/mon-espace/calibrage/creer']); }
   ouvrirSession(s: CalSessionListe): void {
-    // Brouillon -> préparation (jauge) ; sinon -> écran de session (participant/jauge)
-    const cible = s.statut === 'BROUILLON' ? 'preparer' : 'session';
+    // Brouillon -> préparation (jauge) ; Clôturée -> résultats (jauge ET participants) ;
+    // sinon -> écran de session (participant/jauge)
+    let cible: string;
+    if (s.statut === 'BROUILLON') cible = 'preparer';
+    else if (s.statut === 'CLOTUREE') cible = 'resultats';
+    else cible = 'session';
     this.router.navigate(['/mon-espace/calibrage', cible, s.id]);
+  }
+  voirResultats(s: CalSessionListe, ev: Event): void {
+    ev.stopPropagation();
+    this.router.navigate(['/mon-espace/calibrage/resultats', s.id]);
   }
 }
