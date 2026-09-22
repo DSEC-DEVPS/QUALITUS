@@ -10,9 +10,9 @@
 
     <!-- actions jauge -->
     <ng-container *ngIf="role === 'jauge'">
-      <mat-slide-toggle [checked]="session.visibilite" (change)="basculerVisibilite()"
+      <mat-slide-toggle [checked]="!!session.visibilite" (change)="basculerVisibilite()"
                         matTooltip="Ouvre/ferme l'accès des participants">
-        Visibilité participants
+        Visibilité participants {{ session.visibilite ? '(ouverte)' : '(fermée)' }}
       </mat-slide-toggle>
       <button mat-stroked-button (click)="cloturerReference()" *ngIf="session.statut === 'OUVERTE'">
         <mat-icon>flag</mat-icon> Clôturer la référence
@@ -109,13 +109,37 @@
           <button mat-stroked-button (click)="rafraichir()" [disabled]="rafraichissement">
             <mat-icon>{{ rafraichissement ? 'hourglass_empty' : 'refresh' }}</mat-icon> Actualiser
           </button>
+          <button mat-stroked-button color="primary" *ngIf="session.statut !== 'CLOTUREE' && session.statut !== 'RESULTATS_EN_REVISION'"
+                  (click)="ouvrirAjoutParticipants()">
+            <mat-icon>person_add</mat-icon> Ajouter des participants
+          </button>
         </div>
+
+        <!-- Panneau d'ajout / invitation de participants (session non clôturée) -->
+        <div class="ajout-participants" *ngIf="afficherAjout">
+          <p class="hint">Cochez les évaluateurs à convier. Les nouveaux seront invités automatiquement.</p>
+          <div class="dispo-liste">
+            <mat-checkbox *ngFor="let e of disponibles"
+                          [checked]="estSelectionne(e.id)"
+                          (change)="basculeAjout(e.id, $event.checked)">
+              {{ e.prenom }} {{ e.nom }}
+            </mat-checkbox>
+            <div class="vide" *ngIf="!disponibles.length">Aucun évaluateur disponible sur ce site.</div>
+          </div>
+          <div class="actions">
+            <button mat-button (click)="afficherAjout = false">Annuler</button>
+            <button mat-flat-button color="primary" (click)="enregistrerParticipants()">
+              <mat-icon>save</mat-icon> Enregistrer & inviter
+            </button>
+          </div>
+        </div>
+
         <div class="eval-item" *ngFor="let p of participants">
           <div>
             <strong>{{ p.prenom }} {{ p.nom }}</strong>
             <span class="sub">{{ p.statut_participation }}<span *ngIf="!p.invite"> · non invité</span></span>
           </div>
-          <button mat-icon-button matTooltip="Réinitialiser (si temps écoulé)" (click)="reinitialiser(p)">
+          <button mat-icon-button matTooltip="Réinitialiser la participation" (click)="reinitialiser(p)">
             <mat-icon>restart_alt</mat-icon>
           </button>
         </div>

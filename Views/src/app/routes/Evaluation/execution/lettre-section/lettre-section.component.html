@@ -43,7 +43,19 @@
         } @else { <p class="attente">Coaching pas encore renseigné.</p> }
       }
 
-      @if (lettre.avis_agent) { <h4>Avis de l'agent</h4><p><em>{{ lettre.avis_agent }}</em></p> }
+      <h4>Avis de l'agent</h4>
+      @if (avisModifiable) {
+        <mat-form-field appearance="outline" class="plein avis-champ">
+          <mat-label>Votre avis sur cette évaluation</mat-label>
+          <textarea matInput rows="3" [(ngModel)]="avis" name="avisAgent"></textarea>
+        </mat-form-field>
+        <button mat-raised-button color="primary" [disabled]="enregistrement" (click)="enregistrerAvis()">
+          <mat-icon>save</mat-icon> Enregistrer mon avis
+        </button>
+      } @else {
+        @if (lettre.avis_agent) { <p><em>{{ lettre.avis_agent }}</em></p> }
+        @else { <p class="attente">Aucun avis saisi par l'agent.</p> }
+      }
     </div>
   }
 </div>

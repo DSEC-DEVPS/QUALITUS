@@ -15,7 +15,8 @@
       <ul class="liste">
         @for (s of data.supplementaires; track s.id) {
           <li (click)="ouvrir(s.id)">
-            Évaluation #{{ s.id }} — {{ s.statut }}
+            <span class="lib">Évaluation Supplémentaire {{ s.date_creation | date: 'dd-MM-yyyy HH:mm' }}</span>
+            <span class="stat">{{ s.statut }}</span>
             @if (s.conclusion === 'SUCCES') { <span class="tag succes">Succès</span> }
             @else if (s.conclusion === 'ECHEC') { <span class="tag echec">Échec</span> }
             <mat-icon>chevron_right</mat-icon>

@@ -94,6 +94,9 @@
               <dt>Contexte</dt><dd>{{ detail.evaluation.contexte || '—' }}</dd>
               <dt>Date d'appel</dt><dd>{{ detail.evaluation.date_appel ? (detail.evaluation.date_appel | date: 'dd/MM/yyyy') : '—' }}</dd>
               <dt>Statut</dt><dd>{{ detail.evaluation.statut }}</dd>
+              @if (terminee) {
+                <dt>Statut après évaluation</dt><dd>{{ libelleStatutApres(detail.evaluation.statut_apres_evaluation) }}</dd>
+              }
             </dl>
           </mat-card-content>
         </mat-card>
@@ -144,11 +147,7 @@
               <div class="conclusion-finale" [class.echec]="detail.evaluation.conclusion === 'ECHEC'">
                 Conclusion : <strong>{{ detail.evaluation.conclusion === 'SUCCES' ? 'Succès' : 'Échec' }}</strong>
               </div>
-              <mat-form-field appearance="outline" class="plein">
-                <mat-label>Avis de l'agent</mat-label>
-                <textarea matInput rows="2" [(ngModel)]="detail.evaluation.avis_agent" name="avis"></textarea>
-              </mat-form-field>
-              <button mat-stroked-button (click)="enregistrerAvis()"><mat-icon>save</mat-icon> Enregistrer l'avis</button>
+              <p class="hint-avis"><mat-icon>info</mat-icon> L'avis de l'agent se saisit dans la lettre ci-dessous.</p>
             }
           </mat-card-content>
         </mat-card>
@@ -168,7 +167,8 @@
                   {{ detail.evaluation.conclusion === 'SUCCES' ? 'Lettre de félicitation' : 'Lettre de débriefing' }}
                 </mat-panel-title>
               </mat-expansion-panel-header>
-              <app-lettre-section [idEvaluation]="id" />
+              <app-lettre-section [idEvaluation]="id" [avisModifiable]="detail.viewer.is_agent"
+                                  (avisEnregistre)="onAvisEnregistre($event)" />
             </mat-expansion-panel>
 
             @if (detail.evaluation.conclusion === 'ECHEC') {
@@ -176,22 +176,24 @@
                 <mat-expansion-panel-header>
                   <mat-panel-title><mat-icon>psychology</mat-icon>&nbsp; Coaching</mat-panel-title>
                 </mat-expansion-panel-header>
-                <app-coaching-section [idEvaluation]="id" />
+                <app-coaching-section [idEvaluation]="id" [lectureSeule]="detail.viewer.lecture_seule" />
               </mat-expansion-panel>
 
               <mat-expansion-panel>
                 <mat-expansion-panel-header>
                   <mat-panel-title><mat-icon>checklist</mat-icon>&nbsp; Plan d'action</mat-panel-title>
                 </mat-expansion-panel-header>
-                <app-plan-action-section [idEvaluation]="id" />
+                <app-plan-action-section [idEvaluation]="id" [lectureSeule]="detail.viewer.lecture_seule" />
               </mat-expansion-panel>
 
-              <mat-expansion-panel>
-                <mat-expansion-panel-header>
-                  <mat-panel-title><mat-icon>repeat</mat-icon>&nbsp; Évaluations supplémentaires</mat-panel-title>
-                </mat-expansion-panel-header>
-                <app-supplementaires-section [idEvaluation]="id" />
-              </mat-expansion-panel>
+              @if (!detail.viewer.is_agent) {
+                <mat-expansion-panel>
+                  <mat-expansion-panel-header>
+                    <mat-panel-title><mat-icon>repeat</mat-icon>&nbsp; Évaluations supplémentaires</mat-panel-title>
+                  </mat-expansion-panel-header>
+                  <app-supplementaires-section [idEvaluation]="id" />
+                </mat-expansion-panel>
+              }
             }
           </mat-accordion>
         </mat-card-content>

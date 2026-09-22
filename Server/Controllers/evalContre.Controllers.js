@@ -6,8 +6,19 @@
 // Tables b_eval_contre_evaluation / b_eval_contre_categorie/erreur.
 // =====================================================================
 const db = require("../config/db");
+const { permissionsEffectives } = require("../middlewares/permission");
 
 const num = (v) => (v === null || v === undefined ? 0 : Number(v));
+
+// Droit effectif sur la contre-évaluation : le créateur (responsable) a tous les
+// droits ; sinon il faut la permission dédiée (module CONTRE_EVALUATION).
+const aDroitContre = async (userId, code, estCreateur) => {
+  if (estCreateur) return true;
+  try {
+    const { role, set } = await permissionsEffectives(userId);
+    return role === "R_ADMI" || set.has(code);
+  } catch { return false; }
+};
 const EPS = 0.01; // tolérance d'arrondi (poids DECIMAL(12,6)) — cf. evalExecution
 const reussite = (score, comp, seuil) => (comp === ">=" ? num(score) >= num(seuil) - EPS : num(score) > num(seuil) - EPS);
 
@@ -59,6 +70,8 @@ const creerContre = async (req, res) => {
       const [[e]] = await conn.query(`SELECT * FROM b_evaluation WHERE id=?`, [idInit]);
       if (!e) return { notFound: true };
       if (e.statut !== "TERMINE") return { pasTerminee: true };
+      // Nul ne peut contre-évaluer sa propre évaluation (point cahier / F.42bis).
+      if (Number(e.id_evaluateur) === Number(responsable)) return { propreEval: true };
       const [[dup]] = await conn.query(`SELECT id FROM b_eval_contre_evaluation WHERE id_evaluation_initiale=?`, [idInit]);
       if (dup) return { dejaContre: true };
 
@@ -95,21 +108,25 @@ const creerContre = async (req, res) => {
     });
     if (out.notFound) return res.status(404).json({ message: "Évaluation introuvable." });
     if (out.pasTerminee) return res.status(409).json({ message: "La contre-évaluation ne porte que sur une évaluation terminée." });
+    if (out.propreEval) return res.status(403).json({ message: "Vous ne pouvez pas contre-évaluer votre propre évaluation." });
     if (out.dejaContre) return res.status(409).json({ message: "Cette évaluation a déjà une contre-évaluation." });
     return res.status(201).json({ id: out.id, message: "Contre-évaluation créée." });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors de la création." }); }
 };
 
 // --- Liste (respecte la date de visibilité) -------------------------------
+// Visibilité (point cahier) : le créateur voit toujours ; sinon SEUL l'évaluateur
+// de l'évaluation contre-évaluée la voit, et uniquement une fois terminée + la date
+// de visibilité atteinte. (R_ADMI / R_AQ : accès transverse.)
 const getAllContre = async (req, res) => {
   const userId = req.auth.userId;
   try {
     const role = await getUserRole(userId);
     const where = ["ce.actif=1"];
     const params = [];
-    if (role !== "R_ADMI") {
-      where.push(`(ce.id_responsable=? OR (ce.date_visibilite IS NOT NULL AND ce.date_visibilite<=NOW()
-                  AND e.id_agent IN (SELECT id_AGENT FROM b_r_superviseur_agent WHERE id_SUPERVISEUR=?)))`);
+    if (!["R_ADMI", "R_AQ"].includes(role)) {
+      where.push(`(ce.id_responsable=? OR (ce.statut='TERMINE' AND ce.date_visibilite IS NOT NULL
+                  AND ce.date_visibilite<=NOW() AND e.id_evaluateur=?))`);
       params.push(userId, userId);
     }
     const [rows] = await db.query(
@@ -128,12 +145,46 @@ const getAllContre = async (req, res) => {
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors du chargement." }); }
 };
 
+// --- « Mes contre-évaluations » : celles qui portent sur les évaluations de
+// l'utilisateur connecté (en tant qu'évaluateur), visibles après le délai.
+const getMesContre = async (req, res) => {
+  const userId = req.auth.userId;
+  try {
+    const [rows] = await db.query(
+      `SELECT ce.id, ce.statut, ce.conclusion, ce.date_creation, ce.date_visibilite, ce.date_evaluation,
+              e.id AS id_evaluation_initiale, e.identifiant_appel, ev.nom AS evaluateur_nom, ev.prenom AS evaluateur_prenom,
+              ag.nom AS agent_nom, ag.prenom AS agent_prenom, r.nom AS responsable_nom, r.prenom AS responsable_prenom
+       FROM b_eval_contre_evaluation ce
+       JOIN b_evaluation e ON ce.id_evaluation_initiale=e.id
+       LEFT JOIN b_utilisateur ev ON e.id_evaluateur=ev.id
+       LEFT JOIN b_utilisateur ag ON e.id_agent=ag.id
+       LEFT JOIN b_utilisateur r ON ce.id_responsable=r.id
+       WHERE ce.actif=1 AND e.id_evaluateur=? AND ce.statut='TERMINE'
+         AND ce.date_visibilite IS NOT NULL AND ce.date_visibilite<=NOW()
+       ORDER BY ce.date_evaluation DESC`, [userId]
+    );
+    return res.status(200).json(rows);
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors du chargement." }); }
+};
+
+// Contrôle d'accès au détail d'une contre-évaluation (visibilité)
+const peutVoirContre = async (userId, ce) => {
+  const role = await getUserRole(userId);
+  if (["R_ADMI", "R_AQ"].includes(role)) return true;
+  if (Number(ce.id_responsable) === Number(userId)) return true;
+  // l'évaluateur contre-évalué, une fois la contre-éval terminée et visible
+  const visible = ce.statut === "TERMINE" && ce.date_visibilite && new Date(ce.date_visibilite) <= new Date();
+  return visible && Number(ce.id_evaluateur_init) === Number(userId);
+};
+
 // --- Détail : contre-éval + comparaison avec l'évaluation initiale --------
 const getContre = async (req, res) => {
   const id = req.params.id;
+  const userId = req.auth.userId;
   try {
     const [[ce]] = await db.query(
-      `SELECT ce.*, e.id AS id_eval_init, ev.nom AS evaluateur_nom, ev.prenom AS evaluateur_prenom,
+      `SELECT ce.*, e.id AS id_eval_init, e.id_evaluateur AS id_evaluateur_init,
+              ev.nom AS evaluateur_nom, ev.prenom AS evaluateur_prenom,
               ag.nom AS agent_nom, ag.prenom AS agent_prenom, gr.nom AS grille
        FROM b_eval_contre_evaluation ce
        JOIN b_evaluation e ON ce.id_evaluation_initiale=e.id
@@ -143,6 +194,9 @@ const getContre = async (req, res) => {
        WHERE ce.id=?`, [id]
     );
     if (!ce) return res.status(404).json({ message: "Contre-évaluation introuvable." });
+    if (!(await peutVoirContre(userId, ce))) {
+      return res.status(403).json({ message: "Vous n'avez pas accès à cette contre-évaluation." });
+    }
 
     // cochage initial indexé par id_erreur_origine
     const [initErrs] = await db.query(
@@ -168,11 +222,13 @@ const getContre = async (req, res) => {
 
 const toggleErreur = async (req, res) => {
   const { id, idErreur } = req.params;
+  const uid = req.auth.userId;
   const { coche, commentaire } = req.body;
   try {
     const out = await withTx(async (conn) => {
-      const [[ce]] = await conn.query(`SELECT statut FROM b_eval_contre_evaluation WHERE id=?`, [id]);
+      const [[ce]] = await conn.query(`SELECT statut, id_responsable FROM b_eval_contre_evaluation WHERE id=?`, [id]);
       if (!ce) return { notFound: true };
+      if (Number(ce.id_responsable) !== Number(uid) && (await getUserRole(uid)) !== "R_ADMI") return { forbidden: true };
       if (ce.statut === "TERMINE") return { locked: true };
       const [[er]] = await conn.query(`SELECT id_contre_categorie FROM b_eval_contre_erreur WHERE id=? AND id_contre_evaluation=?`, [idErreur, id]);
       if (!er) return { notFound: true };
@@ -188,6 +244,7 @@ const toggleErreur = async (req, res) => {
       return { id_categorie: er.id_contre_categorie, score_categorie: num(cat.score_obtenu), reussite_categorie: reussite(cat.score_obtenu, cat.comparateur, cat.seuil_reussite), conclusion_live };
     });
     if (out.notFound) return res.status(404).json({ message: "Élément introuvable." });
+    if (out.forbidden) return res.status(403).json({ message: "Réservé au responsable de la contre-évaluation." });
     if (out.locked) return res.status(409).json({ message: "Contre-évaluation terminée : non modifiable." });
     return res.status(200).json(out);
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
@@ -195,10 +252,14 @@ const toggleErreur = async (req, res) => {
 
 const setResolution = async (req, res) => {
   const id = req.params.id;
+  const uid = req.auth.userId;
   const { resolution, synthese, date_visibilite } = req.body;
   try {
-    const [[ce]] = await db.query(`SELECT statut FROM b_eval_contre_evaluation WHERE id=?`, [id]);
+    const [[ce]] = await db.query(`SELECT statut, id_responsable FROM b_eval_contre_evaluation WHERE id=?`, [id]);
     if (!ce) return res.status(404).json({ message: "Introuvable." });
+    if (Number(ce.id_responsable) !== Number(uid) && (await getUserRole(uid)) !== "R_ADMI") {
+      return res.status(403).json({ message: "Réservé au responsable de la contre-évaluation." });
+    }
     if (ce.statut === "TERMINE") return res.status(409).json({ message: "Terminée : non modifiable." });
     await db.query(`UPDATE b_eval_contre_evaluation SET resolution=?, synthese=?, date_visibilite=? WHERE id=?`,
       [resolution || null, synthese !== undefined ? synthese : null, date_visibilite || null, id]);
@@ -208,10 +269,12 @@ const setResolution = async (req, res) => {
 
 const terminerContre = async (req, res) => {
   const id = req.params.id;
+  const uid = req.auth.userId;
   try {
     const out = await withTx(async (conn) => {
       const [[ce]] = await conn.query(`SELECT * FROM b_eval_contre_evaluation WHERE id=?`, [id]);
       if (!ce) return { notFound: true };
+      if (Number(ce.id_responsable) !== Number(uid) && (await getUserRole(uid)) !== "R_ADMI") return { forbidden: true };
       if (ce.statut === "TERMINE") return { deja: true };
       if (!ce.date_visibilite) return { sansVisibilite: true };
       const [cats] = await conn.query(`SELECT score_obtenu, comparateur, seuil_reussite FROM b_eval_contre_categorie WHERE id_contre_evaluation=?`, [id]);
@@ -220,20 +283,50 @@ const terminerContre = async (req, res) => {
       return { conclusion };
     });
     if (out.notFound) return res.status(404).json({ message: "Introuvable." });
+    if (out.forbidden) return res.status(403).json({ message: "Réservé au responsable de la contre-évaluation." });
     if (out.deja) return res.status(409).json({ message: "Déjà terminée." });
     if (out.sansVisibilite) return res.status(400).json({ message: "La date de visibilité est obligatoire avant de terminer." });
     return res.status(200).json({ message: "Contre-évaluation terminée.", conclusion: out.conclusion });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
 
+// Désactiver / réactiver : créateur OU permission dédiée (CONTRE_EVALUATION.DESACTIVER)
 const setActifContre = async (req, res) => {
+  const id = req.params.id;
+  const uid = req.auth.userId;
   try {
-    await db.query(`UPDATE b_eval_contre_evaluation SET actif=? WHERE id=?`, [req.body.actif ? 1 : 0, req.params.id]);
+    const [[ce]] = await db.query(`SELECT id_responsable FROM b_eval_contre_evaluation WHERE id=?`, [id]);
+    if (!ce) return res.status(404).json({ message: "Introuvable." });
+    const estCreateur = Number(ce.id_responsable) === Number(uid);
+    if (!(await aDroitContre(uid, "contre_evaluation.desactiver", estCreateur))) {
+      return res.status(403).json({ message: "Vous n'avez pas le droit de désactiver cette contre-évaluation." });
+    }
+    await db.query(`UPDATE b_eval_contre_evaluation SET actif=? WHERE id=?`, [req.body.actif ? 1 : 0, id]);
     return res.status(200).json({ message: req.body.actif ? "Réactivée." : "Désactivée." });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
 
+// Suppression définitive : créateur OU permission dédiée (CONTRE_EVALUATION.SUPPRIMER)
+const supprimerContre = async (req, res) => {
+  const id = req.params.id;
+  const uid = req.auth.userId;
+  try {
+    const [[ce]] = await db.query(`SELECT id_responsable FROM b_eval_contre_evaluation WHERE id=?`, [id]);
+    if (!ce) return res.status(404).json({ message: "Introuvable." });
+    const estCreateur = Number(ce.id_responsable) === Number(uid);
+    if (!(await aDroitContre(uid, "contre_evaluation.supprimer", estCreateur))) {
+      return res.status(403).json({ message: "Vous n'avez pas le droit de supprimer cette contre-évaluation." });
+    }
+    await withTx(async (conn) => {
+      await conn.query(`DELETE FROM b_eval_contre_erreur WHERE id_contre_evaluation=?`, [id]);
+      await conn.query(`DELETE FROM b_eval_contre_categorie WHERE id_contre_evaluation=?`, [id]);
+      await conn.query(`DELETE FROM b_eval_contre_evaluation WHERE id=?`, [id]);
+    });
+    return res.status(200).json({ message: "Contre-évaluation supprimée." });
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
+};
+
 module.exports = {
-  getEvaluateursBySite, getEvaluationsByEvaluateur, creerContre, getAllContre, getContre,
-  toggleErreur, setResolution, terminerContre, setActifContre,
+  getEvaluateursBySite, getEvaluationsByEvaluateur, creerContre, getAllContre, getMesContre, getContre,
+  toggleErreur, setResolution, terminerContre, setActifContre, supprimerContre,
 };

@@ -255,6 +255,32 @@ const setAppreciation = async (req, res) => {
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
 
+// PUT commentaire du jauge sur une erreur de SA référence (révision) — le jauge
+// ne peut modifier QUE ses propres commentaires (jamais ceux des participants).
+const setCommentaireJauge = async (req, res) => {
+  const id = req.params.id;
+  const uid = req.auth.userId;
+  const { id_transaction, id_erreur_origine, commentaire } = req.body;
+  if (!id_transaction || id_erreur_origine == null) {
+    return res.status(400).json({ message: "Paramètres invalides." });
+  }
+  try {
+    const ctx = await contexte(db, id, uid);
+    if (ctx.notFound || ctx.role !== "jauge") return res.status(403).json({ message: "Réservé au jauge." });
+    if (ctx.s.statut === "CLOTUREE") return res.status(409).json({ message: "Session clôturée." });
+    const [[refEval]] = await db.query(
+      "SELECT id FROM b_cal_evaluation WHERE id_session=? AND id_transaction=? AND est_reference=1", [id, id_transaction]
+    );
+    if (!refEval) return res.status(404).json({ message: "Référence introuvable." });
+    const [r] = await db.query(
+      "UPDATE b_cal_evaluation_erreur SET commentaire=? WHERE id_cal_evaluation=? AND id_erreur_origine=?",
+      [commentaire !== undefined ? commentaire : null, refEval.id, id_erreur_origine]
+    );
+    if (r.affectedRows === 0) return res.status(404).json({ message: "Erreur introuvable." });
+    return res.status(200).json({ message: "Commentaire enregistré." });
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
+};
+
 // PUT conclusions de session (jauge)
 const setConclusions = async (req, res) => {
   const id = req.params.id;
@@ -298,5 +324,5 @@ const validerSession = async (req, res) => {
 };
 
 module.exports = {
-  getResultats, getConfrontation, modifierCote, setAppreciation, setConclusions, validerSession,
+  getResultats, getConfrontation, modifierCote, setAppreciation, setCommentaireJauge, setConclusions, validerSession,
 };

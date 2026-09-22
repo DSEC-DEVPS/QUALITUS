@@ -131,12 +131,16 @@ export class ExecuterEvaluationComponent implements OnInit {
     });
   }
 
-  enregistrerAvis(): void {
-    if (!this.detail) return;
-    this.service.setAvis(this.id, this.detail.evaluation.avis_agent || '').subscribe({
-      next: () => this.toastr.success('Avis enregistré.'),
-      error: err => this.toastr.error(err?.error?.message || 'Erreur.'),
-    });
+  onAvisEnregistre(statutApres: string): void {
+    if (this.detail) this.detail.evaluation.statut_apres_evaluation = statutApres;
+  }
+
+  libelleStatutApres(v: string | null): string {
+    switch (v) {
+      case 'FELICITER': return 'Féliciter';
+      case 'DEBRIEFER': return 'Débriefer';
+      default: return 'Non validé';
+    }
   }
 
   retour(): void { this.location.back(); }

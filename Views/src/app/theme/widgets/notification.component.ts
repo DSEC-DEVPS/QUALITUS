@@ -283,7 +283,9 @@ import { Subject, takeUntil } from 'rxjs';
       <mat-menu #menu="matMenu" class="notification-menu">
         <div class="notification-header" (click)="$event.stopPropagation()">
           <span class="notification-title">Notifications</span>
-        
+          @if (unreadCount > 0) {
+            <button mat-button class="mark-all-read" (click)="markAllAsRead()">Tout marquer comme lu</button>
+          }
         </div>
         
         <mat-nav-list class="notification-list">
@@ -294,25 +296,27 @@ import { Subject, takeUntil } from 'rxjs';
             </div>
           } @else {
             @for (notification of table_notification; track notification.id) {
-              <mat-list-item 
-                (click)="displayFiche(notification)"
+              <mat-list-item
+                (click)="openNotification(notification)"
                 [class.unread]="!notification.isRead"
               >
-                <mat-icon 
-                  class="m-x-16" 
-                  matListItemIcon 
+                <mat-icon
+                  class="m-x-16"
+                  matListItemIcon
                   [style.color]="notification.isRead ? '#9e9e9e' : '#ff8e36'"
                 >
-                  {{ notification.isRead ? 'check_circle' : 'info' }}
+                  {{ iconFor(notification) }}
                 </mat-icon>
                 <span matListItemTitle>
                   <span class="notification-author">
-                    {{ notification.nom | titlecase }} a ajouté la fiche
-                  </span>
-                  <br />
-                  <span class="notification-title-text">
                     {{ notification.titre }}
                   </span>
+                  @if (notification.message) {
+                    <br />
+                    <span class="notification-title-text">
+                      {{ notification.message }}
+                    </span>
+                  }
                 </span>
                 @if (!notification.isRead) {
                   <span class="unread-indicator"></span>
@@ -474,17 +478,16 @@ export class NotificationComponent implements OnInit, OnDestroy {
     // Optionnel : vous pouvez ajouter une logique ici si nécessaire
   }
 
-  markAsReadOnHover(notification: Notification): void {
+  markAsRead(notification: Notification): void {
     if (!notification.isRead) {
       notification.isRead = true;
       this.unreadCount = Math.max(0, this.unreadCount - 1);
-      
-      this.userService.markNotificationAsRead(notification.id)
+
+      this.userService.markNotificationAsRead(notification.id, notification.source || 'CORE')
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           error: error => {
             console.error('Erreur lors du marquage de la notification:', error);
-            // Restaurer l'état en cas d'erreur
             notification.isRead = false;
             this.unreadCount++;
           }
@@ -493,12 +496,8 @@ export class NotificationComponent implements OnInit, OnDestroy {
   }
 
   markAllAsRead(): void {
-    const unreadNotifications = this.table_notification.filter(n => !n.isRead);
-    const notificationIds = unreadNotifications.map(n => n.id);
-
-    if (notificationIds.length === 0) return;
-
-    this.userService.markAllNotificationsAsRead(notificationIds)
+    if (this.unreadCount === 0) return;
+    this.userService.markAllNotificationsAsRead([])
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -511,11 +510,26 @@ export class NotificationComponent implements OnInit, OnDestroy {
       });
   }
 
-  displayFiche(notification: Notification): void {
-    // Marquer comme lu avant de naviguer
-    if (!notification.isRead) {
-      this.markAsReadOnHover(notification);
+  iconFor(notification: Notification): string {
+    if (notification.isRead) return 'check_circle';
+    switch (notification.nature_objet) {
+      case 'EVALUATION': return 'fact_check';
+      case 'CONTRE_EVALUATION': return 'compare_arrows';
+      case 'CALIBRAGE': return 'tune';
+      case 'QUIZ': return 'quiz';
+      case 'PLAN_ACTION': return 'checklist';
+      case 'COACHING': return 'psychology';
+      default: return notification.id_FICHE ? 'description' : 'notifications';
     }
-    this.router.navigateByUrl(`lecture-fiche/${notification.id_FICHE}`);
+  }
+
+  // Redirige vers l'objet concerné (url unifiée) et marque comme lu
+  openNotification(notification: Notification): void {
+    this.markAsRead(notification);
+    if (notification.url) {
+      this.router.navigateByUrl(notification.url);
+    } else if (notification.id_FICHE) {
+      this.router.navigateByUrl(`/lecture-fiche/${notification.id_FICHE}`);
+    }
   }
 }

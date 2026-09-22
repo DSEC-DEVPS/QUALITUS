@@ -11,6 +11,7 @@ router.get("/calibrage/session/:id/confrontation/:pid", auth, permission("CALIBR
 // Révision (jauge)
 router.put("/calibrage/session/:id/cote", auth, permission("CALIBRAGE", "ORGANISER"), c.modifierCote);
 router.put("/calibrage/session/:id/appreciation", auth, permission("CALIBRAGE", "ORGANISER"), c.setAppreciation);
+router.put("/calibrage/session/:id/commentaire-jauge", auth, permission("CALIBRAGE", "ORGANISER"), c.setCommentaireJauge);
 router.put("/calibrage/session/:id/conclusions", auth, permission("CALIBRAGE", "ORGANISER"), c.setConclusions);
 router.post("/calibrage/session/:id/valider", auth, permission("CALIBRAGE", "ORGANISER"), c.validerSession);
 

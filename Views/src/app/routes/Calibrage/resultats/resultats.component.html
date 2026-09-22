@@ -82,12 +82,31 @@
             </div>
             <div class="err-detail">
               <div class="ref-txt" *ngIf="e.referentiel"><strong>Référentiel :</strong> {{ e.referentiel }}</div>
-              <div class="comm" *ngIf="e.participant?.commentaire"><strong>Commentaire participant :</strong> {{ e.participant.commentaire }}</div>
-              <mat-form-field appearance="outline" class="appr">
-                <mat-label>Appréciation du jauge</mat-label>
-                <textarea matInput rows="2" [(ngModel)]="e.reference.appreciation_jauge" [disabled]="!modifiable"
+
+              <!-- Commentaire du jauge (son propre constat) : éditable en révision, sinon lecture -->
+              <mat-form-field appearance="outline" class="appr" *ngIf="modifiable">
+                <mat-label>Commentaire du jauge</mat-label>
+                <textarea matInput rows="2" [(ngModel)]="e.reference.commentaire"
+                          (blur)="enregistrerCommentaireJauge(t, e)"></textarea>
+              </mat-form-field>
+              <div class="comm jauge" *ngIf="!modifiable">
+                <strong>Commentaire du jauge :</strong> {{ e.reference?.commentaire || '—' }}
+              </div>
+
+              <!-- Commentaire du participant (jamais modifiable par le jauge) -->
+              <div class="comm part">
+                <strong>Commentaire du participant :</strong> {{ e.participant?.commentaire || '—' }}
+              </div>
+
+              <!-- Appréciation complémentaire du jauge (révision) -->
+              <mat-form-field appearance="outline" class="appr" *ngIf="modifiable">
+                <mat-label>Appréciation complémentaire du jauge</mat-label>
+                <textarea matInput rows="2" [(ngModel)]="e.reference.appreciation_jauge"
                           (blur)="enregistrerAppreciation(t, e)"></textarea>
               </mat-form-field>
+              <div class="comm appr-ro" *ngIf="!modifiable && e.reference?.appreciation_jauge">
+                <strong>Appréciation du jauge :</strong> {{ e.reference.appreciation_jauge }}
+              </div>
             </div>
           </div>
         </div>

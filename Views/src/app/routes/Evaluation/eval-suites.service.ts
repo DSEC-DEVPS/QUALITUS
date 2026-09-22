@@ -81,6 +81,10 @@ export class EvalSuitesService {
   getLettre(idEval: number): Observable<LettreData> {
     return this.http.get<LettreData>(`/api/v1/eval/evaluation/${idEval}/lettre`);
   }
+  // Avis de l'agent (saisi depuis la lettre) — met aussi à jour statut_apres_evaluation
+  setAvis(idEval: number, avis: string): Observable<{ message: string; statut_apres_evaluation: string }> {
+    return this.http.put<{ message: string; statut_apres_evaluation: string }>(`/api/v1/eval/evaluation/${idEval}/avis`, { avis });
+  }
 
   // Utilisateurs (porteur / contributeurs)
   getUtilisateurs(): Observable<any[]> {

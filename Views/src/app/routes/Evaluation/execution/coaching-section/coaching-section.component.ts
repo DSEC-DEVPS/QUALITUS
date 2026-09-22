@@ -25,6 +25,7 @@ export class CoachingSectionComponent implements OnChanges {
   private readonly toastr = inject(ToastrService);
 
   @Input() idEvaluation!: number;
+  @Input() lectureSeule = false;
 
   eligible = false;
   idCoaching = 0;

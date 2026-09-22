@@ -22,8 +22,8 @@ export class UserService {
    * Marque une notification comme lue
    * @param notificationId - L'ID de la notification à marquer comme lue
    */
-  markNotificationAsRead(notificationId: number): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/notifications/${notificationId}/read`, {});
+  markNotificationAsRead(notificationId: number, source: string = 'CORE'): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/notifications/${notificationId}/read?source=${source}`, {});
   }
 
   /**

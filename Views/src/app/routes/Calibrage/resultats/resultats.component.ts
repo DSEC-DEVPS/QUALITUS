@@ -101,6 +101,14 @@ export class ResultatsComponent implements OnInit {
       appreciation: err.reference.appreciation_jauge || '',
     }).subscribe({ next: () => this.toastr.success('Appréciation enregistrée.'), error: () => this.toastr.error('Erreur.') });
   }
+  // Le jauge ne modifie que SON propre commentaire (côté référence)
+  enregistrerCommentaireJauge(t: any, err: any): void {
+    if (!this.modifiable) return;
+    this.service.setCommentaireJauge(this.id, {
+      id_transaction: t.transaction.id, id_erreur_origine: err.id_erreur_origine,
+      commentaire: err.reference?.commentaire || '',
+    }).subscribe({ next: () => this.toastr.success('Commentaire enregistré.'), error: () => this.toastr.error('Erreur.') });
+  }
 
   private rafraichir(): void {
     // recalcul immédiat : table + confrontation courante

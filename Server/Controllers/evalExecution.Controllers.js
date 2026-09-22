@@ -82,7 +82,28 @@ const getEvaluationDetail = async (req, res) => {
     const conclusion_live = cats.length
       ? (cats.every((c) => c.reussite) ? "SUCCES" : "ECHEC")
       : "SUCCES";
-    return res.status(200).json({ evaluation: e, categories: cats, conclusion_live });
+
+    // Rôle du visualiseur vis-à-vis de cette évaluation (droits d'affichage)
+    const uid = req.auth.userId;
+    const [[roleRow]] = await db.query(
+      `SELECT f.Role_Associe AS role FROM b_utilisateur u JOIN b_fonction f ON u.id_Fonction=f.id WHERE u.id=?`, [uid]
+    );
+    const role = roleRow ? roleRow.role : null;
+    const is_agent = e.id_agent != null && Number(e.id_agent) === Number(uid);
+    const is_evaluateur = e.id_evaluateur != null && Number(e.id_evaluateur) === Number(uid);
+    let is_superviseur = false;
+    if (e.id_agent) {
+      const [[sup]] = await db.query(
+        `SELECT 1 AS ok FROM b_r_superviseur_agent WHERE id_SUPERVISEUR=? AND id_AGENT=?`, [uid, e.id_agent]
+      );
+      is_superviseur = !!sup;
+    }
+    // L'agent évalué ne fait que consulter (coaching/plan en lecture seule,
+    // section « évaluations supplémentaires » masquée).
+    const lecture_seule = is_agent && !is_evaluateur && !is_superviseur && !["R_ADMI", "R_AQ", "R_RO"].includes(role);
+    const viewer = { role, is_agent, is_evaluateur, is_superviseur, lecture_seule };
+
+    return res.status(200).json({ evaluation: e, categories: cats, conclusion_live, viewer });
   } catch (err) { console.log(err); return res.status(500).json({ message: "Erreur lors du chargement." }); }
 };
 
@@ -211,13 +232,30 @@ const terminerEvaluation = async (req, res) => {
 // ---------------------------------------------------------------------
 const setAvisAgent = async (req, res) => {
   const id = req.params.id;
+  const uid = req.auth.userId;
   const { avis } = req.body;
   try {
-    const [[e]] = await db.query(`SELECT id FROM b_evaluation WHERE id=?`, [id]);
+    const [[e]] = await db.query(`SELECT id, id_agent, statut, conclusion FROM b_evaluation WHERE id=?`, [id]);
     if (!e) return res.status(404).json({ message: "Évaluation introuvable." });
-    await db.query(`UPDATE b_evaluation SET avis_agent=?, date_avis=NOW() WHERE id=?`, [avis || null, id]);
+    if (e.statut !== "TERMINE") return res.status(409).json({ message: "L'avis n'est saisissable qu'après clôture." });
+    // L'avis appartient à l'agent évalué (les admins peuvent le saisir aussi).
+    const [[roleRow]] = await db.query(
+      `SELECT f.Role_Associe AS role FROM b_utilisateur u JOIN b_fonction f ON u.id_Fonction=f.id WHERE u.id=?`, [uid]
+    );
+    const role = roleRow ? roleRow.role : null;
+    const estAgent = e.id_agent != null && Number(e.id_agent) === Number(uid);
+    if (!estAgent && role !== "R_ADMI") {
+      return res.status(403).json({ message: "Seul l'agent évalué peut enregistrer son avis." });
+    }
+    // Statut après évaluation : dérivé de la nature de la lettre (conclusion).
+    // Félicitation (Succès) -> FELICITER ; Débriefing (Échec) -> DEBRIEFER.
+    const statutApres = e.conclusion === "SUCCES" ? "FELICITER" : "DEBRIEFER";
+    await db.query(
+      `UPDATE b_evaluation SET avis_agent=?, date_avis=NOW(), statut_apres_evaluation=? WHERE id=?`,
+      [avis || null, statutApres, id]
+    );
     await db.query(`INSERT INTO b_evaluation_avis_histo (id_evaluation, avis, dateSaisie) VALUES (?, ?, NOW())`, [id, avis || null]);
-    return res.status(200).json({ message: "Avis enregistré." });
+    return res.status(200).json({ message: "Avis enregistré.", statut_apres_evaluation: statutApres });
   } catch (err) { console.log(err); return res.status(500).json({ message: "Erreur." }); }
 };
 

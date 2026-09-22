@@ -947,109 +947,87 @@ const addNotification = async (req, res, next) => {
     res.status(500).json({ message: "Error request." });
   }
 };
+// Cloche unifiée (point cahier) : agrège TOUTES les notifications de l'utilisateur,
+// tous modules confondus — fiches + évaluations/calibrage (B_NOTIFICATION) et quiz
+// (B_QZ_NOTIFICATION) — avec une url de redirection vers l'objet concerné.
 const getAllNotification = async (req, res) => {
   try {
-    const userId = req.auth.userId; // Depuis votre middleware d'authentification
-
+    const userId = req.auth.userId;
     if (!userId) {
       return res.status(401).json({ error: "Non authentifié" });
     }
-
-    // Exemple avec une base de données SQL
     const [notifications] = await db.query(
       `
-      SELECT 
-        BN.id,
-        BN.id_FICHE,
-        f.titre,
-        IF(n.id_NOTIFICATION is null,0,1 ) isRead,
-        BN.dateReception as createdAt,
-        u.nom
-      FROM B_NOTIFICATION BN 
-      LEFT JOIN (select id_NOTIFICATION,createdBy from B_notifications where createdBy=?) n
-      on BN.id=n.id_NOTIFICATION
-      INNER JOIN B_UTILISATEUR u on BN.id_UTILISATEUR=u.ID
-      INNER JOIN B_FICHE f on BN.id_FICHE=f.id
-      ORDER BY n.createdBy ASC
-    `,
-      [userId],
+      SELECT * FROM (
+        SELECT bn.id,
+               'CORE' AS source,
+               bn.titre,
+               bn.message,
+               bn.type,
+               bn.nature_objet,
+               bn.id_objet,
+               bn.id_FICHE,
+               COALESCE(NULLIF(bn.url, ''),
+                        IF(bn.id_FICHE IS NOT NULL, CONCAT('/lecture-fiche/', bn.id_FICHE), NULL)) AS url,
+               bn.lu AS isRead,
+               bn.dateReception AS createdAt
+          FROM B_NOTIFICATION bn
+         WHERE bn.id_UTILISATEUR = ?
+        UNION ALL
+        SELECT qn.id,
+               'QUIZ' AS source,
+               qn.titre,
+               qn.message,
+               'QUIZ' AS type,
+               'QUIZ' AS nature_objet,
+               qn.id_Quiz AS id_objet,
+               NULL AS id_FICHE,
+               CONCAT('/mon-espace/quiz/participer/', qn.id_Quiz) AS url,
+               qn.lu AS isRead,
+               qn.dateCreation AS createdAt
+          FROM B_QZ_NOTIFICATION qn
+         WHERE qn.id_UTILISATEUR = ?
+      ) t
+      ORDER BY t.createdAt DESC
+      `,
+      [userId, userId],
     );
-    console.log(notifications);
     return res.status(200).json(notifications);
   } catch (error) {
     console.error("Erreur lors de la récupération des notifications:", error);
     res.status(500).json({ error: "Erreur serveur" });
   }
 };
+// Marque UNE notification comme lue (route par source : CORE = B_NOTIFICATION, QUIZ = B_QZ_NOTIFICATION)
 const redOneNotifcation = async (req, res) => {
   try {
     const notificationId = parseInt(req.params.id);
     const userId = req.auth.userId;
-
+    const source = String(req.query.source || req.body.source || "CORE").toUpperCase();
     if (!userId) {
       return res.status(401).json({ error: "Non authentifié" });
     }
-
-    // Vérifier que la notification appartient à l'utilisateur
-    const [result1] = await db.query(
-      `Select F.id, F.titre from B_NOTIFICATION BN ,B_FICHE F where BN.id_FICHE=F.id and BN.id=?`,
-      [notificationId],
-    );
-    const createdAt = new Date();
-    const titre = result1[0].titre;
-    const isRead = true;
-    const id_FICHE = result1[0].id;
-    const result = await db.query(
-      `
-      INSERT INTO B_notifications (id_UTILISATEUR,id_NOTIFICATION,id_FICHE,titre,createdBy,isRead,createdAt,readAt) VALUES(?,?,?,?,?,?,?,?) `,
-      [
-        userId,
-        notificationId,
-        id_FICHE,
-        titre,
-        userId,
-        isRead,
-        createdAt,
-        createdAt,
-      ],
-    );
-    /* if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Notification non trouvée' });
-    }*/
-
+    if (source === "QUIZ") {
+      await db.query(`UPDATE B_QZ_NOTIFICATION SET lu=1 WHERE id=? AND id_UTILISATEUR=?`, [notificationId, userId]);
+    } else {
+      await db.query(`UPDATE B_NOTIFICATION SET lu=1, dateLecture=NOW() WHERE id=? AND id_UTILISATEUR=?`, [notificationId, userId]);
+    }
     res.json({ success: true, message: "Notification marquée comme lue" });
   } catch (error) {
     console.error("Erreur lors du marquage de la notification:", error);
     res.status(500).json({ error: "Erreur serveur" });
   }
 };
+// Marque TOUTES les notifications non lues de l'utilisateur comme lues (tous modules)
 const redAllNotification = async (req, res) => {
   try {
-    const { ids } = req.body;
     const userId = req.auth.userId;
-    console.log(ids);
     if (!userId) {
       return res.status(401).json({ error: "Non authentifié" });
     }
-
-    if (!Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ error: "IDs invalides" });
-    }
-
-    // Marquer toutes les notifications spécifiées comme lues
-    const result = await db.query(
-      `
-      UPDATE B_notifications 
-      SET isRead = true, readAt = NOW()
-      WHERE id IN (?) AND id_UTILISATEUR = ?
-    `,
-      [ids, userId],
-    );
-
-    res.json({
-      success: true,
-      message: `${result.affectedRows} notification(s) marquée(s) comme lue(s)`,
-    });
+    await db.query(`UPDATE B_NOTIFICATION SET lu=1, dateLecture=NOW() WHERE id_UTILISATEUR=? AND lu=0`, [userId]);
+    await db.query(`UPDATE B_QZ_NOTIFICATION SET lu=1 WHERE id_UTILISATEUR=? AND lu=0`, [userId]);
+    res.json({ success: true, message: "Toutes les notifications ont été marquées comme lues" });
   } catch (error) {
     console.error("Erreur lors du marquage des notifications:", error);
     res.status(500).json({ error: "Erreur serveur" });

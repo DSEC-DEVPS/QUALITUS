@@ -186,14 +186,21 @@ const setParticipants = async (req, res) => {
     const out = await withTx(async (conn) => {
       const [[s]] = await conn.query("SELECT statut, id_jauge FROM b_cal_session WHERE id=?", [id]);
       if (!s) return { notFound: true };
-      if (s.statut !== "BROUILLON") return { locked: true };
+      // On peut gérer les participants tant que la session n'est pas en révision/clôturée
+      // (le jauge peut donc en ajouter/inviter après l'ouverture).
+      if (["RESULTATS_EN_REVISION", "CLOTUREE"].includes(s.statut)) return { locked: true };
       const cibles = ids.filter((x) => Number(x) !== s.id_jauge);
-      const [existants] = await conn.query("SELECT id_evaluateur FROM b_cal_participant WHERE id_session=?", [id]);
+      const [existants] = await conn.query(
+        "SELECT id_evaluateur, statut_participation FROM b_cal_participant WHERE id_session=?", [id]
+      );
       const setExist = new Set(existants.map((x) => x.id_evaluateur));
       const setCible = new Set(cibles.map(Number));
-      // suppressions
-      for (const e of existants) if (!setCible.has(e.id_evaluateur))
+      // suppressions : jamais un participant qui a déjà commencé (protège sa progression)
+      for (const e of existants) {
+        if (setCible.has(e.id_evaluateur)) continue;
+        if (e.statut_participation && e.statut_participation !== "NON_COMMENCEE") continue;
         await conn.query("DELETE FROM b_cal_participant WHERE id_session=? AND id_evaluateur=?", [id, e.id_evaluateur]);
+      }
       // ajouts
       for (const e of setCible) if (!setExist.has(e))
         await conn.query(
@@ -203,7 +210,7 @@ const setParticipants = async (req, res) => {
       return { ok: true };
     });
     if (out.notFound) return res.status(404).json({ message: "Session introuvable." });
-    if (out.locked) return res.status(409).json({ message: "Participants non modifiables (session ouverte)." });
+    if (out.locked) return res.status(409).json({ message: "Participants non modifiables (session en révision ou clôturée)." });
     return res.status(200).json({ message: "Participants mis à jour." });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };

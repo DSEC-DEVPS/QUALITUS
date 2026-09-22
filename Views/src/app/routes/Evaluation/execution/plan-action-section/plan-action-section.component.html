@@ -1,10 +1,14 @@
 <div class="plan-action">
   <div class="entete">
     <h3>Plan d'action</h3>
-    <button mat-stroked-button color="primary" (click)="afficherForm = !afficherForm"><mat-icon>add</mat-icon> Ajouter une action</button>
+    @if (!lectureSeule) {
+      <button mat-stroked-button color="primary" (click)="afficherForm = !afficherForm"><mat-icon>add</mat-icon> Ajouter une action</button>
+    } @else {
+      <span class="info"><mat-icon>visibility</mat-icon> Lecture seule</span>
+    }
   </div>
 
-  @if (afficherForm) {
+  @if (afficherForm && !lectureSeule) {
     <div class="form">
       <mat-form-field appearance="outline"><mat-label>Action</mat-label>
         <mat-select [(ngModel)]="nouvelle.id_action" name="act">
@@ -44,7 +48,7 @@
   @if (lignes.length === 0) {
     <p class="vide">Aucune action pour le moment.</p>
   } @else {
-    <table mat-table [dataSource]="lignes" class="table">
+    <table mat-table [dataSource]="lignes" class="table" [class.lecture]="lectureSeule">
       <ng-container matColumnDef="action">
         <th mat-header-cell *matHeaderCellDef>Action</th>
         <td mat-cell *matCellDef="let l">{{ l.action_libelle || '—' }}<br /><small>{{ l.commentaire }}</small></td>
@@ -60,11 +64,15 @@
       <ng-container matColumnDef="statut">
         <th mat-header-cell *matHeaderCellDef>Statut</th>
         <td mat-cell *matCellDef="let l">
-          <mat-form-field appearance="outline" class="mini">
-            <mat-select [(ngModel)]="l.id_statut" (selectionChange)="changerStatut(l)" [name]="'stl' + l.id">
-              @for (s of statuts; track s.id) { <mat-option [value]="s.id">{{ s.libelle }}</mat-option> }
-            </mat-select>
-          </mat-form-field>
+          @if (lectureSeule) {
+            <span>{{ l.statut_libelle || '—' }}</span>
+          } @else {
+            <mat-form-field appearance="outline" class="mini">
+              <mat-select [(ngModel)]="l.id_statut" (selectionChange)="changerStatut(l)" [name]="'stl' + l.id">
+                @for (s of statuts; track s.id) { <mat-option [value]="s.id">{{ s.libelle }}</mat-option> }
+              </mat-select>
+            </mat-form-field>
+          }
         </td>
       </ng-container>
       <ng-container matColumnDef="kpi">
@@ -75,8 +83,8 @@
         <th mat-header-cell *matHeaderCellDef></th>
         <td mat-cell *matCellDef="let l"><button mat-icon-button color="warn" (click)="supprimer(l)"><mat-icon>delete</mat-icon></button></td>
       </ng-container>
-      <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
-      <tr mat-row *matRowDef="let row; columns: colonnes"></tr>
+      <tr mat-header-row *matHeaderRowDef="colonnesAff"></tr>
+      <tr mat-row *matRowDef="let row; columns: colonnesAff"></tr>
     </table>
   }
 </div>

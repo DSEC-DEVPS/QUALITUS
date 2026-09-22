@@ -1,4 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { toYMD } from '@shared/date-utils';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -37,7 +38,10 @@ export class MesEvaluationsComponent implements OnInit {
 
   charger(): void {
     this.chargement = true;
-    this.service.getEvaluations(this.filtres).subscribe({
+    const f: any = { ...this.filtres };
+    if (this.filtres.date_debut) f.date_debut = toYMD(this.filtres.date_debut);
+    if (this.filtres.date_fin) f.date_fin = toYMD(this.filtres.date_fin);
+    this.service.getEvaluations(f).subscribe({
       next: e => { this.evaluations = e; this.chargement = false; },
       error: () => { this.toastr.error('Impossible de charger vos évaluations.'); this.chargement = false; },
     });

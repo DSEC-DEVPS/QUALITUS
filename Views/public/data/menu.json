@@ -468,6 +468,21 @@
           }
         },
         {
+          "route": "mes-contre-evaluations",
+          "name": "Mes contre-évaluations",
+          "type": "link",
+          "icon": "fact_check",
+          "permissions": {
+            "only": [
+              "R_ADMI",
+              "R_AQ",
+              "R_RO",
+              "R_SUP",
+              "R_GB"
+            ]
+          }
+        },
+        {
           "route": "agents-pole",
           "name": "Agents en pôle",
           "type": "link",

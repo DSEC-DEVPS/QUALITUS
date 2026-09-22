@@ -45,6 +45,11 @@ export class SessionComponent implements OnInit, OnDestroy {
   vueJauge: 'transactions' | 'evaluateurs' = 'transactions';
   rafraichissement = false;
 
+  // Ajout de participants après ouverture (tant que la session n'est pas clôturée)
+  afficherAjout = false;
+  disponibles: any[] = [];
+  selectionAjout = new Set<number>();
+
   txSel: any = null;
   categories: any[] = [];
   catActive = 0;
@@ -173,11 +178,44 @@ export class SessionComponent implements OnInit, OnDestroy {
     });
   }
   basculerVisibilite(): void {
-    this.service.setVisibilite(this.id, !this.session.visibilite).subscribe({
-      next: (r: any) => { this.toastr.success(r.message); this.charger(); },
-      error: () => this.toastr.error('Erreur.'),
+    const cible = !this.session.visibilite;
+    // Mise à jour visuelle immédiate (le switch reflète l'état sans attendre le serveur)
+    this.session.visibilite = cible ? 1 : 0;
+    this.service.setVisibilite(this.id, cible).subscribe({
+      next: (r: any) => this.toastr.success(r.message),
+      error: () => {
+        this.session.visibilite = cible ? 0 : 1; // rollback visuel en cas d'échec
+        this.toastr.error('Erreur.');
+      },
     });
   }
+  // --- Ajout / invitation de participants (jauge, session non clôturée) ---
+  ouvrirAjoutParticipants(): void {
+    this.afficherAjout = !this.afficherAjout;
+    if (!this.afficherAjout) return;
+    this.selectionAjout = new Set<number>(this.participants.map(p => p.id_evaluateur));
+    this.service.getEvaluateursDisponibles(this.id).subscribe({
+      next: d => (this.disponibles = d || []),
+      error: () => this.toastr.error('Impossible de charger les évaluateurs.'),
+    });
+  }
+  estSelectionne(idEvaluateur: number): boolean { return this.selectionAjout.has(idEvaluateur); }
+  basculeAjout(idEvaluateur: number, checked: boolean): void {
+    if (checked) this.selectionAjout.add(idEvaluateur); else this.selectionAjout.delete(idEvaluateur);
+  }
+  enregistrerParticipants(): void {
+    this.service.setParticipants(this.id, [...this.selectionAjout]).subscribe({
+      next: () => {
+        // invite automatiquement les nouveaux (non encore invités)
+        this.service.inviter(this.id).subscribe({
+          next: () => { this.toastr.success('Participants mis à jour et invités.'); this.afficherAjout = false; this.rafraichir(); },
+          error: () => { this.toastr.success('Participants mis à jour.'); this.afficherAjout = false; this.rafraichir(); },
+        });
+      },
+      error: (e: any) => this.toastr.error(e?.error?.message || 'Mise à jour impossible.'),
+    });
+  }
+
   reinitialiser(p: any): void {
     if (!confirm(`Réinitialiser la participation de ${p.prenom} ${p.nom} ?`)) return;
     this.service.reinitialiser(p.id).subscribe({

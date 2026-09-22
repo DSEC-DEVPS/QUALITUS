@@ -33,6 +33,7 @@ export interface EvaluationInfo {
   statut: string;
   conclusion: string | null;
   resolution: string | null;
+  statut_apres_evaluation: string | null;
   synthese: string | null;
   avis_agent: string | null;
   date_appel: string | null;
@@ -53,10 +54,19 @@ export interface EvaluationInfo {
   type_evaluation: string | null;
 }
 
+export interface ViewerInfo {
+  role: string | null;
+  is_agent: boolean;
+  is_evaluateur: boolean;
+  is_superviseur: boolean;
+  lecture_seule: boolean;
+}
+
 export interface EvaluationDetail {
   evaluation: EvaluationInfo;
   categories: CategorieSnap[];
   conclusion_live: string;
+  viewer: ViewerInfo;
 }
 
 export interface ToggleResult {

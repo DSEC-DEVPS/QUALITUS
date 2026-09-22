@@ -14,6 +14,7 @@ router.get("/eval/evaluation/:id", auth, permission("EVALUATION","LIRE"), x.getE
 router.put("/eval/evaluation/:id/erreur/:idErreur", auth, permission("EVALUATION","EXECUTER"), x.toggleErreur);
 router.put("/eval/evaluation/:id/resolution", auth, permission("EVALUATION","EXECUTER"), x.setResolution);
 router.post("/eval/evaluation/:id/terminer", auth, permission("EVALUATION","EXECUTER"), x.terminerEvaluation);
-router.put("/eval/evaluation/:id/avis", auth, permission("EVALUATION","EXECUTER"), x.setAvisAgent);
+// L'agent évalué saisit son propre avis : LIRE suffit (identité vérifiée dans le contrôleur).
+router.put("/eval/evaluation/:id/avis", auth, permission("EVALUATION","LIRE"), x.setAvisAgent);
 
 module.exports = router;

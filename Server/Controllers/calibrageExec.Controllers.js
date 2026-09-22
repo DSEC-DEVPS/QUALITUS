@@ -370,10 +370,8 @@ const reinitialiserParticipant = async (req, res) => {
       if (ctx.notFound || ctx.role !== "jauge") return { forbidden: true };
       const s = ctx.s;
       if (s.statut === "CLOTUREE") return { locked: true };
-      // uniquement lorsque le temps imparti est écoulé
-      const expire = p.date_debut_participation && restantSecondes(s, p) <= 0;
-      const closed = p.statut_participation === "CLOSE";
-      if (!expire && !closed) return { pasEcoule: true };
+      // Le jauge peut remettre à neuf un participant à tout moment tant que la
+      // session n'est pas clôturée — y compris si son compte à rebours a démarré.
       // remet à zéro les constats du participant
       await conn.query(
         `UPDATE b_cal_evaluation_erreur ee
@@ -404,7 +402,6 @@ const reinitialiserParticipant = async (req, res) => {
     if (out.notFound) return res.status(404).json({ message: "Participant introuvable." });
     if (out.forbidden) return res.status(403).json({ message: "Réservé au jauge." });
     if (out.locked) return res.status(409).json({ message: "Session clôturée : réinitialisation impossible." });
-    if (out.pasEcoule) return res.status(409).json({ message: "Réinitialisation possible uniquement quand le temps imparti est écoulé." });
     return res.status(200).json({ message: "Participation réinitialisée." });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };

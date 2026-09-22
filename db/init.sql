@@ -1006,6 +1006,7 @@ CREATE TABLE IF NOT EXISTS b_evaluation (
   motif_appel TEXT, date_appel DATETIME DEFAULT NULL, dmt INT DEFAULT 0,
   id_type_evaluation INT DEFAULT NULL, id_evaluation_parente INT DEFAULT NULL, nb_supplementaires_attendues INT DEFAULT NULL,
   statut VARCHAR(30) DEFAULT 'NON_TERMINE', conclusion VARCHAR(10) DEFAULT NULL, resolution VARCHAR(3) DEFAULT NULL,
+  statut_apres_evaluation VARCHAR(20) DEFAULT 'NON_VALIDER', -- NON_VALIDER | FELICITER | DEBRIEFER
   synthese TEXT, avis_agent TEXT, date_avis DATETIME DEFAULT NULL,
   date_creation DATETIME DEFAULT NULL, date_evaluation DATETIME DEFAULT NULL, actif TINYINT(1) DEFAULT 1,
   FOREIGN KEY (id_nature_ressource) REFERENCES b_eval_ref_nature_ressource(id),
@@ -1311,6 +1312,10 @@ INSERT INTO b_permission (module,action,code,libelle) VALUES
   ('EVALUATION','VALIDER','evaluation.valider','Valider — evaluation'),
   ('EVALUATION','CONTRE_EVALUER','evaluation.contre_evaluer','Contre-évaluer — evaluation'),
   ('EVALUATION','SUPPRIMER','evaluation.supprimer','Supprimer — evaluation'),
+  ('CONTRE_EVALUATION','LIRE','contre_evaluation.lire','Consulter — contre-évaluation'),
+  ('CONTRE_EVALUATION','CREER','contre_evaluation.creer','Créer — contre-évaluation'),
+  ('CONTRE_EVALUATION','DESACTIVER','contre_evaluation.desactiver','Désactiver — contre-évaluation'),
+  ('CONTRE_EVALUATION','SUPPRIMER','contre_evaluation.supprimer','Supprimer — contre-évaluation'),
   ('NOTIFICATION','LIRE','notification.lire','Consulter — notification'),
   ('HABILITATION','LIRE','habilitation.lire','Consulter — habilitation'),
   ('HABILITATION','GERER','habilitation.gerer','Gérer — habilitation'),

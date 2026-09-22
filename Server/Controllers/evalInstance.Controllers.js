@@ -230,13 +230,33 @@ const getUserRole = async (userId) => {
   return r ? r.role : null;
 };
 
+// Gardes-fous de parsing pour les filtres (évite les 500 sur valeurs invalides)
+const estDateYMD = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
+const entierOuNull = (v) => {
+  if (v === undefined || v === null || v === "") return null;
+  const n = Number(v);
+  return Number.isInteger(n) && n > 0 ? n : null;
+};
+const dansEnsemble = (v, ens) => (ens.includes(v) ? v : null);
+
 const getAllEvaluations = async (req, res) => {
   const userId = req.auth.userId;
-  const q = req.query;
+  const q = req.query || {};
   try {
     const role = await getUserRole(userId);
     const where = [];
     const params = [];
+
+    // Normalisation / validation des filtres (aucune valeur brute non vérifiée)
+    const fStatut = dansEnsemble(q.statut, ["NON_TERMINE", "EN_ATTENTE_VALIDATION_OPTION", "TERMINE"]);
+    const fConclusion = dansEnsemble(q.conclusion, ["SUCCES", "ECHEC"]);
+    const fTypeRessource = dansEnsemble(q.type_ressource, ["HUMAINE", "AUTOMATISEE"]);
+    const fTypeEval = dansEnsemble(q.type_evaluation, ["EVALUATION", "EVALUATION_SUPPLEMENTAIRE"]);
+    const fSite = entierOuNull(q.id_site);
+    const fContexte = entierOuNull(q.id_contexte);
+    const fDateDebut = estDateYMD(q.date_debut) ? q.date_debut : null;
+    const fDateFin = estDateYMD(q.date_fin) ? q.date_fin : null;
+    const fQ = typeof q.q === "string" && q.q.trim() ? q.q.trim().slice(0, 100) : null;
 
     // Portée par rôle (matrice des droits)
     if (["R_ADMI", "R_AQ", "R_RO"].includes(role)) {
@@ -245,7 +265,10 @@ const getAllEvaluations = async (req, res) => {
       where.push(`(e.id_evaluateur=? OR e.id_agent=? OR e.id_agent IN (SELECT id_AGENT FROM b_r_superviseur_agent WHERE id_SUPERVISEUR=?))`);
       params.push(userId, userId, userId);
     } else if (role === "R_TC") {
+      // Agent évalué : uniquement ses évaluations, et seulement une fois terminées
+      // (il ne doit rien voir tant que l'évaluation n'est pas terminée).
       where.push(`e.id_agent=?`);
+      where.push(`e.statut='TERMINE'`);
       params.push(userId);
     } else {
       where.push(`e.id_evaluateur=?`);
@@ -256,18 +279,18 @@ const getAllEvaluations = async (req, res) => {
     if (q.inactifs === "true") where.push(`e.actif=0`);
     else where.push(`e.actif=1`);
 
-    // filtres
-    if (q.statut) { where.push(`e.statut=?`); params.push(q.statut); }
-    if (q.conclusion) { where.push(`e.conclusion=?`); params.push(q.conclusion); }
-    if (q.type_ressource) { where.push(`e.type_ressource=?`); params.push(q.type_ressource); }
-    if (q.id_site) { where.push(`e.id_site=?`); params.push(q.id_site); }
-    if (q.id_contexte) { where.push(`e.id_contexte=?`); params.push(q.id_contexte); }
-    if (q.type_evaluation) { where.push(`t.code=?`); params.push(q.type_evaluation); }
-    if (q.date_debut) { where.push(`e.date_appel >= ?`); params.push(q.date_debut); }
-    if (q.date_fin) { where.push(`e.date_appel <= ?`); params.push(q.date_fin + " 23:59:59"); }
-    if (q.q) {
+    // filtres (valeurs déjà validées/normalisées ci-dessus)
+    if (fStatut) { where.push(`e.statut=?`); params.push(fStatut); }
+    if (fConclusion) { where.push(`e.conclusion=?`); params.push(fConclusion); }
+    if (fTypeRessource) { where.push(`e.type_ressource=?`); params.push(fTypeRessource); }
+    if (fSite) { where.push(`e.id_site=?`); params.push(fSite); }
+    if (fContexte) { where.push(`e.id_contexte=?`); params.push(fContexte); }
+    if (fTypeEval) { where.push(`t.code=?`); params.push(fTypeEval); }
+    if (fDateDebut) { where.push(`e.date_appel >= ?`); params.push(fDateDebut + " 00:00:00"); }
+    if (fDateFin) { where.push(`e.date_appel <= ?`); params.push(fDateFin + " 23:59:59"); }
+    if (fQ) {
       where.push(`(e.identifiant_appel LIKE ? OR e.numero_case LIKE ? OR e.numero_appel LIKE ? OR ag.nom LIKE ? OR ag.nom_utilisateur LIKE ?)`);
-      const like = `%${q.q}%`;
+      const like = `%${fQ}%`;
       params.push(like, like, like, like, like);
     }
 
@@ -293,10 +316,22 @@ const getAllEvaluations = async (req, res) => {
 };
 
 // --- cycle de vie (F.39septies D) --------------------------------------
+// Un superviseur ne peut (dés)activer qu'une évaluation qu'il a créée ; les rôles
+// transverses (admin/AQ/RO) et le créateur (évaluateur) gardent le plein droit.
+const peutModifierCycle = (role, evaluationCreateurId, userId) =>
+  ["R_ADMI", "R_AQ", "R_RO"].includes(role) || Number(evaluationCreateurId) === Number(userId);
+
 const setActifEvaluation = async (req, res) => {
   const id = req.params.id;
+  const userId = req.auth.userId;
   const actif = req.body.actif ? 1 : 0;
   try {
+    const role = await getUserRole(userId);
+    const [[e]] = await db.query(`SELECT id_evaluateur FROM b_evaluation WHERE id=?`, [id]);
+    if (!e) return res.status(404).json({ message: "Évaluation introuvable." });
+    if (!peutModifierCycle(role, e.id_evaluateur, userId)) {
+      return res.status(403).json({ message: "Vous ne pouvez (dés)activer qu'une évaluation que vous avez créée." });
+    }
     await withTx(async (conn) => {
       await conn.query(`UPDATE b_evaluation SET actif=? WHERE id=?`, [actif, id]);
       // les évaluations supplémentaires suivent le sort de leur parente
@@ -307,16 +342,23 @@ const setActifEvaluation = async (req, res) => {
 };
 
 const desactiverMasse = async (req, res) => {
+  const userId = req.auth.userId;
   const ids = Array.isArray(req.body.ids) ? req.body.ids : [];
   if (ids.length === 0) return res.status(400).json({ message: "Aucune évaluation sélectionnée." });
   try {
+    const role = await getUserRole(userId);
+    let ignorees = 0;
     await withTx(async (conn) => {
       for (const id of ids) {
+        const [[e]] = await conn.query(`SELECT id_evaluateur FROM b_evaluation WHERE id=?`, [id]);
+        if (!e || !peutModifierCycle(role, e.id_evaluateur, userId)) { ignorees++; continue; }
         await conn.query(`UPDATE b_evaluation SET actif=0 WHERE id=?`, [id]);
         await conn.query(`UPDATE b_evaluation SET actif=0 WHERE id_evaluation_parente=?`, [id]);
       }
     });
-    return res.status(200).json({ message: `${ids.length} évaluation(s) désactivée(s).` });
+    const traitees = ids.length - ignorees;
+    const suffixe = ignorees ? ` (${ignorees} ignorée(s) : non créée(s) par vous)` : "";
+    return res.status(200).json({ message: `${traitees} évaluation(s) désactivée(s)${suffixe}.` });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
 

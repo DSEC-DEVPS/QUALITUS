@@ -11,11 +11,12 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { ToastrService } from 'ngx-toastr';
 import { EvalContreService, ContreListe } from '../../eval-contre.service';
+import { CanDirective } from '@core/authorization/can.directive';
 
 @Component({
   selector: 'app-contre-liste',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatChipsModule, MatFormFieldModule, MatSelectModule],
+  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatChipsModule, MatFormFieldModule, MatSelectModule, CanDirective],
   templateUrl: './contre-liste.component.html',
   styleUrl: './contre-liste.component.scss',
 })
@@ -66,6 +67,15 @@ export class ContreListeComponent implements OnInit {
 
   desactiver(c: ContreListe, ev: Event): void {
     ev.stopPropagation();
-    this.service.setActif(c.id, false).subscribe({ next: () => { this.toastr.success('Désactivée.'); this.charger(); }, error: () => this.toastr.error('Erreur.') });
+    this.service.setActif(c.id, false).subscribe({ next: () => { this.toastr.success('Désactivée.'); this.charger(); }, error: (e: any) => this.toastr.error(e?.error?.message || 'Erreur.') });
+  }
+
+  supprimer(c: ContreListe, ev: Event): void {
+    ev.stopPropagation();
+    if (!confirm('Supprimer définitivement cette contre-évaluation ?')) return;
+    this.service.supprimer(c.id).subscribe({
+      next: () => { this.toastr.success('Contre-évaluation supprimée.'); this.charger(); },
+      error: (e: any) => this.toastr.error(e?.error?.message || 'Suppression impossible.'),
+    });
   }
 }

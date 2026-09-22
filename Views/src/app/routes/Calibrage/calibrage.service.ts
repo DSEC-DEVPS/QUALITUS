@@ -94,6 +94,9 @@ export class CalibrageService {
   setAppreciation(id: number, body: { id_transaction: number; id_erreur_origine: number; appreciation: string }) {
     return this.http.put(`${this.base}/session/${id}/appreciation`, body);
   }
+  setCommentaireJauge(id: number, body: { id_transaction: number; id_erreur_origine: number; commentaire: string }) {
+    return this.http.put(`${this.base}/session/${id}/commentaire-jauge`, body);
+  }
   setConclusions(id: number, conclusions: string) { return this.http.put(`${this.base}/session/${id}/conclusions`, { conclusions }); }
   valider(id: number) { return this.http.post(`${this.base}/session/${id}/valider`, {}); }
 }

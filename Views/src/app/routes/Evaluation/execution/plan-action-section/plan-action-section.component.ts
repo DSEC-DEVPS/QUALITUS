@@ -30,6 +30,7 @@ export class PlanActionSectionComponent implements OnInit {
   private readonly toastr = inject(ToastrService);
 
   @Input() idEvaluation!: number;
+  @Input() lectureSeule = false;
 
   lignes: LignePlanAction[] = [];
   actions: RefItem[] = [];
@@ -37,6 +38,9 @@ export class PlanActionSectionComponent implements OnInit {
   kpis: RefItem[] = [];
   users: { id: number; nom: string; prenom: string }[] = [];
   colonnes = ['action', 'porteur', 'echeance', 'statut', 'kpi', 'actions'];
+  get colonnesAff(): string[] {
+    return this.lectureSeule ? this.colonnes.filter(c => c !== 'actions') : this.colonnes;
+  }
 
   afficherForm = false;
   nouvelle: any = this.vide();
