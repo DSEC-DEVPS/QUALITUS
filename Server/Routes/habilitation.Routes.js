@@ -20,6 +20,7 @@ router.put("/habilitations/mode", auth, permission("HABILITATION", "GERER"), h.s
 
 // Droits complémentaires par utilisateur (GERER)
 router.get("/habilitations/utilisateurs", auth, permission("HABILITATION", "LIRE"), h.rechercherUtilisateurs);
+router.get("/habilitations/utilisateurs-speciaux", auth, permission("HABILITATION", "LIRE"), h.getUtilisateursSpeciaux);
 router.get("/habilitations/utilisateur/:id/droits", auth, permission("HABILITATION", "LIRE"), h.getDroitsUtilisateur);
 router.put("/habilitations/utilisateur/:id/permission/:idPermission", auth, permission("HABILITATION", "GERER"), h.setDroitUtilisateur);
 

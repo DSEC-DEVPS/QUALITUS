@@ -21,6 +21,7 @@
         [ngxPermissionsOnly]="menuItem.permissions?.only"
         [ngxPermissionsExcept]="menuItem.permissions?.except"
       >
+        @if (canModule(menuItem.module)) {
         <li
           #navItem="navAccordionItem"
           navAccordionItem
@@ -88,6 +89,7 @@
             />
           }
         </li>
+        }
       </ng-template>
     }
   </ul>

@@ -150,6 +150,40 @@ const getDroitsUtilisateur = async (req, res) => {
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
 
+// --- Utilisateurs spéciaux : ceux qui ont plus ou moins de droits que leur rôle
+// (au moins une dérogation GRANT/DENY). Paginable + filtre rôle + recherche.
+const getUtilisateursSpeciaux = async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const taille = Math.min(100, Math.max(1, parseInt(req.query.taille) || 10));
+    const offset = (page - 1) * taille;
+    const role = req.query.role || null;
+    const q = req.query.q ? "%" + req.query.q + "%" : null;
+
+    const where = ["EXISTS (SELECT 1 FROM b_utilisateur_permission up WHERE up.id_utilisateur=u.id)"];
+    const params = [];
+    if (role) { where.push("f.Role_Associe=?"); params.push(role); }
+    if (q) { where.push("(u.nom LIKE ? OR u.prenom LIKE ? OR u.nom_utilisateur LIKE ?)"); params.push(q, q, q); }
+    const clause = "WHERE " + where.join(" AND ");
+
+    const [[{ total }]] = await db.query(
+      `SELECT COUNT(*) AS total FROM b_utilisateur u LEFT JOIN b_fonction f ON u.id_Fonction=f.id ${clause}`,
+      params
+    );
+    const [items] = await db.query(
+      `SELECT u.id, u.nom, u.prenom, u.nom_utilisateur, f.Role_Associe AS role, f.nom AS fonction,
+              (SELECT COUNT(*) FROM b_utilisateur_permission up WHERE up.id_utilisateur=u.id AND up.sens='GRANT') AS nb_grant,
+              (SELECT COUNT(*) FROM b_utilisateur_permission up WHERE up.id_utilisateur=u.id AND up.sens='DENY')  AS nb_deny
+         FROM b_utilisateur u LEFT JOIN b_fonction f ON u.id_Fonction=f.id
+         ${clause}
+        ORDER BY u.nom, u.prenom
+        LIMIT ? OFFSET ?`,
+      [...params, taille, offset]
+    );
+    return res.status(200).json({ items, total, page, taille });
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
+};
+
 // Positionne / retire une dérogation (GRANT, DENY, ou NONE pour hériter du rôle)
 const setDroitUtilisateur = async (req, res) => {
   const { id, idPermission } = req.params;
@@ -175,5 +209,5 @@ const setDroitUtilisateur = async (req, res) => {
 module.exports = {
   getPermissions, getRoles, getMatrice, toggleRolePermission,
   getMode, setMode, getObservations, getMesPermissions,
-  rechercherUtilisateurs, getDroitsUtilisateur, setDroitUtilisateur,
+  rechercherUtilisateurs, getDroitsUtilisateur, setDroitUtilisateur, getUtilisateursSpeciaux,
 };

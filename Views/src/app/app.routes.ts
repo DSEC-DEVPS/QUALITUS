@@ -30,6 +30,7 @@ export const routes: Routes = [
       { path: 'dashboard', component: DashboardComponent },
       {
         path: 'Utilisateurs',
+        canMatch: [canMatchPermission('utilisateur.lire')],
         loadChildren: () => import('./routes/Utilisateurs/Utilisateurs.routes').then(m => m.routes),
       },
       {
@@ -37,22 +38,26 @@ export const routes: Routes = [
         loadChildren: () => import('./routes/Mes-agents/mes-agents.routes').then(m => m.routes),
       },
 
-      { path: 'export', component: ExporterComponent },
+      { path: 'export', component: ExporterComponent, canMatch: [canMatchPermission('reporting.lire')] },
 
       {
         path: 'Fonction',
+        canMatch: [canMatchPermission('fonction.lire')],
         loadChildren: () => import('./routes/Fonction/fonction-routes').then(m => m.routes),
       },
       {
         path: 'Site',
+        canMatch: [canMatchPermission('site.lire')],
         loadChildren: () => import('./routes/Site/site.routes').then(m => m.routes),
       },
       {
         path: 'Programme',
+        canMatch: [canMatchPermission('programme.lire')],
         loadChildren: () => import('./routes/Programme/programme.routes').then(m => m.routes),
       },
       {
         path: 'Fiche',
+        canMatch: [canMatchPermission('fiche.lire')],
         loadChildren: () => import('./routes/Fiche/fiche.routes').then(m => m.routes),
       },
       {
@@ -69,18 +74,24 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./routes/Responsable-Operation/Responsable-Operation.routes').then(m => m.routes),
       },
-      { path: 'quiz', loadChildren: () => import('./routes/Quiz/quiz.routes').then(m => m.routes) },
+      {
+        path: 'quiz',
+        canMatch: [canMatchPermission('quiz.lire')],
+        loadChildren: () => import('./routes/Quiz/quiz.routes').then(m => m.routes),
+      },
       {
         path: 'evaluation',
         loadChildren: () => import('./routes/Evaluation/evaluation.routes').then(m => m.routes),
       },
       {
         path: 'sondage',
+        canMatch: [canMatchPermission('sondage.lire')],
         loadChildren: () => import('./routes/Sondage/sondage.routes').then(m => m.routes),
       },
       {
         path: 'grille',
         component: ListeGrilleComponent,
+        canMatch: [canMatchPermission('grille.lire')],
       },
       {
         path: 'habilitations',
@@ -89,6 +100,7 @@ export const routes: Routes = [
       },
       {
         path: 'calibrage',
+        canMatch: [canMatchPermission('calibrage.lire')],
         loadChildren: () => import('./routes/Calibrage/calibrage.routes').then(m => m.routes),
       },
     ],

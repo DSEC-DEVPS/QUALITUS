@@ -15,6 +15,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { NgxPermissionsModule } from 'ngx-permissions';
 
 import { MenuService } from '@core';
+import { PermissionsService } from '../../core/authorization/permissions.service';
 import { NavAccordionItemDirective } from './nav-accordion-item.directive';
 import { NavAccordionToggleDirective } from './nav-accordion-toggle.directive';
 import { NavAccordionDirective } from './nav-accordion.directive';
@@ -59,6 +60,7 @@ export class SidemenuComponent implements OnInit {
   @Input() ripple = false;
 
   private readonly menu = inject(MenuService);
+  private readonly perms = inject(PermissionsService);
 
   menu$ = this.menu.getAll();
 
@@ -66,4 +68,11 @@ export class SidemenuComponent implements OnInit {
     this.menu$.pipe(map(value => console.log(value))).subscribe();
   }
   buildRoute = this.menu.buildRoute;
+
+  /**
+   * Un menu/sous-menu n'est visible que si l'utilisateur possède au moins une
+   * permission du module associé (champ `module`). Sans `module`, on ne restreint
+   * pas (audience gérée par les rôles via ngxPermissionsOnly).
+   */
+  canModule = (module?: string): boolean => (!module ? true : this.perms.canModule(module));
 }

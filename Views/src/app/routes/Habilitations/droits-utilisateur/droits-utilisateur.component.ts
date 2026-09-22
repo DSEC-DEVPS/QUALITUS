@@ -1,4 +1,5 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -22,9 +23,10 @@ import { HabilitationService, UserLite, DroitItem } from '../habilitation.servic
   templateUrl: './droits-utilisateur.component.html',
   styleUrl: './droits-utilisateur.component.scss',
 })
-export class DroitsUtilisateurComponent {
+export class DroitsUtilisateurComponent implements OnInit {
   private readonly service = inject(HabilitationService);
   private readonly toastr = inject(ToastrService);
+  private readonly route = inject(ActivatedRoute);
 
   private readonly recherche$ = new Subject<string>();
   resultats: UserLite[] = [];
@@ -38,6 +40,28 @@ export class DroitsUtilisateurComponent {
     this.recherche$
       .pipe(debounceTime(250), distinctUntilChanged(), switchMap(q => this.service.rechercherUtilisateurs(q)))
       .subscribe({ next: r => (this.resultats = r), error: () => {} });
+  }
+
+  ngOnInit(): void {
+    const id = Number(this.route.snapshot.queryParamMap.get('id'));
+    if (id) this.chargerParId(id);
+  }
+
+  private chargerParId(id: number): void {
+    this.service.getDroitsUtilisateur(id).subscribe({
+      next: d => {
+        this.selection = d.utilisateur;
+        this.admin = d.admin;
+        this.terme = `${d.utilisateur.prenom} ${d.utilisateur.nom}`;
+        const map = new Map<string, DroitItem[]>();
+        for (const p of d.permissions) {
+          if (!map.has(p.module)) map.set(p.module, []);
+          map.get(p.module)!.push(p);
+        }
+        this.modules = Array.from(map.entries()).map(([module, items]) => ({ module, items }));
+      },
+      error: () => this.toastr.error('Impossible de charger les droits.'),
+    });
   }
 
   chercher(q: string): void { this.terme = q; this.recherche$.next(q); }

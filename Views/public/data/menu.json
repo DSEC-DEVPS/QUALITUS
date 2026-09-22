@@ -17,6 +17,7 @@
       "name": "Utilisateurs",
       "type": "link",
       "icon": "people",
+      "module": "utilisateur",
       "permissions": {
         "only": [
           "R_ADMI"
@@ -39,6 +40,7 @@
       "name": "Gestion Fonction",
       "type": "link",
       "icon": "widgets",
+      "module": "fonction",
       "permissions": {
         "only": [
           "R_ADMI"
@@ -72,6 +74,7 @@
       "name": "Gestion Site",
       "type": "link",
       "icon": "location_on",
+      "module": "site",
       "permissions": {
         "only": [
           "R_ADMI"
@@ -83,6 +86,7 @@
       "name": "Gestion Programme",
       "type": "link",
       "icon": "subtitles",
+      "module": "programme",
       "permissions": {
         "only": [
           "R_ADMI"
@@ -94,6 +98,7 @@
       "name": "Gestion Contenu",
       "type": "sub",
       "icon": "insert_drive_file",
+      "module": "fiche",
       "children": [
         {
           "route": "Ajouter",
@@ -210,6 +215,7 @@
       "name": "Gestion Chargements",
       "type": "link",
       "icon": "insert_drive_file",
+      "module": "fiche",
       "permissions": {
         "only": [
           "R_GE"
@@ -221,6 +227,7 @@
       "name": "Sondage",
       "type": "sub",
       "icon": "poll",
+      "module": "sondage",
       "children": [
         {
           "route": "gestion",
@@ -257,6 +264,7 @@
       "name": "Exportations",
       "type": "link",
       "icon": "import_export",
+      "module": "reporting",
       "permissions": {
         "only": [
           "R_ADMI",
@@ -271,6 +279,7 @@
       "name": "Quiz",
       "type": "sub",
       "icon": "quiz",
+      "module": "quiz",
       "permissions": {
         "only": [
           "R_ADMI",
@@ -402,6 +411,7 @@
       "name": "Évaluation",
       "type": "sub",
       "icon": "assignment_turned_in",
+      "module": "evaluation",
       "children": [
         {
           "route": "evaluations",
@@ -459,6 +469,7 @@
           "name": "Contre-évaluation",
           "type": "link",
           "icon": "compare_arrows",
+          "module": "contre_evaluation",
           "permissions": {
             "only": [
               "R_ADMI",
@@ -472,6 +483,7 @@
           "name": "Mes contre-évaluations",
           "type": "link",
           "icon": "fact_check",
+          "module": "contre_evaluation",
           "permissions": {
             "only": [
               "R_ADMI",
@@ -500,6 +512,7 @@
           "name": "Grilles d'évaluation",
           "type": "link",
           "icon": "grid_view",
+          "module": "grille",
           "permissions": {
             "only": [
               "R_ADMI",
@@ -537,6 +550,7 @@
           "name": "Notifications",
           "type": "link",
           "icon": "notifications_active",
+          "module": "notification",
           "permissions": {
             "only": [
               "R_ADMI",
@@ -575,6 +589,7 @@
           "name": "Référentiels",
           "type": "link",
           "icon": "tune",
+          "module": "referentiel",
           "permissions": {
             "only": [
               "R_ADMI",
@@ -597,6 +612,7 @@
       "name": "Calibrage",
       "type": "sub",
       "icon": "tune",
+      "module": "calibrage",
       "children": [
         {
           "route": "sessions",
@@ -623,6 +639,7 @@
       "name": "Habilitations",
       "type": "sub",
       "icon": "admin_panel_settings",
+      "module": "habilitation",
       "children": [
         {
           "route": "matrice",
@@ -645,6 +662,17 @@
               "R_ADMI"
             ]
           }
+        },
+        {
+          "route": "utilisateurs-speciaux",
+          "name": "Utilisateurs spéciaux",
+          "type": "link",
+          "icon": "supervisor_account",
+          "permissions": {
+            "only": [
+              "R_ADMI"
+            ]
+          }
         }
       ]
     },
@@ -653,6 +681,7 @@
       "name": "Export",
       "type": "sub",
       "icon": "insert_drive_file",
+      "module": "reporting",
       "children": [
         {
           "route": "ecoutes",

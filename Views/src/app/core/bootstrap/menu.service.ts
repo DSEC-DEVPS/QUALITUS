@@ -17,6 +17,8 @@ export interface MenuChildrenItem {
   type: 'link' | 'sub' | 'extLink' | 'extTabLink';
   children?: MenuChildrenItem[];
   permissions?: MenuPermissions;
+  /** Module requis (≥1 permission de ce module) pour afficher l'entrée. */
+  module?: string;
 }
 
 export interface Menu {
@@ -28,6 +30,8 @@ export interface Menu {
   badge?: MenuTag;
   children?: MenuChildrenItem[];
   permissions?: MenuPermissions;
+  /** Module requis (≥1 permission de ce module) pour afficher l'entrée. */
+  module?: string;
 }
 
 @Injectable({
