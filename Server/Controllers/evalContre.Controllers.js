@@ -118,8 +118,11 @@ const creerContre = async (req, res) => {
 // Visibilité (point cahier) : le créateur voit toujours ; sinon SEUL l'évaluateur
 // de l'évaluation contre-évaluée la voit, et uniquement une fois terminée + la date
 // de visibilité atteinte. (R_ADMI / R_AQ : accès transverse.)
+const estDateYMD = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
+
 const getAllContre = async (req, res) => {
   const userId = req.auth.userId;
+  const q = req.query || {};
   try {
     const role = await getUserRole(userId);
     const where = ["ce.actif=1"];
@@ -129,6 +132,9 @@ const getAllContre = async (req, res) => {
                   AND ce.date_visibilite<=NOW() AND e.id_evaluateur=?))`);
       params.push(userId, userId);
     }
+    // Filtre par intervalle de date (sur la date de création de la contre-évaluation)
+    if (estDateYMD(q.date_debut)) { where.push(`ce.date_creation >= ?`); params.push(q.date_debut + " 00:00:00"); }
+    if (estDateYMD(q.date_fin)) { where.push(`ce.date_creation <= ?`); params.push(q.date_fin + " 23:59:59"); }
     const [rows] = await db.query(
       `SELECT ce.id, ce.statut, ce.conclusion, ce.date_creation, ce.date_visibilite, ce.date_evaluation,
               e.id AS id_evaluation_initiale, e.identifiant_appel, ev.nom AS evaluateur_nom, ev.prenom AS evaluateur_prenom,
@@ -149,7 +155,16 @@ const getAllContre = async (req, res) => {
 // l'utilisateur connecté (en tant qu'évaluateur), visibles après le délai.
 const getMesContre = async (req, res) => {
   const userId = req.auth.userId;
+  const q = req.query || {};
   try {
+    const where = [
+      "ce.actif=1", "e.id_evaluateur=?", "ce.statut='TERMINE'",
+      "ce.date_visibilite IS NOT NULL", "ce.date_visibilite<=NOW()",
+    ];
+    const params = [userId];
+    // Filtre par intervalle de date (sur la date de la contre-évaluation)
+    if (estDateYMD(q.date_debut)) { where.push(`ce.date_evaluation >= ?`); params.push(q.date_debut + " 00:00:00"); }
+    if (estDateYMD(q.date_fin)) { where.push(`ce.date_evaluation <= ?`); params.push(q.date_fin + " 23:59:59"); }
     const [rows] = await db.query(
       `SELECT ce.id, ce.statut, ce.conclusion, ce.date_creation, ce.date_visibilite, ce.date_evaluation,
               e.id AS id_evaluation_initiale, e.identifiant_appel, ev.nom AS evaluateur_nom, ev.prenom AS evaluateur_prenom,
@@ -159,9 +174,8 @@ const getMesContre = async (req, res) => {
        LEFT JOIN b_utilisateur ev ON e.id_evaluateur=ev.id
        LEFT JOIN b_utilisateur ag ON e.id_agent=ag.id
        LEFT JOIN b_utilisateur r ON ce.id_responsable=r.id
-       WHERE ce.actif=1 AND e.id_evaluateur=? AND ce.statut='TERMINE'
-         AND ce.date_visibilite IS NOT NULL AND ce.date_visibilite<=NOW()
-       ORDER BY ce.date_evaluation DESC`, [userId]
+       WHERE ${where.join(" AND ")}
+       ORDER BY ce.date_evaluation DESC`, params
     );
     return res.status(200).json(rows);
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors du chargement." }); }
@@ -198,25 +212,29 @@ const getContre = async (req, res) => {
       return res.status(403).json({ message: "Vous n'avez pas accès à cette contre-évaluation." });
     }
 
-    // cochage initial indexé par id_erreur_origine
+    // Constats de l'évaluation initiale indexés par id_erreur_origine :
+    // cochage + commentaire de l'évaluateur d'origine (lecture seule côté contre-éval).
     const [initErrs] = await db.query(
-      `SELECT id_erreur_origine, coche FROM b_evaluation_erreur WHERE id_evaluation=?`, [ce.id_eval_init]
+      `SELECT id_erreur_origine, coche, commentaire FROM b_evaluation_erreur WHERE id_evaluation=?`, [ce.id_eval_init]
     );
     const initMap = {};
-    initErrs.forEach((x) => (initMap[x.id_erreur_origine] = x.coche));
+    initErrs.forEach((x) => (initMap[x.id_erreur_origine] = x));
 
     const [cats] = await db.query(`SELECT * FROM b_eval_contre_categorie WHERE id_contre_evaluation=? ORDER BY ordre, id`, [id]);
     for (const cat of cats) {
       const [errs] = await db.query(`SELECT * FROM b_eval_contre_erreur WHERE id_contre_categorie=? ORDER BY id`, [cat.id]);
       errs.forEach((er) => {
-        er.coche_initiale = initMap[er.id_erreur_origine] !== undefined ? initMap[er.id_erreur_origine] : null;
+        const src = initMap[er.id_erreur_origine];
+        er.coche_initiale = src ? src.coche : null;
+        er.commentaire_initial = src ? src.commentaire : null; // commentaire de l'évaluateur d'origine
         er.ecart = er.coche_initiale !== null && er.coche_initiale !== er.coche;
       });
       cat.erreurs = errs;
       cat.reussite = reussite(cat.score_obtenu, cat.comparateur, cat.seuil_reussite);
     }
     const conclusion_live = cats.length ? (cats.every((c) => c.reussite) ? "SUCCES" : "ECHEC") : "SUCCES";
-    return res.status(200).json({ contre: ce, categories: cats, conclusion_live });
+    const est_responsable = Number(ce.id_responsable) === Number(userId);
+    return res.status(200).json({ contre: ce, categories: cats, conclusion_live, est_responsable });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors du chargement." }); }
 };
 

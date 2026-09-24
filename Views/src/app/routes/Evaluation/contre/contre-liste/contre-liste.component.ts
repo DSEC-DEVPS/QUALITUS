@@ -9,6 +9,9 @@ import { MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+import { MatInputModule } from '@angular/material/input';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { toYMD } from '@shared/date-utils';
 import { ToastrService } from 'ngx-toastr';
 import { EvalContreService, ContreListe } from '../../eval-contre.service';
 import { CanDirective } from '@core/authorization/can.directive';
@@ -16,7 +19,7 @@ import { CanDirective } from '@core/authorization/can.directive';
 @Component({
   selector: 'app-contre-liste',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatChipsModule, MatFormFieldModule, MatSelectModule, CanDirective],
+  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatChipsModule, MatFormFieldModule, MatSelectModule, MatInputModule, MatDatepickerModule, CanDirective],
   templateUrl: './contre-liste.component.html',
   styleUrl: './contre-liste.component.scss',
 })
@@ -27,6 +30,8 @@ export class ContreListeComponent implements OnInit {
 
   liste: ContreListe[] = [];
   colonnes = ['evaluateur', 'agent', 'appel', 'statut', 'conclusion', 'visibilite', 'actions'];
+  dateDebut: any = null;
+  dateFin: any = null;
 
   // assistant de création
   afficherAssistant = false;
@@ -43,8 +48,10 @@ export class ContreListeComponent implements OnInit {
   }
 
   charger(): void {
-    this.service.getAll().subscribe({ next: l => (this.liste = l), error: () => this.toastr.error('Erreur de chargement.') });
+    this.service.getAll({ date_debut: toYMD(this.dateDebut), date_fin: toYMD(this.dateFin) })
+      .subscribe({ next: l => (this.liste = l), error: () => this.toastr.error('Erreur de chargement.') });
   }
+  reinitialiserFiltres(): void { this.dateDebut = null; this.dateFin = null; this.charger(); }
 
   onSite(): void {
     this.idEvaluateur = null; this.idEvaluation = null; this.evaluateurs = []; this.evaluations = [];

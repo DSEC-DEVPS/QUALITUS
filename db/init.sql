@@ -1085,7 +1085,7 @@ CREATE TABLE IF NOT EXISTS b_eval_coaching_niveau (
 CREATE TABLE IF NOT EXISTS b_eval_plan_action_ligne (
   id INT AUTO_INCREMENT PRIMARY KEY, id_evaluation INT NOT NULL, id_action INT DEFAULT NULL, id_porteur INT DEFAULT NULL,
   date_debut DATETIME DEFAULT NULL, date_attendue DATETIME DEFAULT NULL, date_realisation DATETIME DEFAULT NULL,
-  id_statut INT DEFAULT NULL, id_kpi INT DEFAULT NULL, commentaire TEXT,
+  id_statut INT DEFAULT NULL, id_kpi INT DEFAULT NULL, commentaire TEXT, synthese TEXT,
   dateCreation DATETIME DEFAULT NULL, dateModification DATETIME DEFAULT NULL,
   FOREIGN KEY (id_evaluation) REFERENCES b_evaluation(id),
   FOREIGN KEY (id_action) REFERENCES b_eval_ref_action_pa(id),
@@ -1308,9 +1308,9 @@ INSERT INTO b_permission (module,action,code,libelle) VALUES
   ('REFERENTIEL','SUPPRIMER','referentiel.supprimer','Supprimer — referentiel'),
   ('EVALUATION','LIRE','evaluation.lire','Consulter — evaluation'),
   ('EVALUATION','CREER','evaluation.creer','Créer — evaluation'),
+  ('EVALUATION','MODIFIER','evaluation.modifier','Modifier — evaluation'),
   ('EVALUATION','EXECUTER','evaluation.executer','Exécuter — evaluation'),
   ('EVALUATION','VALIDER','evaluation.valider','Valider — evaluation'),
-  ('EVALUATION','CONTRE_EVALUER','evaluation.contre_evaluer','Contre-évaluer — evaluation'),
   ('EVALUATION','SUPPRIMER','evaluation.supprimer','Supprimer — evaluation'),
   ('CONTRE_EVALUATION','LIRE','contre_evaluation.lire','Consulter — contre-évaluation'),
   ('CONTRE_EVALUATION','CREER','contre_evaluation.creer','Créer — contre-évaluation'),
@@ -1321,6 +1321,8 @@ INSERT INTO b_permission (module,action,code,libelle) VALUES
   ('NOTIFICATION','LIRE','notification.lire','Consulter — notification'),
   ('HABILITATION','LIRE','habilitation.lire','Consulter — habilitation'),
   ('HABILITATION','GERER','habilitation.gerer','Gérer — habilitation'),
+  ('AGENT_POLE','LIRE','agent_pole.lire','Consulter — agents en pôle'),
+  ('AGENT_POLE','VOIR_TOUS','agent_pole.voir_tous','Voir les agents en pôle de tous les sites'),
   ('REPORTING','LIRE','reporting.lire','Consulter — reporting');
 
 -- Seed : roles (codes repris des fonctions, immuables)
@@ -1364,6 +1366,7 @@ CREATE TABLE IF NOT EXISTS b_cal_session (
   duree_minutes INT DEFAULT 0,                 -- durée de participation (individuelle)
   statut VARCHAR(25) DEFAULT 'BROUILLON',      -- BROUILLON | OUVERTE | RESULTATS_EN_REVISION | CLOTUREE
   visibilite TINYINT(1) DEFAULT 0,             -- interrupteur d'accès des participants
+  resultat_publie TINYINT(1) DEFAULT 0,        -- résultat validé/publié (visible si visibilite=1) sans figer
   id_jauge INT DEFAULT NULL,                   -- organisateur = référence
   conclusions TEXT,                            -- conclusions de session (F.47 G)
   dateCreation DATETIME DEFAULT NULL,
@@ -1382,6 +1385,7 @@ CREATE TABLE IF NOT EXISTS b_cal_transaction (
   descriptif TEXT NOT NULL,                     -- descriptif du problème + synthèse de résolution
   numero_case VARCHAR(100) DEFAULT NULL,
   numero_appel VARCHAR(100) DEFAULT NULL,
+  id_agent INT DEFAULT NULL,                    -- agent ayant traité l'appel (comme en évaluation)
   date_appel DATE DEFAULT NULL,
   motif_appel TEXT,
   ordre_passage INT NOT NULL DEFAULT 0,

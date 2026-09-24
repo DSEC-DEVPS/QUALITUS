@@ -40,6 +40,17 @@
     </mat-card>
   }
 
+  <div class="cal-filtres-row">
+    <mat-form-field appearance="outline"><mat-label>Du</mat-label>
+      <input matInput [matDatepicker]="pd" [(ngModel)]="dateDebut" name="dd" /><mat-datepicker-toggle matSuffix [for]="pd"></mat-datepicker-toggle><mat-datepicker #pd></mat-datepicker>
+    </mat-form-field>
+    <mat-form-field appearance="outline"><mat-label>Au</mat-label>
+      <input matInput [matDatepicker]="pf" [(ngModel)]="dateFin" name="df" /><mat-datepicker-toggle matSuffix [for]="pf"></mat-datepicker-toggle><mat-datepicker #pf></mat-datepicker>
+    </mat-form-field>
+    <button mat-flat-button color="primary" (click)="charger()"><mat-icon>search</mat-icon> Filtrer</button>
+    <button mat-button (click)="reinitialiserFiltres()">Réinitialiser</button>
+  </div>
+
   <mat-card>
     <mat-card-content>
       @if (liste.length === 0) {

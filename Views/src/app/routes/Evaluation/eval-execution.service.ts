@@ -46,6 +46,9 @@ export interface EvaluationInfo {
   agent_nom: string | null;
   agent_prenom: string | null;
   evaluateur_nom: string | null;
+  evaluateur_prenom: string | null;
+  superviseur_nom: string | null;
+  superviseur_prenom: string | null;
   contexte: string | null;
   grille: string | null;
   nature_ressource: string | null;

@@ -69,6 +69,10 @@
           <th mat-header-cell *matHeaderCellDef>Identifiant d'appel</th>
           <td mat-cell *matCellDef="let t">{{ t.identifiant_appel }}</td>
         </ng-container>
+        <ng-container matColumnDef="agent">
+          <th mat-header-cell *matHeaderCellDef>Agent</th>
+          <td mat-cell *matCellDef="let t">{{ t.agent_nom ? (t.agent_nom + ' ' + t.agent_prenom + ' (' + t.agent_login + ')') : '—' }}</td>
+        </ng-container>
         <ng-container matColumnDef="descriptif">
           <th mat-header-cell *matHeaderCellDef>Descriptif</th>
           <td mat-cell *matCellDef="let t" class="tronque">{{ t.descriptif }}</td>
@@ -92,18 +96,29 @@
       <!-- Ajout / édition + duplication (brouillon) -->
       <div class="ajout-tx" *ngIf="brouillon">
         <h4>{{ txEditId ? 'Modifier la transaction' : 'Ajouter une transaction' }}</h4>
-        <div class="form">
+        <div class="alerte-cap" *ngIf="!txEditId && capAtteint">
+          <mat-icon>info</mat-icon> Nombre de transactions atteint ({{ session.nombre_transactions }}). Augmentez d'abord le nombre défini dans les paramètres pour en ajouter.
+        </div>
+        <div class="form" *ngIf="txEditId || !capAtteint">
+          <mat-form-field appearance="outline"><mat-label>Ordre de passage *</mat-label>
+            <mat-select [(ngModel)]="txForm.ordre_passage" name="tord">
+              @for (o of ordresPossibles; track o) { <mat-option [value]="o">{{ o }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Identifiant d'appel *</mat-label>
             <input matInput [(ngModel)]="txForm.identifiant_appel" name="tid" />
-          </mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>Ordre de passage *</mat-label>
-            <input matInput type="number" [(ngModel)]="txForm.ordre_passage" name="tord" />
           </mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Numéro de case</mat-label>
             <input matInput [(ngModel)]="txForm.numero_case" name="tcase" />
           </mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Numéro d'appel</mat-label>
             <input matInput [(ngModel)]="txForm.numero_appel" name="tnum" />
+          </mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Agent</mat-label>
+            <input matInput [matAutocomplete]="autoAg" [(ngModel)]="agentRecherche" name="tagent" placeholder="Nom ou prénom…" />
+            <mat-autocomplete #autoAg="matAutocomplete" (optionSelected)="choisirAgentTx($event.option.value)">
+              @for (a of agentsFiltres(); track a.id) { <mat-option [value]="a">{{ a.nom }} {{ a.prenom }} ({{ a.nom_utilisateur }})</mat-option> }
+            </mat-autocomplete>
           </mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Date d'appel</mat-label>
             <input matInput [matDatepicker]="pt" [(ngModel)]="txForm.date_appel" name="tdate" />
@@ -116,7 +131,7 @@
             <textarea matInput rows="2" [(ngModel)]="txForm.motif_appel" name="tmotif"></textarea>
           </mat-form-field>
         </div>
-        <div class="actions">
+        <div class="actions" *ngIf="txEditId || !capAtteint">
           <button mat-button *ngIf="txEditId" (click)="annulerTx()">Annuler</button>
           <button mat-flat-button color="primary" (click)="enregistrerTx()">
             <mat-icon>{{ txEditId ? 'save' : 'add' }}</mat-icon> {{ txEditId ? 'Enregistrer' : 'Ajouter' }}
@@ -170,16 +185,21 @@
         <button mat-flat-button color="primary" (click)="inviterTous()"><mat-icon>mark_email_read</mat-icon> Inviter les non-invités</button>
       </div>
 
-      <!-- Sélection depuis le site (brouillon) -->
+      <!-- Sélection depuis le site (brouillon) : recherche nom/prénom + cases à cocher -->
       <div class="selection" *ngIf="brouillon">
         <h4>Évaluateurs du site</h4>
+        <mat-form-field appearance="outline" class="plein">
+          <mat-label>Rechercher un utilisateur (nom ou prénom)…</mat-label>
+          <input matInput [(ngModel)]="rechercheParticipant" name="rechPart" />
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
         <div class="liste-dispo">
-          <mat-checkbox *ngFor="let e of disponibles"
+          <mat-checkbox *ngFor="let e of disponiblesFiltres"
                         [checked]="estSelectionne(e.id)"
                         (change)="bascule(e.id, $event.checked)">
             {{ e.prenom }} {{ e.nom }}
           </mat-checkbox>
-          <div class="vide" *ngIf="!disponibles.length">Aucun évaluateur sur ce site.</div>
+          <div class="vide" *ngIf="!disponiblesFiltres.length">Aucun évaluateur ne correspond.</div>
         </div>
         <button mat-flat-button color="primary" (click)="enregistrerParticipants()"><mat-icon>save</mat-icon> Enregistrer les participants</button>
       </div>

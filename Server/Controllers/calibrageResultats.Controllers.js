@@ -93,21 +93,25 @@ const getResultats = async (req, res) => {
       const ctx = await contexte(conn, id, uid);
       if (ctx.notFound) return { notFound: true };
       if (!ctx.role) return { forbidden: true };
-      if (ctx.role === "participant" && ctx.s.statut !== "CLOTUREE") return { pasEncore: true };
+      // Le participant voit le résultat uniquement s'il est publié (validé) ET
+      // que la visibilité est activée par le jauge (point cahier).
+      if (ctx.role === "participant" && !(ctx.s.resultat_publie && ctx.s.visibilite)) return { pasEncore: true };
       const r = await calculer(conn, id);
+      // « provisoire » tant que le résultat n'est pas figé (CLOTUREE).
       const provisoire = ctx.s.statut !== "CLOTUREE";
+      const nomSession = ctx.s.nom;
       if (ctx.role === "participant") {
         // un participant ne voit que sa propre ligne
         const ev = uid;
         return {
-          role: "participant", provisoire, statut: ctx.s.statut,
+          role: "participant", provisoire, statut: ctx.s.statut, nom: nomSession,
           transactions: r.transactions,
           participants: r.participants.filter((p) => p.id_evaluateur === ev),
           grid: { [ev]: r.grid[ev] || {} }, global: { [ev]: r.global[ev] },
           conclusions: ctx.s.conclusions,
         };
       }
-      return { role: "jauge", provisoire, statut: ctx.s.statut, ...r, conclusions: ctx.s.conclusions };
+      return { role: "jauge", provisoire, statut: ctx.s.statut, nom: nomSession, resultat_publie: !!ctx.s.resultat_publie, visibilite: !!ctx.s.visibilite, ...r, conclusions: ctx.s.conclusions };
     });
     if (out.notFound) return res.status(404).json({ message: "Session introuvable." });
     if (out.forbidden) return res.status(403).json({ message: "Accès refusé." });
@@ -224,6 +228,27 @@ const modifierCote = async (req, res) => {
         [coche ? 1 : 0, uid, evalRow.id, id_erreur_origine]
       );
       if (r.affectedRows === 0) return { notFound: true };
+      // Après publication : notifier le(s) évaluateur(s) dont le résultat change.
+      if (ctx.s.resultat_publie) {
+        let destinataires = [];
+        if (cote === "PARTICIPANT") {
+          destinataires = [Number(id_participant)];
+        } else {
+          // une modification de la référence impacte tous les participants
+          const [ps] = await conn.query("SELECT id_evaluateur FROM b_cal_participant WHERE id_session=?", [id]);
+          destinataires = ps.map((p) => p.id_evaluateur);
+        }
+        for (const dest of destinataires) {
+          if (!dest) continue;
+          await emit(conn, {
+            id_utilisateur: dest,
+            titre: "Résultat de calibrage modifié",
+            message: `Le résultat de la session « ${ctx.s.nom} » a été ajusté par le jauge.`,
+            type: "CALIBRAGE", nature_objet: "CALIBRAGE", id_objet: id,
+            url: `/mon-espace/calibrage/resultats/${id}`,
+          });
+        }
+      }
       return { ok: true };
     });
     if (out.forbidden) return res.status(403).json({ message: "Réservé au jauge." });
@@ -295,7 +320,9 @@ const setConclusions = async (req, res) => {
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
 
-// POST validation de la session (jauge) — clôture définitive + notifications
+// POST validation du résultat (jauge) — publie le résultat SANS figer :
+// le jauge peut continuer à modifier ; les participants le voient si la
+// visibilité est activée. Notifie les participants.
 const validerSession = async (req, res) => {
   const id = req.params.id;
   const uid = req.auth.userId;
@@ -304,7 +331,7 @@ const validerSession = async (req, res) => {
       const ctx = await contexte(conn, id, uid);
       if (ctx.notFound || ctx.role !== "jauge") return { forbidden: true };
       if (ctx.s.statut !== "RESULTATS_EN_REVISION") return { mauvaisStatut: true };
-      await conn.query("UPDATE b_cal_session SET statut='CLOTUREE', dateCloture=NOW(), dateModification=NOW() WHERE id=?", [id]);
+      await conn.query("UPDATE b_cal_session SET resultat_publie=1, dateModification=NOW() WHERE id=?", [id]);
       const [parts] = await conn.query("SELECT id_evaluateur FROM b_cal_participant WHERE id_session=?", [id]);
       for (const p of parts) {
         await emit(conn, {
@@ -319,10 +346,43 @@ const validerSession = async (req, res) => {
     });
     if (out.forbidden) return res.status(403).json({ message: "Réservé au jauge." });
     if (out.mauvaisStatut) return res.status(409).json({ message: "La session doit être en révision pour être validée." });
-    return res.status(200).json({ message: "Session validée et clôturée." });
+    return res.status(200).json({ message: "Résultat validé : visible par les participants (si visibilité activée). Vous pouvez encore l'ajuster." });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors de la validation." }); }
 };
 
+// POST figer le résultat (jauge) — verrouillage définitif : plus aucune action
+// possible sur le résultat après cette opération.
+const figerSession = async (req, res) => {
+  const id = req.params.id;
+  const uid = req.auth.userId;
+  try {
+    const out = await withTx(async (conn) => {
+      const ctx = await contexte(conn, id, uid);
+      if (ctx.notFound || ctx.role !== "jauge") return { forbidden: true };
+      if (ctx.s.statut === "CLOTUREE") return { deja: true };
+      if (ctx.s.statut !== "RESULTATS_EN_REVISION") return { mauvaisStatut: true };
+      await conn.query(
+        "UPDATE b_cal_session SET statut='CLOTUREE', resultat_publie=1, dateCloture=NOW(), dateModification=NOW() WHERE id=?", [id]
+      );
+      const [parts] = await conn.query("SELECT id_evaluateur FROM b_cal_participant WHERE id_session=?", [id]);
+      for (const p of parts) {
+        await emit(conn, {
+          id_utilisateur: p.id_evaluateur,
+          titre: "Résultats de calibrage figés",
+          message: `Le résultat de la session « ${ctx.s.nom} » est désormais définitif.`,
+          type: "CALIBRAGE", nature_objet: "CALIBRAGE", id_objet: id,
+          url: `/mon-espace/calibrage/resultats/${id}`,
+        });
+      }
+      return { ok: true };
+    });
+    if (out.forbidden) return res.status(403).json({ message: "Réservé au jauge." });
+    if (out.deja) return res.status(409).json({ message: "Le résultat est déjà figé." });
+    if (out.mauvaisStatut) return res.status(409).json({ message: "La session doit être en révision." });
+    return res.status(200).json({ message: "Résultat figé : plus aucune modification possible." });
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors du figement." }); }
+};
+
 module.exports = {
-  getResultats, getConfrontation, modifierCote, setAppreciation, setCommentaireJauge, setConclusions, validerSession,
+  getResultats, getConfrontation, modifierCote, setAppreciation, setCommentaireJauge, setConclusions, validerSession, figerSession,
 };

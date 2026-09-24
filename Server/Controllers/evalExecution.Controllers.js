@@ -6,6 +6,7 @@
 // =====================================================================
 const db = require("../config/db");
 const { emit } = require("../utils/notify");
+const { genererSupplementairesAuto } = require("./evalSuites.Controllers");
 
 const num = (v) => (v === null || v === undefined ? 0 : Number(v));
 // Tolérance d'arrondi : les poids sont en DECIMAL(12,6), un cumul « 100 %
@@ -97,6 +98,17 @@ const getEvaluationDetail = async (req, res) => {
         `SELECT 1 AS ok FROM b_r_superviseur_agent WHERE id_SUPERVISEUR=? AND id_AGENT=?`, [uid, e.id_agent]
       );
       is_superviseur = !!sup;
+      // Superviseur de l'agent (pour la section Informations)
+      const [[supU]] = await db.query(
+        `SELECT su.nom, su.prenom FROM b_r_superviseur_agent ra
+           JOIN b_utilisateur su ON su.id=ra.id_SUPERVISEUR
+          WHERE ra.id_AGENT=? LIMIT 1`, [e.id_agent]
+      );
+      if (supU) { e.superviseur_nom = supU.nom; e.superviseur_prenom = supU.prenom; }
+    }
+    // Une évaluation désactivée n'est pas visible par l'agent évalué.
+    if (Number(e.actif) === 0 && is_agent && !is_evaluateur && role !== "R_ADMI") {
+      return res.status(403).json({ message: "Cette évaluation n'est pas disponible." });
     }
     // L'agent évalué ne fait que consulter (coaching/plan en lecture seule,
     // section « évaluations supplémentaires » masquée).
@@ -188,19 +200,27 @@ const terminerEvaluation = async (req, res) => {
       const [cats] = await conn.query(`SELECT id FROM b_evaluation_categorie WHERE id_evaluation=?`, [id]);
       for (const c of cats) await recomputeCategorie(conn, c.id);
       const conclusion = await computeConclusion(conn, id);
-      // F.39quater : figer le nb d'évaluations supplémentaires attendues sur un échec
-      // (uniquement pour une évaluation ordinaire, pas une supplémentaire).
-      let nbAttendues = null;
-      if (conclusion === "ECHEC" && !e.id_evaluation_parente) {
+      // F.39quater : sur un ÉCHEC, on fige le nb d'évaluations supplémentaires
+      // attendues — pour TOUT niveau (ordinaire OU supplémentaire) afin de
+      // permettre la cascade d'échec.
+      let nbAttendues = e.nb_supplementaires_attendues || null;
+      if (conclusion === "ECHEC") {
         const [[p]] = await conn.query(
           `SELECT valeur FROM b_eval_param_systeme WHERE cle='nb_supplementaires_attendues'`
         );
-        nbAttendues = p ? parseInt(p.valeur, 10) : null;
+        const parDefaut = p ? parseInt(p.valeur, 10) : null;
+        nbAttendues = nbAttendues || parDefaut;
       }
       await conn.query(
         `UPDATE b_evaluation SET statut='TERMINE', conclusion=?, date_evaluation=NOW(), nb_supplementaires_attendues=? WHERE id=?`,
         [conclusion, nbAttendues, id]
       );
+      // Auto-création des évaluations supplémentaires manquantes en cas d'échec
+      // (cascade : s'applique aussi aux supplémentaires elles-mêmes).
+      if (conclusion === "ECHEC") {
+        const [[eMaj]] = await conn.query(`SELECT * FROM b_evaluation WHERE id=?`, [id]);
+        await genererSupplementairesAuto(conn, eMaj, e.id_evaluateur);
+      }
       // notifications (F.39bis E) — agents humains uniquement
       if (e.type_ressource === "HUMAINE" && e.id_agent) {
         const titre = "Résultat d'évaluation";

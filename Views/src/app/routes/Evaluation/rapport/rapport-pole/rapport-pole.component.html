@@ -5,24 +5,28 @@
 
   <mat-card class="filtres">
     <mat-card-content>
-      <mat-form-field appearance="outline"><mat-label>Site</mat-label>
-        <mat-select [(ngModel)]="filtres.id_site" name="site">
-          <mat-option [value]="undefined">Tous</mat-option>
-          @for (s of sites; track s.id) { <mat-option [value]="s.id">{{ s.nom }}</mat-option> }
-        </mat-select>
-      </mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Programme</mat-label>
-        <mat-select [(ngModel)]="filtres.id_programme" name="prog">
-          <mat-option [value]="undefined">Tous</mat-option>
-          @for (p of programmes; track p.id) { <mat-option [value]="p.id">{{ p.nom }}</mat-option> }
-        </mat-select>
-      </mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Équipe (superviseur)</mat-label>
-        <mat-select [(ngModel)]="filtres.id_superviseur" name="sup">
-          <mat-option [value]="undefined">Toutes</mat-option>
-          @for (s of superviseurs; track s.id) { <mat-option [value]="s.id">{{ s.nom }} {{ s.prenom }}</mat-option> }
-        </mat-select>
-      </mat-form-field>
+      @if (voirTous) {
+        <mat-form-field appearance="outline"><mat-label>Site</mat-label>
+          <mat-select [(ngModel)]="filtres.id_site" name="site">
+            <mat-option [value]="undefined">Tous</mat-option>
+            @for (s of sites; track s.id) { <mat-option [value]="s.id">{{ s.nom }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Programme</mat-label>
+          <mat-select [(ngModel)]="filtres.id_programme" name="prog">
+            <mat-option [value]="undefined">Tous</mat-option>
+            @for (p of programmes; track p.id) { <mat-option [value]="p.id">{{ p.nom }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Équipe (superviseur)</mat-label>
+          <mat-select [(ngModel)]="filtres.id_superviseur" name="sup">
+            <mat-option [value]="undefined">Toutes</mat-option>
+            @for (s of superviseurs; track s.id) { <mat-option [value]="s.id">{{ s.nom }} {{ s.prenom }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+      } @else {
+        <span class="portee-info"><mat-icon>info</mat-icon> Vous voyez uniquement vos agents. Filtre par période disponible.</span>
+      }
       <mat-form-field appearance="outline"><mat-label>Du</mat-label>
         <input matInput [matDatepicker]="pickerDd" [(ngModel)]="filtres.date_debut" name="dd" /><mat-datepicker-toggle matSuffix [for]="pickerDd"></mat-datepicker-toggle><mat-datepicker #pickerDd></mat-datepicker></mat-form-field>
       <mat-form-field appearance="outline"><mat-label>Au</mat-label>
@@ -63,49 +67,17 @@
             </td>
           </ng-container>
           <ng-container matColumnDef="nb">
-            <th mat-header-cell *matHeaderCellDef>Nb éval.</th>
+            <th mat-header-cell *matHeaderCellDef>Évaluations en échec</th>
             <td mat-cell *matCellDef="let a">{{ a.nb_evaluations }}</td>
           </ng-container>
           <ng-container matColumnDef="detail">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let a">
-              <button mat-icon-button (click)="toggleDetail(a)"><mat-icon>{{ detailOuvert === a.id ? 'expand_less' : 'expand_more' }}</mat-icon></button>
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="expand">
-            <td mat-cell *matCellDef="let a" [attr.colspan]="colonnes.length">
-              <div class="drill">
-                <strong>Plans d'action des évaluations en échec :</strong>
-                @for (e of a.evaluations; track e.id) {
-                  <div class="eval-bloc">
-                    <div class="eval-tete" (click)="ouvrirEval(e.id)">
-                      Évaluation #{{ e.id }} — {{ e.date_appel ? (e.date_appel | date: 'dd/MM/yyyy') : '' }}
-                      @if (e.critiques_decochees >= 3) { <span class="tag">{{ e.critiques_decochees }} erreurs critiques</span> }
-                      <mat-icon>chevron_right</mat-icon>
-                    </div>
-                    @if (e.plans && e.plans.length) {
-                      <ul class="plans">
-                        @for (p of e.plans; track $index) {
-                          <li>
-                            <mat-icon class="ico">task_alt</mat-icon>
-                            <span class="act">{{ p.action || '—' }}</span>
-                            @if (p.statut) { <span class="statut">{{ p.statut }}</span> }
-                            @if (p.date_attendue) { <span class="date">éch. {{ p.date_attendue | date: 'dd/MM/yyyy' }}</span> }
-                            @if (p.porteur) { <span class="porteur">{{ p.porteur }}</span> }
-                          </li>
-                        }
-                      </ul>
-                    } @else {
-                      <p class="aucun-plan">Aucun plan d'action rattaché.</p>
-                    }
-                  </div>
-                }
-              </div>
+              <button mat-icon-button color="primary" matTooltip="Voir le détail" (click)="ouvrirDetail(a)"><mat-icon>chevron_right</mat-icon></button>
             </td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
-          <tr mat-row *matRowDef="let row; columns: colonnes"></tr>
-          <tr mat-row *matRowDef="let row; columns: ['expand']; when: estOuvert" class="ligne-detail"></tr>
+          <tr mat-row *matRowDef="let row; columns: colonnes" class="ligne" (click)="ouvrirDetail(row)"></tr>
         </table>
       }
     </mat-card-content>

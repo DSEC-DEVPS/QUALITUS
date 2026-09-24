@@ -263,23 +263,28 @@ const inviterParticipants = async (req, res) => {
 // ---------------------------------------------------------------------
 const addTransaction = async (req, res) => {
   const id = req.params.id;
-  const { identifiant_appel, descriptif, numero_case, numero_appel, date_appel, motif_appel, ordre_passage } = req.body;
+  const { identifiant_appel, descriptif, numero_case, numero_appel, id_agent, date_appel, motif_appel, ordre_passage } = req.body;
   if (!identifiant_appel || !identifiant_appel.trim() || !descriptif || !descriptif.trim() || ordre_passage == null) {
     return res.status(400).json({ message: "Identifiant d'appel, descriptif et ordre de passage sont obligatoires." });
   }
   try {
-    const [[s]] = await db.query("SELECT statut FROM b_cal_session WHERE id=?", [id]);
+    const [[s]] = await db.query("SELECT statut, nombre_transactions FROM b_cal_session WHERE id=?", [id]);
     if (!s) return res.status(404).json({ message: "Session introuvable." });
     if (!enBrouillon(s)) return res.status(409).json({ message: "Le jeu de transactions est figé (session ouverte)." });
+    // Plafond : on ne peut pas dépasser le nombre de transactions défini pour la session.
+    const [[{ nb }]] = await db.query("SELECT COUNT(*) AS nb FROM b_cal_transaction WHERE id_session=?", [id]);
+    if (num(s.nombre_transactions) > 0 && nb >= num(s.nombre_transactions)) {
+      return res.status(409).json({ message: `Nombre de transactions atteint (${s.nombre_transactions}). Augmentez d'abord le nombre défini pour la session.` });
+    }
     const [[dup]] = await db.query(
       "SELECT id FROM b_cal_transaction WHERE id_session=? AND identifiant_appel=?", [id, identifiant_appel.trim()]
     );
     if (dup) return res.status(409).json({ message: "Cette transaction est déjà chargée dans la session." });
     const [r] = await db.query(
       `INSERT INTO b_cal_transaction
-        (id_session, identifiant_appel, descriptif, numero_case, numero_appel, date_appel, motif_appel, ordre_passage, dateCreation)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [id, identifiant_appel.trim(), descriptif.trim(), numero_case || null, numero_appel || null,
+        (id_session, identifiant_appel, descriptif, numero_case, numero_appel, id_agent, date_appel, motif_appel, ordre_passage, dateCreation)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [id, identifiant_appel.trim(), descriptif.trim(), numero_case || null, numero_appel || null, id_agent || null,
        date_appel || null, motif_appel || null, num(ordre_passage)]
     );
     return res.status(201).json({ id: r.insertId, message: "Transaction ajoutée." });
@@ -290,7 +295,9 @@ const getTransactions = async (req, res) => {
   const id = req.params.id;
   try {
     const [rows] = await db.query(
-      "SELECT * FROM b_cal_transaction WHERE id_session=? ORDER BY ordre_passage, id", [id]
+      `SELECT t.*, u.nom AS agent_nom, u.prenom AS agent_prenom, u.nom_utilisateur AS agent_login
+         FROM b_cal_transaction t LEFT JOIN b_utilisateur u ON t.id_agent=u.id
+        WHERE t.id_session=? ORDER BY t.ordre_passage, t.id`, [id]
     );
     return res.status(200).json(rows);
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
@@ -298,7 +305,7 @@ const getTransactions = async (req, res) => {
 
 const updateTransaction = async (req, res) => {
   const tid = req.params.tid;
-  const { identifiant_appel, descriptif, numero_case, numero_appel, date_appel, motif_appel, ordre_passage } = req.body;
+  const { identifiant_appel, descriptif, numero_case, numero_appel, id_agent, date_appel, motif_appel, ordre_passage } = req.body;
   try {
     const [[t]] = await db.query(
       "SELECT t.*, s.statut FROM b_cal_transaction t JOIN b_cal_session s ON t.id_session=s.id WHERE t.id=?", [tid]
@@ -313,11 +320,13 @@ const updateTransaction = async (req, res) => {
       if (dup) return res.status(409).json({ message: "Un autre enregistrement porte déjà cet identifiant d'appel." });
     }
     await db.query(
-      `UPDATE b_cal_transaction SET identifiant_appel=?, descriptif=?, numero_case=?, numero_appel=?,
+      `UPDATE b_cal_transaction SET identifiant_appel=?, descriptif=?, numero_case=?, numero_appel=?, id_agent=?,
               date_appel=?, motif_appel=?, ordre_passage=? WHERE id=?`,
       [identifiant_appel != null ? identifiant_appel.trim() : t.identifiant_appel,
        descriptif != null ? descriptif : t.descriptif, numero_case !== undefined ? numero_case : t.numero_case,
-       numero_appel !== undefined ? numero_appel : t.numero_appel, date_appel !== undefined ? date_appel : t.date_appel,
+       numero_appel !== undefined ? numero_appel : t.numero_appel,
+       id_agent !== undefined ? (id_agent || null) : t.id_agent,
+       date_appel !== undefined ? date_appel : t.date_appel,
        motif_appel !== undefined ? motif_appel : t.motif_appel,
        ordre_passage != null ? num(ordre_passage) : t.ordre_passage, tid]
     );

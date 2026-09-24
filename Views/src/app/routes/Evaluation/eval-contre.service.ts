@@ -17,6 +17,7 @@ export interface ContreListe {
 export interface ContreErreur {
   id: number; item: string; sous_item?: string; referentiel?: string;
   poids: number; coche: number; commentaire?: string;
+  commentaire_initial?: string | null; // commentaire de l'évaluateur d'origine (lecture seule)
   coche_initiale: number | null; ecart: boolean;
 }
 export interface ContreCategorie {
@@ -27,6 +28,7 @@ export interface ContreDetail {
   contre: any;
   categories: ContreCategorie[];
   conclusion_live: string;
+  est_responsable?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -34,8 +36,18 @@ export class EvalContreService {
   private readonly http = inject(HttpClient);
 
   getSites(): Observable<{ id: number; nom: string }[]> { return this.http.get<any[]>(`/api/v1/site/all`); }
-  getAll(): Observable<ContreListe[]> { return this.http.get<ContreListe[]>(`/api/v1/eval/contre/all`); }
-  getMes(): Observable<ContreListe[]> { return this.http.get<ContreListe[]>(`/api/v1/eval/contre/mes`); }
+  private dateParams(f?: { date_debut?: string | null; date_fin?: string | null }): any {
+    const p: any = {};
+    if (f?.date_debut) p.date_debut = f.date_debut;
+    if (f?.date_fin) p.date_fin = f.date_fin;
+    return p;
+  }
+  getAll(f?: { date_debut?: string | null; date_fin?: string | null }): Observable<ContreListe[]> {
+    return this.http.get<ContreListe[]>(`/api/v1/eval/contre/all`, { params: this.dateParams(f) });
+  }
+  getMes(f?: { date_debut?: string | null; date_fin?: string | null }): Observable<ContreListe[]> {
+    return this.http.get<ContreListe[]>(`/api/v1/eval/contre/mes`, { params: this.dateParams(f) });
+  }
   getEvaluateurs(idSite: number): Observable<any[]> { return this.http.get<any[]>(`/api/v1/eval/contre/evaluateurs/${idSite}`); }
   getEvaluations(idEvaluateur: number): Observable<any[]> { return this.http.get<any[]>(`/api/v1/eval/contre/evaluations/${idEvaluateur}`); }
   creer(idEvaluation: number): Observable<{ id: number }> { return this.http.post<{ id: number }>(`/api/v1/eval/contre/creer/${idEvaluation}`, {}); }

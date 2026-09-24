@@ -5,6 +5,7 @@
 // Schéma b_evaluation + b_evaluation_categorie/erreur. Endpoints /eval/*.
 // =====================================================================
 const db = require("../config/db");
+const { permissionsEffectives } = require("../middlewares/permission");
 
 const num = (v) => (v === null || v === undefined ? 0 : Number(v));
 const applied = (mode, row) =>
@@ -258,8 +259,20 @@ const getAllEvaluations = async (req, res) => {
     const fDateFin = estDateYMD(q.date_fin) ? q.date_fin : null;
     const fQ = typeof q.q === "string" && q.q.trim() ? q.q.trim().slice(0, 100) : null;
 
-    // Portée par rôle (matrice des droits)
-    if (["R_ADMI", "R_AQ", "R_RO"].includes(role)) {
+    // Vues dédiées superviseur (sous-menus « Évaluations de mes agents » / « Mes coaching »)
+    if (q.portee === "mes-agents") {
+      // évaluations de MES agents où je ne suis PAS l'évaluateur
+      where.push(`e.id_agent IN (SELECT id_AGENT FROM b_r_superviseur_agent WHERE id_SUPERVISEUR=?)`);
+      where.push(`e.id_evaluateur<>?`);
+      params.push(userId, userId);
+    } else if (q.portee === "coaching") {
+      // évaluations de MES agents nécessitant un coaching (échec), quel que soit l'évaluateur
+      where.push(`e.id_agent IN (SELECT id_AGENT FROM b_r_superviseur_agent WHERE id_SUPERVISEUR=?)`);
+      where.push(`e.conclusion='ECHEC'`);
+      params.push(userId);
+    }
+    // Portée par rôle (matrice des droits) — appliquée seulement hors vues dédiées
+    else if (["R_ADMI", "R_AQ", "R_RO"].includes(role)) {
       // accès à toutes les évaluations
     } else if (role === "R_SUP") {
       where.push(`(e.id_evaluateur=? OR e.id_agent=? OR e.id_agent IN (SELECT id_AGENT FROM b_r_superviseur_agent WHERE id_SUPERVISEUR=?))`);
@@ -276,8 +289,13 @@ const getAllEvaluations = async (req, res) => {
     }
 
     // actif / inactif
-    if (q.inactifs === "true") where.push(`e.actif=0`);
-    else where.push(`e.actif=1`);
+    if (q.inactifs === "true") {
+      where.push(`e.actif=0`);
+      // Voir les évaluations désactivées : réservé à leur créateur (l'admin voit tout).
+      if (role !== "R_ADMI") { where.push(`e.id_evaluateur=?`); params.push(userId); }
+    } else {
+      where.push(`e.actif=1`);
+    }
 
     // filtres (valeurs déjà validées/normalisées ci-dessus)
     if (fStatut) { where.push(`e.statut=?`); params.push(fStatut); }
@@ -316,10 +334,10 @@ const getAllEvaluations = async (req, res) => {
 };
 
 // --- cycle de vie (F.39septies D) --------------------------------------
-// Un superviseur ne peut (dés)activer qu'une évaluation qu'il a créée ; les rôles
-// transverses (admin/AQ/RO) et le créateur (évaluateur) gardent le plein droit.
+// (Dés)activer / voir une évaluation désactivée : réservé à son créateur
+// (l'administrateur conserve un accès transverse).
 const peutModifierCycle = (role, evaluationCreateurId, userId) =>
-  ["R_ADMI", "R_AQ", "R_RO"].includes(role) || Number(evaluationCreateurId) === Number(userId);
+  role === "R_ADMI" || Number(evaluationCreateurId) === Number(userId);
 
 const setActifEvaluation = async (req, res) => {
   const id = req.params.id;
@@ -362,12 +380,20 @@ const desactiverMasse = async (req, res) => {
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
 
-// Suppression définitive (admin) — uniquement sur une évaluation non terminée
+// Suppression définitive — réservée au CRÉATEUR disposant de la permission
+// EVALUATION.SUPPRIMER (l'administrateur conserve un accès transverse).
 const deleteEvaluation = async (req, res) => {
   const id = req.params.id;
+  const userId = req.auth.userId;
   try {
-    const role = await getUserRole(req.auth.userId);
-    if (role !== "R_ADMI") return res.status(403).json({ message: "Réservé aux administrateurs." });
+    const [[e0]] = await db.query(`SELECT id_evaluateur, statut FROM b_evaluation WHERE id=?`, [id]);
+    if (!e0) return res.status(404).json({ message: "Évaluation introuvable." });
+    const { role, set } = await permissionsEffectives(userId);
+    const estCreateur = Number(e0.id_evaluateur) === Number(userId);
+    const aDroit = role === "R_ADMI" || (estCreateur && set.has("evaluation.supprimer"));
+    if (!aDroit) {
+      return res.status(403).json({ message: "Suppression réservée au créateur disposant de la permission Supprimer." });
+    }
     const out = await withTx(async (conn) => {
       const [[e]] = await conn.query(`SELECT statut FROM b_evaluation WHERE id=?`, [id]);
       if (!e) return { notFound: true };

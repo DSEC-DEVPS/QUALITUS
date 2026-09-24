@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { ToastrService } from 'ngx-toastr';
 import { EvalSuitesService, LettreData } from '../../eval-suites.service';
 
@@ -15,7 +16,7 @@ import { EvalSuitesService, LettreData } from '../../eval-suites.service';
 @Component({
   selector: 'app-lettre-section',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule],
+  imports: [CommonModule, FormsModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule],
   templateUrl: './lettre-section.component.html',
   styleUrl: './lettre-section.component.scss',
 })

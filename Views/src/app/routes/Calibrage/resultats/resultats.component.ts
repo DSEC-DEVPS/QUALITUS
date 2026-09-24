@@ -33,6 +33,9 @@ export class ResultatsComponent implements OnInit {
   role: 'jauge' | 'participant' | null = null;
   provisoire = true;
   statut = '';
+  nom = '';
+  resultatPublie = false;
+  visibilite = false;
   transactions: any[] = [];
   participants: any[] = [];
   grid: any = {};
@@ -57,6 +60,7 @@ export class ResultatsComponent implements OnInit {
     this.service.getResultats(this.id).subscribe({
       next: d => {
         this.role = d.role; this.provisoire = d.provisoire; this.statut = d.statut;
+        this.nom = d.nom || ''; this.resultatPublie = !!d.resultat_publie; this.visibilite = !!d.visibilite;
         this.transactions = d.transactions; this.participants = d.participants;
         this.grid = d.grid; this.global = d.global; this.conclusions = d.conclusions || '';
         // participant : ouvre directement sa confrontation
@@ -125,10 +129,17 @@ export class ResultatsComponent implements OnInit {
     });
   }
   valider(): void {
-    if (!confirm('Valider la session ? Les résultats deviennent définitifs et les participants sont notifiés.')) return;
+    if (!confirm('Valider le résultat ? Il devient visible par les participants (si la visibilité est activée). Vous pourrez encore l’ajuster.')) return;
     this.service.valider(this.id).subscribe({
-      next: () => { this.toastr.success('Session validée.'); this.charger(); },
+      next: (r: any) => { this.toastr.success(r?.message || 'Résultat validé.'); this.charger(); },
       error: e => this.toastr.error(e?.error?.message || 'Validation impossible.'),
+    });
+  }
+  figer(): void {
+    if (!confirm('Figer le résultat ? Cette action est définitive : plus aucune modification ne sera possible.')) return;
+    this.service.figer(this.id).subscribe({
+      next: (r: any) => { this.toastr.success(r?.message || 'Résultat figé.'); this.charger(); },
+      error: e => this.toastr.error(e?.error?.message || 'Figement impossible.'),
     });
   }
   retour(): void { this.router.navigate(['/mon-espace/calibrage/sessions']); }

@@ -1,11 +1,16 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { toYMD } from '@shared/date-utils';
 import { ToastrService } from 'ngx-toastr';
 import { EvalContreService, ContreListe } from '../../eval-contre.service';
 
@@ -17,7 +22,7 @@ import { EvalContreService, ContreListe } from '../../eval-contre.service';
 @Component({
   selector: 'app-mes-contre',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatChipsModule],
+  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatChipsModule, MatFormFieldModule, MatInputModule, MatDatepickerModule],
   template: `
     <div class="contre-liste">
       <mat-card class="cal-panel">
@@ -26,6 +31,16 @@ import { EvalContreService, ContreListe } from '../../eval-contre.service';
         </mat-card-header>
         <mat-card-content>
           <p class="cal-desc">Contre-évaluations portant sur vos évaluations, visibles après la date fixée par le responsable.</p>
+          <div class="cal-filtres-row">
+            <mat-form-field appearance="outline"><mat-label>Du</mat-label>
+              <input matInput [matDatepicker]="pd" [(ngModel)]="dateDebut" name="dd" /><mat-datepicker-toggle matSuffix [for]="pd"></mat-datepicker-toggle><mat-datepicker #pd></mat-datepicker>
+            </mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>Au</mat-label>
+              <input matInput [matDatepicker]="pf" [(ngModel)]="dateFin" name="df" /><mat-datepicker-toggle matSuffix [for]="pf"></mat-datepicker-toggle><mat-datepicker #pf></mat-datepicker>
+            </mat-form-field>
+            <button mat-flat-button color="primary" (click)="charger()"><mat-icon>search</mat-icon> Filtrer</button>
+            <button mat-button (click)="reinitialiserFiltres()">Réinitialiser</button>
+          </div>
           <mat-card>
             <mat-card-content>
               @if (liste.length === 0) {
@@ -70,13 +85,18 @@ export class MesContreComponent implements OnInit {
 
   liste: ContreListe[] = [];
   colonnes = ['responsable', 'appel', 'conclusion', 'visibilite'];
+  dateDebut: any = null;
+  dateFin: any = null;
 
-  ngOnInit(): void {
-    this.service.getMes().subscribe({
+  ngOnInit(): void { this.charger(); }
+
+  charger(): void {
+    this.service.getMes({ date_debut: toYMD(this.dateDebut), date_fin: toYMD(this.dateFin) }).subscribe({
       next: l => (this.liste = l),
       error: () => this.toastr.error('Erreur de chargement.'),
     });
   }
+  reinitialiserFiltres(): void { this.dateDebut = null; this.dateFin = null; this.charger(); }
 
   ouvrir(c: ContreListe): void {
     this.router.navigate(['/mon-espace/evaluation/contre-executer', c.id]);

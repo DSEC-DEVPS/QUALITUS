@@ -8,7 +8,8 @@ const rap = require("../Controllers/evalRapport.Controllers");
 
 const router = express.Router();
 
-router.get("/eval/rapport/agents-pole", auth, permission("REPORTING","LIRE"), rap.getRapportAgentsPole);
-router.get("/eval/rapport/superviseurs", auth, permission("REPORTING","LIRE"), rap.getSuperviseurs);
+router.get("/eval/rapport/agents-pole", auth, permission("AGENT_POLE","LIRE"), rap.getRapportAgentsPole);
+router.get("/eval/rapport/agents-pole/:id", auth, permission("AGENT_POLE","LIRE"), rap.getAgentPoleDetail);
+router.get("/eval/rapport/superviseurs", auth, permission("AGENT_POLE","LIRE"), rap.getSuperviseurs);
 
 module.exports = router;

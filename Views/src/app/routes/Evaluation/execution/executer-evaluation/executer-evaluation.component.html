@@ -90,6 +90,10 @@
               } @else {
                 <dt>Nature</dt><dd>{{ detail.evaluation.nature_ressource || '—' }}</dd>
               }
+              <dt>Évaluateur</dt><dd>{{ detail.evaluation.evaluateur_nom ? (detail.evaluation.evaluateur_nom + ' ' + (detail.evaluation.evaluateur_prenom || '')) : '—' }}</dd>
+              @if (detail.evaluation.type_ressource === 'HUMAINE') {
+                <dt>Superviseur</dt><dd>{{ detail.evaluation.superviseur_nom ? (detail.evaluation.superviseur_nom + ' ' + (detail.evaluation.superviseur_prenom || '')) : '—' }}</dd>
+              }
               <dt>Grille</dt><dd>{{ detail.evaluation.grille || '—' }}</dd>
               <dt>Contexte</dt><dd>{{ detail.evaluation.contexte || '—' }}</dd>
               <dt>Date d'appel</dt><dd>{{ detail.evaluation.date_appel ? (detail.evaluation.date_appel | date: 'dd/MM/yyyy') : '—' }}</dd>
@@ -106,12 +110,12 @@
             <h3>Résultats par catégorie</h3>
             <table class="resultats">
               <tr>
-                <th>Catégorie</th><th>Score /20</th><th>Décochées</th><th></th>
+                <th>Catégorie</th><th>Score (Σ poids)</th><th>Décochées</th><th></th>
               </tr>
               @for (c of detail.categories; track c.id) {
                 <tr>
                   <td>{{ c.libelle }}</td>
-                  <td class="num">{{ (c.score_obtenu / 5) | number: '1.0-2' }}</td>
+                  <td class="num">{{ c.score_obtenu | number: '1.0-2' }} / {{ c.seuil_reussite | number: '1.0-2' }}</td>
                   <td class="num">{{ c.nb_erreurs_decochees }}</td>
                   <td>
                     @if (c.reussite) { <mat-icon class="ok">check_circle</mat-icon> }
@@ -147,7 +151,7 @@
               <div class="conclusion-finale" [class.echec]="detail.evaluation.conclusion === 'ECHEC'">
                 Conclusion : <strong>{{ detail.evaluation.conclusion === 'SUCCES' ? 'Succès' : 'Échec' }}</strong>
               </div>
-              <p class="hint-avis"><mat-icon>info</mat-icon> L'avis de l'agent se saisit dans la lettre ci-dessous.</p>
+              <p class="hint-avis"><mat-icon>info</mat-icon> L'approbation de l'agent se saisit dans la lettre ci-dessous.</p>
             }
           </mat-card-content>
         </mat-card>

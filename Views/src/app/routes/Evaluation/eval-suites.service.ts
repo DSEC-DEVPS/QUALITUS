@@ -27,6 +27,7 @@ export interface LignePlanAction {
   id_statut: number | null;
   id_kpi: number | null;
   commentaire: string | null;
+  synthese?: string | null;
   action_libelle?: string;
   statut_libelle?: string;
   kpi_libelle?: string;

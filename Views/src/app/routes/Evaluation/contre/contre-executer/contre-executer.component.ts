@@ -42,6 +42,7 @@ export class ContreExecuterComponent implements OnInit {
   ngOnInit(): void { this.id = Number(this.route.snapshot.params['id']); this.charger(); }
 
   get terminee(): boolean { return this.detail?.contre.statut === 'TERMINE'; }
+  get estResponsable(): boolean { return !!this.detail?.est_responsable; }
 
   charger(): void {
     this.service.getDetail(this.id).subscribe({
@@ -78,10 +79,12 @@ export class ContreExecuterComponent implements OnInit {
     this.service.toggleErreur(this.id, e.id, e.coche === 1, e.commentaire).subscribe({ next: () => {}, error: () => this.toastr.error('Erreur.') });
   }
 
-  enregistrerResolution(): void {
+  // La contre-évaluation n'a plus de section Résolution : seule la date de
+  // visibilité est enregistrée (obligatoire avant de terminer).
+  enregistrerVisibilite(): void {
     if (!this.detail || this.terminee) return;
     const c = this.detail.contre;
-    this.service.setResolution(this.id, { resolution: c.resolution, synthese: c.synthese, date_visibilite: toYMD(c.date_visibilite) }).subscribe({
+    this.service.setResolution(this.id, { date_visibilite: toYMD(c.date_visibilite) }).subscribe({
       next: () => this.toastr.success('Enregistré.'), error: err => this.toastr.error(err?.error?.message || 'Erreur.'),
     });
   }

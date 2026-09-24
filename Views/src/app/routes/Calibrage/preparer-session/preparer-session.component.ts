@@ -13,6 +13,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { ToastrService } from 'ngx-toastr';
 import { UserService } from '@shared/services/user.service';
 import { CalibrageService, CalSession, CalParticipant, CalTransaction, EvaluateurDispo, CalSessionListe } from '../calibrage.service';
@@ -23,7 +24,7 @@ import { CalibrageService, CalSession, CalParticipant, CalTransaction, Evaluateu
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatDatepickerModule,
-    MatTableModule, MatCheckboxModule, MatTooltipModule, MatExpansionModule,
+    MatTableModule, MatCheckboxModule, MatTooltipModule, MatExpansionModule, MatAutocompleteModule,
   ],
   templateUrl: './preparer-session.component.html',
   styleUrl: './preparer-session.component.scss',
@@ -46,17 +47,46 @@ export class PreparerSessionComponent implements OnInit {
 
   selection = new Set<number>();          // id_evaluateur sélectionnés
   sourceDup: number | null = null;
-  colonnesTx = ['ordre', 'identifiant', 'descriptif', 'date', 'actions'];
+  colonnesTx = ['ordre', 'identifiant', 'agent', 'descriptif', 'date', 'actions'];
 
   txForm: any = this.txVide();
   txEditId: number | null = null;
 
+  // Recherche participants (liste déroulante à cases + recherche nom/prénom)
+  rechercheParticipant = '';
+  // Agents (autocomplete du champ Agent de la transaction) + recherche
+  agents: any[] = [];
+  agentRecherche = '';
+
   get brouillon(): boolean { return this.session?.statut === 'BROUILLON'; }
+  get ordresPossibles(): number[] {
+    const n = Number(this.session?.nombre_transactions) || 0;
+    return Array.from({ length: n }, (_, i) => i + 1);
+  }
+  get capAtteint(): boolean {
+    const n = Number(this.session?.nombre_transactions) || 0;
+    return n > 0 && this.transactions.length >= n;
+  }
+  get disponiblesFiltres(): EvaluateurDispo[] {
+    const q = (this.rechercheParticipant || '').trim().toLowerCase();
+    if (!q) return this.disponibles;
+    return this.disponibles.filter(e => `${e.nom} ${e.prenom}`.toLowerCase().includes(q));
+  }
+  agentsFiltres(): any[] {
+    const q = (this.agentRecherche || '').trim().toLowerCase();
+    const base = q ? this.agents.filter(a => `${a.nom} ${a.prenom}`.toLowerCase().includes(q)) : this.agents;
+    return base.slice(0, 20);
+  }
+  choisirAgentTx(a: any): void {
+    this.txForm.id_agent = a.id;
+    this.agentRecherche = `${a.nom} ${a.prenom} (${a.nom_utilisateur})`;
+  }
 
   ngOnInit(): void {
     this.id = Number(this.route.snapshot.paramMap.get('id'));
     this.userService.getAllSite().subscribe({ next: s => (this.sites = s || []) });
     this.userService.getEvalGrillesActives().subscribe({ next: g => (this.grilles = g || []) });
+    this.userService.getAllUtilisateur().subscribe({ next: u => (this.agents = u || []) });
     this.charger();
   }
 
@@ -125,13 +155,14 @@ export class PreparerSessionComponent implements OnInit {
 
   // --- Transactions ---
   txVide() {
-    return { identifiant_appel: '', descriptif: '', numero_case: '', numero_appel: '', date_appel: null as any, motif_appel: '', ordre_passage: null as any };
+    return { identifiant_appel: '', descriptif: '', numero_case: '', numero_appel: '', id_agent: null as any, date_appel: null as any, motif_appel: '', ordre_passage: null as any };
   }
-  editerTx(t: CalTransaction): void {
+  editerTx(t: any): void {
     this.txEditId = t.id;
     this.txForm = { ...t };
+    this.agentRecherche = t.id_agent ? `${t.agent_nom || ''} ${t.agent_prenom || ''} (${t.agent_login || ''})` : '';
   }
-  annulerTx(): void { this.txEditId = null; this.txForm = this.txVide(); }
+  annulerTx(): void { this.txEditId = null; this.txForm = this.txVide(); this.agentRecherche = ''; }
   enregistrerTx(): void {
     if (!this.txForm.identifiant_appel?.trim() || !this.txForm.descriptif?.trim() || this.txForm.ordre_passage == null) {
       this.toastr.warning('Identifiant, descriptif et ordre de passage sont obligatoires.'); return;

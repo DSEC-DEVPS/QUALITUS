@@ -99,4 +99,5 @@ export class CalibrageService {
   }
   setConclusions(id: number, conclusions: string) { return this.http.put(`${this.base}/session/${id}/conclusions`, { conclusions }); }
   valider(id: number) { return this.http.post(`${this.base}/session/${id}/valider`, {}); }
+  figer(id: number) { return this.http.post(`${this.base}/session/${id}/figer`, {}); }
 }

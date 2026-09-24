@@ -2,7 +2,10 @@ import { Routes } from '@angular/router';
 import { canMatchPermission } from '../../core/authorization/permission.guard';
 import { ListeEvaluationsComponent } from './consultation/liste-evaluations/liste-evaluations.component';
 import { MesEvaluationsComponent } from './mes-evaluations/mes-evaluations.component';
+import { MesAgentsEvalsComponent } from './supervision/mes-agents-evals.component';
+import { MesCoachingComponent } from './supervision/mes-coaching.component';
 import { RapportPoleComponent } from './rapport/rapport-pole/rapport-pole.component';
+import { AgentPoleDetailComponent } from './rapport/agent-pole-detail/agent-pole-detail.component';
 import { ContreListeComponent } from './contre/contre-liste/contre-liste.component';
 import { MesContreComponent } from './contre/mes-contre/mes-contre.component';
 import { ContreExecuterComponent } from './contre/contre-executer/contre-executer.component';
@@ -22,6 +25,8 @@ export const routes: Routes = [
   { path: '', redirectTo: 'evaluations', pathMatch: 'full' },
   { path: 'evaluations', component: ListeEvaluationsComponent, canMatch: [canMatchPermission('evaluation.lire')] },
   { path: 'mes-evaluations', component: MesEvaluationsComponent, canMatch: [canMatchPermission('evaluation.lire')] },
+  { path: 'mes-agents-evaluations', component: MesAgentsEvalsComponent, canMatch: [canMatchPermission('evaluation.lire')] },
+  { path: 'mes-coaching', component: MesCoachingComponent, canMatch: [canMatchPermission('evaluation.lire')] },
   { path: 'grilles', component: ListeGrillesComponent, canMatch: [canMatchPermission('grille.lire')] },
   { path: 'grilles/editeur/:id', component: EditeurGrilleComponent, canMatch: [canMatchPermission('grille.modifier')] },
   { path: 'creation/unitaire', component: CreerEvaluationCahierComponent, canMatch: [canMatchPermission('evaluation.creer')] },
@@ -36,5 +41,6 @@ export const routes: Routes = [
   { path: 'contre-executer/:id', component: ContreExecuterComponent, canMatch: [canMatchPermission('contre_evaluation.lire')] },
   { path: 'notifications', component: NotificationsEvalComponent, canMatch: [canMatchPermission('notification.lire')] },
   { path: 'referentiels', component: ReferentielsComponent, canMatch: [canMatchPermission('referentiel.lire')] },
-  { path: 'agents-pole', component: RapportPoleComponent, canMatch: [canMatchPermission('evaluation.lire')] },
+  { path: 'agents-pole', component: RapportPoleComponent, canMatch: [canMatchPermission('agent_pole.lire')] },
+  { path: 'agents-pole/:id', component: AgentPoleDetailComponent, canMatch: [canMatchPermission('agent_pole.lire')] },
 ];

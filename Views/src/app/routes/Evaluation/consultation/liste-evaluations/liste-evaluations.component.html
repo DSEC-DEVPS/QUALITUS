@@ -129,7 +129,6 @@
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let e" (click)="$event.stopPropagation()">
               @if (e.actif) {
-                <button mat-icon-button color="primary" title="Contre-évaluer" *ngIf="e.statut === 'TERMINE'" (click)="contreEvaluer(e, $event)"><mat-icon>compare_arrows</mat-icon></button>
                 <button mat-icon-button title="Désactiver" (click)="setActif(e, false, $event)"><mat-icon>block</mat-icon></button>
               } @else {
                 <button mat-icon-button color="primary" title="Réactiver" (click)="setActif(e, true, $event)"><mat-icon>undo</mat-icon></button>

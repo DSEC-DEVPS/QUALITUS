@@ -3,17 +3,28 @@
     <button mat-icon-button (click)="retour()"><mat-icon>arrow_back</mat-icon></button>
     <span class="cal-ic"><mat-icon>analytics</mat-icon></span>
     <div class="cal-tt">
-      <h2>Résultats du calibrage <span class="cal-badge" [attr.data-st]="statut">{{ statut }}</span></h2>
+      <h2>Résultats — {{ nom }}
+        <span class="cal-badge" [attr.data-st]="statut">{{ statut }}</span>
+        <span class="cal-badge" *ngIf="resultatPublie" data-st="OUVERTE">Publié</span>
+      </h2>
     </div>
     <div class="cal-actions">
-      <button mat-flat-button color="primary" *ngIf="modifiable" (click)="valider()">
-        <mat-icon>verified</mat-icon> Valider la session
+      <button mat-flat-button color="primary" *ngIf="modifiable && !resultatPublie" (click)="valider()">
+        <mat-icon>verified</mat-icon> Valider le résultat
+      </button>
+      <button mat-stroked-button *ngIf="modifiable" (click)="figer()">
+        <mat-icon>lock</mat-icon> Figer le résultat
       </button>
     </div>
   </mat-card-header><mat-card-content>
 
   <div class="provisoire" *ngIf="provisoire">
-    <mat-icon>info</mat-icon> Résultats <b>provisoires</b> : la référence comme les constats peuvent encore évoluer jusqu'à la validation.
+    <mat-icon>info</mat-icon>
+    @if (resultatPublie) {
+      Résultat <b>publié</b> mais non figé : le jauge peut encore l'ajuster (les participants sont notifiés à chaque changement).
+    } @else {
+      Résultats <b>provisoires</b> : la référence comme les constats peuvent encore évoluer jusqu'à la validation.
+    }
   </div>
 
   <!-- Tableau croisé (jauge) -->
@@ -52,7 +63,7 @@
   <!-- Confrontation -->
   <mat-card *ngIf="selPid" class="confront">
     <div class="conf-tete">
-      <h3>Confrontation — {{ selNom }}</h3>
+      <h3>{{ nom }} — {{ selNom }}</h3>
       <button mat-button *ngIf="estJauge" (click)="fermerConfrontation()"><mat-icon>close</mat-icon> Fermer</button>
     </div>
     <p class="legende"><span class="dot ref"></span> Référence (jauge) &nbsp; <span class="dot part"></span> Participant &nbsp; <mat-icon class="ico-div">report_problem</mat-icon> divergence</p>

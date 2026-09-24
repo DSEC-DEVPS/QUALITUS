@@ -14,7 +14,6 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { ToastrService } from 'ngx-toastr';
 import { EvalInstanceService, EvaluationListe, FiltresEvaluation, RefItem } from '../../eval-instance.service';
-import { EvalContreService } from '../../eval-contre.service';
 
 import { MatDatepickerModule } from '@angular/material/datepicker';
 @Component({
@@ -29,7 +28,6 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 })
 export class ListeEvaluationsComponent implements OnInit {
   private readonly service = inject(EvalInstanceService);
-  private readonly contreService = inject(EvalContreService);
   private readonly router = inject(Router);
   private readonly toastr = inject(ToastrService);
 
@@ -101,11 +99,4 @@ export class ListeEvaluationsComponent implements OnInit {
     });
   }
 
-  contreEvaluer(e: EvaluationListe, ev: Event): void {
-    ev.stopPropagation();
-    this.contreService.creer(e.id).subscribe({
-      next: (r: any) => { this.toastr.success('Contre-évaluation ouverte.'); this.router.navigate(['/mon-espace/evaluation/contre-executer', r.id]); },
-      error: (err: any) => this.toastr.error(err?.error?.message || 'Contre-évaluation impossible.'),
-    });
-  }
 }

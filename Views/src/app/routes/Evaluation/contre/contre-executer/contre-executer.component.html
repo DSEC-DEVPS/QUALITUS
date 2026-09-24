@@ -38,9 +38,14 @@
                       @if (depliee === e.id) {
                         <div class="detail-err">
                           @if (e.referentiel) { <div class="ref"><strong>Réf. :</strong> {{ e.referentiel }}</div> }
+                          <!-- Commentaire de l'évaluateur d'origine : lecture seule, jamais modifiable -->
+                          <div class="comm-origine">
+                            <strong>Commentaire de l'évaluateur :</strong> {{ e.commentaire_initial || '—' }}
+                          </div>
+                          <!-- Commentaire du contre-évaluateur : modifiable tant que non terminée -->
                           <mat-form-field appearance="outline" class="plein">
-                            <mat-label>Commentaire</mat-label>
-                            <textarea matInput rows="2" [(ngModel)]="e.commentaire" [disabled]="terminee" (blur)="enregistrerCommentaire(e)" [name]="'c'+e.id"></textarea>
+                            <mat-label>Commentaire du contre-évaluateur</mat-label>
+                            <textarea matInput rows="2" [(ngModel)]="e.commentaire" [disabled]="terminee || !estResponsable" (blur)="enregistrerCommentaire(e)" [name]="'c'+e.id"></textarea>
                           </mat-form-field>
                         </div>
                       }
@@ -65,26 +70,24 @@
       <div class="col-droite">
         <mat-card>
           <mat-card-content>
-            <h3>Résolution & clôture</h3>
-            <mat-radio-group [(ngModel)]="detail.contre.resolution" (change)="enregistrerResolution()" [disabled]="terminee" name="res">
-              <mat-radio-button value="OUI">Résolu</mat-radio-button>
-              <mat-radio-button value="NON">Non résolu</mat-radio-button>
-            </mat-radio-group>
-            <mat-form-field appearance="outline" class="plein">
-              <mat-label>Synthèse</mat-label>
-              <textarea matInput rows="3" [(ngModel)]="detail.contre.synthese" [disabled]="terminee" (blur)="enregistrerResolution()" name="syn"></textarea>
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="plein">
-              <mat-label>Date de visibilité (obligatoire)</mat-label>
-              <input matInput [matDatepicker]="pickerVis" [(ngModel)]="detail.contre.date_visibilite" [disabled]="terminee" (dateChange)="enregistrerResolution()" name="vis" /><mat-datepicker-toggle matSuffix [for]="pickerVis"></mat-datepicker-toggle><mat-datepicker #pickerVis></mat-datepicker>
-            </mat-form-field>
-            @if (!terminee) {
-              <button mat-raised-button color="primary" [disabled]="!detail.contre.date_visibilite" (click)="terminer()">
-                <mat-icon>done_all</mat-icon> Terminer
-              </button>
+            @if (estResponsable) {
+              <h3>Clôture</h3>
+              <mat-form-field appearance="outline" class="plein">
+                <mat-label>Date de visibilité (obligatoire)</mat-label>
+                <input matInput [matDatepicker]="pickerVis" [(ngModel)]="detail.contre.date_visibilite" [disabled]="terminee" (dateChange)="enregistrerVisibilite()" name="vis" /><mat-datepicker-toggle matSuffix [for]="pickerVis"></mat-datepicker-toggle><mat-datepicker #pickerVis></mat-datepicker>
+              </mat-form-field>
+              @if (!terminee) {
+                <button mat-raised-button color="primary" [disabled]="!detail.contre.date_visibilite" (click)="terminer()">
+                  <mat-icon>done_all</mat-icon> Terminer
+                </button>
+              } @else {
+                <div class="fin">Conclusion : <strong>{{ detail.contre.conclusion === 'SUCCES' ? 'Succès' : 'Échec' }}</strong>
+                  — visible le {{ detail.contre.date_visibilite | date: 'dd/MM/yyyy' }}</div>
+              }
             } @else {
-              <div class="fin">Conclusion : <strong>{{ detail.contre.conclusion === 'SUCCES' ? 'Succès' : 'Échec' }}</strong>
-                — visible le {{ detail.contre.date_visibilite | date: 'dd/MM/yyyy' }}</div>
+              <!-- Côté évaluateur contre-évalué : on affiche juste la conclusion -->
+              <h3>Résultat</h3>
+              <div class="fin">Conclusion : <strong>{{ detail.contre.conclusion === 'SUCCES' ? 'Succès' : 'Échec' }}</strong></div>
             }
           </mat-card-content>
         </mat-card>

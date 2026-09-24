@@ -441,6 +441,32 @@
           }
         },
         {
+          "route": "mes-agents-evaluations",
+          "name": "Évaluations de mes agents",
+          "type": "link",
+          "icon": "groups",
+          "module": "evaluation",
+          "permissions": {
+            "only": [
+              "R_SUP",
+              "R_ADMI"
+            ]
+          }
+        },
+        {
+          "route": "mes-coaching",
+          "name": "Mes coaching",
+          "type": "link",
+          "icon": "psychology",
+          "module": "evaluation",
+          "permissions": {
+            "only": [
+              "R_SUP",
+              "R_ADMI"
+            ]
+          }
+        },
+        {
           "route": "creation/unitaire",
           "name": "Créer une évaluation",
           "type": "link",
@@ -499,6 +525,7 @@
           "name": "Agents en pôle",
           "type": "link",
           "icon": "trending_down",
+          "module": "agent_pole",
           "permissions": {
             "only": [
               "R_ADMI",

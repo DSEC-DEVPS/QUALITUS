@@ -51,7 +51,7 @@ export class PermissionsService {
       // l'admin voit tout : on ajoute tous les modules connus + ceux du set
       ['utilisateur', 'site', 'programme', 'fonction', 'fiche', 'sondage', 'quiz', 'grille',
        'referentiel', 'evaluation', 'contre_evaluation', 'calibrage', 'notification',
-       'habilitation', 'reporting'].forEach(m => this.modules.add(m));
+       'habilitation', 'agent_pole', 'reporting'].forEach(m => this.modules.add(m));
     }
     // Conserve les permissions "legacy" (rôles menu.json) et ajoute les fines + modules.
     const legacy = ['canAdd', 'canDelete', 'canEdit', 'canRead'];

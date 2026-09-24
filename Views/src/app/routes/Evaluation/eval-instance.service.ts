@@ -59,6 +59,7 @@ export interface FiltresEvaluation {
   date_debut?: any;
   date_fin?: any;
   inactifs?: boolean;
+  portee?: string; // 'mes-agents' | 'coaching' (vues superviseur)
 }
 
 export interface CompteRenduMasse {

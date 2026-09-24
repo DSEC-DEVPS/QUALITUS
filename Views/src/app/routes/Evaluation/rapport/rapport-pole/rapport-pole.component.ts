@@ -11,6 +11,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ToastrService } from 'ngx-toastr';
 import { EvalRapportService, AgentPole, FiltresRapport } from '../../eval-rapport.service';
 
@@ -18,9 +19,9 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 @Component({
   selector: 'app-rapport-pole',
   standalone: true,
-  imports: [MatDatepickerModule, 
+  imports: [MatDatepickerModule,
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatSelectModule, MatInputModule, MatTableModule, MatChipsModule,
+    MatFormFieldModule, MatSelectModule, MatInputModule, MatTableModule, MatChipsModule, MatTooltipModule,
   ],
   templateUrl: './rapport-pole.component.html',
   styleUrl: './rapport-pole.component.scss',
@@ -32,12 +33,12 @@ export class RapportPoleComponent implements OnInit {
 
   agents: AgentPole[] = [];
   chargement = false;
+  voirTous = false;
   filtres: FiltresRapport = {};
   sites: { id: number; nom: string }[] = [];
   programmes: { id: number; nom: string }[] = [];
   superviseurs: { id: number; nom: string; prenom: string }[] = [];
   colonnes = ['agent', 'programme', 'site', 'superviseur', 'criteres', 'nb', 'detail'];
-  detailOuvert: number | null = null;
 
   ngOnInit(): void {
     this.charger();
@@ -52,16 +53,12 @@ export class RapportPoleComponent implements OnInit {
     if (this.filtres.date_debut) f.date_debut = toYMD(this.filtres.date_debut);
     if (this.filtres.date_fin) f.date_fin = toYMD(this.filtres.date_fin);
     this.service.getAgentsPole(f).subscribe({
-      next: a => { this.agents = a; this.chargement = false; },
+      next: r => { this.agents = r.agents || []; this.voirTous = !!r.voir_tous; this.chargement = false; },
       error: () => { this.toastr.error('Erreur de chargement du rapport.'); this.chargement = false; },
     });
   }
 
   reinitialiser(): void { this.filtres = {}; this.charger(); }
 
-  toggleDetail(a: AgentPole): void { this.detailOuvert = this.detailOuvert === a.id ? null : a.id; }
-
-  estOuvert = (_: number, row: AgentPole): boolean => this.detailOuvert === row.id;
-
-  ouvrirEval(id: number): void { this.router.navigate(['/mon-espace/evaluation/executer', id]); }
+  ouvrirDetail(a: AgentPole): void { this.router.navigate(['/mon-espace/evaluation/agents-pole', a.id]); }
 }

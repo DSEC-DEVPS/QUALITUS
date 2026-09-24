@@ -51,8 +51,17 @@ export class ExecuterEvaluationComponent implements OnInit {
   chargement = false;
 
   ngOnInit(): void {
-    this.id = Number(this.route.snapshot.params['id']);
-    this.charger();
+    // Recharger à chaque changement d'id (navigation vers une supplémentaire
+    // depuis l'accordéon : Angular réutilise le composant, il faut réagir au param).
+    this.route.paramMap.subscribe(pm => {
+      const nouvelId = Number(pm.get('id'));
+      if (!nouvelId || nouvelId === this.id) return;
+      this.id = nouvelId;
+      this.detail = undefined;
+      this.categorieActive = undefined;
+      this.erreurDepliee = null;
+      this.charger();
+    });
   }
 
   get terminee(): boolean {
