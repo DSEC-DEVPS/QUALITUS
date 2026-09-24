@@ -50,7 +50,7 @@ export class ListeEvaluationsComponent implements OnInit {
   charger(): void {
     this.chargement = true;
     this.selection.clear();
-    const f: any = { ...this.filtres };
+    const f: any = { ...this.filtres, portee: 'creees' };
     if (this.filtres.date_debut) f.date_debut = toYMD(this.filtres.date_debut);
     if (this.filtres.date_fin) f.date_fin = toYMD(this.filtres.date_fin);
     this.service.getEvaluations(f).subscribe({

@@ -72,9 +72,11 @@ export class PreparerSessionComponent implements OnInit {
     if (!q) return this.disponibles;
     return this.disponibles.filter(e => `${e.nom} ${e.prenom}`.toLowerCase().includes(q));
   }
+  // Le champ Agent ne propose que les utilisateurs du SITE de la session
+  // (liste des évaluateurs disponibles, résolue sur session.id_site).
   agentsFiltres(): any[] {
     const q = (this.agentRecherche || '').trim().toLowerCase();
-    const base = q ? this.agents.filter(a => `${a.nom} ${a.prenom}`.toLowerCase().includes(q)) : this.agents;
+    const base = q ? this.disponibles.filter(a => `${a.nom} ${a.prenom}`.toLowerCase().includes(q)) : this.disponibles;
     return base.slice(0, 20);
   }
   choisirAgentTx(a: any): void {
@@ -86,7 +88,6 @@ export class PreparerSessionComponent implements OnInit {
     this.id = Number(this.route.snapshot.paramMap.get('id'));
     this.userService.getAllSite().subscribe({ next: s => (this.sites = s || []) });
     this.userService.getEvalGrillesActives().subscribe({ next: g => (this.grilles = g || []) });
-    this.userService.getAllUtilisateur().subscribe({ next: u => (this.agents = u || []) });
     this.charger();
   }
 

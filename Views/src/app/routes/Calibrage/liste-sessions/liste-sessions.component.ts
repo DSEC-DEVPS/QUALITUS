@@ -15,6 +15,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { ToastrService } from 'ngx-toastr';
 import { UserService } from '@shared/services/user.service';
 import { CanDirective } from '@core/authorization/can.directive';
+import { PermissionsService } from '@core/authorization/permissions.service';
 import { CalibrageService, CalSessionListe, FiltresSession } from '../calibrage.service';
 
 @Component({
@@ -33,6 +34,11 @@ export class ListeSessionsComponent implements OnInit {
   private readonly userService = inject(UserService);
   private readonly toastr = inject(ToastrService);
   private readonly router = inject(Router);
+  private readonly perms = inject(PermissionsService);
+
+  // Organisateur (jauge) : accès aux filtres Site/Statut ; sinon (participant),
+  // seul le filtre par période est proposé.
+  get peutOrganiser(): boolean { return this.perms.can('calibrage.organiser'); }
 
   filtres: FiltresSession = {};
   sessions: CalSessionListe[] = [];

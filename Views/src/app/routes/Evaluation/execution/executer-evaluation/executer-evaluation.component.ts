@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -41,6 +41,7 @@ import { LettreSectionComponent } from '../lettre-section/lettre-section.compone
 export class ExecuterEvaluationComponent implements OnInit {
   private readonly service = inject(EvalExecutionService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly toastr = inject(ToastrService);
 
@@ -150,6 +151,11 @@ export class ExecuterEvaluationComponent implements OnInit {
       case 'DEBRIEFER': return 'Débriefer';
       default: return 'Non validé';
     }
+  }
+
+  ouvrirParente(): void {
+    const p = this.detail?.evaluation?.id_evaluation_parente;
+    if (p) this.router.navigate(['/mon-espace/evaluation/executer', p]);
   }
 
   retour(): void { this.location.back(); }

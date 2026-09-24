@@ -263,17 +263,28 @@ const getAllEvaluations = async (req, res) => {
     const fDateFin = estDateYMD(q.date_fin) ? q.date_fin : null;
     const fQ = typeof q.q === "string" && q.q.trim() ? q.q.trim().slice(0, 100) : null;
 
-    // Vues dédiées superviseur (sous-menus « Évaluations de mes agents » / « Mes coaching »)
-    if (q.portee === "mes-agents") {
-      // évaluations de MES agents où je ne suis PAS l'évaluateur
+    // Vues dédiées
+    if (q.portee === "creees") {
+      // « Mes évaluations » : uniquement celles créées par l'utilisateur lui-même
+      where.push(`e.id_evaluateur=?`);
+      params.push(userId);
+    } else if (q.portee === "mes-agents") {
+      // évaluations de MES agents où je ne suis PAS l'évaluateur, et seulement TERMINÉES
       where.push(`e.id_agent IN (SELECT id_AGENT FROM b_r_superviseur_agent WHERE id_SUPERVISEUR=?)`);
       where.push(`e.id_evaluateur<>?`);
+      where.push(`e.statut='TERMINE'`);
       params.push(userId, userId);
     } else if (q.portee === "coaching") {
       // évaluations de MES agents nécessitant un coaching (échec), quel que soit l'évaluateur
       where.push(`e.id_agent IN (SELECT id_AGENT FROM b_r_superviseur_agent WHERE id_SUPERVISEUR=?)`);
       where.push(`e.conclusion='ECHEC'`);
       params.push(userId);
+      // filtre sur l'état du coaching (terminé ou non)
+      if (q.coaching_termine === "true") {
+        where.push(`EXISTS (SELECT 1 FROM b_eval_coaching co WHERE co.id_evaluation=e.id AND co.statut='TERMINE')`);
+      } else if (q.coaching_termine === "false") {
+        where.push(`NOT EXISTS (SELECT 1 FROM b_eval_coaching co WHERE co.id_evaluation=e.id AND co.statut='TERMINE')`);
+      }
     }
     // Portée par rôle (matrice des droits) — appliquée seulement hors vues dédiées
     else if (["R_ADMI", "R_AQ", "R_RO"].includes(role)) {
@@ -321,7 +332,8 @@ const getAllEvaluations = async (req, res) => {
               e.identifiant_appel, e.numero_case, e.numero_appel, e.actif, e.id_evaluation_parente,
               ag.nom AS agent_nom, ag.prenom AS agent_prenom,
               ev.nom AS evaluateur_nom, ev.prenom AS evaluateur_prenom,
-              t.libelle AS type_evaluation, t.code AS type_code, ctx.libelle AS contexte, gr.nom AS grille, s.nom AS site
+              t.libelle AS type_evaluation, t.code AS type_code, ctx.libelle AS contexte, gr.nom AS grille, s.nom AS site,
+              (SELECT co.statut FROM b_eval_coaching co WHERE co.id_evaluation=e.id ORDER BY co.id DESC LIMIT 1) AS coaching_statut
        FROM b_evaluation e
        LEFT JOIN b_utilisateur ag ON e.id_agent = ag.id
        LEFT JOIN b_utilisateur ev ON e.id_evaluateur = ev.id

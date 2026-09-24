@@ -1,27 +1,43 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { toYMD } from '@shared/date-utils';
 import { ToastrService } from 'ngx-toastr';
 import { EvalInstanceService, EvaluationListe } from '../eval-instance.service';
 
 /**
- * « Évaluations de mes agents » (superviseur) : évaluations qui concernent
- * ses agents et dont il n'est PAS l'évaluateur.
+ * « Évaluations de mes agents » (superviseur) : évaluations TERMINÉES qui
+ * concernent ses agents et dont il n'est PAS l'évaluateur. Filtre période.
  */
 @Component({
   selector: 'app-mes-agents-evals',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatChipsModule],
+  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatChipsModule,
+    MatFormFieldModule, MatInputModule, MatDatepickerModule],
   template: `
     <div class="cal-page">
       <mat-card class="cal-panel">
         <mat-card-header class="cal-band"><span class="cal-band-title"><mat-icon>groups</mat-icon> Évaluations de mes agents</span></mat-card-header>
         <mat-card-content>
+          <div class="cal-filtres-row">
+            <mat-form-field appearance="outline"><mat-label>Du</mat-label>
+              <input matInput [matDatepicker]="pd" [(ngModel)]="dateDebut" name="dd" /><mat-datepicker-toggle matSuffix [for]="pd"></mat-datepicker-toggle><mat-datepicker #pd></mat-datepicker>
+            </mat-form-field>
+            <mat-form-field appearance="outline"><mat-label>Au</mat-label>
+              <input matInput [matDatepicker]="pf" [(ngModel)]="dateFin" name="df" /><mat-datepicker-toggle matSuffix [for]="pf"></mat-datepicker-toggle><mat-datepicker #pf></mat-datepicker>
+            </mat-form-field>
+            <button mat-flat-button color="primary" (click)="charger()"><mat-icon>search</mat-icon> Filtrer</button>
+            <button mat-button (click)="reinitialiser()">Réinitialiser</button>
+          </div>
           <mat-card>
             <mat-card-content>
               @if (chargement) { <p>Chargement…</p> }
@@ -71,13 +87,21 @@ export class MesAgentsEvalsComponent implements OnInit {
   evaluations: EvaluationListe[] = [];
   chargement = false;
   colonnes = ['agent', 'evaluateur', 'date', 'statut', 'conclusion'];
+  dateDebut: any = null;
+  dateFin: any = null;
 
-  ngOnInit(): void {
+  ngOnInit(): void { this.charger(); }
+
+  charger(): void {
     this.chargement = true;
-    this.service.getEvaluations({ portee: 'mes-agents' }).subscribe({
+    const f: any = { portee: 'mes-agents' };
+    if (this.dateDebut) f.date_debut = toYMD(this.dateDebut);
+    if (this.dateFin) f.date_fin = toYMD(this.dateFin);
+    this.service.getEvaluations(f).subscribe({
       next: e => { this.evaluations = e; this.chargement = false; },
       error: () => { this.toastr.error('Impossible de charger les évaluations.'); this.chargement = false; },
     });
   }
+  reinitialiser(): void { this.dateDebut = null; this.dateFin = null; this.charger(); }
   ouvrir(e: EvaluationListe): void { this.router.navigate(['/mon-espace/evaluation/executer', e.id]); }
 }

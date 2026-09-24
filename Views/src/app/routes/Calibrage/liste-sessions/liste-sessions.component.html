@@ -13,7 +13,7 @@
       <p class="cal-desc">Harmonisation des évaluateurs : chaque participant examine les mêmes transactions, confrontées à la référence du jauge.</p>
 
       <div class="cal-filtres-row">
-        <mat-form-field appearance="outline"><mat-label>Site</mat-label>
+        <mat-form-field appearance="outline" *ngIf="peutOrganiser"><mat-label>Site</mat-label>
           <mat-select [(ngModel)]="filtres.id_site" name="site">
             <mat-option [value]="null">Tous</mat-option>
             <mat-option *ngFor="let s of sites" [value]="s.id">{{ s.nom }}</mat-option>
@@ -27,7 +27,7 @@
           <input matInput [matDatepicker]="pf" [(ngModel)]="filtres.date_fin" name="df" />
           <mat-datepicker-toggle matSuffix [for]="pf"></mat-datepicker-toggle><mat-datepicker #pf></mat-datepicker>
         </mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Statut</mat-label>
+        <mat-form-field appearance="outline" *ngIf="peutOrganiser"><mat-label>Statut</mat-label>
           <mat-select [(ngModel)]="filtres.statut" name="st">
             <mat-option [value]="undefined">Tous</mat-option>
             <mat-option *ngFor="let s of statuts" [value]="s.v">{{ s.l }}</mat-option>

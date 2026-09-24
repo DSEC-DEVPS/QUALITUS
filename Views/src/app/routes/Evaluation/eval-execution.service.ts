@@ -33,6 +33,7 @@ export interface EvaluationInfo {
   statut: string;
   conclusion: string | null;
   resolution: string | null;
+  id_evaluation_parente: number | null;
   statut_apres_evaluation: string | null;
   synthese: string | null;
   avis_agent: string | null;

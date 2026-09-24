@@ -73,8 +73,12 @@
             @if (estResponsable) {
               <h3>Clôture</h3>
               <mat-form-field appearance="outline" class="plein">
+                <mat-label>Synthèse de la contre-évaluation</mat-label>
+                <textarea matInput rows="3" [(ngModel)]="detail.contre.synthese" [disabled]="terminee" (blur)="enregistrerCloture()" name="synth"></textarea>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="plein">
                 <mat-label>Date de visibilité (obligatoire)</mat-label>
-                <input matInput [matDatepicker]="pickerVis" [(ngModel)]="detail.contre.date_visibilite" [disabled]="terminee" (dateChange)="enregistrerVisibilite()" name="vis" /><mat-datepicker-toggle matSuffix [for]="pickerVis"></mat-datepicker-toggle><mat-datepicker #pickerVis></mat-datepicker>
+                <input matInput [matDatepicker]="pickerVis" [(ngModel)]="detail.contre.date_visibilite" [disabled]="terminee" (dateChange)="enregistrerCloture()" name="vis" /><mat-datepicker-toggle matSuffix [for]="pickerVis"></mat-datepicker-toggle><mat-datepicker #pickerVis></mat-datepicker>
               </mat-form-field>
               @if (!terminee) {
                 <button mat-raised-button color="primary" [disabled]="!detail.contre.date_visibilite" (click)="terminer()">
@@ -85,9 +89,12 @@
                   — visible le {{ detail.contre.date_visibilite | date: 'dd/MM/yyyy' }}</div>
               }
             } @else {
-              <!-- Côté évaluateur contre-évalué : on affiche juste la conclusion -->
+              <!-- Côté évaluateur contre-évalué : conclusion + synthèse (lecture seule) -->
               <h3>Résultat</h3>
               <div class="fin">Conclusion : <strong>{{ detail.contre.conclusion === 'SUCCES' ? 'Succès' : 'Échec' }}</strong></div>
+              @if (detail.contre.synthese) {
+                <p class="synthese-ro"><strong>Synthèse :</strong> {{ detail.contre.synthese }}</p>
+              }
             }
           </mat-card-content>
         </mat-card>

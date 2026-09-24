@@ -2,6 +2,11 @@
   <mat-card class="cal-panel"><mat-card-header class="cal-band"><span class="cal-band-title"><mat-icon>assignment_turned_in</mat-icon> Exécution de l'évaluation</span></mat-card-header><mat-card-content>
 
   <button mat-button (click)="retour()"><mat-icon>arrow_back</mat-icon> Retour</button>
+  @if (detail?.evaluation?.id_evaluation_parente) {
+    <button mat-stroked-button color="primary" (click)="ouvrirParente()">
+      <mat-icon>arrow_upward</mat-icon> Voir l'évaluation parente
+    </button>
+  }
 
   @if (chargement && !detail) { <p>Chargement…</p> }
 
@@ -95,6 +100,7 @@
                 <dt>Superviseur</dt><dd>{{ detail.evaluation.superviseur_nom ? (detail.evaluation.superviseur_nom + ' ' + (detail.evaluation.superviseur_prenom || '')) : '—' }}</dd>
               }
               <dt>Grille</dt><dd>{{ detail.evaluation.grille || '—' }}</dd>
+              <dt>Type d'évaluation</dt><dd>{{ detail.evaluation.type_evaluation || '—' }}</dd>
               <dt>Contexte</dt><dd>{{ detail.evaluation.contexte || '—' }}</dd>
               <dt>Numéro de case</dt><dd>{{ detail.evaluation.numero_case || '—' }}</dd>
               <dt>Identifiant d'appel</dt><dd>{{ detail.evaluation.identifiant_appel || '—' }}</dd>
@@ -113,12 +119,12 @@
             <h3>Résultats par catégorie</h3>
             <table class="resultats">
               <tr>
-                <th>Catégorie</th><th>Score (Σ poids)</th><th>Décochées</th><th></th>
+                <th>Catégorie</th><th>Seuil</th><th>Décochées</th><th></th>
               </tr>
               @for (c of detail.categories; track c.id) {
                 <tr>
                   <td>{{ c.libelle }}</td>
-                  <td class="num">{{ c.score_obtenu | number: '1.0-2' }}</td>
+                  <td class="num">{{ c.score_obtenu | number: '1.0-2' }} {{ c.comparateur }} {{ c.seuil_reussite | number: '1.0-2' }}</td>
                   <td class="num">{{ c.nb_erreurs_decochees }}</td>
                   <td>
                     @if (c.reussite) { <mat-icon class="ok">check_circle</mat-icon> }

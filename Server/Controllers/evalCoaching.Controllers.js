@@ -4,7 +4,17 @@
 // proposition/validation d'options. Tables b_eval_coaching(_option|_niveau).
 // =====================================================================
 const db = require("../config/db");
-const { emit } = require("../utils/notify");
+const { emit, emitEvaluation } = require("../utils/notify");
+
+// Notifie {créateur, superviseur, agent} d'une modif coaching/plan si l'éval est TERMINÉE.
+const notifierSiEvalTerminee = async (executor, idEval, { titre, message, exclure }) => {
+  const [[e]] = await executor.query(
+    `SELECT id, id_evaluateur, id_agent, statut FROM b_evaluation WHERE id=?`, [idEval]
+  );
+  if (e && e.statut === "TERMINE") {
+    await emitEvaluation(executor, e, { titre, message, exclure });
+  }
+};
 
 const withTx = async (fn) => {
   const conn = await db.getConnection();
@@ -135,6 +145,9 @@ const saveCoaching = async (req, res) => {
       await conn.query(`UPDATE b_eval_coaching SET statut=? WHERE id=? AND statut<>'TERMINE'`, [statut, idCoaching]);
       return { idCoaching, statut };
     });
+    await notifierSiEvalTerminee(db, idEval, {
+      titre: "Coaching mis à jour", message: "Le coaching de l'évaluation a été modifié.", exclure: superviseurId,
+    });
     return res.status(200).json({ message: "Coaching enregistré.", ...out });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
@@ -152,6 +165,9 @@ const terminerCoaching = async (req, res) => {
     });
     if (out.notFound) return res.status(404).json({ message: "Coaching introuvable." });
     if (out.pending) return res.status(409).json({ message: "Une option est en attente de validation : clôture du coaching impossible." });
+    await notifierSiEvalTerminee(db, idEval, {
+      titre: "Coaching terminé", message: "Le coaching de l'évaluation a été terminé.", exclure: req.auth.userId,
+    });
     return res.status(200).json({ message: "Coaching terminé." });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };

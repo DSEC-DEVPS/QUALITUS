@@ -235,8 +235,7 @@
           "type": "link",
           "permissions": {
             "only": [
-              "R_ADMI",
-              "R_GB"
+              "sondage.gestion"
             ]
           }
         },
@@ -246,16 +245,14 @@
           "type": "link",
           "permissions": {
             "only": [
-              "R_ADMI",
-              "R_GB"
+              "sondage.gestion"
             ]
           }
         }
       ],
       "permissions": {
         "only": [
-          "R_ADMI",
-          "R_GB"
+          "sondage.gestion"
         ]
       }
     },
@@ -282,11 +279,7 @@
       "module": "quiz",
       "permissions": {
         "only": [
-          "R_ADMI",
-          "R_AQ",
-          "R_GB",
-          "R_SUP",
-          "R_TC"
+          "quiz.lire"
         ]
       },
       "children": [
@@ -297,10 +290,7 @@
           "icon": "add_circle",
           "permissions": {
             "only": [
-              "R_ADMI",
-              "R_GB",
-              "R_SUP",
-              "R_AQ"
+              "quiz.gestion"
             ]
           }
         },
@@ -311,10 +301,7 @@
           "icon": "list",
           "permissions": {
             "only": [
-              "R_ADMI",
-              "R_GB",
-              "R_SUP",
-              "R_AQ"
+              "quiz.gestion"
             ]
           }
         },
@@ -325,9 +312,7 @@
           "icon": "bar_chart",
           "permissions": {
             "only": [
-              "R_ADMI",
-              "R_GB",
-              "R_SUP"
+              "quiz.gestion"
             ]
           }
         },
@@ -338,9 +323,7 @@
           "icon": "play_circle",
           "permissions": {
             "only": [
-              "R_TC",
-              "R_ADMI",
-              "R_AQ"
+              "quiz.lire"
             ]
           }
         },
@@ -351,8 +334,7 @@
           "icon": "notifications_active",
           "permissions": {
             "only": [
-              "R_TC",
-              "R_ADMI"
+              "quiz.lire"
             ]
           }
         },
@@ -363,8 +345,7 @@
           "icon": "history",
           "permissions": {
             "only": [
-              "R_TC",
-              "R_ADMI"
+              "quiz.lire"
             ]
           }
         },
@@ -375,8 +356,7 @@
           "icon": "lock_open",
           "permissions": {
             "only": [
-              "R_SUP",
-              "R_ADMI"
+              "quiz.gestion"
             ]
           }
         },
@@ -387,8 +367,7 @@
           "icon": "trending_down",
           "permissions": {
             "only": [
-              "R_SUP",
-              "R_ADMI"
+              "quiz.gestion"
             ]
           }
         },
@@ -399,8 +378,7 @@
           "icon": "restart_alt",
           "permissions": {
             "only": [
-              "R_SUP",
-              "R_ADMI"
+              "quiz.gestion"
             ]
           }
         }
@@ -415,7 +393,7 @@
       "children": [
         {
           "route": "evaluations",
-          "name": "Évaluations",
+          "name": "Mes Évaluations",
           "type": "link",
           "icon": "fact_check",
           "permissions": {

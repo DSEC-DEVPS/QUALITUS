@@ -79,12 +79,13 @@ export class ContreExecuterComponent implements OnInit {
     this.service.toggleErreur(this.id, e.id, e.coche === 1, e.commentaire).subscribe({ next: () => {}, error: () => this.toastr.error('Erreur.') });
   }
 
-  // La contre-évaluation n'a plus de section Résolution : seule la date de
-  // visibilité est enregistrée (obligatoire avant de terminer).
-  enregistrerVisibilite(): void {
+  // La contre-évaluation n'a plus de section Résolution, mais garde une Synthèse
+  // (rédigée par le contre-évaluateur) + la date de visibilité (obligatoire).
+  // On envoie toujours les deux valeurs courantes ensemble.
+  enregistrerCloture(): void {
     if (!this.detail || this.terminee) return;
     const c = this.detail.contre;
-    this.service.setResolution(this.id, { date_visibilite: toYMD(c.date_visibilite) }).subscribe({
+    this.service.setResolution(this.id, { synthese: c.synthese || '', date_visibilite: toYMD(c.date_visibilite) }).subscribe({
       next: () => this.toastr.success('Enregistré.'), error: err => this.toastr.error(err?.error?.message || 'Erreur.'),
     });
   }

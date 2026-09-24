@@ -5,7 +5,7 @@
 // notifications. Schéma b_evaluation / b_evaluation_categorie/erreur.
 // =====================================================================
 const db = require("../config/db");
-const { emit } = require("../utils/notify");
+const { emitEvaluation } = require("../utils/notify");
 
 const num = (v) => (v === null || v === undefined ? 0 : Number(v));
 // Tolérance d'arrondi : les poids sont en DECIMAL(12,6), un cumul « 100 %
@@ -227,21 +227,12 @@ const terminerEvaluation = async (req, res) => {
         `UPDATE b_evaluation SET statut='TERMINE', conclusion=?, date_evaluation=NOW(), nb_supplementaires_attendues=? WHERE id=?`,
         [conclusion, nbAttendues, id]
       );
-      // notifications (F.39bis E) — agents humains uniquement
+      // Notification « Évaluation terminée » — uniquement créateur + superviseur + agent
       if (e.type_ressource === "HUMAINE" && e.id_agent) {
-        const titre = "Résultat d'évaluation";
-        const message = `Votre évaluation est terminée : ${conclusion === "SUCCES" ? "Succès" : "Échec"}.`;
-        const destinataires = new Set([e.id_agent]);
-        const [sups] = await conn.query(
-          `SELECT id_SUPERVISEUR FROM b_r_superviseur_agent WHERE id_AGENT=?`, [e.id_agent]
-        );
-        sups.forEach((s) => destinataires.add(s.id_SUPERVISEUR));
-        for (const uid of destinataires) {
-          await emit(conn, {
-            id_utilisateur: uid, titre, message, type: "EVALUATION",
-            nature_objet: "EVALUATION", id_objet: id, url: `/mon-espace/evaluation/executer/${id}`,
-          });
-        }
+        await emitEvaluation(conn, { id, id_evaluateur: e.id_evaluateur, id_agent: e.id_agent }, {
+          titre: "Résultat d'évaluation",
+          message: `L'évaluation est terminée : ${conclusion === "SUCCES" ? "Succès" : "Échec"}.`,
+        });
       }
       return { conclusion };
     });
@@ -265,7 +256,7 @@ const setAvisAgent = async (req, res) => {
   const uid = req.auth.userId;
   const { avis } = req.body;
   try {
-    const [[e]] = await db.query(`SELECT id, id_agent, statut, conclusion FROM b_evaluation WHERE id=?`, [id]);
+    const [[e]] = await db.query(`SELECT id, id_evaluateur, id_agent, statut, conclusion FROM b_evaluation WHERE id=?`, [id]);
     if (!e) return res.status(404).json({ message: "Évaluation introuvable." });
     if (e.statut !== "TERMINE") return res.status(409).json({ message: "L'avis n'est saisissable qu'après clôture." });
     // L'avis appartient à l'agent évalué (les admins peuvent le saisir aussi).
@@ -285,6 +276,12 @@ const setAvisAgent = async (req, res) => {
       [avis || null, statutApres, id]
     );
     await db.query(`INSERT INTO b_evaluation_avis_histo (id_evaluation, avis, dateSaisie) VALUES (?, ?, NOW())`, [id, avis || null]);
+    // Notification « Approbation agent enregistrée » — créateur + superviseur (pas l'auteur)
+    await emitEvaluation(db, e, {
+      titre: "Approbation de l'agent",
+      message: `L'agent a enregistré son approbation (${statutApres === "FELICITER" ? "Féliciter" : "Débriefer"}).`,
+      exclure: uid,
+    });
     return res.status(200).json({ message: "Avis enregistré.", statut_apres_evaluation: statutApres });
   } catch (err) { console.log(err); return res.status(500).json({ message: "Erreur." }); }
 };

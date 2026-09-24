@@ -46,6 +46,7 @@ export interface EvaluationListe {
   contexte: string | null;
   grille: string | null;
   site?: string | null;
+  coaching_statut?: string | null;
 }
 
 export interface FiltresEvaluation {

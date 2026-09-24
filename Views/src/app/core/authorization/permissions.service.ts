@@ -53,9 +53,17 @@ export class PermissionsService {
        'referentiel', 'evaluation', 'contre_evaluation', 'calibrage', 'notification',
        'habilitation', 'agent_pole', 'reporting'].forEach(m => this.modules.add(m));
     }
-    // Conserve les permissions "legacy" (rôles menu.json) et ajoute les fines + modules.
+    // Permissions synthétiques de GESTION : présentes seulement si l'utilisateur
+    // possède lire+creer+modifier+supprimer d'un module (ET). Gèrent l'accès aux
+    // sous-menus d'administration (ex. gestion des quiz / sondages).
+    const synth = new Set<string>();
+    const gestion = (mod: string) => ['lire', 'creer', 'modifier', 'supprimer']
+      .every(a => this.admin || this.set.has(`${mod}.${a}`));
+    if (gestion('quiz')) synth.add('quiz.gestion');
+    if (gestion('sondage')) synth.add('sondage.gestion');
+    // Conserve les permissions "legacy" (rôles menu.json) et ajoute les fines + modules + synthétiques.
     const legacy = ['canAdd', 'canDelete', 'canEdit', 'canRead'];
-    this.ngxPerms.addPermission([...legacy, ...this.set, ...this.modules]);
+    this.ngxPerms.addPermission([...legacy, ...this.set, ...this.modules, ...synth]);
   }
 
   private modules = new Set<string>();

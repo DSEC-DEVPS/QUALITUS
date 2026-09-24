@@ -4,6 +4,17 @@
 // F.39sexies (lettres félicitation/débriefing + rendu).
 // =====================================================================
 const db = require("../config/db");
+const { emitEvaluation } = require("../utils/notify");
+
+// Notifie {créateur, superviseur, agent} d'une modif du plan d'action si l'éval est TERMINÉE.
+const notifierPlanSiTerminee = async (idEval, message, exclure) => {
+  const [[e]] = await db.query(
+    `SELECT id, id_evaluateur, id_agent, statut FROM b_evaluation WHERE id=?`, [idEval]
+  );
+  if (e && e.statut === "TERMINE") {
+    await emitEvaluation(db, e, { titre: "Plan d'action mis à jour", message, exclure });
+  }
+};
 
 const num = (v) => (v === null || v === undefined ? 0 : Number(v));
 // Normalise une date entrante (ISO, Date, 'YYYY-MM-DD…') en 'YYYY-MM-DD' pour MySQL
@@ -180,6 +191,7 @@ const addLignePlanAction = async (req, res) => {
       }
       return ligneId;
     });
+    await notifierPlanSiTerminee(b.id_evaluation, "Une action a été ajoutée au plan d'action.", req.auth.userId);
     return res.status(201).json({ id: out, message: "Ligne ajoutée." });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors de l'ajout." }); }
 };
@@ -203,16 +215,20 @@ const updateLignePlanAction = async (req, res) => {
         }
       }
     });
+    const [[l]] = await db.query(`SELECT id_evaluation FROM b_eval_plan_action_ligne WHERE id=?`, [id]);
+    if (l) await notifierPlanSiTerminee(l.id_evaluation, "Une action du plan d'action a été modifiée.", req.auth.userId);
     return res.status(200).json({ message: "Ligne mise à jour." });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors de la mise à jour." }); }
 };
 
 const deleteLignePlanAction = async (req, res) => {
   try {
+    const [[l]] = await db.query(`SELECT id_evaluation FROM b_eval_plan_action_ligne WHERE id=?`, [req.params.id]);
     await withTx(async (conn) => {
       await conn.query(`DELETE FROM b_eval_plan_action_contributeur WHERE id_ligne=?`, [req.params.id]);
       await conn.query(`DELETE FROM b_eval_plan_action_ligne WHERE id=?`, [req.params.id]);
     });
+    if (l) await notifierPlanSiTerminee(l.id_evaluation, "Une action du plan d'action a été supprimée.", req.auth.userId);
     return res.status(200).json({ message: "Ligne supprimée." });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors de la suppression." }); }
 };
