@@ -33,6 +33,7 @@ export class ReferentielsComponent implements OnInit {
     { key: 'action', label: 'Actions (plan d’action)' },
     { key: 'statut', label: 'Statuts (plan d’action)' },
     { key: 'kpi', label: 'KPI' },
+    { key: 'statut_evaluation', label: 'Statuts après évaluation' },
   ];
   typeActif: RefType = 'contexte';
   items: RefItem[] = [];

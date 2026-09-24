@@ -30,11 +30,10 @@ export class SupplementairesSectionComponent implements OnInit {
     });
   }
 
+  // L'évaluation supplémentaire n'est PAS une duplication : on ouvre le
+  // formulaire de création normal, lié au parent (même agent).
   creer(): void {
-    this.service.creerSupplementaire(this.idEvaluation).subscribe({
-      next: r => { this.toastr.success('Évaluation supplémentaire créée.'); this.router.navigate(['/mon-espace/evaluation/executer', r.id]); },
-      error: err => this.toastr.error(err?.error?.message || 'Erreur.'),
-    });
+    this.router.navigate(['/mon-espace/evaluation/creation/unitaire'], { queryParams: { parent: this.idEvaluation } });
   }
 
   ouvrir(id: number): void {

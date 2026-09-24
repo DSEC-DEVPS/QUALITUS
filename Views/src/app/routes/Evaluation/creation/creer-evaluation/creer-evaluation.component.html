@@ -2,13 +2,16 @@
   <mat-card class="cal-panel"><mat-card-header class="cal-band"><span class="cal-band-title"><mat-icon>add_circle</mat-icon> Créer une évaluation</span></mat-card-header><mat-card-content>
 
   <button mat-button (click)="retour()"><mat-icon>arrow_back</mat-icon> Retour</button>
-  
+
+  <div class="banniere-supp" *ngIf="idParent">
+    <mat-icon>repeat</mat-icon> Création d'une <strong>évaluation supplémentaire</strong> liée à l'évaluation #{{ idParent }} (même agent).
+  </div>
 
   <mat-card>
     <mat-card-content>
       <div class="section">
         <label class="lbl">Type de ressource</label>
-        <mat-radio-group [(ngModel)]="model.type_ressource" (change)="onTypeChange()" name="type">
+        <mat-radio-group [(ngModel)]="model.type_ressource" (change)="onTypeChange()" name="type" [disabled]="agentVerrouille">
           <mat-radio-button value="HUMAINE">Humaine</mat-radio-button>
           <mat-radio-button value="AUTOMATISEE">Automatisée</mat-radio-button>
         </mat-radio-group>
@@ -18,7 +21,7 @@
         <div class="section">
           <mat-form-field appearance="outline" class="plein">
             <mat-label>Agent — sélectionner ou saisir (nom / login)</mat-label>
-            <input matInput [matAutocomplete]="autoAgent" [(ngModel)]="agentRecherche" name="agentRech" placeholder="Nom, prénom ou login…" (ngModelChange)="onAgentTexteChange()" />
+            <input matInput [matAutocomplete]="autoAgent" [(ngModel)]="agentRecherche" name="agentRech" placeholder="Nom, prénom ou login…" [disabled]="agentVerrouille" (ngModelChange)="onAgentTexteChange()" />
             <mat-autocomplete #autoAgent="matAutocomplete" (optionSelected)="selectionAgent($event.option.value)">
               @for (a of agentsFiltres; track a.id) {
                 <mat-option [value]="a">{{ a.nom }} {{ a.prenom }} ({{ a.login }})</mat-option>

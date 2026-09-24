@@ -956,6 +956,17 @@ CREATE TABLE IF NOT EXISTS b_eval_ref_kpi (
   etat VARCHAR(10) DEFAULT 'ACTIF', dateCreation DATETIME DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Statut après évaluation (paramétrable comme le contexte)
+CREATE TABLE IF NOT EXISTS b_eval_ref_statut_evaluation (
+  id INT AUTO_INCREMENT PRIMARY KEY, libelle VARCHAR(60) NOT NULL,
+  description VARCHAR(255) DEFAULT NULL, ordre INT DEFAULT 0,
+  etat VARCHAR(10) DEFAULT 'ACTIF', dateCreation DATETIME DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+INSERT INTO b_eval_ref_statut_evaluation (libelle, description, ordre, etat, dateCreation) VALUES
+  ('Non validé', 'Statut initial à la création', 1, 'ACTIF', NOW()),
+  ('Féliciter', 'Évaluation en succès approuvée par l''agent', 2, 'ACTIF', NOW()),
+  ('Débriefer', 'Évaluation en échec approuvée par l''agent', 3, 'ACTIF', NOW());
+
 CREATE TABLE IF NOT EXISTS b_eval_param_systeme (
   id INT AUTO_INCREMENT PRIMARY KEY, cle VARCHAR(80) NOT NULL, valeur VARCHAR(255) NOT NULL,
   description VARCHAR(255) DEFAULT NULL, dateModification DATETIME DEFAULT NULL, UNIQUE(cle)

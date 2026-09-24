@@ -129,7 +129,11 @@ const creerEvaluationInterne = async (conn, p, evaluateurId, evaluateurSiteId) =
     grilleId = g.id; natureId = p.id_nature_ressource;
   }
 
-  const typeId = p.id_type_evaluation || (await getTypeEvaluationId(conn, "EVALUATION"));
+  // Une évaluation liée à un parent EST une évaluation supplémentaire (créée via
+  // le formulaire normal, ce n'est pas une duplication).
+  const typeId = p.id_evaluation_parente
+    ? await getTypeEvaluationId(conn, "EVALUATION_SUPPLEMENTAIRE")
+    : (p.id_type_evaluation || (await getTypeEvaluationId(conn, "EVALUATION")));
   const [ins] = await conn.query(
     `INSERT INTO b_evaluation
      (type_ressource, id_nature_ressource, id_agent, id_evaluateur, id_site, id_programme,

@@ -23,7 +23,7 @@ export interface RefItem {
   dateCreation?: string;
 }
 
-export type RefType = 'contexte' | 'nature' | 'action' | 'statut' | 'kpi';
+export type RefType = 'contexte' | 'nature' | 'action' | 'statut' | 'kpi' | 'statut_evaluation';
 
 @Injectable({ providedIn: 'root' })
 export class EvalAdminService {

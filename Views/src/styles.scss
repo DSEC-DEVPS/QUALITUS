@@ -70,7 +70,19 @@ button.mat-mdc-unelevated-button:disabled {
 
 
 /* ===== Calibrage — mise en page commune (harmonisation) ===== */
-.cal-page { padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
+/* Bandeau COLLÉ en haut ET aux bords : on annule le padding/marge du wrapper et
+   on compense le gutter latéral du conteneur (.matero-page-content) par une marge
+   négative, pour que le bandeau touche les bords gauche/droite. */
+.cal-page { padding: 0; max-width: none; margin: 0 calc(-1 * var(--gutter, 1rem)); }
+
+.liste-evaluations, .contre-liste, .contre-executer, .rapport-pole, .liste-grilles,
+.editeur-grille, .referentiels, .calendrier, .creer-evaluation, .creer-masse,
+.executer, .arbo-admin, .validation, .coaching-arbre, .notifications,
+.matrice-page, .droits-page {
+  max-width: none !important;
+  margin: 0 calc(-1 * var(--gutter, 1rem)) !important;
+  padding: 0 !important;
+}
 /* Bandeau d'en-tête orange plein (charte QUALITUS) */
 .cal-header { display: flex; align-items: center; gap: 16px; margin-bottom: 0; flex-wrap: wrap; background: #ff8e36; color: #fff; border-radius: 12px 12px 0 0; padding: 14px 20px; }
 .cal-header .cal-ic { flex: 0 0 auto; width: 46px; height: 46px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,.22); color: #fff; }

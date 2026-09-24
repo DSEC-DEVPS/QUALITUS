@@ -2,8 +2,9 @@ import { Component, OnInit, inject } from '@angular/core';
 import { toYMD } from '@shared/date-utils';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { Location } from '@angular/common';
+import { EvalExecutionService } from '../../eval-execution.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -33,9 +34,15 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 export class CreerEvaluationComponent implements OnInit {
   private readonly service = inject(EvalInstanceService);
   private readonly grilleService = inject(EvalGrilleService);
+  private readonly execService = inject(EvalExecutionService);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly toastr = inject(ToastrService);
+
+  // Création d'une évaluation supplémentaire (liée à un parent en échec)
+  idParent: number | null = null;
+  agentVerrouille = false;
 
   agents: AgentEvaluable[] = [];
   grillesAuto: Grille[] = [];
@@ -63,10 +70,34 @@ export class CreerEvaluationComponent implements OnInit {
   };
 
   ngOnInit(): void {
-    this.service.getAgentsEvaluables().subscribe({ next: a => (this.agents = a), error: () => this.toastr.error('Impossible de charger les agents.') });
+    this.service.getAgentsEvaluables().subscribe({
+      next: a => { this.agents = a; if (this.idParent) this.prefillParent(); },
+      error: () => this.toastr.error('Impossible de charger les agents.'),
+    });
     this.service.getContextes().subscribe({ next: c => (this.contextes = c) });
     this.service.getNatures().subscribe({ next: n => (this.natures = n) });
     this.grilleService.getGrilles({ statut: 'ACTIVE', type_ressource_cible: 'AUTOMATISEE' }).subscribe({ next: g => (this.grillesAuto = g) });
+    const p = Number(this.route.snapshot.queryParamMap.get('parent'));
+    if (p) { this.idParent = p; this.prefillParent(); }
+  }
+
+  // Évaluation supplémentaire : même agent que le parent, verrouillé.
+  private prefillParent(): void {
+    if (!this.idParent || !this.agents.length) return;
+    this.execService.getDetail(this.idParent).subscribe({
+      next: d => {
+        const idAgent = (d.evaluation as any).id_agent;
+        if (idAgent) {
+          this.model.type_ressource = 'HUMAINE';
+          this.model.id_agent = idAgent;
+          const a = this.agents.find(x => x.id === idAgent);
+          if (a) this.agentRecherche = `${a.nom} ${a.prenom} (${a.login})`;
+          this.agentVerrouille = true;
+          this.onAgentChange();
+        }
+      },
+      error: () => {},
+    });
   }
 
   get agentsFiltres(): AgentEvaluable[] {
@@ -144,13 +175,15 @@ export class CreerEvaluationComponent implements OnInit {
     };
     if (this.model.type_ressource === 'HUMAINE') body.id_agent = this.model.id_agent;
     else { body.id_grille = this.model.id_grille; body.id_nature_ressource = this.model.id_nature_ressource; }
+    if (this.idParent) body.id_evaluation_parente = this.idParent;
 
     this.envoi = true;
     this.service.createEvaluation(body).subscribe({
       next: res => {
         this.envoi = false;
-        this.toastr.success('Évaluation créée.');
-        if (res.afficher_grille) {
+        this.toastr.success(this.idParent ? 'Évaluation supplémentaire créée.' : 'Évaluation créée.');
+        // Supplémentaire : on exécute directement la nouvelle évaluation.
+        if (this.idParent || res.afficher_grille) {
           this.router.navigate(['/mon-espace/evaluation/executer', res.id]);
         } else {
           this.router.navigate(['/mon-espace/evaluation/evaluations']);

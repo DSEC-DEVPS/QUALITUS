@@ -96,6 +96,9 @@
               }
               <dt>Grille</dt><dd>{{ detail.evaluation.grille || '—' }}</dd>
               <dt>Contexte</dt><dd>{{ detail.evaluation.contexte || '—' }}</dd>
+              <dt>Numéro de case</dt><dd>{{ detail.evaluation.numero_case || '—' }}</dd>
+              <dt>Identifiant d'appel</dt><dd>{{ detail.evaluation.identifiant_appel || '—' }}</dd>
+              <dt>Numéro appelant</dt><dd>{{ detail.evaluation.numero_appel || '—' }}</dd>
               <dt>Date d'appel</dt><dd>{{ detail.evaluation.date_appel ? (detail.evaluation.date_appel | date: 'dd/MM/yyyy') : '—' }}</dd>
               <dt>Statut</dt><dd>{{ detail.evaluation.statut }}</dd>
               @if (terminee) {
@@ -115,7 +118,7 @@
               @for (c of detail.categories; track c.id) {
                 <tr>
                   <td>{{ c.libelle }}</td>
-                  <td class="num">{{ c.score_obtenu | number: '1.0-2' }} / {{ c.seuil_reussite | number: '1.0-2' }}</td>
+                  <td class="num">{{ c.score_obtenu | number: '1.0-2' }}</td>
                   <td class="num">{{ c.nb_erreurs_decochees }}</td>
                   <td>
                     @if (c.reussite) { <mat-icon class="ok">check_circle</mat-icon> }
@@ -157,6 +160,20 @@
         </mat-card>
       </div>
     </div>
+
+    <!-- ÉCHEC avant clôture : créer/réaliser les évaluations supplémentaires requises -->
+    @if (!terminee && detail.conclusion_live === 'ECHEC' && !detail.viewer.is_agent) {
+      <mat-card class="actions-section">
+        <mat-card-content>
+          <h2 class="titre-actions">Évaluations supplémentaires requises</h2>
+          <p class="hint-avis"><mat-icon>info</mat-icon>
+            Cette évaluation est en échec : vous devez <strong>créer et réaliser</strong> les évaluations supplémentaires
+            (via le formulaire de création) avant de pouvoir la terminer.
+          </p>
+          <app-supplementaires-section [idEvaluation]="id" />
+        </mat-card-content>
+      </mat-card>
+    }
 
     <!-- SECTION ACTIONS (F.39septies) — disponible après clôture -->
     @if (terminee) {

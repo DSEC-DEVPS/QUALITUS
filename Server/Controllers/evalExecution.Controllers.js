@@ -6,7 +6,6 @@
 // =====================================================================
 const db = require("../config/db");
 const { emit } = require("../utils/notify");
-const { genererSupplementairesAuto } = require("./evalSuites.Controllers");
 
 const num = (v) => (v === null || v === undefined ? 0 : Number(v));
 // Tolérance d'arrondi : les poids sont en DECIMAL(12,6), un cumul « 100 %
@@ -200,27 +199,34 @@ const terminerEvaluation = async (req, res) => {
       const [cats] = await conn.query(`SELECT id FROM b_evaluation_categorie WHERE id_evaluation=?`, [id]);
       for (const c of cats) await recomputeCategorie(conn, c.id);
       const conclusion = await computeConclusion(conn, id);
-      // F.39quater : sur un ÉCHEC, on fige le nb d'évaluations supplémentaires
-      // attendues — pour TOUT niveau (ordinaire OU supplémentaire) afin de
-      // permettre la cascade d'échec.
+      // F.39quater : sur un ÉCHEC (ressource humaine), le nb d'évaluations
+      // supplémentaires attendues s'applique à TOUT niveau (ordinaire OU
+      // supplémentaire). L'évaluation supplémentaire n'est PAS une duplication :
+      // elle se crée via le formulaire normal, liée au parent.
       let nbAttendues = e.nb_supplementaires_attendues || null;
-      if (conclusion === "ECHEC") {
+      if (conclusion === "ECHEC" && e.type_ressource === "HUMAINE") {
         const [[p]] = await conn.query(
           `SELECT valeur FROM b_eval_param_systeme WHERE cle='nb_supplementaires_attendues'`
         );
-        const parDefaut = p ? parseInt(p.valeur, 10) : null;
-        nbAttendues = nbAttendues || parDefaut;
+        const parDefaut = p ? parseInt(p.valeur, 10) : 0;
+        nbAttendues = nbAttendues || parDefaut || 0;
+        // On fige le nombre attendu (utile à l'UI) même si la clôture est bloquée.
+        await conn.query(`UPDATE b_evaluation SET nb_supplementaires_attendues=? WHERE id=?`, [nbAttendues, id]);
+        // Blocage : impossible de terminer tant que les N supplémentaires ne sont
+        // pas RÉALISÉES (terminées).
+        if (nbAttendues > 0) {
+          const [[{ realisees }]] = await conn.query(
+            `SELECT COUNT(*) AS realisees FROM b_evaluation WHERE id_evaluation_parente=? AND statut='TERMINE' AND actif=1`, [id]
+          );
+          if (realisees < nbAttendues) {
+            return { supplementairesRequises: true, requis: nbAttendues, realisees };
+          }
+        }
       }
       await conn.query(
         `UPDATE b_evaluation SET statut='TERMINE', conclusion=?, date_evaluation=NOW(), nb_supplementaires_attendues=? WHERE id=?`,
         [conclusion, nbAttendues, id]
       );
-      // Auto-création des évaluations supplémentaires manquantes en cas d'échec
-      // (cascade : s'applique aussi aux supplémentaires elles-mêmes).
-      if (conclusion === "ECHEC") {
-        const [[eMaj]] = await conn.query(`SELECT * FROM b_evaluation WHERE id=?`, [id]);
-        await genererSupplementairesAuto(conn, eMaj, e.id_evaluateur);
-      }
       // notifications (F.39bis E) — agents humains uniquement
       if (e.type_ressource === "HUMAINE" && e.id_agent) {
         const titre = "Résultat d'évaluation";
@@ -243,6 +249,10 @@ const terminerEvaluation = async (req, res) => {
     if (out.deja) return res.status(409).json({ message: "Évaluation déjà terminée." });
     if (out.sansResolution) return res.status(400).json({ message: "La résolution est obligatoire avant de terminer." });
     if (out.optionEnAttente) return res.status(409).json({ message: "Une option BI est en attente de validation : clôture impossible." });
+    if (out.supplementairesRequises) return res.status(409).json({
+      message: `Évaluation en échec : vous devez créer et réaliser ${out.requis} évaluation(s) supplémentaire(s) avant de terminer (${out.realisees}/${out.requis} réalisée(s)).`,
+      requis: out.requis, realisees: out.realisees,
+    });
     return res.status(200).json({ message: "Évaluation terminée.", conclusion: out.conclusion });
   } catch (err) { console.log(err); return res.status(500).json({ message: "Erreur lors de la clôture." }); }
 };

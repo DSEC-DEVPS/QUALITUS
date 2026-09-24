@@ -43,6 +43,7 @@ export interface EvaluationInfo {
   numero_appel: string | null;
   motif_appel: string | null;
   dmt: number;
+  id_agent: number | null;
   agent_nom: string | null;
   agent_prenom: string | null;
   evaluateur_nom: string | null;

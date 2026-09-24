@@ -13,6 +13,8 @@ const REF = {
   action: { table: "b_eval_ref_action_pa", usages: [["b_eval_plan_action_ligne", "id_action"]] },
   statut: { table: "b_eval_ref_statut_pa", usages: [["b_eval_plan_action_ligne", "id_statut"]] },
   kpi: { table: "b_eval_ref_kpi", usages: [["b_eval_plan_action_ligne", "id_kpi"]] },
+  // Statut après évaluation (paramétrable) — pas de FK id (colonne texte sur b_evaluation)
+  statut_evaluation: { table: "b_eval_ref_statut_evaluation", usages: [] },
 };
 
 const getAll = async (req, res) => {
