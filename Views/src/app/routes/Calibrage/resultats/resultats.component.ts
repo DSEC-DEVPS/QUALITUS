@@ -49,7 +49,17 @@ export class ResultatsComponent implements OnInit {
   focusTx: number | null = null;
 
   get estJauge(): boolean { return this.role === 'jauge'; }
-  get modifiable(): boolean { return this.estJauge && this.statut === 'RESULTATS_EN_REVISION'; }
+  // Le jauge peut ajuster le résultat tant qu'il n'est pas figé (CLOTUREE) :
+  // en révision comme après validation (VALIDEE).
+  get modifiable(): boolean { return this.estJauge && this.statut !== 'CLOTUREE'; }
+  get fige(): boolean { return this.statut === 'CLOTUREE'; }
+  get statutLibelle(): string {
+    return ({
+      BROUILLON: 'Brouillon', OUVERTE: 'Ouverte',
+      RESULTATS_EN_REVISION: 'Résultats en révision',
+      VALIDEE: 'Validée', CLOTUREE: 'Figée',
+    } as any)[this.statut] || this.statut;
+  }
 
   ngOnInit(): void {
     this.id = Number(this.route.snapshot.paramMap.get('id'));

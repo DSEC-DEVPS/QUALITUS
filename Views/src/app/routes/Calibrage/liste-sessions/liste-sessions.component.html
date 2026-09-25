@@ -69,7 +69,7 @@
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let s">
-            <button mat-icon-button *ngIf="s.statut === 'CLOTUREE'" color="primary" matTooltip="Voir les résultats" (click)="voirResultats(s, $event)"><mat-icon>analytics</mat-icon></button>
+            <button mat-icon-button *ngIf="s.statut === 'CLOTUREE' || s.statut === 'VALIDEE'" color="primary" matTooltip="Voir les résultats" (click)="voirResultats(s, $event)"><mat-icon>analytics</mat-icon></button>
             <button mat-icon-button matTooltip="Ouvrir" (click)="ouvrirSession(s)"><mat-icon>chevron_right</mat-icon></button>
           </td>
         </ng-container>

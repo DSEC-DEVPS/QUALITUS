@@ -264,10 +264,7 @@
       "module": "reporting",
       "permissions": {
         "only": [
-          "R_ADMI",
-          "R_GB",
-          "R_SUP",
-          "R_GE"
+          "reporting.lire"
         ]
       }
     },
@@ -367,7 +364,7 @@
           "icon": "trending_down",
           "permissions": {
             "only": [
-              "quiz.gestion"
+              "est_superviseur"
             ]
           }
         },
@@ -378,7 +375,7 @@
           "icon": "restart_alt",
           "permissions": {
             "only": [
-              "quiz.gestion"
+              "est_superviseur"
             ]
           }
         }
@@ -461,10 +458,10 @@
           "name": "Création en masse",
           "type": "link",
           "icon": "playlist_add",
+          "module": "creation_masse",
           "permissions": {
             "only": [
-              "R_ADMI",
-              "R_AQ"
+              "creation_masse.gestion"
             ]
           }
         },
@@ -476,9 +473,7 @@
           "module": "contre_evaluation",
           "permissions": {
             "only": [
-              "R_ADMI",
-              "R_AQ",
-              "R_RO"
+              "contre_evaluation.gestion"
             ]
           }
         },
@@ -490,11 +485,7 @@
           "module": "contre_evaluation",
           "permissions": {
             "only": [
-              "R_ADMI",
-              "R_AQ",
-              "R_RO",
-              "R_SUP",
-              "R_GB"
+              "contre_evaluation.lire"
             ]
           }
         },
@@ -520,8 +511,7 @@
           "module": "grille",
           "permissions": {
             "only": [
-              "R_ADMI",
-              "R_AQ"
+              "grille.gestion"
             ]
           }
         },
@@ -530,10 +520,10 @@
           "name": "Arborescences BI",
           "type": "link",
           "icon": "account_tree",
+          "module": "bi",
           "permissions": {
             "only": [
-              "R_ADMI",
-              "R_AQ"
+              "bi.gestion"
             ]
           }
         },
@@ -542,11 +532,10 @@
           "name": "Validation d'options",
           "type": "link",
           "icon": "rule",
+          "module": "validation_option",
           "permissions": {
             "only": [
-              "R_ADMI",
-              "R_AQ",
-              "R_RO"
+              "validation_option.gestion"
             ]
           }
         },
@@ -570,10 +559,10 @@
           "name": "Arbre de coaching",
           "type": "link",
           "icon": "psychology",
+          "module": "arbre_coaching",
           "permissions": {
             "only": [
-              "R_ADMI",
-              "R_AQ"
+              "arbre_coaching.gestion"
             ]
           }
         },
@@ -582,10 +571,10 @@
           "name": "Périodes / Calendrier",
           "type": "link",
           "icon": "event",
+          "module": "calendrier",
           "permissions": {
             "only": [
-              "R_ADMI",
-              "R_AQ"
+              "calendrier.gestion"
             ]
           }
         },
@@ -597,8 +586,7 @@
           "module": "referentiel",
           "permissions": {
             "only": [
-              "R_ADMI",
-              "R_AQ"
+              "referentiel.gestion"
             ]
           }
         }
@@ -645,6 +633,11 @@
       "type": "sub",
       "icon": "admin_panel_settings",
       "module": "habilitation",
+      "permissions": {
+        "only": [
+          "habilitation.gestion"
+        ]
+      },
       "children": [
         {
           "route": "matrice",
@@ -653,7 +646,7 @@
           "icon": "security",
           "permissions": {
             "only": [
-              "R_ADMI"
+              "habilitation.gestion"
             ]
           }
         },
@@ -664,7 +657,7 @@
           "icon": "manage_accounts",
           "permissions": {
             "only": [
-              "R_ADMI"
+              "habilitation.gestion"
             ]
           }
         },
@@ -675,47 +668,11 @@
           "icon": "supervisor_account",
           "permissions": {
             "only": [
-              "R_ADMI"
+              "habilitation.gestion"
             ]
           }
         }
       ]
-    },
-    {
-      "route": "mon-espace/export",
-      "name": "Export",
-      "type": "sub",
-      "icon": "insert_drive_file",
-      "module": "reporting",
-      "children": [
-        {
-          "route": "ecoutes",
-          "name": "Export",
-          "type": "link",
-          "permissions": {
-            "only": [
-              "R_ADMI",
-              "R_AQ"
-            ]
-          }
-        },
-        {
-          "route": "sondage",
-          "name": "Sondage",
-          "type": "link",
-          "permissions": {
-            "only": [
-              "R_ADMI",
-              "R_AQ"
-            ]
-          }
-        }
-      ],
-      "permissions": {
-        "only": [
-          "R_AQ"
-        ]
-      }
     }
   ]
 }

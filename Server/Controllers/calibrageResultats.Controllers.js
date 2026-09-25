@@ -180,7 +180,9 @@ const getConfrontation = async (req, res) => {
       if (!ctx.role) return { forbidden: true };
       if (ctx.role === "participant") {
         if (Number(pid) !== uid) return { forbidden: true };
-        if (ctx.s.statut !== "CLOTUREE") return { pasEncore: true };
+        // Le participant voit sa confrontation dès la validation du résultat,
+        // à condition que la visibilité soit activée (même règle que getResultats).
+        if (!(ctx.s.resultat_publie && ctx.s.visibilite)) return { pasEncore: true };
       }
       const [[part]] = await conn.query(
         "SELECT u.nom, u.prenom FROM b_utilisateur u WHERE u.id=?", [pid]
@@ -209,7 +211,9 @@ const modifierCote = async (req, res) => {
     const out = await withTx(async (conn) => {
       const ctx = await contexte(conn, id, uid);
       if (ctx.notFound || ctx.role !== "jauge") return { forbidden: true };
-      if (ctx.s.statut !== "RESULTATS_EN_REVISION") return { locked: true };
+      // Le jauge peut ajuster tant que le résultat n'est pas figé (CLOTUREE),
+      // c.-à-d. en révision ET après validation (VALIDEE).
+      if (!["RESULTATS_EN_REVISION", "VALIDEE"].includes(ctx.s.statut)) return { locked: true };
       let evalRow;
       if (cote === "REFERENCE") {
         [[evalRow]] = await conn.query(
@@ -320,9 +324,9 @@ const setConclusions = async (req, res) => {
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
 
-// POST validation du résultat (jauge) — publie le résultat SANS figer :
-// le jauge peut continuer à modifier ; les participants le voient si la
-// visibilité est activée. Notifie les participants.
+// POST validation du résultat (jauge) — passe la session à VALIDEE et publie le
+// résultat SANS figer : le jauge peut continuer à l'ajuster autant qu'il le
+// souhaite ; les participants le voient si la visibilité est activée. Notifie.
 const validerSession = async (req, res) => {
   const id = req.params.id;
   const uid = req.auth.userId;
@@ -331,7 +335,7 @@ const validerSession = async (req, res) => {
       const ctx = await contexte(conn, id, uid);
       if (ctx.notFound || ctx.role !== "jauge") return { forbidden: true };
       if (ctx.s.statut !== "RESULTATS_EN_REVISION") return { mauvaisStatut: true };
-      await conn.query("UPDATE b_cal_session SET resultat_publie=1, dateModification=NOW() WHERE id=?", [id]);
+      await conn.query("UPDATE b_cal_session SET statut='VALIDEE', resultat_publie=1, dateModification=NOW() WHERE id=?", [id]);
       const [parts] = await conn.query("SELECT id_evaluateur FROM b_cal_participant WHERE id_session=?", [id]);
       for (const p of parts) {
         await emit(conn, {
@@ -360,7 +364,8 @@ const figerSession = async (req, res) => {
       const ctx = await contexte(conn, id, uid);
       if (ctx.notFound || ctx.role !== "jauge") return { forbidden: true };
       if (ctx.s.statut === "CLOTUREE") return { deja: true };
-      if (ctx.s.statut !== "RESULTATS_EN_REVISION") return { mauvaisStatut: true };
+      // On peut figer depuis la révision OU après validation (VALIDEE).
+      if (!["RESULTATS_EN_REVISION", "VALIDEE"].includes(ctx.s.statut)) return { mauvaisStatut: true };
       await conn.query(
         "UPDATE b_cal_session SET statut='CLOTUREE', resultat_publie=1, dateCloture=NOW(), dateModification=NOW() WHERE id=?", [id]
       );
@@ -378,7 +383,7 @@ const figerSession = async (req, res) => {
     });
     if (out.forbidden) return res.status(403).json({ message: "Réservé au jauge." });
     if (out.deja) return res.status(409).json({ message: "Le résultat est déjà figé." });
-    if (out.mauvaisStatut) return res.status(409).json({ message: "La session doit être en révision." });
+    if (out.mauvaisStatut) return res.status(409).json({ message: "La session doit être en révision ou validée." });
     return res.status(200).json({ message: "Résultat figé : plus aucune modification possible." });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors du figement." }); }
 };

@@ -124,14 +124,12 @@ const getAllContre = async (req, res) => {
   const userId = req.auth.userId;
   const q = req.query || {};
   try {
-    const role = await getUserRole(userId);
-    const where = ["ce.actif=1"];
-    const params = [];
-    if (!["R_ADMI", "R_AQ"].includes(role)) {
-      where.push(`(ce.id_responsable=? OR (ce.statut='TERMINE' AND ce.date_visibilite IS NOT NULL
-                  AND ce.date_visibilite<=NOW() AND e.id_evaluateur=?))`);
-      params.push(userId, userId);
-    }
+    // Le sous-menu « Contre-évaluation » ne liste QUE les contre-évaluations
+    // créées par l'utilisateur connecté (point cahier), quel que soit son rôle.
+    // Les contre-évaluations qui le concernent en tant qu'évaluateur contre-évalué
+    // restent dans « Mes contre-évaluations » (getMesContre).
+    const where = ["ce.actif=1", "ce.id_responsable=?"];
+    const params = [userId];
     // Filtre par intervalle de date (sur la date de création de la contre-évaluation)
     if (estDateYMD(q.date_debut)) { where.push(`ce.date_creation >= ?`); params.push(q.date_debut + " 00:00:00"); }
     if (estDateYMD(q.date_fin)) { where.push(`ce.date_creation <= ?`); params.push(q.date_fin + " 23:59:59"); }

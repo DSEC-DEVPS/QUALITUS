@@ -61,12 +61,6 @@
             @for (c of contextes; track c.id) { <mat-option [value]="c.id">{{ c.libelle }}</mat-option> }
           </mat-select>
         </mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Site</mat-label>
-          <mat-select [(ngModel)]="filtres.id_site" name="site">
-            <mat-option [value]="undefined">Tous</mat-option>
-            @for (s of sites; track s.id) { <mat-option [value]="s.id">{{ s.nom }}</mat-option> }
-          </mat-select>
-        </mat-form-field>
         <mat-checkbox [(ngModel)]="filtres.inactifs" name="inact">Voir les désactivées</mat-checkbox>
         <div class="btns">
           <button mat-raised-button color="primary" (click)="charger()"><mat-icon>search</mat-icon> Appliquer</button>

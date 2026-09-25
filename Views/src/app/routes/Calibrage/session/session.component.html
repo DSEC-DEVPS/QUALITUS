@@ -18,7 +18,7 @@
         <mat-icon>flag</mat-icon> Clôturer la référence
       </button>
       <button mat-flat-button color="primary" (click)="accederResultats()"
-              *ngIf="session.statut === 'RESULTATS_EN_REVISION' || session.statut === 'CLOTUREE'">
+              *ngIf="session.statut === 'RESULTATS_EN_REVISION' || session.statut === 'VALIDEE' || session.statut === 'CLOTUREE'">
         <mat-icon>analytics</mat-icon> Accéder aux résultats
       </button>
     </ng-container>
@@ -109,7 +109,7 @@
           <button mat-stroked-button (click)="rafraichir()" [disabled]="rafraichissement">
             <mat-icon>{{ rafraichissement ? 'hourglass_empty' : 'refresh' }}</mat-icon> Actualiser
           </button>
-          <button mat-stroked-button color="primary" *ngIf="session.statut !== 'CLOTUREE' && session.statut !== 'RESULTATS_EN_REVISION'"
+          <button mat-stroked-button color="primary" *ngIf="session.statut !== 'CLOTUREE' && session.statut !== 'RESULTATS_EN_REVISION' && session.statut !== 'VALIDEE'"
                   (click)="ouvrirAjoutParticipants()">
             <mat-icon>person_add</mat-icon> Ajouter des participants
           </button>

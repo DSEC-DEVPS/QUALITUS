@@ -50,7 +50,8 @@ export class ListeSessionsComponent implements OnInit {
     { v: 'BROUILLON', l: 'Brouillon' },
     { v: 'OUVERTE', l: 'Ouverte' },
     { v: 'RESULTATS_EN_REVISION', l: 'Résultats en révision' },
-    { v: 'CLOTUREE', l: 'Clôturée' },
+    { v: 'VALIDEE', l: 'Validée' },
+    { v: 'CLOTUREE', l: 'Figée' },
   ];
 
   ngOnInit(): void {
@@ -76,7 +77,7 @@ export class ListeSessionsComponent implements OnInit {
     // sinon -> écran de session (participant/jauge)
     let cible: string;
     if (s.statut === 'BROUILLON') cible = 'preparer';
-    else if (s.statut === 'CLOTUREE') cible = 'resultats';
+    else if (s.statut === 'CLOTUREE' || s.statut === 'VALIDEE') cible = 'resultats';
     else cible = 'session';
     this.router.navigate(['/mon-espace/calibrage', cible, s.id]);
   }

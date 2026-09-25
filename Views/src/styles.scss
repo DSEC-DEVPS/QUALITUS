@@ -114,6 +114,7 @@ button.mat-mdc-unelevated-button:disabled {
 .cal-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; background: #eceff1; color: #546e7a; white-space: nowrap; }
 .cal-badge[data-st="OUVERTE"] { background: #e3f2fd; color: #1565c0; }
 .cal-badge[data-st="RESULTATS_EN_REVISION"] { background: #fff1e6; color: #b26a00; }
+.cal-badge[data-st="VALIDEE"] { background: #e8f0fe; color: #1a56c4; }
 .cal-badge[data-st="CLOTUREE"] { background: #e8f5e9; color: #2e7d32; }
 .cal-badge[data-c="SUCCES"] { background: #e8f5e9; color: #2e7d32; }
 .cal-badge[data-c="ECHEC"] { background: #ffebee; color: #c62828; }

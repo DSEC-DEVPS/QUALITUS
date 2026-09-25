@@ -36,7 +36,6 @@ export class ListeEvaluationsComponent implements OnInit {
   colonnes = ['select', 'type', 'agent', 'grille', 'date_appel', 'type_evaluation', 'statut', 'conclusion', 'actions'];
 
   contextes: RefItem[] = [];
-  sites: { id: number; nom: string }[] = [];
   filtres: FiltresEvaluation = {};
   afficherFiltres = false;
   selection = new Set<number>();
@@ -44,7 +43,6 @@ export class ListeEvaluationsComponent implements OnInit {
   ngOnInit(): void {
     this.charger();
     this.service.getContextes().subscribe({ next: c => (this.contextes = c) });
-    this.service.getSites().subscribe({ next: s => (this.sites = s || []) });
   }
 
   charger(): void {

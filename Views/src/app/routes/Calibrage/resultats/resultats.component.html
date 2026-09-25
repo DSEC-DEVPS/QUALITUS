@@ -4,8 +4,8 @@
     <span class="cal-ic"><mat-icon>analytics</mat-icon></span>
     <div class="cal-tt">
       <h2>Résultats — {{ nom }}
-        <span class="cal-badge" [attr.data-st]="statut">{{ statut }}</span>
-        <span class="cal-badge" *ngIf="resultatPublie" data-st="OUVERTE">Publié</span>
+        <span class="cal-badge" [attr.data-st]="statut">{{ statutLibelle }}</span>
+        <span class="cal-badge" *ngIf="resultatPublie && !fige" data-st="OUVERTE">Publié</span>
       </h2>
     </div>
     <div class="cal-actions">
