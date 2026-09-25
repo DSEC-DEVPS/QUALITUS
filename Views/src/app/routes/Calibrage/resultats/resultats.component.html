@@ -41,7 +41,12 @@
         </thead>
         <tbody>
           <tr *ngFor="let p of participants">
-            <td class="col-eval"><button class="lien" (click)="ouvrirConfrontation(p, null)">{{ p.prenom }} {{ p.nom }}</button></td>
+            <td class="col-eval">
+              <button class="lien" (click)="ouvrirConfrontation(p, null)">{{ p.prenom }} {{ p.nom }}</button>
+              <button mat-icon-button class="btn-relance" *ngIf="estJauge" matTooltip="Relancer la session de ce participant" (click)="relancer(p, $event)">
+                <mat-icon>restart_alt</mat-icon>
+              </button>
+            </td>
             <td *ngFor="let t of transactions" class="cell">
               <button class="pastille" [attr.data-c]="cellule(p.id_evaluateur, t.id)" (click)="ouvrirConfrontation(p, t.id)">
                 {{ cellule(p.id_evaluateur, t.id) === 'SUCCES' ? '✓' : '✗' }}

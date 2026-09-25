@@ -358,7 +358,12 @@ const setVisibilite = async (req, res) => {
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
 
-// PUT réinitialisation d'une participation (jauge, uniquement si temps écoulé)
+// PUT réinitialisation (relance) d'une participation par le jauge.
+// Le jauge peut relancer un participant À TOUT MOMENT — y compris quand SA
+// participation est close (compte à rebours écoulé, clôture injuste pour cause
+// de réseau, etc.). Si cette clôture avait fait basculer la session en phase de
+// résultats (révision / validée / figée), on la ré-ouvre pour que le participant
+// puisse réellement recommencer (les résultats seront recalculés ensuite).
 const reinitialiserParticipant = async (req, res) => {
   const pid = req.params.pid;
   const uid = req.auth.userId;
@@ -369,9 +374,6 @@ const reinitialiserParticipant = async (req, res) => {
       const ctx = await contexte(conn, p.id_session, uid);
       if (ctx.notFound || ctx.role !== "jauge") return { forbidden: true };
       const s = ctx.s;
-      if (s.statut === "CLOTUREE") return { locked: true };
-      // Le jauge peut remettre à neuf un participant à tout moment tant que la
-      // session n'est pas clôturée — y compris si son compte à rebours a démarré.
       // remet à zéro les constats du participant
       await conn.query(
         `UPDATE b_cal_evaluation_erreur ee
@@ -386,6 +388,16 @@ const reinitialiserParticipant = async (req, res) => {
       await conn.query(
         "UPDATE b_cal_participant SET statut_participation='NON_COMMENCEE', date_debut_participation=NULL, date_cloture=NULL WHERE id=?", [pid]
       );
+      // Si la session avait quitté l'état OUVERTE (parce que toutes les
+      // participations étaient closes), on la ré-ouvre pour permettre la reprise.
+      let reouverte = false;
+      if (["RESULTATS_EN_REVISION", "VALIDEE", "CLOTUREE"].includes(s.statut)) {
+        await conn.query(
+          "UPDATE b_cal_session SET statut='OUVERTE', resultat_publie=0, dateCloture=NULL, dateModification=NOW() WHERE id=?",
+          [p.id_session]
+        );
+        reouverte = true;
+      }
       await conn.query(
         "INSERT INTO b_cal_reinitialisation (id_session, id_participant, id_auteur, dateReinit) VALUES (?, ?, ?, NOW())",
         [p.id_session, pid, uid]
@@ -397,12 +409,15 @@ const reinitialiserParticipant = async (req, res) => {
         type: "CALIBRAGE", nature_objet: "CALIBRAGE", id_objet: p.id_session,
         url: `/mon-espace/calibrage/session/${p.id_session}`,
       });
-      return { ok: true };
+      return { ok: true, reouverte };
     });
     if (out.notFound) return res.status(404).json({ message: "Participant introuvable." });
     if (out.forbidden) return res.status(403).json({ message: "Réservé au jauge." });
-    if (out.locked) return res.status(409).json({ message: "Session clôturée : réinitialisation impossible." });
-    return res.status(200).json({ message: "Participation réinitialisée." });
+    return res.status(200).json({
+      message: out.reouverte
+        ? "Participation réinitialisée : la session a été ré-ouverte pour permettre la reprise."
+        : "Participation réinitialisée.",
+    });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
 

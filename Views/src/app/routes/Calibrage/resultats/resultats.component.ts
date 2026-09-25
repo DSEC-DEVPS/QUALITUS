@@ -152,5 +152,20 @@ export class ResultatsComponent implements OnInit {
       error: e => this.toastr.error(e?.error?.message || 'Figement impossible.'),
     });
   }
+  // Relancer un participant même depuis l'écran des résultats (session validée
+  // ou figée) : sa participation est remise à zéro et la session ré-ouverte pour
+  // qu'il puisse recommencer (ex. coupure réseau ayant clos sa session).
+  relancer(p: any, ev: Event): void {
+    ev.stopPropagation();
+    if (!confirm(`Relancer la session de ${p.prenom} ${p.nom} ? La session sera ré-ouverte pour permettre la reprise.`)) return;
+    this.service.reinitialiser(p.id).subscribe({
+      next: (r: any) => {
+        this.toastr.success(r?.message || 'Participation réinitialisée.');
+        this.router.navigate(['/mon-espace/calibrage/session', this.id]);
+      },
+      error: e => this.toastr.error(e?.error?.message || 'Relance impossible.'),
+    });
+  }
+
   retour(): void { this.router.navigate(['/mon-espace/calibrage/sessions']); }
 }
