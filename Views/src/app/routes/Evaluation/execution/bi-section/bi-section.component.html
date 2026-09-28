@@ -20,7 +20,7 @@
           </mat-select>
         </mat-form-field>
 
-        @if (!terminee) {
+        @if (!terminee && peutProposer) {
           @if (!propositionOuverte[n]) {
             <button mat-button type="button" (click)="ouvrirProposition(n)"><mat-icon>add</mat-icon> Proposer</button>
           } @else {

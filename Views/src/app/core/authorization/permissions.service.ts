@@ -72,6 +72,13 @@ export class PermissionsService {
     // Grille : le menu « Grilles d'évaluation » exige les 4 permissions ;
     // grille.lire seul ne suffit pas.
     if (gestion('grille')) synth.add('grille.gestion');
+    // Fonction / Programme : les menus « Gestion Fonction » / « Gestion Programme »
+    // exigent les 4 permissions ; le .lire seul ne suffit pas (HABILITATIONS 10).
+    if (gestion('fonction')) synth.add('fonction.gestion');
+    if (gestion('programme')) synth.add('programme.gestion');
+    // Utilisateur : le menu « Utilisateurs » exige les 4 permissions ;
+    // utilisateur.lire seul ne suffit pas (HABILITATIONS 13).
+    if (gestion('utilisateur')) synth.add('utilisateur.gestion');
     // BI : le sous-menu « Arborescences BI » exige les 4 permissions ;
     // bi.lire seul ne suffit pas.
     if (gestion('bi')) synth.add('bi.gestion');

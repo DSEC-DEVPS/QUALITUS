@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ToastrService } from 'ngx-toastr';
 import { EvalCoachingService, CoachingOption } from '../../eval-coaching.service';
+import { PermissionsService } from '@core/authorization/permissions.service';
 
 /**
  * Coaching (F.39quinquies A) : 5 pourquoi sur l'arbre UNIQUE, cause racine.
@@ -23,6 +24,10 @@ import { EvalCoachingService, CoachingOption } from '../../eval-coaching.service
 export class CoachingSectionComponent implements OnChanges {
   private readonly service = inject(EvalCoachingService);
   private readonly toastr = inject(ToastrService);
+  private readonly perms = inject(PermissionsService);
+
+  /** Proposer une option au niveau des 5 pourquoi exige arbre_coaching.lire (HABILITATIONS 9). */
+  get peutProposer(): boolean { return this.perms.can('arbre_coaching.lire'); }
 
   @Input() idEvaluation!: number;
   @Input() lectureSeule = false;

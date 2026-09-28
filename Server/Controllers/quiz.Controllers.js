@@ -118,8 +118,9 @@ const genererPinUnique = async (executor) => {
 /* QUIZ                                                                */
 /* ------------------------------------------------------------------ */
 
-// Liste des quiz. R_ADMI voit tout ; les autres createurs (R_GB, R_SUP)
-// ne voient QUE les quiz qu'ils ont crees.
+// Liste des quiz. R_ADMI voit tout ; tout autre utilisateur ayant les droits de
+// gestion ne voit QUE les quiz qu'il a lui-même créés (HABILITATIONS 11 :
+// « il ne doit voir que les quiz qu'il a créé, dans le sous menu Liste des quiz »).
 const getAllQuiz = async (req, res, next) => {
   const userId = req.auth ? req.auth.userId : null;
   try {
@@ -137,9 +138,9 @@ const getAllQuiz = async (req, res, next) => {
              (SELECT COUNT(*) FROM B_QZ_QUESTION qq WHERE qq.id_Quiz = q.id) AS nb_questions
       FROM B_QZ_QUIZ q
       LEFT JOIN B_FICHE FCH ON FCH.id = q.id_Fiche
-      ${restreint ? "WHERE (q.id_createur = ? OR q.id IN (SELECT d.id_Quiz FROM B_QZ_IP_DEMANDE d WHERE d.statut = 'EN_ATTENTE' AND d.id_UTILISATEUR IN (SELECT id_AGENT FROM B_R_SUPERVISEUR_AGENT WHERE id_SUPERVISEUR = ?)))" : ""}
+      ${restreint ? "WHERE q.id_createur = ?" : ""}
       ORDER BY q.id DESC`;
-    const [resultat] = await db.query(Query, restreint ? [userId, userId] : []);
+    const [resultat] = await db.query(Query, restreint ? [userId] : []);
     return res.status(200).send(resultat);
   } catch (error) {
     console.log(error);

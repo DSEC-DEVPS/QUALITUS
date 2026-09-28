@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ToastrService } from 'ngx-toastr';
 import { EvalBiService, Arborescence, BiOption } from '../../eval-bi.service';
+import { PermissionsService } from '@core/authorization/permissions.service';
 
 /**
  * Section Business Intelligence (F.39ter) affichée dans le détail d'une
@@ -24,6 +25,10 @@ import { EvalBiService, Arborescence, BiOption } from '../../eval-bi.service';
 export class BiSectionComponent implements OnChanges {
   private readonly service = inject(EvalBiService);
   private readonly toastr = inject(ToastrService);
+  private readonly perms = inject(PermissionsService);
+
+  /** Proposer une option au niveau des 5 pourquoi exige bi.lire (HABILITATIONS 9). */
+  get peutProposer(): boolean { return this.perms.can('bi.lire'); }
 
   @Input() idEvaluation!: number;
   @Input() resolution: string | null = null;

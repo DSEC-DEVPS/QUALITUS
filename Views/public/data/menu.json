@@ -20,7 +20,7 @@
       "module": "utilisateur",
       "permissions": {
         "only": [
-          "utilisateur.lire"
+          "utilisateur.gestion"
         ]
       }
     },
@@ -43,7 +43,7 @@
       "module": "fonction",
       "permissions": {
         "only": [
-          "fonction.lire"
+          "fonction.gestion"
         ]
       }
     },
@@ -89,7 +89,7 @@
       "module": "programme",
       "permissions": {
         "only": [
-          "programme.lire"
+          "programme.gestion"
         ]
       }
     },
@@ -169,7 +169,7 @@
       ],
       "permissions": {
         "only": [
-          "fiche.lire"
+          "fiche.gestion"
         ]
       }
     },
@@ -249,7 +249,7 @@
       ],
       "permissions": {
         "only": [
-          "sondage.lire"
+          "sondage.gestion"
         ]
       }
     },
@@ -502,7 +502,7 @@
           "module": "grille",
           "permissions": {
             "only": [
-              "grille.lire"
+              "grille.gestion"
             ]
           }
         },
@@ -514,7 +514,7 @@
           "module": "bi",
           "permissions": {
             "only": [
-              "bi.lire"
+              "bi.gestion"
             ]
           }
         },
@@ -526,7 +526,7 @@
           "module": "validation_option",
           "permissions": {
             "only": [
-              "validation_option.lire"
+              "validation_option.gestion"
             ]
           }
         },
@@ -553,7 +553,7 @@
           "module": "arbre_coaching",
           "permissions": {
             "only": [
-              "arbre_coaching.lire"
+              "arbre_coaching.gestion"
             ]
           }
         },
@@ -565,7 +565,7 @@
           "module": "calendrier",
           "permissions": {
             "only": [
-              "calendrier.lire"
+              "calendrier.gestion"
             ]
           }
         },
@@ -577,7 +577,7 @@
           "module": "referentiel",
           "permissions": {
             "only": [
-              "referentiel.lire"
+              "referentiel.gestion"
             ]
           }
         }
