@@ -20,7 +20,7 @@
       "module": "utilisateur",
       "permissions": {
         "only": [
-          "R_ADMI"
+          "utilisateur.lire"
         ]
       }
     },
@@ -43,7 +43,7 @@
       "module": "fonction",
       "permissions": {
         "only": [
-          "R_ADMI"
+          "fonction.lire"
         ]
       }
     },
@@ -77,7 +77,7 @@
       "module": "site",
       "permissions": {
         "only": [
-          "R_ADMI"
+          "site.lire"
         ]
       }
     },
@@ -89,7 +89,7 @@
       "module": "programme",
       "permissions": {
         "only": [
-          "R_ADMI"
+          "programme.lire"
         ]
       }
     },
@@ -107,8 +107,7 @@
           "icon": "colorize",
           "permissions": {
             "only": [
-              "R_ADMI",
-              "R_GB"
+              "fiche.gestion"
             ]
           }
         },
@@ -130,7 +129,7 @@
           "icon": "flag",
           "permissions": {
             "only": [
-              "R_ADMI"
+              "fiche.gestion"
             ]
           }
         },
@@ -141,7 +140,7 @@
           "icon": "flag",
           "permissions": {
             "only": [
-              "R_ADMI"
+              "fiche.gestion_complete"
             ]
           }
         },
@@ -152,7 +151,7 @@
           "icon": "flag",
           "permissions": {
             "only": [
-              "R_ADMI"
+              "fiche.gestion_complete"
             ]
           }
         },
@@ -163,16 +162,14 @@
           "icon": "flag",
           "permissions": {
             "only": [
-              "R_ADMI",
-              "R_GB"
+              "fiche.gestion"
             ]
           }
         }
       ],
       "permissions": {
         "only": [
-          "R_ADMI",
-          "R_GB"
+          "fiche.lire"
         ]
       }
     },
@@ -252,7 +249,7 @@
       ],
       "permissions": {
         "only": [
-          "sondage.gestion"
+          "sondage.lire"
         ]
       }
     },
@@ -276,7 +273,8 @@
       "module": "quiz",
       "permissions": {
         "only": [
-          "quiz.lire"
+          "quiz.lire",
+          "quiz.baseco"
         ]
       },
       "children": [
@@ -364,7 +362,7 @@
           "icon": "trending_down",
           "permissions": {
             "only": [
-              "est_superviseur"
+              "quiz.baseco"
             ]
           }
         },
@@ -375,7 +373,7 @@
           "icon": "restart_alt",
           "permissions": {
             "only": [
-              "est_superviseur"
+              "quiz.baseco"
             ]
           }
         }
@@ -393,11 +391,10 @@
           "name": "Mes Évaluations",
           "type": "link",
           "icon": "fact_check",
+          "module": "evaluation",
           "permissions": {
             "only": [
-              "R_ADMI",
-              "R_AQ",
-              "R_SUP"
+              "evaluation.creer"
             ]
           }
         },
@@ -406,12 +403,10 @@
           "name": "Mes évaluations",
           "type": "link",
           "icon": "fact_check",
+          "module": "evaluation",
           "permissions": {
             "only": [
-              "R_TC",
-              "R_AF",
-              "R_GE",
-              "R_GB"
+              "evaluation.lire"
             ]
           }
         },
@@ -423,8 +418,7 @@
           "module": "evaluation",
           "permissions": {
             "only": [
-              "R_SUP",
-              "R_ADMI"
+              "evaluation.lire"
             ]
           }
         },
@@ -436,8 +430,7 @@
           "module": "evaluation",
           "permissions": {
             "only": [
-              "R_SUP",
-              "R_ADMI"
+              "evaluation.lire"
             ]
           }
         },
@@ -446,10 +439,10 @@
           "name": "Créer une évaluation",
           "type": "link",
           "icon": "add_circle",
+          "module": "evaluation",
           "permissions": {
             "only": [
-              "R_ADMI",
-              "R_AQ"
+              "evaluation.creer"
             ]
           }
         },
@@ -461,7 +454,7 @@
           "module": "creation_masse",
           "permissions": {
             "only": [
-              "creation_masse.gestion"
+              "creation_masse.lire"
             ]
           }
         },
@@ -497,9 +490,7 @@
           "module": "agent_pole",
           "permissions": {
             "only": [
-              "R_ADMI",
-              "R_AQ",
-              "R_SUP"
+              "agent_pole.lire"
             ]
           }
         },
@@ -511,7 +502,7 @@
           "module": "grille",
           "permissions": {
             "only": [
-              "grille.gestion"
+              "grille.lire"
             ]
           }
         },
@@ -523,7 +514,7 @@
           "module": "bi",
           "permissions": {
             "only": [
-              "bi.gestion"
+              "bi.lire"
             ]
           }
         },
@@ -535,7 +526,7 @@
           "module": "validation_option",
           "permissions": {
             "only": [
-              "validation_option.gestion"
+              "validation_option.lire"
             ]
           }
         },
@@ -562,7 +553,7 @@
           "module": "arbre_coaching",
           "permissions": {
             "only": [
-              "arbre_coaching.gestion"
+              "arbre_coaching.lire"
             ]
           }
         },
@@ -574,7 +565,7 @@
           "module": "calendrier",
           "permissions": {
             "only": [
-              "calendrier.gestion"
+              "calendrier.lire"
             ]
           }
         },
@@ -586,17 +577,14 @@
           "module": "referentiel",
           "permissions": {
             "only": [
-              "referentiel.gestion"
+              "referentiel.lire"
             ]
           }
         }
       ],
       "permissions": {
         "only": [
-          "R_ADMI",
-          "R_AQ",
-          "R_SUP",
-          "R_TC"
+          "evaluation.lire"
         ]
       }
     },
@@ -612,16 +600,10 @@
           "name": "Sessions de calibrage",
           "type": "link",
           "icon": "fact_check",
+          "module": "calibrage",
           "permissions": {
             "only": [
-              "R_ADMI",
-              "R_AQ",
-              "R_SUP",
-              "R_RO",
-              "R_TC",
-              "R_GB",
-              "R_GE",
-              "R_AF"
+              "calibrage.lire"
             ]
           }
         }

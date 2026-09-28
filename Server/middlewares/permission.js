@@ -78,4 +78,22 @@ const permission = (module, action) => async (req, res, next) => {
   }
 };
 
-module.exports = { permission, permissionsEffectives };
+// Accès au module HABILITATION (voir ET agir) : exige habilitation.lire ET
+// habilitation.gerer réunies — ou R_ADMI. Bloque TOUJOURS (403) si la condition
+// n'est pas remplie, indépendamment du mode OBSERVATION/ACTIF (HABILITATIONS 7 :
+// « ne doit pas voir, ni faire d'action » avec la seule permission lire).
+const exigerHabilitationGestion = async (req, res, next) => {
+  const userId = req.auth && req.auth.userId;
+  try {
+    const { role, set } = await permissionsEffectives(userId);
+    if (role === "R_ADMI" || (set.has("habilitation.lire") && set.has("habilitation.gerer"))) {
+      return next();
+    }
+    return res.status(403).json({ message: "Accès refusé : gestion des habilitations requise (habilitation.lire + habilitation.gerer)." });
+  } catch (e) {
+    console.log("exigerHabilitationGestion error:", e.message);
+    return res.status(403).json({ message: "Accès refusé." });
+  }
+};
+
+module.exports = { permission, permissionsEffectives, exigerHabilitationGestion };

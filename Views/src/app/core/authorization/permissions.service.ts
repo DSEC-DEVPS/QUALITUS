@@ -84,6 +84,10 @@ export class PermissionsService {
     if (gestion('calendrier')) synth.add('calendrier.gestion');
     // Création en masse : le sous-menu exige les 4 permissions.
     if (gestion('creation_masse')) synth.add('creation_masse.gestion');
+    // Fiche / Gestion Contenu : les 4 permissions ouvrent Nouveau / Liste Fiche /
+    // Archives ; fiche.gerer en plus ouvre aussi SLA / Catégories.
+    if (gestion('fiche')) synth.add('fiche.gestion');
+    if (this.admin || (gestion('fiche') && this.set.has('fiche.gerer'))) synth.add('fiche.gestion_complete');
     // Habilitation : le menu « Habilitations » exige lire ET gerer
     // (ce module n'a que ces deux permissions, pas le quadruplet standard).
     if (this.admin || (this.set.has('habilitation.lire') && this.set.has('habilitation.gerer'))) {
