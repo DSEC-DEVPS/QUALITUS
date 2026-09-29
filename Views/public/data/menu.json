@@ -77,7 +77,7 @@
       "module": "site",
       "permissions": {
         "only": [
-          "site.lire"
+          "site.gestion"
         ]
       }
     },
@@ -394,7 +394,7 @@
           "module": "evaluation",
           "permissions": {
             "only": [
-              "evaluation.creer"
+              "evaluation.gestion_complete"
             ]
           }
         },
@@ -407,6 +407,9 @@
           "permissions": {
             "only": [
               "evaluation.lire"
+            ],
+            "except": [
+              "evaluation.gestion_complete"
             ]
           }
         },
@@ -418,7 +421,7 @@
           "module": "evaluation",
           "permissions": {
             "only": [
-              "evaluation.lire"
+              "evaluation.gestion_complete"
             ]
           }
         },
@@ -430,7 +433,7 @@
           "module": "evaluation",
           "permissions": {
             "only": [
-              "evaluation.lire"
+              "evaluation.gestion_complete"
             ]
           }
         },
@@ -442,7 +445,7 @@
           "module": "evaluation",
           "permissions": {
             "only": [
-              "evaluation.creer"
+              "evaluation.gestion_complete"
             ]
           }
         },
@@ -538,10 +541,7 @@
           "module": "notification",
           "permissions": {
             "only": [
-              "R_ADMI",
-              "R_AQ",
-              "R_SUP",
-              "R_TC"
+              "evaluation.lire"
             ]
           }
         },

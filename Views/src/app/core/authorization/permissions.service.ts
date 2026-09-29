@@ -79,6 +79,14 @@ export class PermissionsService {
     // Utilisateur : le menu « Utilisateurs » exige les 4 permissions ;
     // utilisateur.lire seul ne suffit pas (HABILITATIONS 13).
     if (gestion('utilisateur')) synth.add('utilisateur.gestion');
+    // Site : le menu « Gestion Site » exige les 4 permissions (HABILITATIONS 14).
+    if (gestion('site')) synth.add('site.gestion');
+    // Évaluation « gestion complète » : les 6 permissions du module réunies
+    // (lire + creer + executer + modifier + supprimer + valider). Ouvre les
+    // sous-menus d'évaluation avancés (HABILITATIONS 14).
+    const evalComplete = this.admin || ['lire', 'creer', 'executer', 'modifier', 'supprimer', 'valider']
+      .every(a => this.set.has(`evaluation.${a}`));
+    if (evalComplete) synth.add('evaluation.gestion_complete');
     // BI : le sous-menu « Arborescences BI » exige les 4 permissions ;
     // bi.lire seul ne suffit pas.
     if (gestion('bi')) synth.add('bi.gestion');
