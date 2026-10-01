@@ -967,8 +967,12 @@ const getAllNotification = async (req, res) => {
                bn.nature_objet,
                bn.id_objet,
                bn.id_FICHE,
-               COALESCE(NULLIF(bn.url, ''),
-                        IF(bn.id_FICHE IS NOT NULL, CONCAT('/lecture-fiche/', bn.id_FICHE), NULL)) AS url,
+               -- Une notification de fiche doit TOUJOURS ouvrir la lecture de la
+               -- fiche (corrige aussi les anciennes notifs dont l'url pointait
+               -- vers le fichier /chargements/...).
+               IF(bn.id_FICHE IS NOT NULL,
+                  CONCAT('/lecture-fiche/', bn.id_FICHE),
+                  NULLIF(bn.url, '')) AS url,
                bn.lu AS isRead,
                bn.dateReception AS createdAt
           FROM B_NOTIFICATION bn
@@ -2420,15 +2424,41 @@ const addFiche = async (req, res, next) => {
       on_time,
     ]);
 
+    // URL de lecture de la fiche (route Angular) — le clic sur la notification
+    // doit déclencher la LECTURE de la fiche, pas pointer vers le fichier.
+    const urlLecture = `/lecture-fiche/${id_fiche}`;
+
+    // 1) Notification pour l'auteur de la fiche.
     await connection.query(QyeryInsertNotification, [
       titre_notification,
-      message,
+      `Vous venez d'ajouter une nouvelle fiche « ${titre} »`,
       type,
       dateEnregistrement,
       userId,
       id_fiche,
-      url,
+      urlLecture,
     ]);
+
+    // 2) Notification pour les AUTRES profils ayant accès à la fiche
+    // (mêmes site ET profil que les autorisations de la fiche), hors auteur.
+    const [destinataires] = await connection.query(
+      `SELECT id FROM B_UTILISATEUR
+         WHERE status='ACTIF' AND id <> ?
+           AND FIND_IN_SET(id_Site, ?) > 0
+           AND FIND_IN_SET(id_Fonction, ?) > 0`,
+      [userId, siteAutorisation, accesAutorisation]
+    );
+    for (const dest of destinataires) {
+      await connection.query(QyeryInsertNotification, [
+        titre_notification,
+        `Une nouvelle fiche « ${titre} » est disponible`,
+        type,
+        dateEnregistrement,
+        dest.id,
+        id_fiche,
+        urlLecture,
+      ]);
+    }
 
     if (quizList) {
       for (let i = 0; i < 4; i++) {
