@@ -274,7 +274,7 @@ export class HomePageComponent implements OnInit {
     });
   }
   loadSideStat() {
-    this.userService.statistic().subscribe({
+    this.userService.statistic(this.selectedNiveau || undefined).subscribe({
       next: resultat => {
         this.statitic = resultat;
 

@@ -417,8 +417,9 @@ export class UserService {
     return this.http.put<message>(`/api/v1/quiz_retest`, form);
   }
 
-  statistic(): Observable<statistic> {
-    return this.http.get<statistic>(`/api/v1/fiche_non_lu_sondage_encours`);
+  statistic(niveau?: string): Observable<statistic> {
+    const params = niveau && niveau !== 'reset' ? { niveau } : undefined;
+    return this.http.get<statistic>(`/api/v1/fiche_non_lu_sondage_encours`, { params });
   }
   statistic_TC(date: string): Observable<statistic_TC> {
     return this.http.post<statistic_TC>(`/api/v1/fiche_lu_Quiz_sondage`, {

@@ -94,7 +94,69 @@
       </div>
     </div>
     <div class="col-md-7 col-sm-12 right">
-      <div class="row justify-content-end">
+      <div class="row p-3 justify-content-between">
+        <div class="col-md-4 py-3 justify-content-start">
+         <form [formGroup]="dateFormConsulation">
+  <div class="row justify-content-between">
+
+    <div class="col-2">
+      <mat-form-field
+        appearance="outline"
+        class="custom-datepicker"
+        floatLabel="always">
+
+        <mat-label>Début</mat-label>
+
+        <input
+          matInput
+          [matDatepicker]="pickerDebut"
+          formControlName="selectedDateDebut"
+          placeholder="dd/MM/yyyy"
+        />
+
+        <mat-datepicker-toggle
+          matSuffix
+          [for]="pickerDebut">
+        </mat-datepicker-toggle>
+
+        <mat-datepicker #pickerDebut></mat-datepicker>
+
+      </mat-form-field>
+    </div>
+
+
+    <div class="col-2">
+      <mat-form-field
+        appearance="outline"
+        class="custom-datepicker"
+        floatLabel="always">
+
+        <mat-label>Fin</mat-label>
+
+        <input
+          matInput
+          [matDatepicker]="pickerFin"
+          formControlName="selectedDateFin"
+          placeholder="dd/MM/yyyy"
+        />
+
+        <mat-datepicker-toggle
+          matSuffix
+          [for]="pickerFin">
+        </mat-datepicker-toggle>
+
+        <mat-datepicker #pickerFin></mat-datepicker>
+
+      </mat-form-field>
+    </div>
+
+  </div>
+</form>
+
+
+
+
+        </div>
         <div class="col-2 text-end">
           <mat-icon
             style="color: #ff8e36"
@@ -137,7 +199,7 @@
               <ng-container matColumnDef="dateConsultation">
                 <th mat-header-cell *matHeaderCellDef>Date_Consultation</th>
                 <td mat-cell *matCellDef="let element">
-                  {{ element.dateConsultation | date: 'dd/MM/yyyy' }}
+                  {{ element.dateConsultation | date: 'dd/MM/yyyy HH:mm:ss' }}
                 </td>
               </ng-container>
 

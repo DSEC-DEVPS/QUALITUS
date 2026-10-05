@@ -471,7 +471,6 @@ export class LectureFicheComponent implements OnInit {
     }
 
     newConfirmBox.setButtonLabels('OUI', 'NON');
-
     // Simply open the popup and observe button click
     newConfirmBox
       .openConfirmBox$()

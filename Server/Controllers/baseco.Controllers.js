@@ -3511,11 +3511,13 @@ const export_ma_voix_compte = async (req, res, next) => {
 /** les controllers sur les stats */
 const statistic = async (req, res, next) => {
   const userId = req.auth.userId;
+  const niveau = String(req.query.niveau || "").trim();
+  const filtrerParNiveau = niveau === "1" || niveau === "2";
   try {
     const resultat = {};
     const Query = `select A.* from (SELECT * FROM B_FICHE where ETAT='ACTIF' AND FIND_IN_SET(?, AccesSite) > 0 AND FIND_IN_SET(?, AccesProfil) > 0) A LEFT JOIN (select id_FICHE from B_HISTORIQUE where id_UTILISATEUR=? GROUP BY id_FICHE) B on A.id=B.id_FICHE where  B.id_FICHE is null`;
-    const Query2 = `  
-    SELECT FH.id,FH.titre,sl.type,FH.dateDebut,FH.dateFin,UT.nom_utilisateur as Gestionnaire,FH.extention FROM
+    let Query2 = `
+    SELECT FH.id,FH.titre,sl.type,FH.dateDebut,FH.dateFin,FH.Niveau,UT.nom_utilisateur as Gestionnaire,FH.extention FROM
     (SELECT * FROM 
     (SELECT A.id_FICHE FROM
     (SELECT id_UTILISATEUR,id_FICHE from B_HISTORIQUE WHERE id_UTILISATEUR=? GROUP BY id_FICHE)A
@@ -3528,6 +3530,14 @@ const statistic = async (req, res, next) => {
     INNER JOIN B_SLA sl on FH.id_Sla=sl.id
     INNER JOIN B_UTILISATEUR UT ON FH.id_gestionnaire=UT.id
     `;
+    const query2Params = [userId, userId];
+
+    // Le niveau 0 est commun aux deux niveaux. Le filtrage est fait ici aussi
+    // afin qu'un quiz du niveau 1 ne puisse pas être compté côté niveau 2.
+    if (filtrerParNiveau) {
+      Query2 += ` WHERE FIND_IN_SET(?, FH.Niveau) > 0 OR FIND_IN_SET('0', FH.Niveau) > 0`;
+      query2Params.push(niveau);
+    }
     const Query3 = `SELECT temp.id,temp.titre,sl.type,temp.dateDebut,temp.dateFin,temp.Niveau,UT.nom_utilisateur as Gestionnaire,temp.extention FROM
     (SELECT * from 
     (SELECT id_UTILISATEUR,id_FICHE from B_HISTORIQUE where id_UTILISATEUR=? GROUP BY id_FICHE) A
@@ -3547,7 +3557,7 @@ const statistic = async (req, res, next) => {
       id_Fonction,
       userId,
     ]);
-    const [resultat_Query2] = await db.query(Query2, [userId, userId]);
+    const [resultat_Query2] = await db.query(Query2, query2Params);
     const [resultat_Query3] = await db.query(Query3, [
       userId,
       id_Site,
