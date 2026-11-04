@@ -34,6 +34,19 @@ import { BehaviorSubject, catchError, map, Observable, tap, throwError } from 'r
 import { environment } from '@env/environment';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { PopupComponent } from '@shared/components/popup/popup.component';
+
+export type TypeControleExactitude = 'controle_actif' | 'controle_m_1';
+
+export interface FicheBrouillonControle extends Omit<Fiche, 'response'> {
+  response: '0' | '1' | null;
+}
+
+export interface BrouillonControle {
+  id: number;
+  typeControle: TypeControleExactitude;
+  fiches: FicheBrouillonControle[];
+}
+
 @Injectable({
   providedIn: `root`,
 })
@@ -292,11 +305,17 @@ export class UserService {
       form
     );
   }
-  getResultat_controle_actif(quantite_echantillon:number): Observable<Fiche[]> {
-    return this.http.post<Fiche[]>(`/api/v1/resultat_controle_actif`,quantite_echantillon);
+  getBrouillonsControle(): Observable<BrouillonControle[]> {
+    return this.http.get<BrouillonControle[]>('/api/v1/brouillons_controle');
   }
-  getResultat_controle_m_1(quantite_echantillon_M_1:number): Observable<Fiche[]> {
-    return this.http.post<Fiche[]>(`/api/v1/resultat_controle_m_1`,quantite_echantillon_M_1);
+
+  getEchantillonControle(type: TypeControleExactitude, quantite: number): Observable<BrouillonControle | null> {
+    const champQuantite = type === 'controle_actif' ? 'quantite_echantillon' : 'quantite_echantillon_M_1';
+    return this.http.post<BrouillonControle | null>(`/api/v1/resultat_${type}`, { [champQuantite]: quantite });
+  }
+
+  modifierBrouillonControle(id: number, idFiche: number, response: '0' | '1'): Observable<message> {
+    return this.http.patch<message>(`/api/v1/brouillons_controle/${id}`, { idFiche, response });
   }
   getReporting(): Observable<reporting_resultat[]> {
     return this.http.get<reporting_resultat[]>(`/api/v1/get_reporting`);
@@ -446,15 +465,7 @@ export class UserService {
   }): Observable<message> {
     return this.http.put<message>(`/api/v1/change_password`, form);
   }
-  addControle(
-    Data: { id: any; response: any }[],
-    typeControle: string,
-    score: number
-  ): Observable<message> {
-    return this.http.post<message>(`/api/v1/add_controle`, {
-      Data,
-      typeControle,
-      score,
-    });
+  addControle(idBrouillon: number): Observable<message & { score: number }> {
+    return this.http.post<message & { score: number }>('/api/v1/add_controle', { idBrouillon });
   }
 }

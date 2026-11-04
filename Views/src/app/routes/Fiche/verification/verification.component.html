@@ -3,7 +3,7 @@
   <mat-card-content>
     <mat-tab-group animationDuration="0ms">
       <mat-tab label="Contrôle de contenu Actif">
-         <form [formGroup]="form_echantillon">
+         <form [formGroup]="form_echantillon" *ngIf="!brouillons.controle_actif">
          <div class="col-md-2 align-items-center" style="margin-top:5px;">
           <mat-form-field>
             <mat-label>Saisissez la quantité</mat-label>
@@ -11,10 +11,11 @@
           </mat-form-field>
         </div>
         <div class="col-md-1 align-items-center" style="margin-top: -10px;">
-          <button mat-button  [disabled]="form_echantillon.invalid" (click)="display_echantillon_actif()">Échantillon</button>
+          <button mat-button  type="button" [disabled]="form_echantillon.invalid || chargementBrouillons || controleOccupe.controle_actif" (click)="chargerEchantillon('controle_actif')">Échantillon</button>
         </div>
         </form>
-        <div *ngIf="show_echantillonnage_template" class="example-container mat-elevation-z8 py-2">
+        <div *ngIf="brouillons.controle_actif" class="example-container mat-elevation-z8 py-2">
+          <p class="px-2">Brouillon de contrôle</p>
           <form [formGroup]="form">
             <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
               <ng-container matColumnDef="id">
@@ -75,9 +76,10 @@
                   [formGroup]="getFormGroupAt(i)"
                   class="text-center"
                 >
-                  <mat-radio-group aria-label="Select an option" formControlName="response">
-                    <mat-radio-button value="1">Oui</mat-radio-button>
-                    <mat-radio-button value="0">Non</mat-radio-button>
+                  <mat-radio-group aria-label="Select an option" formControlName="response"
+                    (change)="enregistrerReponse('controle_actif', i, $event.value)">
+                    <mat-radio-button value="1" [disabled]="controleOccupe.controle_actif">Oui</mat-radio-button>
+                    <mat-radio-button value="0" [disabled]="controleOccupe.controle_actif">Non</mat-radio-button>
                   </mat-radio-group>
                 </td>
               </ng-container>
@@ -93,8 +95,8 @@
             <button
               mat-button
               class=""
-              [disabled]="!form.valid || !allResponsesSelected()"
-              (click)="submitResponses()"
+              [disabled]="form.invalid || controleOccupe.controle_actif"
+              (click)="validerControle('controle_actif')"
             >
               Valider
             </button>
@@ -102,7 +104,7 @@
         </div>
       </mat-tab>
       <mat-tab label="Contrôle M-1">
-         <form [formGroup]="form_echantillon_M_1">
+         <form [formGroup]="form_echantillon_M_1" *ngIf="!brouillons.controle_m_1">
          <div class="col-md-2 align-items-center" style="margin-top:5px;">
           <mat-form-field>
             <mat-label>Saisissez la quantité</mat-label>
@@ -110,14 +112,15 @@
           </mat-form-field>
         </div>
         <div class="col-md-1 align-items-center" style="margin-top: -10px;">
-          <button mat-button  [disabled]="form_echantillon_M_1.invalid" (click)="display_echantillon_M_1()">Échantillon</button>
+          <button mat-button  type="button" [disabled]="form_echantillon_M_1.invalid || chargementBrouillons || controleOccupe.controle_m_1" (click)="chargerEchantillon('controle_m_1')">Échantillon</button>
         </div>
         </form>
         <div
-          *ngIf="show_echantillonnage_template_M_1"
+          *ngIf="brouillons.controle_m_1"
           class="example-container mat-elevation-z8 py-2"
         >
-          <form [formGroup]="form">
+          <p class="px-2">Brouillon de contrôle</p>
+          <form [formGroup]="form_M_1">
             <table mat-table [dataSource]="dataSource_M_1" class="mat-elevation-z8">
               <ng-container matColumnDef="id">
                 <th mat-header-cell *matHeaderCellDef>ID</th>
@@ -178,9 +181,10 @@
                   [formGroup]="getFormGroupAt_M_1(i)"
                   class="text-center"
                 >
-                  <mat-radio-group aria-label="Select an option" formControlName="response">
-                    <mat-radio-button value="1">Oui</mat-radio-button>
-                    <mat-radio-button value="0">Non</mat-radio-button>
+                  <mat-radio-group aria-label="Select an option" formControlName="response"
+                    (change)="enregistrerReponse('controle_m_1', i, $event.value)">
+                    <mat-radio-button value="1" [disabled]="controleOccupe.controle_m_1">Oui</mat-radio-button>
+                    <mat-radio-button value="0" [disabled]="controleOccupe.controle_m_1">Non</mat-radio-button>
                   </mat-radio-group>
                 </td>
               </ng-container>
@@ -196,8 +200,8 @@
             <button
               mat-button
               class=""
-              [disabled]="!form_M_1.valid || !allResponsesSelected_M_1()"
-              (click)="submitResponses_M_1()"
+              [disabled]="form_M_1.invalid || controleOccupe.controle_m_1"
+              (click)="validerControle('controle_m_1')"
             >
               Valider
             </button>

@@ -96,6 +96,8 @@ const {
   getOneFiche,
   getAllExport,
   getAllDashboard,
+  getBrouillonsControle,
+  modifierBrouillonControle,
   controle_actif,
   controle_m_1,
   getAllDashboard_admin,
@@ -315,6 +317,8 @@ router.get("/export_dashboard/all", auth, permission("REPORTING","LIRE"), getAll
 router.get("/export_statistique_par_site", getStatistique_par_site);
 router.get("/export_dashboard_amin/all", auth, permission("REPORTING","LIRE"), getAllDashboard_admin);
 /** fin d routes pour utilité et exactitude */
+router.get("/brouillons_controle", auth, getBrouillonsControle);
+router.patch("/brouillons_controle/:id", auth, modifierBrouillonControle);
 router.post("/resultat_controle_actif",auth, controle_actif);
 router.post("/resultat_controle_m_1", auth,controle_m_1);
 router.get("/hello", async (req, res, next) => {

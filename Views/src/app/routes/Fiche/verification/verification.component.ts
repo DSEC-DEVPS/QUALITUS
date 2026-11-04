@@ -2,7 +2,12 @@ import { ChangeDetectorRef,AfterViewInit, Component, ElementRef, Inject, inject,
 import { MatCardModule } from '@angular/material/card';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
-import { UserService } from '@shared/services/user.service';
+import {
+  BrouillonControle,
+  FicheBrouillonControle,
+  TypeControleExactitude,
+  UserService,
+} from '@shared/services/user.service';
 import { MatSort } from '@angular/material/sort';
 import {  AuthService, Fiche, reporting,  reporting_resultat,  User } from '@core';
 import { MatRadioModule } from '@angular/material/radio';
@@ -32,7 +37,7 @@ import {
 } from '@angular/forms';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import {  Subject, switchMap, } from 'rxjs';
+import { finalize, Subject, switchMap } from 'rxjs';
 import { ChangeDetectionStrategy } from '@angular/core';
 import { MatDialogActions, MatDialogClose } from '@angular/material/dialog';
 import Handsontable from 'handsontable';
@@ -89,7 +94,6 @@ export class VerificationComponent implements OnInit {
   form!: FormGroup;
   form_M_1!: FormGroup;
   readonly dialog = inject(MatDialog);
-  show_echantillon_actif = false;
   displayedColumns = ['id', 'titre', 'type', 'dateDebut','dateFin', 'Gestionnaire', 'exactitude'];
   displayedColumns_reporting = [
     'id_CONTROLE',
@@ -99,15 +103,16 @@ export class VerificationComponent implements OnInit {
   score = 0;
   //table_echantillon!: Fiche[];
   table_echantillonnage_reponse!: Fiche[];
-  dataSource = new MatTableDataSource<Fiche>([]);
-  dataSource_M_1 = new MatTableDataSource<Fiche>([]);
+  dataSource = new MatTableDataSource<FicheBrouillonControle>([]);
+  dataSource_M_1 = new MatTableDataSource<FicheBrouillonControle>([]);
+  brouillons: Partial<Record<TypeControleExactitude, BrouillonControle>> = {};
+  controleOccupe = { controle_actif: false, controle_m_1: false };
+  chargementBrouillons = true;
   dataSource_reporting = new MatTableDataSource<reporting>([]);
   //dataSource_reporting_resultat= new MatTableDataSource<reporting_resultat>([]);
     dataSource_reporting_resultat:reporting_resultat[]=[];
   reporting_data: reporting[] = [];
-  show_echantillonnage_template = false;
   show_reporting_template = false;
-  show_echantillonnage_template_M_1 = false;
   user!:User;
   @ViewChild(MatSort) sort!: MatSort;
   ngOnInit() {
@@ -127,6 +132,12 @@ export class VerificationComponent implements OnInit {
       typeControle: ['', [Validators.required]],
       dateDebut: ['', [Validators.required]],
       dateFin: ['', [Validators.required]],
+    });
+    this.userService.getBrouillonsControle().pipe(
+      finalize(() => this.chargementBrouillons = false),
+    ).subscribe({
+      next: brouillons => brouillons.forEach(brouillon => this.afficherBrouillon(brouillon)),
+      error: () => this.toast.error('Impossible de recharger les brouillons de contrôle.'),
     });
      this.auth.user().subscribe({
       next: user => {
@@ -148,100 +159,64 @@ export class VerificationComponent implements OnInit {
   get itemsFormArray_M_1(): FormArray {
     return this.form_M_1.get('items') as FormArray;
   }
-  resetFormArray(items: Fiche[]): void {
-    // Vider d'abord le FormArray
-    while (this.itemsFormArray.length !== 0) {
-      this.itemsFormArray.removeAt(0);
-    }
-
-    // Ajouter un FormGroup pour chaque item
-    items.forEach(item => {
-      const itemGroup = this.fb.group({
-        id: [item.id],
-        response: [item.response, Validators.required],
-      });
-      this.itemsFormArray.push(itemGroup);
-    });
-  }
-  allResponsesSelected_M_1(): boolean {
-    if (this.itemsFormArray_M_1.length === 0) return false;
-
-    for (let i = 0; i < this.itemsFormArray_M_1.length; i++) {
-      const control = this.itemsFormArray_M_1.at(i).get('response');
-      if (!control?.value) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  resetFormArray_M_1(items: Fiche[]): void {
-    // Vider d'abord le FormArray
-    while (this.itemsFormArray_M_1.length !== 0) {
-      this.itemsFormArray_M_1.removeAt(0);
-    }
-
-    // Ajouter un FormGroup pour chaque item
-    items.forEach(item => {
-      const itemGroup = this.fb.group({
-        id: [item.id],
-        response: [item.response, Validators.required],
-      });
-      this.itemsFormArray_M_1.push(itemGroup);
-    });
-  }
-  allResponsesSelected(): boolean {
-    if (this.itemsFormArray.length === 0) return false;
-
-    for (let i = 0; i < this.itemsFormArray.length; i++) {
-      const control = this.itemsFormArray.at(i).get('response');
-      if (!control?.value) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  // Méthode pour obtenir le FormGroup correspondant à un index
   getFormGroupAt(index: number): FormGroup {
     return this.itemsFormArray.at(index) as FormGroup;
   }
 
-  // Méthode pour obtenir le FormGroup correspondant à un index
   getFormGroupAt_M_1(index: number): FormGroup {
     return this.itemsFormArray_M_1.at(index) as FormGroup;
   }
 
-  display_echantillon_actif() {
-    this.show_echantillonnage_template = true;
-    this.userService.getResultat_controle_actif(this.form_echantillon.value).subscribe({
-      next: resultat => {
-        // Mettre à jour la source de données
-        this.dataSource.data = resultat;
-        this.resetFormArray(resultat);
-        console.log(" le reotur dispaly echantillon ");
-        console.log(resultat);
-        this.show_echantillon_actif = true;
+  private afficherBrouillon(brouillon: BrouillonControle): void {
+    const actif = brouillon.typeControle === 'controle_actif';
+    const items = actif ? this.itemsFormArray : this.itemsFormArray_M_1;
+    const dataSource = actif ? this.dataSource : this.dataSource_M_1;
+    items.clear();
+    for (const fiche of brouillon.fiches) {
+      items.push(this.fb.group({ response: [fiche.response, Validators.required] }));
+    }
+    dataSource.data = brouillon.fiches;
+    this.brouillons[brouillon.typeControle] = brouillon;
+  }
+
+  chargerEchantillon(type: TypeControleExactitude): void {
+    if (this.chargementBrouillons || this.controleOccupe[type] || this.brouillons[type]) return;
+    const quantite = type === 'controle_actif'
+      ? this.form_echantillon.value.quantite_echantillon
+      : this.form_echantillon_M_1.value.quantite_echantillon_M_1;
+    this.controleOccupe[type] = true;
+    this.userService.getEchantillonControle(type, quantite).pipe(
+      finalize(() => this.controleOccupe[type] = false),
+    ).subscribe({
+      next: brouillon => {
+        if (brouillon) {
+          this.afficherBrouillon(brouillon);
+        } else {
+          this.toast.info('Aucune fiche disponible pour ce contrôle.');
+        }
       },
+      error: error => this.toast.error(error.error?.message ?? "Impossible de charger l'échantillon."),
+    });
+  }
+
+  enregistrerReponse(type: TypeControleExactitude, index: number, response: '0' | '1'): void {
+    const brouillon = this.brouillons[type];
+    const fiche = brouillon?.fiches[index];
+    if (!brouillon || !fiche || this.controleOccupe[type]) return;
+
+    this.controleOccupe[type] = true;
+    this.userService.modifierBrouillonControle(brouillon.id, fiche.id, response).pipe(
+      finalize(() => this.controleOccupe[type] = false),
+    ).subscribe({
+      next: () => fiche.response = response,
       error: error => {
-        console.log(error);
+        const groupe = type === 'controle_actif' ? this.getFormGroupAt(index) : this.getFormGroupAt_M_1(index);
+        groupe.get('response')?.setValue(fiche.response);
+        this.toast.error(error.error?.message ?? "Impossible d'enregistrer la réponse.");
       },
     });
   }
-  display_echantillon_M_1() {
-    this.show_echantillonnage_template = true;
-    this.userService.getResultat_controle_m_1(this.form_echantillon_M_1.value).subscribe({
-      next: resultat => {
-        console.log(resultat);
-        this.dataSource_M_1.data = resultat;
-        this.resetFormArray_M_1(resultat);
-        this.show_echantillonnage_template_M_1 = true;
-      },
-      error: error => {
-        console.log(error);
-      },
-    });
-  }
+
   lire(id: number) {
     this.router.navigateByUrl(`lecture-fiche/${id}`);
   }
@@ -280,72 +255,32 @@ export class VerificationComponent implements OnInit {
       },
     });
   }*/
-  // Envoyer les réponses à la base de données
-  submitResponses(): void {
-    if (this.form.valid) {
-      const responses = this.itemsFormArray.controls.map(control => {
-        return {
-          id: control.get('id')?.value,
-          response: control.get('response')?.value,
-        };
-      });
+  validerControle(type: TypeControleExactitude): void {
+    const brouillon = this.brouillons[type];
+    if (!brouillon || this.controleOccupe[type] || brouillon.fiches.some(fiche => fiche.response === null)) return;
+    this.controleOccupe[type] = true;
+    this.userService.addControle(brouillon.id).pipe(
+      finalize(() => this.controleOccupe[type] = false),
+    ).subscribe({
+      next: resultat => {
+        delete this.brouillons[type];
+        if (type === 'controle_actif') {
+          this.dataSource.data = [];
+          this.itemsFormArray.clear();
+        } else {
+          this.dataSource_M_1.data = [];
+          this.itemsFormArray_M_1.clear();
+        }
+        this.toast.success(resultat.message);
+        const message = resultat.score === 0
+          ? "Toutes les fiches de l'échantillon sont erronées."
+          : "des fiches de l'échantillon sont exactes.";
+        this.userService.showScoreNotification(resultat.score, message);
+      },
+      error: error => this.toast.error(error.error?.message ?? 'Impossible de valider le contrôle.'),
+    });
+  }
 
-      /** les services pour envoyer les données */
-      let value = 0;
-      Object.keys(responses).forEach(cle => {
-        if (responses[+cle].response === '1') {
-          value = value + 1;
-        }
-      });
-      console.log(responses);
-      const score = Math.round((value / responses.length) * 100);
-      this.userService.addControle(responses, 'controle_actif', score).subscribe({
-        next: resultat => {
-          this.toast.success(resultat.message);
-        },
-        error: error => {
-          console.log(error);
-        },
-      });
-      const message =
-        score === 0
-          ? `Tous les chargements de l'échantillon sont éronés`
-          : `de l'echantillon du controle de contenu Actif sont exacts`;
-      this.userService.showScoreNotification(score, message);
-      /** les services pour envoyer les données */
-    }
-  }
-  submitResponses_M_1(): void {
-    if (this.form_M_1.valid) {
-      const responses = this.itemsFormArray_M_1.controls.map(control => {
-        return {
-          id: control.get('id')?.value,
-          response: control.get('response')?.value,
-        };
-      });
-      let value = 0;
-      Object.keys(responses).forEach(cle => {
-        if (responses[+cle].response === '1') {
-          value = value + 1;
-        }
-      });
-      const score = Math.round((value / responses.length) * 100);
-      this.userService.addControle(responses, 'controle_m_1', score).subscribe({
-        next: resultat => {
-          this.toast.success(resultat.message);
-        },
-        error: error => {
-          console.log(error);
-        },
-      });
-      /** les services pour envoyer les données */
-      const message =
-        score === 0
-          ? `Tous les chargements de l'échantillon sont éronés`
-          : `de l'echantillon du controle de contenu Actif sont exacts`;
-      this.userService.showScoreNotification(score, message);
-    }
-  }
   openDialog(id: number): void {
     this.dialog.open(LectureFicheComponent, {
       data: { id: id },

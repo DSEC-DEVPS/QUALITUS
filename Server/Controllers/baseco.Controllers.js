@@ -103,7 +103,7 @@ const login = async (req, res, next) => {
                 ]);
                 const reponse = { userId: resultat[0].id };
                 const accesToken = jwt.sign(reponse, "DevpsDsec", {
-                  expiresIn: "2h",
+                  expiresIn: "8h",
                 });
                 delete resultat[0]["password"];
                 return res.status(200).json({
@@ -3680,56 +3680,93 @@ const statistic_TC_FOR_SUP = async (req, res, next) => {
 /** fin des controller sur les stats */
 /** */
 /***  debut des contrôles pour le profil Gestionnaire d'exactitude */
-const controle_actif = async (req, res, next) => {
-  const { quantite_echantillon } = req.body;
-  console.log(quantite_echantillon);
+const lireBrouillonControle = ({ id, typeControle, fiches }) => ({
+  id,
+  typeControle,
+  fiches: typeof fiches === "string" ? JSON.parse(fiches) : fiches,
+});
+
+const getBrouillonsControle = async (req, res, next) => {
   try {
+    const [rows] = await db.query(
+      "SELECT id, typeControle, fiches FROM B_BROUILLON_CONTROLE WHERE id_UTILISATEUR=?",
+      [req.auth.userId],
+    );
+    return res.json(rows.map(lireBrouillonControle));
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const echantillonControle = (typeControle, champQuantite, tirerFiches) => async (req, res, next) => {
+  const quantite = req.body[champQuantite];
+  if (!Number.isSafeInteger(quantite) || quantite < 1) {
+    return res.status(400).json({ message: "La quantité doit être un entier positif." });
+  }
+
+  const cle = [req.auth.userId, typeControle];
+  const selection = "SELECT id, typeControle, fiches FROM B_BROUILLON_CONTROLE WHERE id_UTILISATEUR=? AND typeControle=?";
+  let connection;
+  try {
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+    const [existants] = await connection.query(selection, cle);
+    if (existants.length) {
+      await connection.commit();
+      return res.json(lireBrouillonControle(existants[0]));
+    }
+
+    const fiches = await tirerFiches(connection, quantite);
+    if (fiches.length) {
+      await connection.query(
+        "INSERT INTO B_BROUILLON_CONTROLE (id_UTILISATEUR, typeControle, fiches) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE id=id",
+        [...cle, JSON.stringify(fiches.map(fiche => ({ ...fiche, response: null })))],
+      );
+    }
+    const [rows] = await connection.query(selection + " FOR UPDATE", cle);
+    await connection.commit();
+    return res.json(rows.length ? lireBrouillonControle(rows[0]) : null);
+  } catch (error) {
+    if (connection) await connection.rollback();
+    return next(error);
+  } finally {
+    connection?.release();
+  }
+};
+
+const controle_actif = echantillonControle("controle_actif", "quantite_echantillon", async (connection, quantite) => {
     const dateCreation = new Date();
     const yers = new Date(
       dateCreation.getFullYear(),
       dateCreation.getMonth() - 1,
       dateCreation.getDay(),
     );
-    console.log(yers);
     const ETAT = "ACTIF";
     const Query = `SELECT FCH.id, FCH.titre,sl.type,DATE_FORMAT(FCH.dateDebut,'%Y-%m-%d') as dateDebut,DATE_FORMAT(FCH.dateFin,'%Y-%m-%d') as dateFin,UT.nom_utilisateur as Gestionnaire FROM B_FICHE FCH
     LEFT JOIN B_SLA sl on FCH.id=sl.id
     LEFT JOIN B_UTILISATEUR UT on FCH.id_Gestionnaire=UT.id 
     where  DATE_FORMAT(FCH.dateEnregistrement,'%Y-%m')!=DATE_FORMAT(?,'%Y-%m') and FCH.ETAT=?  ORDER BY RAND() LIMIT ?;`;
-    const [resultat] = await db.query(Query, [
+    const [resultat] = await connection.query(Query, [
       yers,
       ETAT,
-      quantite_echantillon,
+      quantite,
     ]);
-    return res.status(200).send(resultat);
-  } catch (error) {
-    console.log(error);
-    throw error;
-  }
-};
-const controle_m_1 = async (req, res, next) => {
-  const { quantite_echantillon_M_1 } = req.body;
-  try {
+    return resultat;
+});
+const controle_m_1 = echantillonControle("controle_m_1", "quantite_echantillon_M_1", async (connection, quantite) => {
     const dateCreation = new Date();
     const yers = new Date(
       dateCreation.getFullYear(),
       dateCreation.getMonth() - 1,
       dateCreation.getDay(),
     );
-    const Query1 = `SELECT COUNT(*) as nombre_fiche from B_FICHE`;
     const Query = `SELECT FCH.id, FCH.titre,sl.type,DATE_FORMAT(FCH.dateDebut,'%Y-%m-%d') as dateDebut,DATE_FORMAT(FCH.dateFin,'%Y-%m-%d') as dateFin,UT.nom_utilisateur as Gestionnaire FROM B_FICHE FCH
     LEFT JOIN B_SLA sl on FCH.id=sl.id
     LEFT JOIN B_UTILISATEUR UT on FCH.id_Gestionnaire=UT.id 
     where  DATE_FORMAT(FCH.dateEnregistrement,'%Y-%m')=DATE_FORMAT(?,'%Y-%m') ORDER BY RAND() LIMIT ?;`;
-    const [resultat1] = await db.query(Query1);
-    const LIMIT = Math.ceil(resultat1[0].nombre_fiche / 2);
-    const [resultat] = await db.query(Query, [yers, quantite_echantillon_M_1]);
-    return res.status(200).send(resultat);
-  } catch (error) {
-    console.log(error);
-    throw error;
-  }
-};
+    const [resultat] = await connection.query(Query, [yers, quantite]);
+    return resultat;
+});
 /*
 const getReporting = async (req, res, next) => {
   const userId = req.auth.userId;
@@ -3791,41 +3828,71 @@ function removeHostFromUrl(fullUrl) {
     return fullUrl; // Retourner l'URL d'origine en cas d'erreur
   }
 }
-const addControle = async (req, res, next) => {
+const traiterBrouillonControle = operation => async (req, res, next) => {
   const userId = req.auth.userId;
-  const { score, typeControle } = req.body;
-
+  const id = Number(req.params.id ?? req.body.idBrouillon);
+  if (!Number.isSafeInteger(id) || id < 1) {
+    return res.status(400).json({ message: "Identifiant de brouillon invalide." });
+  }
+  let connection;
   try {
-    const data = req.body.Data;
-    //console.log(data);
-    const id_controle = Math.floor(Math.random() * 100000) + 1;
-    //console.log(id_controle);
-    const date_controle = new Date();
-    if (Array.isArray(data) && data.length > 0) {
-      for (const profile of data) {
-        db.query(
-          `INSERT INTO B_CONTROLE (id_CONTROLE,id_FICHE,id_UTILISATEUR,typeControle,exactitude,dateControle) VALUES (?,?,?,?,?,?)`,
-          [
-            id_controle,
-            profile.id,
-            userId,
-            typeControle,
-            profile.response,
-            date_controle,
-          ],
-        );
-      }
-      db.query(
-        `INSERT INTO B_RESULTAT_CONTROLE(id_CONTROLEUR,id_CONTROLE,score,dateControle) VALUES (?,?,?,?)`,
-        [userId, id_controle, score, date_controle],
-      );
-      return res.status(201).json({ message: "Contrôle ajouté avec succès." });
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+    const [rows] = await connection.query(
+      "SELECT id, typeControle, fiches FROM B_BROUILLON_CONTROLE WHERE id=? AND id_UTILISATEUR=? FOR UPDATE",
+      [id, userId],
+    );
+    if (!rows.length) {
+      await connection.rollback();
+      return res.status(404).json({ message: "Ce brouillon de contrôle est introuvable." });
     }
+    const { status, body } = await operation(connection, lireBrouillonControle(rows[0]), req, userId);
+    await connection.commit();
+    return res.status(status).json(body);
   } catch (error) {
-    console.log(error);
-    throw error;
+    if (connection) await connection.rollback();
+    return next(error);
+  } finally {
+    connection?.release();
   }
 };
+
+const modifierBrouillonControle = traiterBrouillonControle(async (connection, brouillon, req) => {
+  const { idFiche, response } = req.body;
+  const fiche = brouillon.fiches.find(item => item.id === idFiche);
+  if (!fiche || (response !== "0" && response !== "1")) {
+    return { status: 400, body: { message: "Réponse de contrôle invalide." } };
+  }
+  fiche.response = response;
+  await connection.query("UPDATE B_BROUILLON_CONTROLE SET fiches=? WHERE id=?", [
+    JSON.stringify(brouillon.fiches),
+    brouillon.id,
+  ]);
+  return { status: 200, body: { message: "Réponse enregistrée." } };
+});
+
+const addControle = traiterBrouillonControle(async (connection, brouillon, req, userId) => {
+  const { id, typeControle, fiches } = brouillon;
+  if (!fiches.length || fiches.some(fiche => fiche.response !== "0" && fiche.response !== "1")) {
+    return { status: 400, body: { message: "Renseignez toutes les réponses avant de valider." } };
+  }
+  const score = Math.round(fiches.filter(fiche => fiche.response === "1").length * 100 / fiches.length);
+  // Les anciens identifiants de contrôle sont compris entre 1 et 100 000.
+  const idControle = 100000 + id;
+  const dateControle = new Date();
+  for (const fiche of fiches) {
+    await connection.query(
+      "INSERT INTO B_CONTROLE (id_CONTROLE, id_FICHE, id_UTILISATEUR, typeControle, exactitude, dateControle) VALUES (?, ?, ?, ?, ?, ?)",
+      [idControle, fiche.id, userId, typeControle, fiche.response, dateControle],
+    );
+  }
+  await connection.query(
+    "INSERT INTO B_RESULTAT_CONTROLE (id_CONTROLEUR, id_CONTROLE, score, dateControle) VALUES (?, ?, ?, ?)",
+    [userId, idControle, score, dateControle],
+  );
+  await connection.query("DELETE FROM B_BROUILLON_CONTROLE WHERE id=?", [id]);
+  return { status: 201, body: { message: "Contrôle ajouté avec succès.", score } };
+});
 
 /*** fin de contrôle  */
 module.exports = {
@@ -3930,6 +3997,8 @@ module.exports = {
   getAllSuperviseurByRo,
   getOneFiche,
   getAllDashboard,
+  getBrouillonsControle,
+  modifierBrouillonControle,
   controle_actif,
   controle_m_1,
   getAllDashboard_admin,
