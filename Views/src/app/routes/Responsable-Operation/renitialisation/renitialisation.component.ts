@@ -67,6 +67,18 @@ export class RenitialisationComponent implements OnInit, OnDestroy, AfterViewIni
       next: result => {
         this.downloadData = result;
         this.dataSource = new MatTableDataSource(result);
+        // Recherche sur : Login, Fonction, Programme, Site, ETAT, Superviseur,
+        // nom et prénom de l'agent.
+        this.dataSource.filterPredicate = (data: any, filter: string) => {
+          const champs = [
+            data.nom_utilisateur, data.fonction, data.programme, data.site,
+            data.status, data.superviseur, data.nom, data.prenom,
+          ];
+          return champs
+            .map(v => (v ?? '').toString().toLowerCase())
+            .join(' ')
+            .includes(filter);
+        };
         this.dataSource.paginator = this.paginator;
         this.dataSource.sort = this.sort;
       },

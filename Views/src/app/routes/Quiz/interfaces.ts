@@ -36,6 +36,9 @@ export interface Quiz {
   sites?: number[]; // ids des sites cibles (n..n)
   sites_detail?: { id_Site: number; nom: string }[];
   sites_titres?: string | null; // noms de sites concatenes (liste)
+  // Visibilité par site (cahier Quiz, Partie III)
+  origine?: 'SITE' | 'INVITE'; // quiz du site propriétaire vs site invité
+  autorise?: number;            // 1 si l'utilisateur peut ouvrir le détail
   note_passage: number; // "Seuil de reussite"
   retest_auto: number; // 0 | 1 (conserve en base, hors formulaire)
   nb_retest_max: number;

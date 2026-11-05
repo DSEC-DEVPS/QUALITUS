@@ -1,8 +1,10 @@
+
 services:
   db:
     image: mysql:8
     command: --lower-case-table-names=1
     restart: always
+    command: ["--lower_case_table_names=1"]
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_DATABASE: QUALITUS
@@ -11,18 +13,16 @@ services:
     volumes:
       - ./db/init.sql:/docker-entrypoint-initdb.d/0_init.sql
       - db-data:/var/lib/mysql
-    # Ne pas exposer le port en production sauf si nécessaire
     ports:
       - "3308:3306"
     networks:
       - internalnet
 
-  # Adminer optionnel en production, à activer uniquement si nécessaire
   adminer:
     image: adminer
     restart: always
     ports:
-      - 8000:8080
+      - "8000:8080"
     depends_on:
       - db
     networks:
@@ -36,7 +36,6 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: QUALITUS
-    # Ne pas exposer le port en production, il sera accessible via le frontend nginx
     ports:
       - "3000:3000"
     volumes:

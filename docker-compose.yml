@@ -1,7 +1,11 @@
 services:
   db:
     image: mysql:8
-    command: --lower-case-table-names=1
+    # Le volume de données a été initialisé avec lower_case_table_names=1
+    # (noms de tables insensibles à la casse — requis par l'app qui mélange
+    # B_GRILLE / b_grille). MySQL 8.4 par défaut = 0, d'où un refus de démarrer
+    # ("Different lower_case_table_names settings"). On fige donc la valeur à 1.
+    command: ["--lower-case-table-names=1"]
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}

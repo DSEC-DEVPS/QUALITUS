@@ -28,7 +28,18 @@
 
           <ng-container matColumnDef="titre">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Titre</th>
-            <td mat-cell *matCellDef="let q">{{ q.titre }}</td>
+            <td mat-cell *matCellDef="let q">
+              {{ q.titre }}
+              @if (q.origine === 'INVITE') {
+                @if (peutOuvrir(q)) {
+                  <mat-chip-set><mat-chip class="chip-invite" matTooltip="Quiz d'un autre site — vous y êtes autorisé">Site invité</mat-chip></mat-chip-set>
+                } @else {
+                  <mat-chip-set><mat-chip class="chip-verrou" matTooltip="Autorisation requise auprès du site propriétaire">
+                    <mat-icon>lock</mat-icon> Autorisation requise
+                  </mat-chip></mat-chip-set>
+                }
+              }
+            </td>
           </ng-container>
 
           <ng-container matColumnDef="code_pin">
@@ -61,8 +72,8 @@
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef>Actions</th>
             <td mat-cell *matCellDef="let q">
-              <button mat-icon-button matTooltip="Detail" (click)="detail(q)">
-                <mat-icon>visibility</mat-icon>
+              <button mat-icon-button [matTooltip]="peutOuvrir(q) ? 'Détail' : 'Autorisation requise'" (click)="detail(q)">
+                <mat-icon>{{ peutOuvrir(q) ? 'visibility' : 'lock' }}</mat-icon>
               </button>
               <button mat-icon-button color="primary" matTooltip="Editer" *appCan="'quiz.modifier'" (click)="editer(q)">
                 <mat-icon>edit_note</mat-icon>

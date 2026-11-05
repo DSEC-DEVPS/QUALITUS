@@ -80,6 +80,37 @@ export class QuizService {
   getSites(): Observable<SiteOption[]> {
     return this.http.get<SiteOption[]>('/api/v1/site/all');
   }
+
+  /* ----- Diffusion : filtres + désignation des participants (Partie II) ----- */
+  getFonctions(): Observable<any[]> {
+    return this.http.get<any[]>('/api/v1/fonction/all');
+  }
+  getProgrammes(): Observable<any[]> {
+    return this.http.get<any[]>('/api/v1/programme/all');
+  }
+  rechercherUtilisateursDiffusion(p: { sites?: string; postes?: string; programmes?: string }): Observable<any[]> {
+    return this.http.get<any[]>(`${this.base}/diffusion/utilisateurs`, { params: p as any });
+  }
+  getParticipantsDiffusion(id: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.base}/${id}/participants`);
+  }
+  diffuser(id: number, id_utilisateurs: number[]): Observable<message & { nb: number }> {
+    return this.http.post<message & { nb: number }>(`${this.base}/${id}/diffuser`, { id_utilisateurs });
+  }
+
+  /* ----- Utilisateurs autorisés (Partie IV) ----- */
+  getAutorises(id: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.base}/${id}/autorises`);
+  }
+  candidatsAutorisation(id: number, p: { sites?: string; postes?: string; programmes?: string }): Observable<any[]> {
+    return this.http.get<any[]>(`${this.base}/${id}/autorises/candidats`, { params: p as any });
+  }
+  autoriser(id: number, id_utilisateurs: number[]): Observable<message & { nb: number }> {
+    return this.http.post<message & { nb: number }>(`${this.base}/${id}/autorises`, { id_utilisateurs });
+  }
+  retirerAutorisation(id: number, uid: number): Observable<message> {
+    return this.http.delete<message>(`${this.base}/${id}/autorises/${uid}`);
+  }
   getQuizPublics(): Observable<QuizPublic[]> {
     return this.http.get<QuizPublic[]>(`${this.base}/participer/publics`);
   }
