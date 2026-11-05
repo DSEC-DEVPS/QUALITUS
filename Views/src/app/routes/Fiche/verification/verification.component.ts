@@ -1,4 +1,4 @@
-import { ChangeDetectorRef,AfterViewInit, Component, ElementRef, Inject, inject, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef,AfterViewInit, Component, ElementRef, Inject, inject, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -9,7 +9,7 @@ import {
   UserService,
 } from '@shared/services/user.service';
 import { MatSort } from '@angular/material/sort';
-import {  AuthService, Fiche, reporting,  reporting_resultat,  User } from '@core';
+import { AuthService, DetailRapportControle, Fiche, reporting, reporting_resultat, User } from '@core';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -86,6 +86,7 @@ export class VerificationComponent implements OnInit {
   private readonly auth=inject(AuthService);
   private readonly router = inject(Router);
   hoveredCard: number | null = null; // 👈 AJOUTE ÇA
+  rapportsEnChargement = new Set<number>();
   private fb = inject(FormBuilder);
   private readonly toast = inject(ToastrService);
   form_echantillon!: FormGroup;
@@ -290,28 +291,57 @@ export class VerificationComponent implements OnInit {
       maxHeight: '100%',
     });
   }
-  download() {
-    const transformedData = this.reporting_data.map(item => {
-      const { id, ...itemWithoutId } = item; // Remove 'id' key
-      return itemWithoutId;
+  consulterRapport(id: number, vue?: TemplateRef<unknown>): void {
+    if (this.rapportsEnChargement.has(id)) return;
+    this.rapportsEnChargement.add(id);
+    this.userService.getDetailReporting(id).pipe(
+      finalize(() => this.rapportsEnChargement.delete(id)),
+    ).subscribe({
+      next: rapport => {
+        if (vue) {
+          this.dialog.open(vue, { data: rapport, width: '780px', maxWidth: '95vw' });
+        } else {
+          this.telechargerRapport(rapport);
+        }
+      },
+      error: error => this.toast.error(error.error?.message ?? 'Impossible de charger le rapport.'),
     });
+  }
 
-    // Add a result row at the bottom
-    const resultRow = {
-      id_CONTROLE: 'Résultat',
-      titre: this.score,
-      ETAT: '',
-      nom_utilisateur: '',
-      exactitude: '',
-      dateControle: '',
-    };
+  libelleTypeControle(type: string | null): string {
+    if (type === 'controle_actif') return 'Contrôle de contenu Actif';
+    if (type === 'controle_m_1') return 'Contrôle M-1';
+    return type ?? 'Non renseigné';
+  }
 
-    // Add the result row to the data
-    const finalData = [...transformedData, resultRow];
-    const ws1: XLSX.WorkSheet = XLSX.utils.json_to_sheet(finalData);
-    const wb: XLSX.WorkBook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws1, 'LISTE');
-    XLSX.writeFile(wb, 'reporting.xlsx');
+  libelleExactitude(exactitude: number | null): string {
+    if (exactitude === 1) return 'Oui';
+    if (exactitude === 0) return 'Non';
+    return 'Non renseignée';
+  }
+
+  telechargerRapport(rapport: DetailRapportControle): void {
+    try {
+      const classeur = XLSX.utils.book_new();
+      const synthese = XLSX.utils.aoa_to_sheet([
+        ['N° du contrôle', 'Date du contrôle', 'Score (%)', 'Nombre de fiches'],
+        [rapport.id_CONTROLE, rapport.dateControle, rapport.score, rapport.fiches.length],
+      ]);
+      const fiches = XLSX.utils.aoa_to_sheet([
+        ['ID de la fiche', 'Titre', 'Type de contrôle', 'Exactitude'],
+        ...rapport.fiches.map(fiche => [
+          fiche.idFiche,
+          fiche.titre ?? '',
+          this.libelleTypeControle(fiche.typeControle),
+          this.libelleExactitude(fiche.exactitude),
+        ]),
+      ]);
+      XLSX.utils.book_append_sheet(classeur, synthese, 'Synthèse');
+      XLSX.utils.book_append_sheet(classeur, fiches, 'Fiches contrôlées');
+      XLSX.writeFile(classeur, `rapport-controle-${rapport.id_CONTROLE}.xlsx`);
+    } catch {
+      this.toast.error('Impossible de créer le fichier Excel.');
+    }
   }
 }
 /*

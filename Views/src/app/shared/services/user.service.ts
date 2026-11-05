@@ -28,6 +28,7 @@ import {
   echantillon,
   reporting_retour,
   reporting_resultat,
+  DetailRapportControle,
 } from '@core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, catchError, map, Observable, tap, throwError } from 'rxjs';
@@ -319,6 +320,10 @@ export class UserService {
   }
   getReporting(): Observable<reporting_resultat[]> {
     return this.http.get<reporting_resultat[]>(`/api/v1/get_reporting`);
+  }
+
+  getDetailReporting(id: number): Observable<DetailRapportControle> {
+    return this.http.get<DetailRapportControle>(`/api/v1/get_reporting/${id}`);
   }
   /*
    getReporting(data: {

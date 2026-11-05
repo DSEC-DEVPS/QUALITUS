@@ -3819,6 +3819,36 @@ const getReporting = async (req, res, next) => {
   }
 };
 
+const getDetailReporting = async (req, res, next) => {
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id < 1) {
+    return res.status(400).json({ message: "Identifiant de rapport invalide." });
+  }
+  try {
+    const [rows] = await db.query(
+      `SELECT R.id, R.id_CONTROLE, R.score,
+          DATE_FORMAT(R.dateControle, '%Y-%m-%d') AS dateControle,
+          C.id_FICHE AS idFiche, F.titre, C.typeControle, C.exactitude
+        FROM B_RESULTAT_CONTROLE R
+        LEFT JOIN B_CONTROLE C ON C.id_CONTROLE=R.id_CONTROLE
+          AND C.id_UTILISATEUR=R.id_CONTROLEUR AND C.dateControle=R.dateControle
+        LEFT JOIN B_FICHE F ON F.id=C.id_FICHE
+        WHERE R.id=? AND R.id_CONTROLEUR=?
+        ORDER BY C.id`,
+      [id, req.auth.userId],
+    );
+    if (!rows.length) {
+      return res.status(404).json({ message: "Rapport de contrôle introuvable." });
+    }
+    const { id_CONTROLE, score, dateControle } = rows[0];
+    const fiches = rows.filter(row => row.idFiche !== null)
+      .map(({ idFiche, titre, typeControle, exactitude }) => ({ idFiche, titre, typeControle, exactitude }));
+    return res.json({ id, id_CONTROLE, score, dateControle, fiches });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 function removeHostFromUrl(fullUrl) {
   try {
     const parsedUrl = new URL(fullUrl);
@@ -4006,6 +4036,7 @@ module.exports = {
   statistic_TC,
   addControle,
   getReporting,
+  getDetailReporting,
   updateSite,
   getOneProgramme,
   getAllFiche_Archive,

@@ -97,6 +97,14 @@ export interface reporting_resultat {
   score:number,
   dateControle: string;
 }
+export interface DetailRapportControle extends reporting_resultat {
+  fiches: {
+    idFiche: number;
+    titre: string | null;
+    typeControle: string | null;
+    exactitude: number | null;
+  }[];
+}
 export interface reporting {
   id: number;
   id_CONTROLE: number;

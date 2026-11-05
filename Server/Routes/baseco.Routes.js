@@ -105,6 +105,7 @@ const {
   statistic_TC,
   addControle,
   getReporting,
+  getDetailReporting,
   getAllFiche_Archive,
   statistic_TC_FOR_SUP,
   updateMotifMaVoixCompte,
@@ -327,6 +328,7 @@ router.get("/hello", async (req, res, next) => {
 /** Routes pour   Controle et reporting*/
 router.post("/add_controle", auth, addControle);
 router.get("/get_reporting", auth, permission("REPORTING","LIRE"), getReporting);
+router.get("/get_reporting/:id", auth, permission("REPORTING","LIRE"), getDetailReporting);
 
 /***** les notifications */
 

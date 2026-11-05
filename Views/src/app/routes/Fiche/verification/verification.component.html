@@ -236,14 +236,18 @@
                   </p>
                 </div>
                 <div class="icons-content">
-                  <span class="score">  
-                    <mat-icon
-                class="delete_icon"
-                matTooltip="télécharger"
-                matTooltipPosition="above"
-                style="color: black;"
-                >download</mat-icon
-              > </span>
+                  <button mat-button type="button"
+                    [disabled]="rapportsEnChargement.has(element.id)"
+                    (click)="consulterRapport(element.id, detailRapport)">
+                    Détails
+                  </button>
+                  <button mat-icon-button type="button"
+                    matTooltip="Télécharger en Excel"
+                    [attr.aria-label]="'Télécharger le rapport ' + element.id_CONTROLE + ' en Excel'"
+                    [disabled]="rapportsEnChargement.has(element.id)"
+                    (click)="consulterRapport(element.id)">
+                    <mat-icon>download</mat-icon>
+                  </button>
                   <span class="score">
                      <mat-icon
                
@@ -311,3 +315,39 @@
     </mat-tab-group>
   </mat-card-content>
 </mat-card>
+
+<ng-template #detailRapport let-rapport>
+  <h2 mat-dialog-title>Contrôle n° {{ rapport.id_CONTROLE }}</h2>
+  <mat-dialog-content>
+    <p>{{ rapport.dateControle | date:'dd/MM/yyyy' }} · Score {{ rapport.score }} %</p>
+    <div *ngIf="rapport.fiches.length; else aucunDetail" class="rapport-table-container">
+      <table class="rapport-table">
+        <thead>
+          <tr>
+            <th scope="col">ID de la fiche</th>
+            <th scope="col">Titre</th>
+            <th scope="col">Type de contrôle</th>
+            <th scope="col">Exactitude</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let fiche of rapport.fiches">
+            <td>{{ fiche.idFiche }}</td>
+            <td>{{ fiche.titre || 'Titre indisponible' }}</td>
+            <td>{{ libelleTypeControle(fiche.typeControle) }}</td>
+            <td>{{ libelleExactitude(fiche.exactitude) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <ng-template #aucunDetail>
+      <p>Aucune fiche détaillée n’est disponible pour ce rapport.</p>
+    </ng-template>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Fermer</button>
+    <button mat-stroked-button type="button" (click)="telechargerRapport(rapport)">
+      Télécharger Excel
+    </button>
+  </mat-dialog-actions>
+</ng-template>
