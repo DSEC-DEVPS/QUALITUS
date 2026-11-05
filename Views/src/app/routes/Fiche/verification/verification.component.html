@@ -209,14 +209,9 @@
         </div>
       </mat-tab>
 
-      <mat-tab label="Reporting des Contrôles" (click)="chargement_reporting()" >
-        
-        <div class="example-container">
-         <form [formGroup]="form_echantillon_M_1">
-        <div class="col-md-1 align-items-center" style="margin-top: -15px;">
-          <button mat-button   (click)="chargement_reporting()">Charger</button>
-        </div>
-        </form>
+      <mat-tab label="Reporting des Contrôles" (click)="chargement_reporting()">
+        <div class="reporting-actions">
+          <button mat-stroked-button type="button" (click)="chargement_reporting()">Charger</button>
         </div>
           <div class="cards-container">
               <div
