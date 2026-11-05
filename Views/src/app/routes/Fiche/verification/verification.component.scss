@@ -775,6 +775,20 @@ hr {
   padding: 8px 0 4px;
 }
 
+.reporting-actions,
+.icons-content,
+.rapport-dialog-actions {
+  .mat-mdc-button-base {
+    --mdc-text-button-container-height: 32px;
+    --mdc-outlined-button-container-height: 32px;
+    --mat-text-button-horizontal-padding: 8px;
+    --mat-outlined-button-horizontal-padding: 8px;
+    --mdc-icon-button-state-layer-size: 32px;
+    font-size: 12px;
+    margin: 2px;
+  }
+}
+
 .rapport-table-container {
   overflow-x: auto;
 }
