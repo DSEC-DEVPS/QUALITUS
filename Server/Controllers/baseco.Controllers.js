@@ -3767,55 +3767,14 @@ const controle_m_1 = echantillonControle("controle_m_1", "quantite_echantillon_M
     const [resultat] = await connection.query(Query, [yers, quantite]);
     return resultat;
 });
-/*
 const getReporting = async (req, res, next) => {
   const userId = req.auth.userId;
-  const { typeControle, dateDebut, dateFin } = req.body;
-  //console.log(dateDebut, typeControle, dateFin);
-  try {
-    const resultat = {};
-    const Query = `select F.id,C.id_CONTROLE,F.titre,F.ETAT,U.nom_utilisateur,IF(C.exactitude=1,'oui','non') as exactitude,BOT.on_time,DATE_FORMAT(C.dateControle,'%Y-%m-%d') as dateControle 
-    from B_CONTROLE C INNER JOIN B_RESULTAT_CONTROLE RC on C.id_CONTROLE=RC.id_CONTROLE
-    INNER JOIN B_FICHE F on C.id_FICHE=F.id INNER JOIN B_UTILISATEUR U on C.id_UTILISATEUR=U.id
-    INNER JOIN B_ON_TIME BOT on C.id_FICHE=BOT.id_Fiche
-    where C.id_UTILISATEUR=? and C.typeControle=? and DATE_FORMAT(C.dateControle,'%Y-%m-%d') between DATE_FORMAT(?,'%Y-%m-%d') and DATE_FORMAT(?,'%Y-%m-%d')`;
-    const Query2 = `select score from B_RESULTAT_CONTROLE where id_CONTROLEUR=? and id_CONTROLE=? and DATE_FORMAT(dateControle,'%Y-%m-%d') between DATE_FORMAT(?,'%Y-%m-%d') and DATE_FORMAT(?,'%Y-%m-%d')`;
-    const [resultat1] = await db.query(Query, [
-      userId,
-      typeControle,
-      dateDebut,
-      dateFin,
-    ]);
-    console.log(resultat1[0]);
-     //console.log("id controle est",resultat1[0].id_CONTROLE);
-    if(resultat1[0].length <1){
- const id_CONTROLE = resultat1[0][0].id_CONTROLE;
-    const [resultat2] = await db.query(Query2, [
-      userId,
-      id_CONTROLE,
-      dateDebut,
-      dateFin,
-    ]);
-    resultat["reporting_data"] = resultat1;
-    resultat["score"] = resultat2[0].score;
-    //console.log(resultat);
-    }
-       return res.status(200).send(resultat);
-  } catch (error) {
-    console.log(error);
-    throw error;
-  }
-};*/
-const getReporting = async (req, res, next) => {
-  const userId = req.auth.userId;
-  //console.log(dateDebut, typeControle, dateFin);
   try {
     const Query = `Select id,id_CONTROLE,score,DATE_FORMAT(dateControle, '%Y-%m-%d') as dateControle from B_RESULTAT_CONTROLE where id_CONTROLEUR=? ORDER BY dateControle DESC `;
     const [resultat1] = await db.query(Query, [userId]);
     return res.status(200).send(resultat1);
   } catch (error) {
-    console.log(error);
-    throw error;
+    return next(error);
   }
 };
 

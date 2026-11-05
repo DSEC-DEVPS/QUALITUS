@@ -26,7 +26,6 @@ import {
   updateFiche,
   statistic_TC,
   echantillon,
-  reporting_retour,
   reporting_resultat,
   DetailRapportControle,
 } from '@core';
@@ -325,14 +324,6 @@ export class UserService {
   getDetailReporting(id: number): Observable<DetailRapportControle> {
     return this.http.get<DetailRapportControle>(`/api/v1/get_reporting/${id}`);
   }
-  /*
-   getReporting(data: {
-    typeControle: string;
-    dateDebut: Date;
-    dateFin: string;
-  }): Observable<reporting_retour> {
-    return this.http.post<reporting_retour>(`/api/v1/get_reporting`, data);
-  }*/
   deleteFiche(id: number): Observable<message> {
     return this.http.delete<message>(`/api/v1/fiche/${id}`);
   }

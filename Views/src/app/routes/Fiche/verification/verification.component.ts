@@ -9,7 +9,7 @@ import {
   UserService,
 } from '@shared/services/user.service';
 import { MatSort } from '@angular/material/sort';
-import { AuthService, DetailRapportControle, Fiche, reporting, reporting_resultat, User } from '@core';
+import { DetailRapportControle, reporting_resultat } from '@core';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -83,38 +83,23 @@ registerAllModules();
 })
 export class VerificationComponent implements OnInit {
   private readonly userService = inject(UserService);
-  private readonly auth=inject(AuthService);
   private readonly router = inject(Router);
-  hoveredCard: number | null = null; // 👈 AJOUTE ÇA
+  hoveredCard: number | null = null;
   rapportsEnChargement = new Set<number>();
   private fb = inject(FormBuilder);
   private readonly toast = inject(ToastrService);
   form_echantillon!: FormGroup;
    form_echantillon_M_1!: FormGroup;
-  dateForm!: FormGroup;
   form!: FormGroup;
   form_M_1!: FormGroup;
   readonly dialog = inject(MatDialog);
   displayedColumns = ['id', 'titre', 'type', 'dateDebut','dateFin', 'Gestionnaire', 'exactitude'];
-  displayedColumns_reporting = [
-    'id_CONTROLE',
-  'score',
-  'dateControle'
-  ];
-  score = 0;
-  //table_echantillon!: Fiche[];
-  table_echantillonnage_reponse!: Fiche[];
   dataSource = new MatTableDataSource<FicheBrouillonControle>([]);
   dataSource_M_1 = new MatTableDataSource<FicheBrouillonControle>([]);
   brouillons: Partial<Record<TypeControleExactitude, BrouillonControle>> = {};
   controleOccupe = { controle_actif: false, controle_m_1: false };
   chargementBrouillons = true;
-  dataSource_reporting = new MatTableDataSource<reporting>([]);
-  //dataSource_reporting_resultat= new MatTableDataSource<reporting_resultat>([]);
-    dataSource_reporting_resultat:reporting_resultat[]=[];
-  reporting_data: reporting[] = [];
-  show_reporting_template = false;
-  user!:User;
+  rapports: reporting_resultat[] = [];
   @ViewChild(MatSort) sort!: MatSort;
   ngOnInit() {
     this.form = this.fb.group({
@@ -129,28 +114,13 @@ export class VerificationComponent implements OnInit {
       this.form_echantillon_M_1=this.fb.group({
       quantite_echantillon_M_1:[null,[Validators.required]]
       });
-    this.dateForm = this.fb.group({
-      typeControle: ['', [Validators.required]],
-      dateDebut: ['', [Validators.required]],
-      dateFin: ['', [Validators.required]],
-    });
     this.userService.getBrouillonsControle().pipe(
       finalize(() => this.chargementBrouillons = false),
     ).subscribe({
       next: brouillons => brouillons.forEach(brouillon => this.afficherBrouillon(brouillon)),
       error: () => this.toast.error('Impossible de recharger les brouillons de contrôle.'),
     });
-     this.auth.user().subscribe({
-      next: user => {
-        this.user = user;
-      },
-      error: error => {
-        //console.log(error);
-      },
-    });
   }
-  
-  // user infos
   
   // Getter pour accéder facilement au FormArray
   get itemsFormArray(): FormArray {
@@ -222,40 +192,18 @@ export class VerificationComponent implements OnInit {
     this.router.navigateByUrl(`lecture-fiche/${id}`);
   }
 
- chargement_reporting() {
-  this.userService.getReporting().subscribe({
-    next: (resultat) => {
-      console.log(Array.isArray(resultat), resultat);
-      console.log("Retour API :", resultat);
-      this.dataSource_reporting_resultat= resultat;
-      if(resultat.length<1){
-        this.userService.showScoreNotification(0, "Désolé,nous n'avez pas de reporting.");
-      }
-      this.show_reporting_template=true;
-    },
-    error: (error) => {
-      console.error(error);
-    }
-  });
-}
-   /*chargement_reporting() {
-    console.log(this.dateForm.value);
-    this.userService.getReporting(this.user.id||0).subscribe({
-      next: resultat => {
-        console.log("********* debuh ************");
-        
-        console.log(resultat);
-        console.log("********* debuh ************");
-        this.reporting_data = resultat.reporting_data;
-        this.dataSource_reporting.data = resultat.reporting_data;
-        this.score = resultat.score;
-        this.show_reporting_template = true;
+  chargement_reporting(): void {
+    this.userService.getReporting().subscribe({
+      next: rapports => {
+        this.rapports = rapports;
+        if (!rapports.length) {
+          this.userService.showScoreNotification(0, 'Aucun rapport de contrôle disponible.');
+        }
       },
-      error: error => {
-        console.log(error);
-      },
+      error: () => this.toast.error('Impossible de charger les rapports de contrôle.'),
     });
-  }*/
+  }
+
   validerControle(type: TypeControleExactitude): void {
     const brouillon = this.brouillons[type];
     if (!brouillon || this.controleOccupe[type] || brouillon.fiches.some(fiche => fiche.response === null)) return;
