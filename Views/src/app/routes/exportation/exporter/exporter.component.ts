@@ -18,6 +18,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { NgxPermissionsModule } from 'ngx-permissions';
 import { MatButtonModule } from '@angular/material/button';
+import { ToastrService } from 'ngx-toastr';
 import * as XLSX from 'xlsx';
 @Component({
   selector: 'app-exporter',
@@ -61,7 +62,9 @@ export class ExporterComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    private userService: UserService
+    private userService: UserService,
+    private datePipe: DatePipe,
+    private toast: ToastrService
   ) {}
 
   ngOnInit(): void {
@@ -69,6 +72,7 @@ export class ExporterComponent implements OnInit {
       dataType: ['Chargements', [Validators.required]],
       dateDebut: [null, [Validators.required]],
       dateFin: [null, [Validators.required]],
+      isActive: [false],
       format: ['EXCEL', [Validators.required]],
     });
   }
@@ -76,21 +80,32 @@ export class ExporterComponent implements OnInit {
   onPreview(): void {}
 
   onExport(): void {
-    this.userService.export_ma_voix_compte(this.exportForm.value).subscribe({
-      next: resultat => {
-        console.log(resultat);
-        this.download(resultat);
-      },
-      error: error => {
-        console.log(error);
-      },
+    if (this.exportForm.invalid) return;
+    const demande = this.exportForm.value;
+    if (demande.dataType === 'Exactitude') {
+      const debut = this.datePipe.transform(demande.dateDebut, 'yyyy-MM-dd');
+      const fin = this.datePipe.transform(demande.dateFin, 'yyyy-MM-dd');
+      if (!debut || !fin || debut > fin) {
+        this.toast.error('La date de fin doit être égale ou postérieure à la date de début.');
+        return;
+      }
+      demande.dateDebut = debut;
+      demande.dateFin = fin;
+    }
+    this.userService.export_ma_voix_compte(demande).subscribe({
+      next: resultat => this.download(resultat, demande.dataType, demande.format),
+      error: () => this.toast.error("Impossible de générer l’export."),
     });
   }
-  download(table: any[]) {
-    const data = table;
-    const ws1: XLSX.WorkSheet = XLSX.utils.json_to_sheet(data);
-    const wb: XLSX.WorkBook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws1, this.exportForm.get('dataType')?.value);
-    XLSX.writeFile(wb, `Export_de_${this.exportForm.get('dataType')?.value}.xlsx`);
+  download(table: any[], dataType: string, format: string): void {
+    const exactitude = dataType === 'Exactitude';
+    const header = exactitude
+      ? ['id_controle', 'id_fiche', 'titre', 'type_de_controle', 'exactitude', 'date_contrôle']
+      : undefined;
+    const feuille = XLSX.utils.json_to_sheet(table, { header });
+    const classeur = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(classeur, feuille, dataType);
+    const extension = exactitude && format === 'CSV' ? 'csv' : 'xlsx';
+    XLSX.writeFile(classeur, `Export_de_${dataType}.${extension}`);
   }
 }

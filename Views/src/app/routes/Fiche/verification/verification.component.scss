@@ -772,7 +772,21 @@ hr {
   font-weight: 600;
 }
 .reporting-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
   padding: 8px 0 4px;
+
+  label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  input {
+    min-height: 32px;
+  }
 }
 
 .reporting-actions,

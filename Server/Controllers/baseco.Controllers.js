@@ -1254,14 +1254,14 @@ const getAllExport = async (req, res, next) => {
           `;
         } else {
           if (dataType === "Exactitude") {
-            Query = `SELECT FCH.titre as DESCRIPTION,UT.nom as NOM ,UT.nom_utilisateur as LOGIN,ST.nom as SITE,
-            BS.exactitude as EXACTITUDE,DATE_FORMAT(BS.dateSondage,'%Y-%m-%d %H:%i:%s') AS DATE_SONDAGE
-            FROM B_SONDAGE BS 
-            LEFT JOIN B_FICHE FCH on BS.id_FICHE=FCH.id
-            LEFT JOIN B_UTILISATEUR UT on BS.id_UTILISATEUR=UT.id
-            LEFT JOIN B_SITE ST on UT.id_Site=ST.id
-            where DATE_FORMAT(BS.dateSondage,'%Y-%m-%d')   BETWEEN DATE_FORMAT(?,'%Y-%m-%d')  and DATE_FORMAT(?,'%Y-%m-%d')
-            `;
+            Query = `SELECT C.id_CONTROLE AS id_controle, C.id_FICHE AS id_fiche,
+              FCH.titre AS titre, C.typeControle AS type_de_controle, C.exactitude AS exactitude,
+              DATE_FORMAT(C.dateControle, '%Y-%m-%d %H:%i:%s') AS \`date_contrôle\`
+              FROM B_CONTROLE C
+              LEFT JOIN B_FICHE FCH ON FCH.id=C.id_FICHE
+              WHERE C.dateControle >= DATE(?)
+                AND C.dateControle < DATE_ADD(DATE(?), INTERVAL 1 DAY)
+              ORDER BY C.dateControle, C.id`;
           } else {
             if (dataType === "Utilité") {
               Query = `SELECT FCH.titre as DESCRIPTION,UT.nom as NOM,UT.nom_utilisateur as LOGIN,ST.nom as SITE,

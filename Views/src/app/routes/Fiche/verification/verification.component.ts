@@ -1,4 +1,4 @@
-import { ChangeDetectorRef,AfterViewInit, Component, ElementRef, Inject, inject, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, AfterViewInit, Component, computed, ElementRef, Inject, inject, OnInit, signal, TemplateRef, ViewChild } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -99,7 +99,22 @@ export class VerificationComponent implements OnInit {
   brouillons: Partial<Record<TypeControleExactitude, BrouillonControle>> = {};
   controleOccupe = { controle_actif: false, controle_m_1: false };
   chargementBrouillons = true;
-  rapports: reporting_resultat[] = [];
+  private readonly rapports = signal<reporting_resultat[]>([]);
+  readonly rapportsCharges = signal(false);
+  readonly dateRapportDebut = signal('');
+  readonly dateRapportFin = signal('');
+  readonly intervalleRapportInvalide = computed(() => {
+    const debut = this.dateRapportDebut();
+    const fin = this.dateRapportFin();
+    return !!debut && !!fin && debut > fin;
+  });
+  readonly rapportsFiltres = computed(() => {
+    const debut = this.dateRapportDebut();
+    const fin = this.dateRapportFin();
+    return this.rapports().filter(({ dateControle }) =>
+      (!debut || dateControle >= debut) && (!fin || dateControle <= fin)
+    );
+  });
   @ViewChild(MatSort) sort!: MatSort;
   ngOnInit() {
     this.form = this.fb.group({
@@ -195,13 +210,16 @@ export class VerificationComponent implements OnInit {
   chargement_reporting(): void {
     this.userService.getReporting().subscribe({
       next: rapports => {
-        this.rapports = rapports;
-        if (!rapports.length) {
-          this.userService.showScoreNotification(0, 'Aucun rapport de contrôle disponible.');
-        }
+        this.rapports.set(rapports);
+        this.rapportsCharges.set(true);
       },
       error: () => this.toast.error('Impossible de charger les rapports de contrôle.'),
     });
+  }
+
+  reinitialiserFiltreRapports(): void {
+    this.dateRapportDebut.set('');
+    this.dateRapportFin.set('');
   }
 
   validerControle(type: TypeControleExactitude): void {

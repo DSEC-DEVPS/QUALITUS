@@ -211,12 +211,30 @@
 
       <mat-tab label="Reporting des Contrôles" (click)="chargement_reporting()">
         <div class="reporting-actions">
+          <label>
+            Du
+            <input type="date" #dateDebutRapport [value]="dateRapportDebut()"
+              (input)="dateRapportDebut.set(dateDebutRapport.value)">
+          </label>
+          <label>
+            Au
+            <input type="date" #dateFinRapport [value]="dateRapportFin()"
+              (input)="dateRapportFin.set(dateFinRapport.value)">
+          </label>
           <button mat-stroked-button type="button" (click)="chargement_reporting()">Charger</button>
+          <button mat-button type="button" (click)="reinitialiserFiltreRapports()"
+            [disabled]="!dateRapportDebut() && !dateRapportFin()">Réinitialiser</button>
         </div>
+        <p *ngIf="intervalleRapportInvalide()" role="alert">
+          La date de fin doit être égale ou postérieure à la date de début.
+        </p>
+        <p *ngIf="rapportsCharges() && !intervalleRapportInvalide() && !rapportsFiltres().length" role="status">
+          Aucun rapport de contrôle pour la période sélectionnée.
+        </p>
           <div class="cards-container">
               <div
                 class="card"
-                *ngFor="let element of rapports; let i = index"
+                *ngFor="let element of rapportsFiltres(); let i = index"
                 (mouseenter)="hoveredCard = element.id_CONTROLE"
                 (mouseleave)="hoveredCard = null"
                 [class.hovered]="hoveredCard === element.id_CONTROLE"
