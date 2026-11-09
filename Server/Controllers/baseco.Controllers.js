@@ -228,6 +228,7 @@ const getAllUtilisateur = async (req, res, next) => {
     const [resultat] = await db.query(Query);
     return res.status(200).send(resultat);
   } catch (error) {
+    console.error("getAllUtilisateur error:", error && (error.sqlMessage || error.message), error && error.code);
     res.status(500).json({ message: "Error resques" });
   }
 };
@@ -2545,8 +2546,14 @@ const getAllFiche_Archive = async (req, res, next) => {
 };
 const getAllFicheByGestionnaire = async (req, res, next) => {
   try {
+    const userId = req.auth && req.auth.userId;
+    // Portée : l'utilisateur voit les chargements insérés par lui-même OU par
+    // tout autre utilisateur du MÊME SITE (le gestionnaire de la fiche appartient
+    // au même site que le demandeur).
+    const [[me]] = await db.query("SELECT id_Site FROM B_UTILISATEUR WHERE id=?", [userId]);
+    const idSite = me ? me.id_Site : null;
     const Query = `SELECT FH.id,FH.titre,SL.source,SL.type,SL.priorite,SL.delai,FH.ETAT,DATE_FORMAT(FH.dateEnregistrement,'%Y-%m-%d %H:%i:%s') as dateEnregistrement,DATE_FORMAT(FH.dateDebut,'%Y-%m-%d %H:%i:%s') as dateDebut,DATE_FORMAT(FH.dateFin,'%Y-%m-%d %H:%i:%s') as dateFin,DATE_FORMAT(FH.date_Archive,'%Y-%m-%d %H:%i:%s') as date_Archive,FH.archive_par,CT.nom as Categorie,SCT.nom as Sous_Categorie,BOT.on_time, UT.nom_utilisateur as Gestionnaire  from
-                  B_FICHE FH 
+                  B_FICHE FH
                   LEFT JOIN B_UTILISATEUR UT
                   on FH.id_gestionnaire=UT.id
                   LEFT JOIN B_SLA SL
@@ -2554,13 +2561,14 @@ const getAllFicheByGestionnaire = async (req, res, next) => {
                   LEFT JOIN B_CATEGORIE CT
                   on CT.id=FH.id_Categorie
                   LEFT JOIN B_SOUS_CATEGORIE SCT
-                  on FH.id_SousCategorie=SCT.id 
+                  on FH.id_SousCategorie=SCT.id
                   LEFT JOIN B_ON_TIME BOT on FH.id=BOT.id_Fiche
+                  WHERE UT.id_Site = ?
                   ORDER BY dateDebut DESC`;
-    const [resutat] = await db.query(Query);
-    resutat;
+    const [resutat] = await db.query(Query, [idSite]);
     return res.status(200).send(resutat);
   } catch (error) {
+    console.error("getAllFicheByGestionnaire error:", error && (error.sqlMessage || error.message));
     res.status(500).json({ message: "Error request" });
   }
 };
@@ -3087,8 +3095,14 @@ const getAllArchiveByGestionnaire = async (req, res, next) => {
 };
 const getAllArchive = async (req, res, next) => {
   try {
+    const userId = req.auth && req.auth.userId;
+    // Portée : archives (ETAT='ARCHIVE', qu'elles soient automatiques ou
+    // manuelles) des chargements insérés par l'utilisateur OU par tout autre
+    // utilisateur du MÊME SITE (gestionnaire de la fiche = même site).
+    const [[me]] = await db.query("SELECT id_Site FROM B_UTILISATEUR WHERE id=?", [userId]);
+    const idSite = me ? me.id_Site : null;
     const Query = ` SELECT FH.id,FH.titre,SL.type,SL.priorite,FH.ETAT,DATE_FORMAT(FH.date_Archive,'%Y-%m-%d %H:%i:%s') as dateFin,FH.archive_par,CT.nom as Categorie,SCT.nom as Sous_Categorie, UT.nom_utilisateur as Gestionnaire from
-    B_FICHE FH 
+    B_FICHE FH
     LEFT JOIN B_UTILISATEUR UT
     on FH.id_gestionnaire=UT.id
     LEFT JOIN B_SLA SL
@@ -3096,13 +3110,14 @@ const getAllArchive = async (req, res, next) => {
     LEFT JOIN B_CATEGORIE CT
     on CT.id=FH.id_Categorie
     LEFT JOIN B_SOUS_CATEGORIE SCT
-    on FH.id_SousCategorie=SCT.id  
-    where FH.ETAT=? 
-    ORDER BY dateDebut DESC`;
+    on FH.id_SousCategorie=SCT.id
+    where FH.ETAT=? AND UT.id_Site = ?
+    ORDER BY FH.date_Archive DESC`;
     const ETAT = "ARCHIVE";
-    const [resutat] = await db.query(Query, [ETAT]);
+    const [resutat] = await db.query(Query, [ETAT, idSite]);
     return res.status(200).send(resutat);
   } catch (error) {
+    console.error("getAllArchive error:", error && (error.sqlMessage || error.message));
     res.status(500).json({ message: "Error request" });
   }
 };
@@ -3197,7 +3212,7 @@ const getAllAgentByRo = async (req, res, next) => {
   const userId = req.auth.userId;
   try {
     const Query1 = `SELECT id_Site FROM B_UTILISATEUR where id=? `;
-    const Query2 = `SELECT UT1.id,UT1.nom_utilisateur,FCT.nom as fonction,pr.nom as programme,st.nom as site,UT1.status,UT3.nom_utilisateur as superviseur,UT1.dateCreation FROM B_UTILISATEUR UT1 INNER JOIN B_UTILISATEUR UT2 on UT1.id=UT2.id
+    const Query2 = `SELECT UT1.id,UT1.nom_utilisateur,UT1.nom,UT1.prenom,FCT.nom as fonction,pr.nom as programme,st.nom as site,UT1.status,UT3.nom_utilisateur as superviseur,UT3.nom as superviseur_nom,UT3.prenom as superviseur_prenom,UT1.dateCreation FROM B_UTILISATEUR UT1 INNER JOIN B_UTILISATEUR UT2 on UT1.id=UT2.id
     LEFT JOIN B_FONCTION FCT on UT1.id_Fonction=FCT.id 
     LEFT JOIN B_PROGRAMME pr on UT1.id_Programme=pr.id
     LEFT JOIN B_SITE st on UT1.id_Site=st.id

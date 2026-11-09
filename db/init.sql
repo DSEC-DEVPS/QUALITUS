@@ -791,6 +791,33 @@ CREATE TABLE IF NOT EXISTS B_QZ_SESSION (
   UNIQUE KEY uq_session (id_Quiz, id_UTILISATEUR)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Diffusion : participants désignés (liste nominative figée) — cahier Quiz, Partie II.
+-- Les sites invités sont DÉDUITS de cette table (sites des participants), non saisis.
+CREATE TABLE IF NOT EXISTS B_QZ_PARTICIPANT (
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+  id_Quiz        INT NOT NULL,
+  id_UTILISATEUR INT NOT NULL,
+  id_Site        INT NULL,                 -- site de l'utilisateur figé à la diffusion
+  notifie        TINYINT(1) DEFAULT 0,
+  dateDiffusion  DATETIME NULL,
+  id_diffusePar  INT NULL,
+  UNIQUE KEY uq_qz_participant (id_Quiz, id_UTILISATEUR),
+  CONSTRAINT fk_qz_part_quiz FOREIGN KEY (id_Quiz) REFERENCES B_QZ_QUIZ(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Utilisateurs explicitement AUTORISÉS à ouvrir un quiz d'un site invité
+-- (cahier Quiz, Parties III/IV). Traçabilité : auteur + date. L'autorisation
+-- ne se transmet pas et reste gérée par le site propriétaire.
+CREATE TABLE IF NOT EXISTS B_QZ_AUTORISE (
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+  id_Quiz        INT NOT NULL,
+  id_UTILISATEUR INT NOT NULL,
+  id_auteur      INT NULL,
+  dateCreation   DATETIME NULL,
+  UNIQUE KEY uq_qz_autorise (id_Quiz, id_UTILISATEUR),
+  CONSTRAINT fk_qz_autorise_quiz FOREIGN KEY (id_Quiz) REFERENCES B_QZ_QUIZ(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Source: 20_sondage.sql
 CREATE TABLE IF NOT EXISTS B_SD_SONDAGE (
   id               INT AUTO_INCREMENT PRIMARY KEY,

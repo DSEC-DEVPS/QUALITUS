@@ -83,7 +83,19 @@ export class ListeQuizComponent implements OnInit {
     this.router.navigate(['/mon-espace/quiz/editer', q.id]);
   }
 
-  detail(q: Quiz) {
+  // Un quiz d'un site invité ne s'ouvre qu'avec une autorisation explicite
+  // (cahier Quiz, Partie III) : visibilité dans la liste ≠ ouverture du détail.
+  peutOuvrir(q: any): boolean {
+    return q?.autorise !== 0 && q?.autorise !== false;
+  }
+
+  detail(q: any) {
+    if (!this.peutOuvrir(q)) {
+      this.toast.warning(
+        "Autorisation requise pour ouvrir ce quiz. Demandez-la à un utilisateur du site propriétaire."
+      );
+      return;
+    }
     this.router.navigate(['/mon-espace/quiz/detail', q.id]);
   }
 

@@ -15,13 +15,67 @@ const getRole = async (userId) => {
   return r.length ? r[0].role : null;
 };
 
-// Un utilisateur peut gerer un quiz s'il est admin ou s'il en est le createur.
+// --- Modèle d'accès par site (cahier Quiz, Partie III) -------------------
+// Site de rattachement d'un utilisateur.
+const siteDe = async (userId) => {
+  const [r] = await db.query("SELECT id_Site FROM B_UTILISATEUR WHERE id=?", [userId]);
+  return r.length ? r[0].id_Site : null;
+};
+// L'utilisateur appartient-il au SITE PROPRIÉTAIRE du quiz (= site du créateur) ?
+const estSiteProprietaire = async (userId, idQuiz) => {
+  const [r] = await db.query(
+    `SELECT 1 FROM B_QZ_QUIZ q
+       JOIN B_UTILISATEUR cr ON cr.id = q.id_createur
+       JOIN B_UTILISATEUR me ON me.id = ?
+      WHERE q.id = ? AND cr.id_Site = me.id_Site LIMIT 1`,
+    [userId, idQuiz]
+  );
+  return r.length > 0;
+};
+// L'utilisateur est-il explicitement AUTORISÉ sur ce quiz (site invité) ?
+const estAutorise = async (userId, idQuiz) => {
+  const [r] = await db.query(
+    "SELECT 1 FROM B_QZ_AUTORISE WHERE id_Quiz=? AND id_UTILISATEUR=? LIMIT 1",
+    [idQuiz, userId]
+  );
+  return r.length > 0;
+};
+
+// GÉRER un quiz (config, diffusion, rapport, clôture) : admin, créateur,
+// utilisateur du site propriétaire (équivalence, point 18), ou utilisateur
+// explicitement autorisé (point 23). La suppression et l'autorisation d'autrui
+// en sont EXCLUES (voir peutSupprimer / peutAutoriser).
 const peutGererQuiz = async (userId, idQuiz) => {
   const role = await getRole(userId);
   if (role === "R_ADMI") return true;
   const [r] = await db.query(`SELECT id_createur FROM B_QZ_QUIZ WHERE id=?`, [idQuiz]);
   if (!r.length) return true; // laisse le handler renvoyer 404
-  return r[0].id_createur === userId;
+  if (Number(r[0].id_createur) === Number(userId)) return true;
+  if (await estSiteProprietaire(userId, idQuiz)) return true;
+  if (await estAutorise(userId, idQuiz)) return true;
+  return false;
+};
+
+// AUTORISER des utilisateurs d'un autre site (Partie IV) : réservé au site
+// propriétaire (admin, créateur, ou utilisateur du site propriétaire). Un
+// utilisateur simplement autorisé n'en dispose PAS (non-transmissibilité).
+const peutAutoriser = async (userId, idQuiz) => {
+  const role = await getRole(userId);
+  if (role === "R_ADMI") return true;
+  const [r] = await db.query(`SELECT id_createur FROM B_QZ_QUIZ WHERE id=?`, [idQuiz]);
+  if (!r.length) return false;
+  if (Number(r[0].id_createur) === Number(userId)) return true;
+  return await estSiteProprietaire(userId, idQuiz);
+};
+
+// SUPPRIMER un quiz (point 24) : réservé au créateur. L'admin garde la voie
+// d'administration (créateur parti). Non couvert par les équivalences.
+const peutSupprimer = async (userId, idQuiz) => {
+  const role = await getRole(userId);
+  if (role === "R_ADMI") return true;
+  const [r] = await db.query(`SELECT id_createur FROM B_QZ_QUIZ WHERE id=?`, [idQuiz]);
+  if (!r.length) return false;
+  return Number(r[0].id_createur) === Number(userId);
 };
 
 // Meme controle a partir d'une question (via son quiz).
@@ -118,14 +172,18 @@ const genererPinUnique = async (executor) => {
 /* QUIZ                                                                */
 /* ------------------------------------------------------------------ */
 
-// Liste des quiz. R_ADMI voit tout ; tout autre utilisateur ayant les droits de
-// gestion ne voit QUE les quiz qu'il a lui-même créés (HABILITATIONS 11 :
-// « il ne doit voir que les quiz qu'il a créé, dans le sous menu Liste des quiz »).
+// Liste des quiz (cahier Quiz, Partie III) : un quiz apparaît si son créateur
+// est du MÊME SITE que l'utilisateur (quiz du site propriétaire, ouverture libre)
+// OU si le site de l'utilisateur figure parmi les SITES INVITÉS, déduits des
+// sites des participants (quiz d'un site invitant, ouverture soumise à
+// autorisation explicite). L'admin voit tout. Chaque quiz porte `origine`
+// (SITE | INVITE) et `autorise` (1 si l'utilisateur peut ouvrir le détail).
 const getAllQuiz = async (req, res, next) => {
   const userId = req.auth ? req.auth.userId : null;
   try {
     const role = await getRole(userId);
-    const restreint = role !== "R_ADMI";
+    const admin = role === "R_ADMI";
+    const monSite = await siteDe(userId);
     const Query = `
       SELECT q.id, q.titre, q.code_pin, q.type, q.duree, q.date_fermeture, q.description, q.id_Fiche,
              q.note_passage, q.acces, q.alterner_questions, q.autoriser_machines,
@@ -135,15 +193,26 @@ const getAllQuiz = async (req, res, next) => {
                 JOIN B_FICHE f2 ON f2.id = qf.id_Fiche WHERE qf.id_Quiz = q.id) AS fiches_titres,
              (SELECT GROUP_CONCAT(st.nom SEPARATOR ', ') FROM B_QZ_QUIZ_SITE qs
                 JOIN B_SITE st ON st.id = qs.id_Site WHERE qs.id_Quiz = q.id) AS sites_titres,
-             (SELECT COUNT(*) FROM B_QZ_QUESTION qq WHERE qq.id_Quiz = q.id) AS nb_questions
+             (SELECT COUNT(*) FROM B_QZ_QUESTION qq WHERE qq.id_Quiz = q.id) AS nb_questions,
+             EXISTS(SELECT 1 FROM B_UTILISATEUR cr WHERE cr.id = q.id_createur AND cr.id_Site = ?) AS est_site_proprietaire,
+             EXISTS(SELECT 1 FROM B_QZ_AUTORISE a WHERE a.id_Quiz = q.id AND a.id_UTILISATEUR = ?) AS est_autorise
       FROM B_QZ_QUIZ q
       LEFT JOIN B_FICHE FCH ON FCH.id = q.id_Fiche
-      ${restreint ? "WHERE q.id_createur = ?" : ""}
+      ${admin ? "" : `WHERE (
+             EXISTS(SELECT 1 FROM B_UTILISATEUR cr WHERE cr.id = q.id_createur AND cr.id_Site = ?)
+             OR EXISTS(SELECT 1 FROM B_QZ_PARTICIPANT p WHERE p.id_Quiz = q.id AND p.id_Site = ?)
+           )`}
       ORDER BY q.id DESC`;
-    const [resultat] = await db.query(Query, restreint ? [userId] : []);
-    return res.status(200).send(resultat);
+    const params = admin ? [monSite, userId] : [monSite, userId, monSite, monSite];
+    const [rows] = await db.query(Query, params);
+    const result = rows.map((r) => {
+      const estSite = admin || !!r.est_site_proprietaire;
+      const autorise = admin || estSite || !!r.est_autorise;
+      return { ...r, origine: estSite ? "SITE" : "INVITE", autorise: autorise ? 1 : 0 };
+    });
+    return res.status(200).send(result);
   } catch (error) {
-    console.log(error);
+    console.error("getAllQuiz:", error && error.message);
     res.status(500).json({ message: "Error request" });
   }
 };
@@ -166,10 +235,15 @@ const getOneQuiz = async (req, res, next) => {
       return res.status(404).json({ message: "Quiz introuvable" });
     }
     const quiz = quizRows[0];
-    // Seul le createur (ou un admin) peut ouvrir/gerer ce quiz
+    // Ouverture du détail : site propriétaire (libre) ou utilisateur autorisé.
+    // Un utilisateur d'un site invité non autorisé voit le quiz dans sa liste
+    // mais ne peut pas l'ouvrir (point 22).
     if (!(await peutVoirDetailQuiz(userId, id))) {
-      return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+      return res.status(403).json({ message: "Autorisation requise pour ouvrir ce quiz.", autorisation_requise: true });
     }
+    // Droit de GÉRER les utilisateurs autorisés (Partie IV) : réservé au site
+    // propriétaire. Pilote l'affichage de la commande dans le sous-onglet Actions.
+    quiz.peut_autoriser = (await peutAutoriser(userId, id)) ? 1 : 0;
 
     const [questions] = await db.query(
       `SELECT id, id_Quiz, type, libelle, ordre
@@ -367,8 +441,8 @@ const deleteQuiz = async (req, res, next) => {
       .status(403)
       .json({ message: "Merci de bien renseigner les parametres" });
   }
-  if (!(await peutGererQuiz(req.auth ? req.auth.userId : null, id))) {
-    return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+  if (!(await peutSupprimer(req.auth ? req.auth.userId : null, id))) {
+    return res.status(403).json({ message: "La suppression d'un quiz est réservée à son créateur." });
   }
   try {
     // FK ON DELETE CASCADE : questions + options supprimees automatiquement
@@ -1412,9 +1486,231 @@ const deleteQuizIp = async (req, res) => {
   }
 };
 
+// =====================================================================
+// DIFFUSION — désignation des participants (cahier Quiz, Partie II)
+// Mécanisme aligné sur le module Sondage : filtres Site / Poste (fonction) /
+// Programme restreignant la population, puis sélection NOMINATIVE dans le champ
+// Utilisateur. L'audience est figée (liste nominative), additive à la
+// rediffusion, et seuls les NOUVEAUX participants sont notifiés.
+// =====================================================================
+
+// Population éligible selon les filtres (multi-sélection, combinés en ET ;
+// un filtre vide n'exclut rien).
+const rechercherUtilisateursDiffusion = async (req, res) => {
+  try {
+    const toIds = (v) => String(v || "").split(",").map((x) => parseInt(x, 10)).filter((n) => !isNaN(n));
+    const sIds = toIds(req.query.sites);
+    const pIds = toIds(req.query.postes);       // « Poste » = fonction du socle commun
+    const prIds = toIds(req.query.programmes);
+    const where = ["u.status = 'ACTIF'"];
+    const params = [];
+    if (sIds.length) { where.push("u.id_Site IN (" + sIds.map(() => "?").join(",") + ")"); params.push(...sIds); }
+    if (pIds.length) { where.push("u.id_Fonction IN (" + pIds.map(() => "?").join(",") + ")"); params.push(...pIds); }
+    if (prIds.length) { where.push("u.id_Programme IN (" + prIds.map(() => "?").join(",") + ")"); params.push(...prIds); }
+    const [rows] = await db.query(
+      `SELECT u.id, u.nom, u.prenom, u.nom_utilisateur, u.id_Site,
+              st.nom AS site, f.nom AS fonction, pr.nom AS programme
+         FROM B_UTILISATEUR u
+         LEFT JOIN B_SITE st ON st.id = u.id_Site
+         LEFT JOIN B_FONCTION f ON f.id = u.id_Fonction
+         LEFT JOIN B_PROGRAMME pr ON pr.id = u.id_Programme
+        WHERE ${where.join(" AND ")}
+        ORDER BY u.nom, u.prenom`,
+      params
+    );
+    return res.status(200).send(rows);
+  } catch (error) {
+    console.error("rechercherUtilisateursDiffusion:", error && error.message);
+    res.status(500).json({ message: "Error request" });
+  }
+};
+
+// Liste nominative des participants déjà diffusés d'un quiz.
+const getParticipantsQuiz = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const userId = req.auth ? req.auth.userId : null;
+    if (!(await peutGererQuiz(userId, id))) return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+    const [rows] = await db.query(
+      `SELECT p.id, p.id_UTILISATEUR, u.nom, u.prenom, u.nom_utilisateur,
+              p.id_Site, st.nom AS site, p.notifie,
+              DATE_FORMAT(p.dateDiffusion,'%Y-%m-%d %H:%i:%s') AS dateDiffusion
+         FROM B_QZ_PARTICIPANT p
+         JOIN B_UTILISATEUR u ON u.id = p.id_UTILISATEUR
+         LEFT JOIN B_SITE st ON st.id = p.id_Site
+        WHERE p.id_Quiz = ? ORDER BY u.nom, u.prenom`,
+      [id]
+    );
+    return res.status(200).send(rows);
+  } catch (error) {
+    console.error("getParticipantsQuiz:", error && error.message);
+    res.status(500).json({ message: "Error request" });
+  }
+};
+
+// Diffusion / rediffusion : ajoute des participants (ADDITIF — ne remplace pas),
+// fige leur site de rattachement, et NE NOTIFIE QUE LES NOUVEAUX.
+const diffuserParticipants = async (req, res) => {
+  const { id } = req.params;
+  const ids = Array.isArray(req.body && req.body.id_utilisateurs) ? req.body.id_utilisateurs : [];
+  if (!ids.length) return res.status(400).json({ message: "Aucun participant sélectionné : la diffusion est refusée." });
+  try {
+    const userId = req.auth ? req.auth.userId : null;
+    if (!(await peutGererQuiz(userId, id))) return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+    const [[quiz]] = await db.query("SELECT id, titre FROM B_QZ_QUIZ WHERE id=?", [id]);
+    if (!quiz) return res.status(404).json({ message: "Quiz introuvable" });
+
+    // Participants déjà désignés : conservés tels quels (pas de re-notification).
+    const [ex] = await db.query("SELECT id_UTILISATEUR FROM B_QZ_PARTICIPANT WHERE id_Quiz=?", [id]);
+    const deja = new Set(ex.map((x) => x.id_UTILISATEUR));
+    const aAjouter = ids.filter((u) => Number.isInteger(u) && !deja.has(u));
+    if (!aAjouter.length) {
+      return res.status(200).json({ message: "Tous les utilisateurs sélectionnés sont déjà participants.", nb: 0 });
+    }
+    const [users] = await db.query(
+      "SELECT id, id_Site FROM B_UTILISATEUR WHERE id IN (" + aAjouter.map(() => "?").join(",") + ")",
+      aAjouter
+    );
+    const now = new Date();
+    for (const u of users) {
+      await db.query(
+        `INSERT INTO B_QZ_PARTICIPANT (id_Quiz, id_UTILISATEUR, id_Site, notifie, dateDiffusion, id_diffusePar)
+         VALUES (?,?,?,1,?,?)
+         ON DUPLICATE KEY UPDATE id_UTILISATEUR = id_UTILISATEUR`,
+        [id, u.id, u.id_Site, now, userId]
+      );
+      // Notification uniquement pour les nouveaux participants.
+      await db.query(
+        `INSERT INTO B_QZ_NOTIFICATION (id_Quiz, id_UTILISATEUR, titre, message, lu, dateCreation)
+         VALUES (?,?,?,?,0,?)`,
+        [id, u.id, "Nouveau quiz", `Un quiz vous a été diffusé : ${quiz.titre}`, now]
+      );
+    }
+    return res.status(201).json({ message: `${users.length} participant(s) ajouté(s) à la diffusion.`, nb: users.length });
+  } catch (error) {
+    console.error("diffuserParticipants:", error && error.message);
+    res.status(500).json({ message: "Error request" });
+  }
+};
+
+// =====================================================================
+// UTILISATEURS AUTORISÉS (cahier Quiz, Partie IV)
+// Ouvre un quiz à des utilisateurs d'un SITE INVITÉ. Réservé au site
+// propriétaire (peutAutoriser). Les utilisateurs du site propriétaire n'y
+// figurent pas (leur capacité vient du rattachement au site). Traçabilité
+// (auteur + date) et notification de l'utilisateur autorisé.
+// =====================================================================
+const getAutorises = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const userId = req.auth ? req.auth.userId : null;
+    if (!(await peutGererQuiz(userId, id))) return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+    const [rows] = await db.query(
+      `SELECT a.id, a.id_UTILISATEUR, u.nom, u.prenom, u.nom_utilisateur, st.nom AS site,
+              au.nom_utilisateur AS auteur,
+              DATE_FORMAT(a.dateCreation,'%Y-%m-%d %H:%i:%s') AS dateCreation
+         FROM B_QZ_AUTORISE a
+         JOIN B_UTILISATEUR u ON u.id = a.id_UTILISATEUR
+         LEFT JOIN B_SITE st ON st.id = u.id_Site
+         LEFT JOIN B_UTILISATEUR au ON au.id = a.id_auteur
+        WHERE a.id_Quiz = ? ORDER BY u.nom, u.prenom`,
+      [id]
+    );
+    return res.status(200).send(rows);
+  } catch (e) { console.error("getAutorises:", e && e.message); res.status(500).json({ message: "Error request" }); }
+};
+
+// Population éligible à l'autorisation : même filtrage que la diffusion, mais
+// EXCLUANT les utilisateurs du site propriétaire (point 27).
+const candidatsAutorisation = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const userId = req.auth ? req.auth.userId : null;
+    if (!(await peutAutoriser(userId, id))) return res.status(403).json({ message: "Réservé aux utilisateurs du site propriétaire." });
+    const [[prop]] = await db.query(
+      `SELECT cr.id_Site AS site FROM B_QZ_QUIZ q JOIN B_UTILISATEUR cr ON cr.id = q.id_createur WHERE q.id = ?`, [id]
+    );
+    const ownerSite = prop ? prop.site : null;
+    const toIds = (v) => String(v || "").split(",").map((x) => parseInt(x, 10)).filter((n) => !isNaN(n));
+    const sIds = toIds(req.query.sites), pIds = toIds(req.query.postes), prIds = toIds(req.query.programmes);
+    const where = ["u.status = 'ACTIF'"]; const params = [];
+    if (ownerSite != null) { where.push("u.id_Site <> ?"); params.push(ownerSite); }
+    if (sIds.length) { where.push("u.id_Site IN (" + sIds.map(() => "?").join(",") + ")"); params.push(...sIds); }
+    if (pIds.length) { where.push("u.id_Fonction IN (" + pIds.map(() => "?").join(",") + ")"); params.push(...pIds); }
+    if (prIds.length) { where.push("u.id_Programme IN (" + prIds.map(() => "?").join(",") + ")"); params.push(...prIds); }
+    const [rows] = await db.query(
+      `SELECT u.id, u.nom, u.prenom, u.nom_utilisateur, u.id_Site,
+              st.nom AS site, f.nom AS fonction, pr.nom AS programme
+         FROM B_UTILISATEUR u
+         LEFT JOIN B_SITE st ON st.id = u.id_Site
+         LEFT JOIN B_FONCTION f ON f.id = u.id_Fonction
+         LEFT JOIN B_PROGRAMME pr ON pr.id = u.id_Programme
+        WHERE ${where.join(" AND ")} ORDER BY u.nom, u.prenom`,
+      params
+    );
+    return res.status(200).send(rows);
+  } catch (e) { console.error("candidatsAutorisation:", e && e.message); res.status(500).json({ message: "Error request" }); }
+};
+
+const addAutorises = async (req, res) => {
+  const { id } = req.params;
+  const ids = Array.isArray(req.body && req.body.id_utilisateurs) ? req.body.id_utilisateurs : [];
+  if (!ids.length) return res.status(400).json({ message: "Aucun utilisateur sélectionné." });
+  try {
+    const userId = req.auth ? req.auth.userId : null;
+    if (!(await peutAutoriser(userId, id))) return res.status(403).json({ message: "Réservé aux utilisateurs du site propriétaire." });
+    const [[quiz]] = await db.query("SELECT id, titre FROM B_QZ_QUIZ WHERE id=?", [id]);
+    if (!quiz) return res.status(404).json({ message: "Quiz introuvable" });
+    const [[prop]] = await db.query(
+      `SELECT cr.id_Site AS site FROM B_QZ_QUIZ q JOIN B_UTILISATEUR cr ON cr.id = q.id_createur WHERE q.id = ?`, [id]
+    );
+    const ownerSite = prop ? prop.site : null;
+    const [ex] = await db.query("SELECT id_UTILISATEUR FROM B_QZ_AUTORISE WHERE id_Quiz=?", [id]);
+    const deja = new Set(ex.map((x) => x.id_UTILISATEUR));
+    const [users] = await db.query(
+      "SELECT id, id_Site FROM B_UTILISATEUR WHERE id IN (" + ids.map(() => "?").join(",") + ")", ids
+    );
+    const now = new Date();
+    let n = 0;
+    for (const u of users) {
+      if (deja.has(u.id)) continue;
+      if (ownerSite != null && Number(u.id_Site) === Number(ownerSite)) continue; // site propriétaire exclu
+      await db.query(
+        `INSERT IGNORE INTO B_QZ_AUTORISE (id_Quiz, id_UTILISATEUR, id_auteur, dateCreation) VALUES (?,?,?,?)`,
+        [id, u.id, userId, now]
+      );
+      await db.query(
+        `INSERT INTO B_QZ_NOTIFICATION (id_Quiz, id_UTILISATEUR, titre, message, lu, dateCreation) VALUES (?,?,?,?,0,?)`,
+        [id, u.id, "Autorisation quiz", `Vous êtes autorisé à ouvrir le quiz : ${quiz.titre}`, now]
+      );
+      n++;
+    }
+    return res.status(201).json({ message: `${n} utilisateur(s) autorisé(s).`, nb: n });
+  } catch (e) { console.error("addAutorises:", e && e.message); res.status(500).json({ message: "Error request" }); }
+};
+
+const removeAutorise = async (req, res) => {
+  const { id, uid } = req.params;
+  try {
+    const userId = req.auth ? req.auth.userId : null;
+    if (!(await peutAutoriser(userId, id))) return res.status(403).json({ message: "Réservé aux utilisateurs du site propriétaire." });
+    await db.query("DELETE FROM B_QZ_AUTORISE WHERE id_Quiz=? AND id_UTILISATEUR=?", [id, uid]);
+    return res.status(200).json({ message: "Autorisation retirée." });
+  } catch (e) { console.error("removeAutorise:", e && e.message); res.status(500).json({ message: "Error request" }); }
+};
+
 module.exports = {
   getAllQuiz,
   getOneQuiz,
+  // Diffusion (Partie II) — participants
+  rechercherUtilisateursDiffusion,
+  getParticipantsQuiz,
+  diffuserParticipants,
+  // Utilisateurs autorisés (Partie IV)
+  getAutorises,
+  candidatsAutorisation,
+  addAutorises,
+  removeAutorise,
   addQuiz,
   updateQuiz,
   deleteQuiz,

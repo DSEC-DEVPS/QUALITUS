@@ -35,7 +35,9 @@
         <!-- Progress Column -->
         <ng-container matColumnDef="nom_utilisateur">
           <th mat-header-cell *matHeaderCellDef mat-sort-header>Login</th>
-          <td mat-cell *matCellDef="let row">{{ row.nom_utilisateur }}</td>
+          <td mat-cell *matCellDef="let row"
+              [matTooltip]="((row.nom || '') + ' ' + (row.prenom || '')).trim()"
+              matTooltipPosition="above">{{ row.nom_utilisateur }}</td>
         </ng-container>
 
         <!-- Name Column -->
@@ -65,7 +67,9 @@
         </ng-container>
         <ng-container matColumnDef="superviseur">
           <th mat-header-cell *matHeaderCellDef mat-sort-header>Superviseur</th>
-          <td mat-cell *matCellDef="let row">
+          <td mat-cell *matCellDef="let row"
+              [matTooltip]="((row.superviseur_nom || '') + ' ' + (row.superviseur_prenom || '')).trim()"
+              matTooltipPosition="above">
             {{ row.superviseur }}
           </td>
         </ng-container>

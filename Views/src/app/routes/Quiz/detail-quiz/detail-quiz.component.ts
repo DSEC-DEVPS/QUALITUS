@@ -12,6 +12,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDialog } from '@angular/material/dialog';
 import { ToastrService } from 'ngx-toastr';
 import {
@@ -59,6 +60,7 @@ import { TentativeDetailDialogComponent } from './tentative-detail-dialog.compon
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
+    MatCheckboxModule,
   ],
   templateUrl: './detail-quiz.component.html',
   styleUrl: './detail-quiz.component.scss',
@@ -99,6 +101,19 @@ export class DetailQuizComponent implements OnInit {
   demandes: QuizIpDemande[] = [];
   colsDemande = ['agent', 'adresse_ip', 'dateCreation', 'actions'];
 
+  // ----- Onglet Diffusion (désignation des participants, Partie II) -----
+  fonctionsOptions: any[] = [];
+  programmesOptions: any[] = [];
+  diffSites: number[] = [];
+  diffPostes: number[] = [];      // « Poste » = fonction du socle commun
+  diffProgrammes: number[] = [];
+  candidats: any[] = [];          // population issue des filtres
+  rechercheCandidat = '';
+  selection = new Set<number>();  // ids des participants retenus (nominatif)
+  selDetails = new Map<number, any>(); // détails des retenus (pour l'affichage hors filtre)
+  participantsDiffuses: any[] = [];
+  diffusionEnCours = false;
+
   ngOnInit(): void {
     this.quizId = Number(this.route.snapshot.paramMap.get('id'));
     this.charger();
@@ -107,6 +122,211 @@ export class DetailQuizComponent implements OnInit {
     this.chargerIps();
     this.chargerDemandes();
     this.quizSrv.getSites().subscribe({ next: s => (this.sitesOptions = s), error: () => {} });
+    this.quizSrv.getFonctions().subscribe({ next: f => (this.fonctionsOptions = f || []), error: () => {} });
+    this.quizSrv.getProgrammes().subscribe({ next: p => (this.programmesOptions = p || []), error: () => {} });
+    this.chargerParticipantsDiffuses();
+    this.chargerCandidats();
+    this.chargerAutorises();
+    this.chargerCandidatsAuto();
+  }
+
+  // Participants déjà diffusés (liste nominative figée).
+  chargerParticipantsDiffuses() {
+    this.quizSrv.getParticipantsDiffusion(this.quizId).subscribe({
+      next: p => (this.participantsDiffuses = p || []),
+      error: () => {},
+    });
+  }
+
+  // Recharge la population selon les filtres. La sélection déjà faite est
+  // conservée (un retenu hors périmètre demeure retenu, cf. point 6).
+  chargerCandidats() {
+    const p = {
+      sites: this.diffSites.join(','),
+      postes: this.diffPostes.join(','),
+      programmes: this.diffProgrammes.join(','),
+    };
+    this.quizSrv.rechercherUtilisateursDiffusion(p).subscribe({
+      next: u => (this.candidats = u || []),
+      error: () => this.toast.error('Impossible de charger les utilisateurs'),
+    });
+  }
+
+  candidatsFiltres(): any[] {
+    const q = (this.rechercheCandidat || '').trim().toLowerCase();
+    if (!q) return this.candidats;
+    return this.candidats.filter(
+      c => `${c.nom} ${c.prenom} ${c.nom_utilisateur}`.toLowerCase().includes(q)
+    );
+  }
+
+  dejaParticipant(id: number): boolean {
+    return this.participantsDiffuses.some(p => p.id_UTILISATEUR === id);
+  }
+  estSelectionne(id: number): boolean {
+    return this.selection.has(id);
+  }
+  basculer(id: number, coche: boolean) {
+    if (coche) {
+      this.selection.add(id);
+      const c = this.candidats.find(x => x.id === id);
+      if (c) this.selDetails.set(id, c);
+    } else {
+      this.selection.delete(id);
+    }
+  }
+  // Retient en une action toute la population filtrée (point 5) — sans
+  // enregistrer le filtre comme règle (liste nominative).
+  selectionnerTout() {
+    for (const c of this.candidatsFiltres()) {
+      if (!this.dejaParticipant(c.id)) { this.selection.add(c.id); this.selDetails.set(c.id, c); }
+    }
+  }
+  retirerTout() {
+    this.selection.clear();
+  }
+  retirerUn(id: number) {
+    this.selection.delete(id);
+  }
+  // Les retenus qui ne sont plus dans la population filtrée — signalés
+  // visuellement pour qu'un resserrement de filtre ne les retire pas à l'insu
+  // de celui qui diffuse (point 6).
+  retenusHorsFiltre(): any[] {
+    return [...this.selection]
+      .filter(id => !this.candidats.some(c => c.id === id))
+      .map(id => this.selDetails.get(id))
+      .filter(u => !!u);
+  }
+  get nbSelection(): number {
+    return this.selection.size;
+  }
+
+  diffuser() {
+    if (this.selection.size === 0) {
+      this.toast.warning('Aucun participant retenu : la diffusion est refusée.');
+      return;
+    }
+    this.diffusionEnCours = true;
+    this.quizSrv.diffuser(this.quizId, [...this.selection]).subscribe({
+      next: r => {
+        this.toast.success(r.message);
+        this.diffusionEnCours = false;
+        this.selection.clear();
+        this.chargerParticipantsDiffuses();
+        this.charger();
+      },
+      error: err => {
+        this.diffusionEnCours = false;
+        this.toast.error(err?.error?.message || "Une erreur s'est produite");
+      },
+    });
+  }
+
+  // ----- Utilisateurs autorisés (Partie IV) -----
+  autorises: any[] = [];
+  candidatsAuto: any[] = [];
+  autoSites: number[] = [];
+  autoPostes: number[] = [];
+  autoProgrammes: number[] = [];
+  rechercheAuto = '';
+  selectionAuto = new Set<number>();
+  selAutoDetails = new Map<number, any>();
+  autorisationEnCours = false;
+
+  get peutAutoriser(): boolean {
+    return !!this.quiz && (this.quiz as any).peut_autoriser === 1;
+  }
+
+  chargerAutorises() {
+    this.quizSrv.getAutorises(this.quizId).subscribe({
+      next: a => (this.autorises = a || []),
+      error: () => {},
+    });
+  }
+  chargerCandidatsAuto() {
+    this.quizSrv
+      .candidatsAutorisation(this.quizId, {
+        sites: this.autoSites.join(','),
+        postes: this.autoPostes.join(','),
+        programmes: this.autoProgrammes.join(','),
+      })
+      .subscribe({
+        next: u => (this.candidatsAuto = u || []),
+        error: () => {},
+      });
+  }
+  candidatsAutoFiltres(): any[] {
+    const q = (this.rechercheAuto || '').trim().toLowerCase();
+    if (!q) return this.candidatsAuto;
+    return this.candidatsAuto.filter(c => `${c.nom} ${c.prenom} ${c.nom_utilisateur}`.toLowerCase().includes(q));
+  }
+  dejaAutorise(id: number): boolean {
+    return this.autorises.some(a => a.id_UTILISATEUR === id);
+  }
+  estSelAuto(id: number): boolean { return this.selectionAuto.has(id); }
+  basculerAuto(id: number, coche: boolean) {
+    if (coche) {
+      this.selectionAuto.add(id);
+      const c = this.candidatsAuto.find(x => x.id === id);
+      if (c) this.selAutoDetails.set(id, c);
+    } else {
+      this.selectionAuto.delete(id);
+    }
+  }
+  selectionnerToutAuto() {
+    for (const c of this.candidatsAutoFiltres()) {
+      if (!this.dejaAutorise(c.id)) { this.selectionAuto.add(c.id); this.selAutoDetails.set(c.id, c); }
+    }
+  }
+  retirerToutAuto() { this.selectionAuto.clear(); }
+  retirerUnSelAuto(id: number) { this.selectionAuto.delete(id); }
+  retenusHorsFiltreAuto(): any[] {
+    return [...this.selectionAuto]
+      .filter(id => !this.candidatsAuto.some(c => c.id === id))
+      .map(id => this.selAutoDetails.get(id))
+      .filter(u => !!u);
+  }
+  get nbSelAuto(): number { return this.selectionAuto.size; }
+
+  autoriser() {
+    if (this.selectionAuto.size === 0) {
+      this.toast.warning('Aucun utilisateur sélectionné.');
+      return;
+    }
+    this.autorisationEnCours = true;
+    this.quizSrv.autoriser(this.quizId, [...this.selectionAuto]).subscribe({
+      next: r => {
+        this.toast.success(r.message);
+        this.autorisationEnCours = false;
+        this.selectionAuto.clear();
+        this.chargerAutorises();
+      },
+      error: err => {
+        this.autorisationEnCours = false;
+        this.toast.error(err?.error?.message || "Une erreur s'est produite");
+      },
+    });
+  }
+
+  retirerAutorise(a: any) {
+    const box = new ConfirmBoxInitializer();
+    box.setTitle('Retirer l\'autorisation');
+    box.setMessage(`Retirer l'autorisation de ${a.prenom} ${a.nom} ?`);
+    box.setConfig({
+      layoutType: DialogLayoutDisplay.WARNING,
+      animationIn: AppearanceAnimation.BOUNCE_IN,
+      animationOut: DisappearanceAnimation.BOUNCE_OUT,
+      buttonPosition: 'right',
+    });
+    box.setButtonLabels('OUI', 'NON');
+    box.openConfirmBox$().subscribe(resp => {
+      if (resp.success) {
+        this.quizSrv.retirerAutorisation(this.quizId, a.id_UTILISATEUR).subscribe({
+          next: r => { this.toast.success(r.message); this.chargerAutorises(); },
+          error: () => this.ko(),
+        });
+      }
+    });
   }
 
   chargerParticipants() {

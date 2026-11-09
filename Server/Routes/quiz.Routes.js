@@ -35,11 +35,29 @@ const {
   getRapportParticipants,
   getTentativeDetail,
   getRapportQuestionsRatees,
+  rechercherUtilisateursDiffusion,
+  getParticipantsQuiz,
+  diffuserParticipants,
+  getAutorises,
+  candidatsAutorisation,
+  addAutorises,
+  removeAutorise,
 } = require("../Controllers/quiz.Controllers");
 
 /** Quiz (nouveau modele structure) */
 router.get("/quiz/all", auth, permission("QUIZ","LIRE"), getAllQuiz);
 router.get("/quiz/fiches/recentes", auth, permission("QUIZ","LIRE"), getFichesRecentes);
+
+/** Diffusion — désignation des participants (Partie II) */
+router.get("/quiz/diffusion/utilisateurs", auth, rechercherUtilisateursDiffusion);
+router.get("/quiz/:id/participants", auth, getParticipantsQuiz);
+router.post("/quiz/:id/diffuser", auth, diffuserParticipants);
+
+/** Utilisateurs autorisés (Partie IV) */
+router.get("/quiz/:id/autorises/candidats", auth, candidatsAutorisation);
+router.get("/quiz/:id/autorises", auth, getAutorises);
+router.post("/quiz/:id/autorises", auth, addAutorises);
+router.delete("/quiz/:id/autorises/:uid", auth, removeAutorise);
 
 /** Phase 2 : participation / historique (avant /quiz/:id pour la priorite) */
 router.get("/quiz/participer/disponibles", auth, permission("QUIZ","LIRE"), getQuizzesDisponibles);
