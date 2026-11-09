@@ -1255,7 +1255,8 @@ const getAllExport = async (req, res, next) => {
         } else {
           if (dataType === "Exactitude") {
             Query = `SELECT C.id_CONTROLE AS id_controle, C.id_FICHE AS id_fiche,
-              FCH.titre AS titre, C.typeControle AS type_de_controle, IF(C.exactitude==1,"OUI","NON") AS exactitude,
+              FCH.titre AS titre, C.typeControle AS type_de_controle,
+              CASE C.exactitude WHEN 1 THEN 'OUI' WHEN 0 THEN 'NON' END AS exactitude,
               DATE_FORMAT(C.dateControle, '%Y-%m-%d %H:%i:%s') AS \`date_contrôle\`
               FROM B_CONTROLE C
               LEFT JOIN B_FICHE FCH ON FCH.id=C.id_FICHE
