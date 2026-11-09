@@ -774,19 +774,52 @@ hr {
 .reporting-actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 0 4px;
+  align-items: flex-end;
+  gap: 8px 12px;
+  padding: 12px 0 8px;
+}
 
-  label {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-  }
+.reporting-date {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 152px;
+  max-width: 100%;
+  margin: 0;
+  color: #49413a;
+  font-size: 12px;
+  font-weight: 600;
 
   input {
-    min-height: 32px;
+    box-sizing: border-box;
+    width: 100%;
+    height: 36px;
+    padding: 0 8px;
+    border: 1px solid #c9c2bb;
+    border-radius: 8px;
+    background: #fff;
+    color: #302923;
+    font: inherit;
+    font-weight: 400;
+    color-scheme: light;
+
+    &:hover {
+      border-color: #9f8570;
+    }
+
+    &:focus-visible {
+      border-color: #ad551b;
+      outline: 2px solid #ad551b;
+      outline-offset: 1px;
+    }
   }
+}
+
+.reporting-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-height: 36px;
 }
 
 .reporting-actions,

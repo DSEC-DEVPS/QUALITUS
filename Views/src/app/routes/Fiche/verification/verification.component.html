@@ -211,19 +211,21 @@
 
       <mat-tab label="Reporting des Contrôles" (click)="chargement_reporting()">
         <div class="reporting-actions">
-          <label>
+          <label class="reporting-date">
             Du
             <input type="date" #dateDebutRapport [value]="dateRapportDebut()"
               (input)="dateRapportDebut.set(dateDebutRapport.value)">
           </label>
-          <label>
+          <label class="reporting-date">
             Au
             <input type="date" #dateFinRapport [value]="dateRapportFin()"
               (input)="dateRapportFin.set(dateFinRapport.value)">
           </label>
-          <button mat-stroked-button type="button" (click)="chargement_reporting()">Charger</button>
-          <button mat-button type="button" (click)="reinitialiserFiltreRapports()"
-            [disabled]="!dateRapportDebut() && !dateRapportFin()">Réinitialiser</button>
+          <div class="reporting-buttons">
+            <button mat-stroked-button type="button" (click)="chargement_reporting()">Charger</button>
+            <button mat-button type="button" (click)="reinitialiserFiltreRapports()"
+              [disabled]="!dateRapportDebut() && !dateRapportFin()">Réinitialiser</button>
+          </div>
         </div>
         <p *ngIf="intervalleRapportInvalide()" role="alert">
           La date de fin doit être égale ou postérieure à la date de début.
