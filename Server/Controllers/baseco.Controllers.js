@@ -4,6 +4,8 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const path = require("path");
 const fs = require("fs");
+// Réutilise la logique métier « Agents en pôle » pour l'export (pas de duplication).
+const { chargerPole } = require("./evalRapport.Controllers");
 
 /**les controllers pour l'authentification */
 const sign_in = async (req, res, next) => {
@@ -1221,10 +1223,28 @@ const addMaVoixCompte = async (req, res, next) => {
   }
 };
 const getAllExport = async (req, res, next) => {
-  const { dataType, dateDebut, dateFin } = req.body;
+  const { dataType, dateDebut, dateFin, site, statut } = req.body;
   console.log(req.body);
   try {
     let Query = "";
+    // Paramètres par défaut : intervalle de dates. Les nouveaux exports
+    // (ECOUTES, ECOUTES ITEMS, LISTE DES AGENTS, COACHING AGENT…) redéfinissent
+    // `params` selon les filtres réellement utilisés (site, statut, dates).
+    let params = [dateDebut, dateFin];
+    // Périmètre d'export selon le site de l'utilisateur (cahier HABILITATION
+    // EXPORT) : un utilisateur du site DSFO (ou un admin) peut cibler n'importe
+    // quel site ; tout autre utilisateur est restreint aux agents de SON site.
+    const userId = req.auth && req.auth.userId;
+    const [[moi]] = await db.query(
+      "SELECT f.Role_Associe AS role, s.id AS id_site, s.nom AS site FROM b_utilisateur ut LEFT JOIN b_fonction f ON ut.id_Fonction=f.id LEFT JOIN b_site s ON ut.id_Site=s.id WHERE ut.id=?",
+      [userId]
+    );
+    const estAdmin = !!(moi && moi.role === "R_ADMI");
+    const estDSFO = estAdmin || !!(moi && moi.site === "DSFO");
+    const monSite = moi ? moi.id_site : null;
+    // Site effectif pour ECOUTES / ECOUTES ITEMS : DSFO/admin = site choisi (ou
+    // tous les sites si non précisé) ; sinon forcé au site de l'utilisateur.
+    const siteEcoute = estDSFO ? (site || null) : monSite;
     if (dataType === "Ma voix compte") {
       Query = `SELECT A.nomMotif as MOTIF_DU_MESSAGE,MVCP.message as MESSAGE, 
       DATE_FORMAT(MVCP.dateCreation,'%Y-%m-%d %H:%i:%s') as DATE,UT.nom_utilisateur as LOGIN,st.nom as SITE,UT.nom as NOM ,UT.prenom as PRENOM  from B_MA_VOIX_COMPTE MVCP 
@@ -1296,7 +1316,200 @@ where DATE_FORMAT(FCH.dateEnregistrement,'%Y-%m-%d') BETWEEN DATE_FORMAT(?,'%Y-%
         }
       }
     }
-    const [resultat] = await db.query(Query, [dateDebut, dateFin]);
+    // ====================== EXPORTS REPORTING (cahier) ======================
+    // ECOUTES : export des évaluations (b_evaluation), filtres site + intervalle
+    // de dates sur la date d'évaluation. Les id sont joints à leurs tables source.
+    if (dataType === "ECOUTES") {
+      const siteClause = siteEcoute ? " AND ev.id_site = ?" : "";
+      Query = `SELECT ev.id AS ID_EVALUATION,
+        DATE_FORMAT(ev.date_evaluation,'%Y-%m-%d %H:%i:%s') AS DATE_EVALUATION,
+        DATE_FORMAT(ev.date_appel,'%Y-%m-%d %H:%i:%s') AS DATE_APPEL,
+        ev.statut AS STATUT, ev.identifiant_appel AS IDENTIFIANT_APPEL,
+        ev.motif_appel AS MOTIF_APPEL, ev.dmt AS DMT,
+        ev.conclusion AS CONCLUSION, ev.resolution AS RESOLUTION,
+        ag.nom_utilisateur AS AGENT_LOGIN, ag.nom AS AGENT_NOM, ag.prenom AS AGENT_PRENOM,
+        fo.nom AS AGENT_FONCTION, si.nom AS AGENT_SITE, pr.nom AS AGENT_PROGRAMME,
+        evl.nom_utilisateur AS EVALUATEUR_LOGIN, evl.nom AS EVALUATEUR_NOM, evl.prenom AS EVALUATEUR_PRENOM,
+        ctx.libelle AS CONTEXTE
+        FROM b_evaluation ev
+        LEFT JOIN b_utilisateur ag ON ev.id_agent = ag.id
+        LEFT JOIN b_fonction fo ON ag.id_Fonction = fo.id
+        LEFT JOIN b_site si ON ag.id_Site = si.id
+        LEFT JOIN b_programme pr ON ag.id_Programme = pr.id
+        LEFT JOIN b_utilisateur evl ON ev.id_evaluateur = evl.id
+        LEFT JOIN b_eval_ref_contexte ctx ON ev.id_contexte = ctx.id
+        WHERE DATE_FORMAT(ev.date_evaluation,'%Y-%m-%d') BETWEEN DATE_FORMAT(?,'%Y-%m-%d') AND DATE_FORMAT(?,'%Y-%m-%d')${siteClause}
+        ORDER BY ev.date_evaluation DESC`;
+      params = siteEcoute ? [dateDebut, dateFin, siteEcoute] : [dateDebut, dateFin];
+    }
+    // ECOUTES ITEMS : items d'évaluation (b_evaluation_erreur) joints à
+    // b_evaluation ; les filtres (site, dates) portent sur b_evaluation. La
+    // catégorie remplace l'id par son libellé (b_evaluation_categorie).
+    if (dataType === "ECOUTES ITEMS") {
+      const siteClause = siteEcoute ? " AND ev.id_site = ?" : "";
+      Query = `SELECT ev.id AS ID_EVALUATION,
+        DATE_FORMAT(ev.date_evaluation,'%Y-%m-%d %H:%i:%s') AS DATE_EVALUATION,
+        si.nom AS SITE, ag.nom_utilisateur AS AGENT_LOGIN,
+        cat.libelle AS CATEGORIE, er.item AS ITEM, er.sous_item AS SOUS_ITEM,
+        er.libelle_sous_categorie AS SOUS_CATEGORIE, er.referentiel AS REFERENTIEL,
+        er.poids AS POIDS, er.score_pct AS SCORE_PCT, er.score_sur20 AS SCORE_SUR20,
+        CASE er.coche WHEN 1 THEN 'OUI' WHEN 0 THEN 'NON' END AS COCHE,
+        er.commentaire AS COMMENTAIRE
+        FROM b_evaluation_erreur er
+        INNER JOIN b_evaluation ev ON er.id_evaluation = ev.id
+        LEFT JOIN b_evaluation_categorie cat ON er.id_evaluation_categorie = cat.id
+        LEFT JOIN b_utilisateur ag ON ev.id_agent = ag.id
+        LEFT JOIN b_site si ON ev.id_site = si.id
+        WHERE DATE_FORMAT(ev.date_evaluation,'%Y-%m-%d') BETWEEN DATE_FORMAT(?,'%Y-%m-%d') AND DATE_FORMAT(?,'%Y-%m-%d')${siteClause}
+        ORDER BY ev.id, cat.ordre`;
+      params = siteEcoute ? [dateDebut, dateFin, siteEcoute] : [dateDebut, dateFin];
+    }
+    // LISTE DES AGENTS : export des utilisateurs, filtres site + statut.
+    if (dataType === "LISTE DES AGENTS") {
+      const clauses = [];
+      const p = [];
+      if (site) { clauses.push("ut.id_Site = ?"); p.push(site); }
+      if (statut) { clauses.push("ut.status = ?"); p.push(statut); }
+      const whereClause = clauses.length ? " WHERE " + clauses.join(" AND ") : "";
+      Query = `SELECT ut.nom_utilisateur AS LOGIN, ut.nom AS NOM, ut.prenom AS PRENOM,
+        ut.email AS EMAIL, ut.telephone AS TELEPHONE,
+        fo.nom AS FONCTION, si.nom AS SITE, pr.nom AS PROGRAMME,
+        ut.status AS STATUT, DATE_FORMAT(ut.dateCreation,'%Y-%m-%d %H:%i:%s') AS DATE_CREATION
+        FROM b_utilisateur ut
+        LEFT JOIN b_fonction fo ON ut.id_Fonction = fo.id
+        LEFT JOIN b_site si ON ut.id_Site = si.id
+        LEFT JOIN b_programme pr ON ut.id_Programme = pr.id${whereClause}
+        ORDER BY si.nom, ut.nom_utilisateur`;
+      params = p;
+    }
+    // COACHING AGENT : export des coachings (b_eval_coaching) joints à
+    // l'évaluation d'origine ; filtres site + intervalle de dates (date d'éval).
+    if (dataType === "COACHING AGENT") {
+      const siteClause = site ? " AND ev.id_site = ?" : "";
+      Query = `SELECT co.id AS ID_COACHING, co.statut AS STATUT,
+        DATE_FORMAT(co.dateCreation,'%Y-%m-%d %H:%i:%s') AS DATE_CREATION,
+        DATE_FORMAT(co.dateCloture,'%Y-%m-%d %H:%i:%s') AS DATE_CLOTURE,
+        DATE_FORMAT(ev.date_evaluation,'%Y-%m-%d %H:%i:%s') AS DATE_EVALUATION,
+        ag.nom_utilisateur AS AGENT_LOGIN, ag.nom AS AGENT_NOM, ag.prenom AS AGENT_PRENOM,
+        si.nom AS SITE, pr.nom AS PROGRAMME,
+        sup.nom_utilisateur AS SUPERVISEUR_LOGIN, sup.nom AS SUPERVISEUR_NOM, sup.prenom AS SUPERVISEUR_PRENOM
+        FROM b_eval_coaching co
+        INNER JOIN b_evaluation ev ON co.id_evaluation = ev.id
+        LEFT JOIN b_utilisateur ag ON ev.id_agent = ag.id
+        LEFT JOIN b_site si ON ev.id_site = si.id
+        LEFT JOIN b_programme pr ON ag.id_Programme = pr.id
+        LEFT JOIN b_utilisateur sup ON co.id_superviseur = sup.id
+        WHERE DATE_FORMAT(ev.date_evaluation,'%Y-%m-%d') BETWEEN DATE_FORMAT(?,'%Y-%m-%d') AND DATE_FORMAT(?,'%Y-%m-%d')${siteClause}
+        ORDER BY co.dateCreation DESC`;
+      params = site ? [dateDebut, dateFin, site] : [dateDebut, dateFin];
+    }
+    // ------------------------------- Lot 2 ---------------------------------
+    // PÔLE DE PERFECTIONNEMENT : réutilise la logique métier « Agents en pôle »
+    // (chargerPole) qui calcule les critères déclencheurs et les évaluations en
+    // échec. Filtres site + intervalle de dates (sur la date d'appel).
+    if (dataType === "PÔLE DE PERFECTIONNEMENT") {
+      const where = [];
+      const p = [];
+      if (site) { where.push("e.id_site=?"); p.push(site); }
+      if (dateDebut) { where.push("e.date_appel>=?"); p.push(dateDebut + " 00:00:00"); }
+      if (dateFin) { where.push("e.date_appel<=?"); p.push(dateFin + " 23:59:59"); }
+      const agents = await chargerPole(where, p);
+      const lignes = agents.map((a) => ({
+        LOGIN: a.login, NOM: a.nom, PRENOM: a.prenom,
+        SITE: a.site, PROGRAMME: a.programme, SUPERVISEUR: a.superviseur,
+        CRITERES_DECLENCHEURS: (a.criteres || []).join(" | "),
+        NB_EVALUATIONS_ECHEC: a.nb_evaluations,
+        EVALUATIONS_CONCERNEES: (a.evaluations || []).map((e) => e.id).join(", "),
+      }));
+      return res.status(200).send(lignes);
+    }
+    // CONTRE EVALUATION : export limpide de la contre-évaluation (en-tête) joint
+    // à l'évaluation initiale (agent/site/programme), à l'évaluateur et au
+    // responsable. Filtres site + intervalle de dates (date de création).
+    if (dataType === "CONTRE EVALUATION") {
+      const conds = ["1=1"];
+      const p = [];
+      if (site) { conds.push("e.id_site=?"); p.push(site); }
+      if (dateDebut) { conds.push("DATE_FORMAT(ce.date_creation,'%Y-%m-%d')>=?"); p.push(dateDebut); }
+      if (dateFin) { conds.push("DATE_FORMAT(ce.date_creation,'%Y-%m-%d')<=?"); p.push(dateFin); }
+      Query = `SELECT ce.id AS ID_CONTRE_EVALUATION, ce.statut AS STATUT, ce.conclusion AS CONCLUSION,
+        DATE_FORMAT(ce.date_creation,'%Y-%m-%d %H:%i:%s') AS DATE_CREATION,
+        DATE_FORMAT(ce.date_evaluation,'%Y-%m-%d %H:%i:%s') AS DATE_EVALUATION,
+        DATE_FORMAT(ce.date_visibilite,'%Y-%m-%d %H:%i:%s') AS DATE_VISIBILITE,
+        e.id AS ID_EVALUATION_INITIALE, e.identifiant_appel AS IDENTIFIANT_APPEL,
+        ag.nom_utilisateur AS AGENT_LOGIN, ag.nom AS AGENT_NOM, ag.prenom AS AGENT_PRENOM,
+        si.nom AS SITE, pr.nom AS PROGRAMME,
+        ev.nom_utilisateur AS EVALUATEUR_LOGIN, ev.nom AS EVALUATEUR_NOM, ev.prenom AS EVALUATEUR_PRENOM,
+        r.nom_utilisateur AS RESPONSABLE_LOGIN, r.nom AS RESPONSABLE_NOM, r.prenom AS RESPONSABLE_PRENOM
+        FROM b_eval_contre_evaluation ce
+        JOIN b_evaluation e ON ce.id_evaluation_initiale=e.id
+        LEFT JOIN b_utilisateur ag ON e.id_agent=ag.id
+        LEFT JOIN b_site si ON e.id_site=si.id
+        LEFT JOIN b_programme pr ON e.id_programme=pr.id
+        LEFT JOIN b_utilisateur ev ON e.id_evaluateur=ev.id
+        LEFT JOIN b_utilisateur r ON ce.id_responsable=r.id
+        WHERE ${conds.join(" AND ")}
+        ORDER BY ce.date_creation DESC`;
+      params = p;
+    }
+    // CALIBRAGES : export des calibrages (b_cal_evaluation) joints à la session,
+    // la transaction (appel/agent) et l'évaluateur. Filtres site + dates (session).
+    if (dataType === "CALIBRAGES") {
+      const conds = ["1=1"];
+      const p = [];
+      if (site) { conds.push("ses.id_site=?"); p.push(site); }
+      if (dateDebut) { conds.push("DATE_FORMAT(ses.date_calibrage,'%Y-%m-%d')>=?"); p.push(dateDebut); }
+      if (dateFin) { conds.push("DATE_FORMAT(ses.date_calibrage,'%Y-%m-%d')<=?"); p.push(dateFin); }
+      Query = `SELECT ce.id AS ID_CALIBRAGE, ses.nom AS SESSION,
+        DATE_FORMAT(ses.date_calibrage,'%Y-%m-%d %H:%i:%s') AS DATE_CALIBRAGE,
+        ses.statut AS STATUT_SESSION, si.nom AS SITE,
+        tr.identifiant_appel AS IDENTIFIANT_APPEL, ag.nom_utilisateur AS AGENT_LOGIN,
+        evl.nom_utilisateur AS EVALUATEUR_LOGIN, evl.nom AS EVALUATEUR_NOM, evl.prenom AS EVALUATEUR_PRENOM,
+        CASE ce.est_reference WHEN 1 THEN 'OUI' ELSE 'NON' END AS EST_REFERENCE,
+        ce.etat AS ETAT, DATE_FORMAT(ce.dateCreation,'%Y-%m-%d %H:%i:%s') AS DATE_CREATION
+        FROM b_cal_evaluation ce
+        LEFT JOIN b_cal_session ses ON ce.id_session=ses.id
+        LEFT JOIN b_site si ON ses.id_site=si.id
+        LEFT JOIN b_cal_transaction tr ON ce.id_transaction=tr.id
+        LEFT JOIN b_utilisateur ag ON tr.id_agent=ag.id
+        LEFT JOIN b_utilisateur evl ON ce.id_evaluateur=evl.id
+        WHERE ${conds.join(" AND ")}
+        ORDER BY ses.date_calibrage DESC, ce.id`;
+      params = p;
+    }
+    // PLAN D'ACTIONS : export des lignes de plan d'action (b_eval_plan_action_ligne)
+    // jointes à l'évaluation (agent/site), aux référentiels (action, statut, kpi)
+    // et au porteur. Filtres site + intervalle de dates (date d'évaluation).
+    if (dataType === "PLAN D'ACTIONS") {
+      const conds = ["1=1"];
+      const p = [];
+      if (site) { conds.push("e.id_site=?"); p.push(site); }
+      if (dateDebut) { conds.push("DATE_FORMAT(e.date_evaluation,'%Y-%m-%d')>=?"); p.push(dateDebut); }
+      if (dateFin) { conds.push("DATE_FORMAT(e.date_evaluation,'%Y-%m-%d')<=?"); p.push(dateFin); }
+      Query = `SELECT pal.id AS ID_LIGNE, pal.id_evaluation AS ID_EVALUATION,
+        ag.nom_utilisateur AS AGENT_LOGIN, si.nom AS SITE, pr.nom AS PROGRAMME,
+        ra.libelle AS ACTION, rs.libelle AS STATUT, rk.libelle AS KPI,
+        po.nom_utilisateur AS PORTEUR_LOGIN, po.nom AS PORTEUR_NOM, po.prenom AS PORTEUR_PRENOM,
+        DATE_FORMAT(pal.date_debut,'%Y-%m-%d') AS DATE_DEBUT,
+        DATE_FORMAT(pal.date_attendue,'%Y-%m-%d') AS DATE_ATTENDUE,
+        DATE_FORMAT(pal.date_realisation,'%Y-%m-%d') AS DATE_REALISATION,
+        pal.commentaire AS COMMENTAIRE, pal.synthese AS SYNTHESE,
+        DATE_FORMAT(pal.dateCreation,'%Y-%m-%d %H:%i:%s') AS DATE_CREATION
+        FROM b_eval_plan_action_ligne pal
+        LEFT JOIN b_evaluation e ON pal.id_evaluation=e.id
+        LEFT JOIN b_utilisateur ag ON e.id_agent=ag.id
+        LEFT JOIN b_site si ON e.id_site=si.id
+        LEFT JOIN b_programme pr ON e.id_programme=pr.id
+        LEFT JOIN b_eval_ref_action_pa ra ON pal.id_action=ra.id
+        LEFT JOIN b_eval_ref_statut_pa rs ON pal.id_statut=rs.id
+        LEFT JOIN b_eval_ref_kpi rk ON pal.id_kpi=rk.id
+        LEFT JOIN b_utilisateur po ON pal.id_porteur=po.id
+        WHERE ${conds.join(" AND ")}
+        ORDER BY pal.dateCreation DESC`;
+      params = p;
+    }
+    // ========================================================================
+    const [resultat] = await db.query(Query, params);
     console.log(resultat);
     return res.status(200).send(resultat);
   } catch (error) {

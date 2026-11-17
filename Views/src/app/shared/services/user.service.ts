@@ -451,6 +451,8 @@ export class UserService {
     dateDebut: string;
     dateFin: string;
     format: string;
+    site?: number | string | null;
+    statut?: string | null;
   }): Observable<maVoixCompte[]> {
     return this.http.post<maVoixCompte[]>(`/api/v1/ma_voix_compte/all`, form);
   }

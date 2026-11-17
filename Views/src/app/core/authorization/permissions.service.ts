@@ -8,6 +8,8 @@ export interface MesPermissions {
   role: string;
   permissions: string[];
   admin: boolean;
+  id_site?: number | null;
+  site?: string | null;
 }
 
 /**
@@ -37,6 +39,8 @@ export class PermissionsService {
 
   private apply(r: MesPermissions): void {
     this.admin = !!r.admin;
+    this.siteNom = r.site || null;
+    this.siteId = r.id_site ?? null;
     this.set = new Set((r.permissions || []).map(c => c.toLowerCase()));
     this._perms$.next(Array.from(this.set));
     // Permission synthétique par MODULE : présente dès que l'utilisateur possède
@@ -120,6 +124,16 @@ export class PermissionsService {
 
   private modules = new Set<string>();
   private superviseur = false;
+  private siteNom: string | null = null;
+  private siteId: number | null = null;
+
+  /** Nom du site de l'utilisateur courant. */
+  getSite(): string | null { return this.siteNom; }
+  /** Id du site de l'utilisateur courant. */
+  getSiteId(): number | null { return this.siteId; }
+  /** Vrai si l'utilisateur appartient au site DSFO (ou est admin) : périmètre
+   *  d'export étendu à tous les sites (cahier HABILITATION EXPORT). */
+  estDSFO(): boolean { return this.admin || this.siteNom === 'DSFO'; }
 
   /** Vrai si l'utilisateur est superviseur (ou admin). */
   isSuperviseur(): boolean { return this.superviseur; }

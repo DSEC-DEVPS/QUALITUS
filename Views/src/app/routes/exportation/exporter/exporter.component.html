@@ -20,7 +20,7 @@
             </mat-select>
           </mat-form-field>
 
-          <div class="date-range-fields">
+          <div class="date-range-fields" *ngIf="needsDates()">
             <mat-form-field appearance="outline">
               <mat-label>Début</mat-label>
               <input matInput [matDatepicker]="startPicker" formControlName="dateDebut" />
@@ -35,6 +35,22 @@
               <mat-datepicker #endPicker></mat-datepicker>
             </mat-form-field>
           </div>
+
+          <mat-form-field appearance="outline" class="full-width" *ngIf="showSite()">
+            <mat-label>Site</mat-label>
+            <mat-select formControlName="site">
+              <mat-option [value]="null">Tous les sites</mat-option>
+              <mat-option *ngFor="let s of sites" [value]="s.id">{{ s.nom }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width" *ngIf="showStatut()">
+            <mat-label>Statut</mat-label>
+            <mat-select formControlName="statut">
+              <mat-option [value]="null">Tous les statuts</mat-option>
+              <mat-option *ngFor="let st of statuts" [value]="st">{{ st }}</mat-option>
+            </mat-select>
+          </mat-form-field>
 
           <mat-slide-toggle formControlName="isActive" color="orange"
             >Utilisateurs actifs</mat-slide-toggle

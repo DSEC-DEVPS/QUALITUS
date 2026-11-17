@@ -93,7 +93,19 @@ const getObservations = async (req, res) => {
 const getMesPermissions = async (req, res) => {
   try {
     const { role, set } = await permissionsEffectives(req.auth.userId);
-    return res.status(200).json({ role, permissions: Array.from(set), admin: role === "R_ADMI" });
+    // Le site de l'utilisateur est nécessaire au périmètre des exports
+    // (ex. ECOUTES : site DSFO = tous les sites, sinon uniquement son site).
+    const [[u]] = await db.query(
+      "SELECT s.id AS id_site, s.nom AS site FROM b_utilisateur ut LEFT JOIN b_site s ON ut.id_Site=s.id WHERE ut.id=?",
+      [req.auth.userId]
+    );
+    return res.status(200).json({
+      role,
+      permissions: Array.from(set),
+      admin: role === "R_ADMI",
+      id_site: u ? u.id_site : null,
+      site: u ? u.site : null,
+    });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
 
