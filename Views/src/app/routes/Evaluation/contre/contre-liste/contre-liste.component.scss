@@ -12,3 +12,14 @@
   mat-chip.chip-succes { background: #c8e6c9; }
   mat-chip.chip-echec { background: #ffcdd2; }
 }
+
+// Champ de recherche en tête des listes déroulantes (rendu dans le panneau)
+.recherche-select {
+  position: sticky; top: 0; z-index: 1;
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px; background: var(--mat-select-panel-background-color, #fff);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  mat-icon { color: rgba(0, 0, 0, 0.54); }
+  input { flex: 1; border: none; outline: none; font: inherit; background: transparent; padding: 6px 0; }
+}
+.aucun-select { padding: 12px 16px; color: rgba(0, 0, 0, 0.6); }

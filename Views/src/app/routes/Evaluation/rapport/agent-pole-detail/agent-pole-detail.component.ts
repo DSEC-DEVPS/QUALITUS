@@ -9,6 +9,8 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { ToastrService } from 'ngx-toastr';
 import { EvalRapportService, AgentPoleDetail } from '../../eval-rapport.service';
 import { PlanActionSectionComponent } from '../../execution/plan-action-section/plan-action-section.component';
+import { finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 /**
  * Détail d'un agent en pôle : évaluations déclenchantes, critères, infos agent +
@@ -17,12 +19,12 @@ import { PlanActionSectionComponent } from '../../execution/plan-action-section/
 @Component({
   selector: 'app-agent-pole-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatChipsModule, MatExpansionModule, PlanActionSectionComponent],
+  imports: [ChargementComponent, CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatChipsModule, MatExpansionModule, PlanActionSectionComponent],
   template: `
     <div class="cal-page">
       <button mat-button (click)="retour()"><mat-icon>arrow_back</mat-icon> Retour</button>
 
-      @if (data) {
+      @if (chargement) { <app-chargement /> } @else if (data) {
         <mat-card class="cal-panel">
           <mat-card-header class="cal-band">
             <span class="cal-band-title"><mat-icon>trending_down</mat-icon>
@@ -109,6 +111,7 @@ import { PlanActionSectionComponent } from '../../execution/plan-action-section/
   `,
 })
 export class AgentPoleDetailComponent implements OnInit {
+  chargement = true;
   private readonly service = inject(EvalRapportService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -118,8 +121,9 @@ export class AgentPoleDetailComponent implements OnInit {
   data?: AgentPoleDetail;
 
   ngOnInit(): void {
+    this.chargement = true;
     const id = Number(this.route.snapshot.paramMap.get('id'));
-    this.service.getAgentDetail(id).subscribe({
+    this.service.getAgentDetail(id).pipe(finalize(() => (this.chargement = false))).subscribe({
       next: d => (this.data = d),
       error: err => this.toastr.error(err?.error?.message || 'Détail indisponible.'),
     });

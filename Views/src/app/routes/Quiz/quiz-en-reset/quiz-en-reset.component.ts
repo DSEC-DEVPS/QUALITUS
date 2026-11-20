@@ -12,6 +12,8 @@ import { UserService } from '@shared/services/user.service';
 import { Quiz_reponse } from '@core';
 import { Router } from '@angular/router';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 export interface PeriodicElement {
   fiche: string;
   login: string;
@@ -65,7 +67,7 @@ const ELEMENT_DATA: PeriodicElement[] = [
   standalone: true,
   templateUrl: './quiz-en-reset.component.html',
   styleUrl: './quiz-en-reset.component.scss',
-  imports: [
+  imports: [ChargementComponent,
     CommonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -79,6 +81,7 @@ const ELEMENT_DATA: PeriodicElement[] = [
   ],
 })
 export class QuizEnResetComponent implements OnInit {
+  chargement = true;
   private readonly userService = inject(UserService);
   private readonly router = inject(Router);
   displayedColumns: string[] = ['titre', 'date_retest', 'nom_utilisateur', 'STATUT'];
@@ -89,7 +92,8 @@ export class QuizEnResetComponent implements OnInit {
   @ViewChild(MatSort) sort!: MatSort;
 
   ngOnInit(): void {
-    this.userService.Quiz_encours_retest().subscribe({
+    this.chargement = true;
+    this.userService.Quiz_encours_retest().pipe(finalize(() => (this.chargement = false))).subscribe({
       next: resultat => {
         this.dataSource = new MatTableDataSource(resultat);
         this.dataSource.paginator = this.paginator;

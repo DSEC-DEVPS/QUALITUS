@@ -23,3 +23,38 @@
   background: rgba(255, 121, 0, 0.06);
   font-weight: 500;
 }
+
+.reinit-bloc {
+  border: 1px solid #ffcc80;
+  background: #fff8e1;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+.reinit-titre {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  color: #e65100;
+}
+.reinit-ligne {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 8px;
+  border-top: 1px solid #ffe0b2;
+  border-radius: 6px;
+}
+.reinit-ligne.en-evidence {
+  background: #ffe0b2;
+}
+.reinit-actions {
+  display: flex;
+  gap: 8px;
+}
+.petit {
+  font-size: 12px;
+}

@@ -24,7 +24,8 @@
   </mat-card-header>
   <mat-card-content>
     <div class="mat-elevation-z8">
-      <table mat-table [dataSource]="dataSource">
+      @if (chargement) { <app-chargement /> }
+      <table [style.display]="chargement ? 'none' : null" mat-table [dataSource]="dataSource">
         <!-- Position Column -->
         <ng-container matColumnDef="titre">
           <th mat-header-cell *matHeaderCellDef>Titre</th>
@@ -95,6 +96,7 @@
           <th mat-header-cell *matHeaderCellDef>Action</th>
           <td mat-cell *matCellDef="let element" class="text-center">
             <mat-icon
+              *appCan="'fiche.archiver'"
               class="icon_visibility"
               (click)="deleteSomething(element.id)"
               matTooltip="cliquez pour restorer"

@@ -8,7 +8,7 @@
     </button>
   }
 
-  @if (chargement && !detail) { <p>Chargement…</p> }
+  @if (chargement && !detail) { <app-chargement /> }
 
   @if (detail) {
     <div class="colonnes">
@@ -43,7 +43,7 @@
                 @for (e of categorieActive.erreurs; track e.id) {
                   <div class="erreur" [class.decochee]="!e.coche">
                     <div class="erreur-ligne">
-                      <mat-checkbox [checked]="e.coche === 1" [disabled]="terminee" (change)="onToggleCoche(e)"
+                      <mat-checkbox [checked]="e.coche === 1" [disabled]="figee" (change)="onToggleCoche(e)"
                                     matTooltip="Coché = conforme ; décoché = écart constaté"></mat-checkbox>
                       <span class="item" (click)="toggleDepli(e)">{{ e.item }}</span>
                       <span class="spacer"></span>
@@ -58,7 +58,7 @@
                         @if (e.referentiel) { <p class="referentiel"><strong>Référentiel :</strong> {{ e.referentiel }}</p> }
                         <mat-form-field appearance="outline" class="plein">
                           <mat-label>Commentaire de l'évaluateur</mat-label>
-                          <textarea matInput rows="2" [(ngModel)]="e.commentaire" [disabled]="terminee"
+                          <textarea matInput rows="2" [(ngModel)]="e.commentaire" [disabled]="figee"
                                     (blur)="enregistrerCommentaire(e)" [name]="'com' + e.id"></textarea>
                         </mat-form-field>
                       </div>
@@ -76,7 +76,7 @@
             <app-bi-section
               [idEvaluation]="id"
               [resolution]="detail.evaluation.resolution"
-              [terminee]="terminee"
+              [terminee]="figee"
               (changed)="charger()"
             />
           </mat-card-content>
@@ -141,18 +141,18 @@
             <h3>Résolution & clôture</h3>
             <div class="resolution">
               <label>La demande a-t-elle été résolue ?</label>
-              <mat-radio-group [(ngModel)]="detail.evaluation.resolution" (change)="enregistrerResolution()" [disabled]="terminee" name="resolution">
+              <mat-radio-group [(ngModel)]="detail.evaluation.resolution" (change)="enregistrerResolution()" [disabled]="figee" name="resolution">
                 <mat-radio-button value="OUI">Oui</mat-radio-button>
                 <mat-radio-button value="NON">Non</mat-radio-button>
               </mat-radio-group>
             </div>
             <mat-form-field appearance="outline" class="plein">
               <mat-label>Synthèse</mat-label>
-              <textarea matInput rows="3" [(ngModel)]="detail.evaluation.synthese" [disabled]="terminee"
+              <textarea matInput rows="3" [(ngModel)]="detail.evaluation.synthese" [disabled]="figee"
                         (blur)="enregistrerResolution()" name="synthese"></textarea>
             </mat-form-field>
 
-            @if (!terminee) {
+            @if (!figee) {
               <button mat-raised-button color="primary" [disabled]="!detail.evaluation.resolution" (click)="terminer()">
                 <mat-icon>done_all</mat-icon> Terminer l'évaluation
               </button>
@@ -203,14 +203,14 @@
                 <mat-expansion-panel-header>
                   <mat-panel-title><mat-icon>psychology</mat-icon>&nbsp; Coaching</mat-panel-title>
                 </mat-expansion-panel-header>
-                <app-coaching-section [idEvaluation]="id" [lectureSeule]="detail.viewer.lecture_seule" />
+                <app-coaching-section [idEvaluation]="id" [lectureSeule]="detail.viewer.lecture_seule || !detail.viewer.peut_coacher" />
               </mat-expansion-panel>
 
               <mat-expansion-panel>
                 <mat-expansion-panel-header>
                   <mat-panel-title><mat-icon>checklist</mat-icon>&nbsp; Plan d'action</mat-panel-title>
                 </mat-expansion-panel-header>
-                <app-plan-action-section [idEvaluation]="id" [lectureSeule]="detail.viewer.lecture_seule" />
+                <app-plan-action-section [idEvaluation]="id" [lectureSeule]="detail.viewer.lecture_seule || !detail.viewer.peut_coacher" />
               </mat-expansion-panel>
 
               @if (!detail.viewer.is_agent) {

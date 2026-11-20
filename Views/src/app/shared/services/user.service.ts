@@ -364,8 +364,12 @@ export class UserService {
   addCommentaire(formdata: { message: string; id_Fiche: number }): Observable<message> {
     return this.http.post<message>(`/api/v1/commentaire/add`, formdata);
   }
-  getDetailsUtilisateur(id: number): Observable<detailsUtilisateur> {
-    return this.http.get<detailsUtilisateur>(`/api/v1/utilisateur/details/${id}`);
+  /** Détail d'un utilisateur ; du/au (AAAA-MM-JJ) : consultations calculées sur la période. */
+  getDetailsUtilisateur(id: number, du?: string | null, au?: string | null): Observable<detailsUtilisateur> {
+    const params: Record<string, string> = {};
+    if (du) params['du'] = du;
+    if (au) params['au'] = au;
+    return this.http.get<detailsUtilisateur>(`/api/v1/utilisateur/details/${id}`, { params });
   }
   deleteUtilisateur(id: number): Observable<message> {
     return this.http.delete<message>(`/api/v1/utilisateur/delete/${id}`);
@@ -391,6 +395,20 @@ export class UserService {
   }
   getAllAgentByRo(): Observable<Responsable_Operation[]> {
     return this.http.get<Responsable_Operation[]>(`/api/v1/agents_by_RO/all`);
+  }
+  /** Programmes actifs proposés au RO (Gérer les comptes). */
+  getProgrammesPourRo(): Observable<{ id: number; nom: string }[]> {
+    return this.http.get<{ id: number; nom: string }[]>(`/api/v1/agents_by_RO/programmes`);
+  }
+  /** Modification du programme d'un utilisateur par le RO. */
+  updateProgrammeAgentParRo(
+    id: number,
+    id_Programme: number
+  ): Observable<{ message: string; id_Programme: number; programme: string }> {
+    return this.http.put<{ message: string; id_Programme: number; programme: string }>(
+      `/api/v1/agents_by_RO/${id}/programme`,
+      { id_Programme }
+    );
   }
   getAllAgentByRo_Assignable(): Observable<any[]> {
     return this.http.get<any[]>(`/api/v1/agents_by_RO_assignable/all`);

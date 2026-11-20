@@ -8,6 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ToastrService } from 'ngx-toastr';
+import { PermissionsService } from '../../../core/authorization/permissions.service';
 import { EvalCalendrierService, MoisCalendrier } from '../eval-calendrier.service';
 
 @Component({
@@ -18,6 +19,11 @@ import { EvalCalendrierService, MoisCalendrier } from '../eval-calendrier.servic
   styleUrl: './calendrier.component.scss',
 })
 export class CalendrierComponent implements OnInit {
+  private readonly perms = inject(PermissionsService);
+  /** Paramétrage réservé à evaluation.parametrer (lecture seule sinon). */
+  get peutParametrer(): boolean {
+    return this.perms.can('evaluation.parametrer');
+  }
   private readonly service = inject(EvalCalendrierService);
   private readonly toastr = inject(ToastrService);
 

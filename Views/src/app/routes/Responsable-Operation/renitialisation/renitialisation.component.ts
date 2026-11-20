@@ -14,11 +14,18 @@ import {
   DialogLayoutDisplay,
   DisappearanceAnimation,
 } from '@costlydeveloper/ngx-awesome-popup';
-import { catchError, of, Subject, takeUntil, tap } from 'rxjs';
+import { catchError, of, Subject, takeUntil, tap, finalize } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { UserService } from '@shared/services/user.service';
 import { Responsable_Operation } from '@core';
 import { ToastrService } from 'ngx-toastr';
+import { Router } from '@angular/router';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import {
+  ModifierProgrammeDialogComponent,
+  ModifierProgrammeResultat,
+} from './modifier-programme-dialog.component';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 /** Constants used to fill up our data base. */
 
@@ -30,7 +37,7 @@ import { ToastrService } from 'ngx-toastr';
   standalone: true,
   templateUrl: './renitialisation.component.html',
   styleUrl: './renitialisation.component.scss',
-  imports: [
+  imports: [ChargementComponent,
     CommonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -40,44 +47,58 @@ import { ToastrService } from 'ngx-toastr';
     MatSortModule,
     MatPaginatorModule,
     MatTooltipModule,
+    MatDialogModule,
   ],
 })
 export class RenitialisationComponent implements OnInit, OnDestroy, AfterViewInit {
+  chargement = true;
   displayedColumns: string[] = [
     'profil',
     'nom_utilisateur',
+    'nom',
+    'prenom',
     'fonction',
     'programme',
     'site',
     'status',
     'superviseur',
     'dateCreation',
+    'details',
     'actions',
   ];
   private readonly userService = inject(UserService);
   private readonly taostSrv = inject(ToastrService);
-  dataSource!: MatTableDataSource<Responsable_Operation>;
+  private readonly dialog = inject(MatDialog);
+  private readonly router = inject(Router);
+  // initialisé vide : ngAfterViewInit s\'exécute avant l\'arrivée des données
+  dataSource = new MatTableDataSource<Responsable_Operation>([]);
   filename = `Liste_des_Agents.xlsx`;
   downloadData!: Responsable_Operation[];
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
   ngOnInit(): void {
-    this.userService.getAllAgentByRo().subscribe({
+    this.chargement = true;
+    this.userService.getAllAgentByRo().pipe(finalize(() => (this.chargement = false))).subscribe({
       next: result => {
         this.downloadData = result;
         this.dataSource = new MatTableDataSource(result);
-        // Recherche sur : Login, Fonction, Programme, Site, ETAT, Superviseur,
-        // nom et prénom de l'agent.
-        this.dataSource.filterPredicate = (data: any, filter: string) => {
-          const champs = [
-            data.nom_utilisateur, data.fonction, data.programme, data.site,
-            data.status, data.superviseur, data.nom, data.prenom,
-          ];
-          return champs
+        // Recherche sur : Login, Nom, Prénom, Fonction, Programme, Site, ETAT et
+        // login du Superviseur (le nom / prénom du superviseur ne sont PAS cherchés :
+        // la colonne Superviseur est informative).
+        // Mot par mot : une ligne est retenue si elle contient TOUS les mots saisis,
+        // dans n'importe quel ordre (« Moussa Diallo » = « Diallo Moussa »).
+        this.dataSource.filterPredicate = (data: Responsable_Operation, filter: string) => {
+          const texte = [
+            data.nom_utilisateur, data.nom, data.prenom, data.fonction, data.programme,
+            data.site, data.status, data.superviseur,
+          ]
             .map(v => (v ?? '').toString().toLowerCase())
-            .join(' ')
-            .includes(filter);
+            .join(' ');
+          return filter
+            .split(/\s+/)
+            .filter(mot => mot.length > 0)
+            .every(mot => texte.includes(mot));
         };
         this.dataSource.paginator = this.paginator;
         this.dataSource.sort = this.sort;
@@ -108,6 +129,24 @@ export class RenitialisationComponent implements OnInit, OnDestroy, AfterViewIni
     const wb: XLSX.WorkBook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
     XLSX.writeFile(wb, this.filename);
+  }
+
+  /** Ouvre la fenêtre de modification du programme ; met la ligne à jour sans recharger. */
+  modifierProgramme(row: Responsable_Operation) {
+    this.dialog
+      .open<ModifierProgrammeDialogComponent, Responsable_Operation, ModifierProgrammeResultat>(
+        ModifierProgrammeDialogComponent,
+        { data: row, width: '440px' }
+      )
+      .afterClosed()
+      .subscribe(resultat => {
+        if (!resultat) return;
+        row.id_Programme = resultat.id_Programme;
+        row.programme = resultat.programme;
+        // Réaffecte les données pour que la recherche / le tri prennent en compte le changement
+        this.dataSource.data = [...this.dataSource.data];
+        this.taostSrv.success(resultat.message);
+      });
   }
 
   msg = '';
@@ -156,5 +195,12 @@ export class RenitialisationComponent implements OnInit, OnDestroy, AfterViewIni
   ngOnDestroy(): void {
     this.destroy$.next(true);
     this.destroy$.unsubscribe();
+  }
+
+  /** Même page que « voir plus » de Mes agents ; le bouton Retour ramène ici. */
+  voirDetails(id: number): void {
+    this.router.navigate(['/mon-espace/mes-agents/details-agent', id], {
+      state: { retour: '/mon-espace/RO/renitialisation-password' },
+    });
   }
 }

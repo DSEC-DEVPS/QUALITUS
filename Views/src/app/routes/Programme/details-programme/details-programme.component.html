@@ -40,7 +40,8 @@
 
     <div class="col-md-7 col-sm-12 right">
       <div class="mat-elevation-z8">
-        <table mat-table [dataSource]="dataSource">
+        @if (chargement) { <app-chargement /> }
+        <table [style.display]="chargement ? 'none' : null" mat-table [dataSource]="dataSource">
           <!-- Position Column -->
           <ng-container matColumnDef="nom">
             <th mat-header-cell *matHeaderCellDef>Nom</th>

@@ -39,9 +39,6 @@ export class EvalAdminService {
   marquerLu(id: number) {
     return this.http.patch(`/api/v1/eval/notifications/${id}/lu`, {});
   }
-  marquerToutLu() {
-    return this.http.patch(`/api/v1/eval/notifications/lu-tout`, {});
-  }
 
   // Référentiels
   getRef(type: RefType): Observable<RefItem[]> {

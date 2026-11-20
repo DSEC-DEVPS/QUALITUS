@@ -499,7 +499,7 @@ export class AjouterFicheComponent implements OnInit {
         this.router.navigateByUrl('mon-espace/Fiche/Liste');
       },
       error: error => {
-        this.toastSrv.error("Une Erreur s'est produite");
+        // Le message précis du serveur est affiché par l'intercepteur global.
         console.log(error);
         this.isSubmitting = false;
       },

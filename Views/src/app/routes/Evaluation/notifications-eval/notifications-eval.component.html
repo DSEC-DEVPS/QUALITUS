@@ -1,17 +1,11 @@
 <div class="notifications">
   <mat-card class="cal-panel"><mat-card-header class="cal-band"><span class="cal-band-title"><mat-icon>notifications</mat-icon> Notifications</span></mat-card-header><mat-card-content>
 
-  <div class="entete">
-    
-    <button mat-stroked-button (click)="toutLire()" [disabled]="!notifications.length">
-      <mat-icon>done_all</mat-icon> Tout marquer comme lu
-    </button>
-  </div>
 
   <mat-card>
     <mat-card-content>
       @if (chargement) {
-        <p>Chargement…</p>
+        <app-chargement />
       } @else if (notifications.length === 0) {
         <p class="vide">Aucune notification.</p>
       } @else {

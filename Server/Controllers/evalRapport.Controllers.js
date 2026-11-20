@@ -6,6 +6,8 @@
 // =====================================================================
 const db = require("../config/db");
 const { permissionsEffectives } = require("../middlewares/permission");
+const { porteeSite } = require("../utils/siteVisionGlobale");
+const { droitsEvaluation } = require("../middlewares/accesEvaluation");
 
 const moisIndex = (d) => { const x = new Date(d); return x.getFullYear() * 12 + x.getMonth(); };
 const moisLabel = (d) => { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}`; };
@@ -97,23 +99,35 @@ const chargerPole = async (extraWhere, extraParams) => {
   return resultat;
 };
 
-// Détermine la portée d'accès de l'utilisateur courant.
+// Portée d'accès de l'utilisateur courant (alignée sur les évaluations) :
+//  - agent_pole.lire seul : ses propres agents (ceux qu'il supervise) ;
+//  - agent_pole.voir_tous : les agents en pôle de SON site (évaluations de son
+//    site), de tous les sites pour le site à vision globale ;
+//  - administrateur : tous les sites.
+// siteImpose : site auquel la vue est limitée (null = tous les sites).
 const porteePole = async (userId) => {
   const { role, set } = await permissionsEffectives(userId);
-  const voirTous = role === "R_ADMI" || set.has("agent_pole.voir_tous");
-  return { role, voirTous };
+  const admin = role === "R_ADMI";
+  const voirTous = admin || set.has("agent_pole.voir_tous");
+  if (!voirTous || admin) return { role, voirTous, siteImpose: null };
+  const p = await porteeSite(userId);
+  if (p.visionGlobale) return { role, voirTous, siteImpose: null };
+  // site inconnu : on retombe sur ses seuls agents
+  if (p.idSite === null) return { role, voirTous: false, siteImpose: null };
+  return { role, voirTous, siteImpose: p.idSite };
 };
 
 const getRapportAgentsPole = async (req, res) => {
   const q = req.query || {};
   const userId = req.auth.userId;
   try {
-    const { voirTous } = await porteePole(userId);
+    const { voirTous, siteImpose } = await porteePole(userId);
     const where = [];
     const params = [];
     if (voirTous) {
-      // Filtres complets
-      if (q.id_site) { where.push("e.id_site=?"); params.push(Number(q.id_site)); }
+      // Filtres complets ; le site est imposé hors vision globale
+      const idSite = siteImpose !== null ? siteImpose : q.id_site ? Number(q.id_site) : null;
+      if (idSite) { where.push("e.id_site=?"); params.push(idSite); }
       if (q.id_programme) { where.push("e.id_programme=?"); params.push(Number(q.id_programme)); }
       if (q.id_superviseur) {
         where.push("e.id_agent IN (SELECT id_AGENT FROM b_r_superviseur_agent WHERE id_SUPERVISEUR=?)");
@@ -128,7 +142,7 @@ const getRapportAgentsPole = async (req, res) => {
     if (estDateYMD(q.date_fin)) { where.push("e.date_appel<=?"); params.push(q.date_fin + " 23:59:59"); }
 
     const resultat = await chargerPole(where, params);
-    return res.status(200).json({ voir_tous: voirTous, agents: resultat });
+    return res.status(200).json({ voir_tous: voirTous, site_impose: siteImpose, agents: resultat });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors du chargement du rapport." }); }
 };
 
@@ -138,17 +152,24 @@ const getAgentPoleDetail = async (req, res) => {
   const idAgent = Number(req.params.id);
   const userId = req.auth.userId;
   try {
-    const { voirTous } = await porteePole(userId);
-    // Contrôle d'accès : hors « voir tous », seul le superviseur de l'agent y accède.
-    if (!voirTous) {
-      const [[lien]] = await db.query(
-        "SELECT 1 AS ok FROM b_r_superviseur_agent WHERE id_SUPERVISEUR=? AND id_AGENT=?", [userId, idAgent]
-      );
-      if (!lien) return res.status(403).json({ message: "Accès limité à vos agents." });
-    }
-    const liste = await chargerPole(["e.id_agent=?"], [idAgent]);
+    const { voirTous, siteImpose } = await porteePole(userId);
+    const [[lien]] = await db.query(
+      "SELECT 1 AS ok FROM b_r_superviseur_agent WHERE id_SUPERVISEUR=? AND id_AGENT=?", [userId, idAgent]
+    );
+    // Contrôle d'accès : le superviseur de l'agent, ou « voir tous » sur la portée.
+    if (!lien && !voirTous) return res.status(403).json({ message: "Accès limité à vos agents." });
+    // Hors vision globale (et hors supervision), seules les évaluations de son site comptent.
+    const filtreSite = !lien && siteImpose !== null;
+    const liste = await chargerPole(
+      filtreSite ? ["e.id_agent=?", "e.id_site=?"] : ["e.id_agent=?"],
+      filtreSite ? [idAgent, siteImpose] : [idAgent]
+    );
     const agent = liste[0];
-    if (!agent) return res.status(404).json({ message: "Cet agent n'est pas en pôle sur ce périmètre." });
+    if (!agent) {
+      return filtreSite
+        ? res.status(403).json({ message: "Cet agent n'est pas en pôle sur votre site." })
+        : res.status(404).json({ message: "Cet agent n'est pas en pôle sur ce périmètre." });
+    }
 
     // Infos agent + superviseur détaillées
     const [[ag]] = await db.query(
@@ -162,25 +183,35 @@ const getAgentPoleDetail = async (req, res) => {
          FROM b_r_superviseur_agent r JOIN b_utilisateur u ON r.id_SUPERVISEUR=u.id
         WHERE r.id_AGENT=? LIMIT 1`, [idAgent]
     );
-    // Droit d'agir sur le plan d'action de chaque éval : évaluateur de l'éval OU superviseur de l'agent
-    const estSup = sup && Number(sup.id) === Number(userId);
-    agent.evaluations = agent.evaluations.map((e) => ({
-      ...e,
-      peut_plan: estSup || Number(e.id_evaluateur) === Number(userId) || voirTous,
+    // Droit d'agir sur le plan d'action : la règle réelle de l'évaluation (droit « agir » :
+    // évaluateur, superviseur de l'agent, evaluation.voir_tous sur sa portée, admin).
+    agent.evaluations = await Promise.all(agent.evaluations.map(async (e) => {
+      const [[ev]] = await db.query(
+        "SELECT id, id_agent, id_evaluateur, id_site, statut FROM b_evaluation WHERE id=?", [e.id]
+      );
+      const d = ev ? await droitsEvaluation(userId, ev) : { agir: false };
+      return { ...e, peut_plan: !!d.agir };
     }));
 
     return res.status(200).json({ agent, infos_agent: ag || null, superviseur: sup || null });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors du chargement du détail." }); }
 };
 
-// Superviseurs (pour le filtre équipe)
+// Superviseurs (pour le filtre équipe) : limités à la portée visible.
 const getSuperviseurs = async (req, res) => {
   try {
+    const { voirTous, siteImpose } = await porteePole(req.auth.userId);
+    if (!voirTous) return res.status(200).json([]);
     const [rows] = await db.query(
-      `SELECT DISTINCT u.id, u.nom, u.prenom FROM b_r_superviseur_agent r JOIN b_utilisateur u ON r.id_SUPERVISEUR=u.id ORDER BY u.nom`
+      `SELECT DISTINCT u.id, u.nom, u.prenom
+         FROM b_r_superviseur_agent r
+         JOIN b_utilisateur u ON r.id_SUPERVISEUR=u.id
+         JOIN b_utilisateur ag ON r.id_AGENT=ag.id
+        ${siteImpose !== null ? "WHERE ag.id_Site=?" : ""}
+        ORDER BY u.nom`, siteImpose !== null ? [siteImpose] : []
     );
     return res.status(200).json(rows);
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
 
-module.exports = { getRapportAgentsPole, getAgentPoleDetail, getSuperviseurs };
+module.exports = { getRapportAgentsPole, getAgentPoleDetail, getSuperviseurs, chargerPole };

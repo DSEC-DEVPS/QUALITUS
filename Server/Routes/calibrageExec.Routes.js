@@ -20,5 +20,7 @@ router.post("/calibrage/session/:id/cloturer-reference", auth, permission("CALIB
 // Pilotage jauge
 router.put("/calibrage/session/:id/visibilite", auth, permission("CALIBRAGE", "ORGANISER"), c.setVisibilite);
 router.put("/calibrage/participant/:pid/reinitialiser", auth, permission("CALIBRAGE", "ORGANISER"), c.reinitialiserParticipant);
+router.get("/calibrage/participant/:pid/reprise", auth, permission("CALIBRAGE", "ORGANISER"), c.propositionReprise);
+router.put("/calibrage/participant/:pid/reprendre", auth, permission("CALIBRAGE", "ORGANISER"), c.reprendreParticipant);
 
 module.exports = router;

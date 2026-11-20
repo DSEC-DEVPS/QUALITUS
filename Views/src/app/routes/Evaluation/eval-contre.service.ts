@@ -13,6 +13,8 @@ export interface ContreListe {
   evaluateur_nom: string; evaluateur_prenom: string;
   agent_nom: string; agent_prenom: string;
   responsable_nom: string; responsable_prenom: string;
+  /** L'utilisateur connecté a créé cette contre-évaluation. */
+  est_createur?: number | boolean;
 }
 export interface ContreErreur {
   id: number; item: string; sous_item?: string; referentiel?: string;
@@ -35,15 +37,20 @@ export interface ContreDetail {
 export class EvalContreService {
   private readonly http = inject(HttpClient);
 
-  getSites(): Observable<{ id: number; nom: string }[]> { return this.http.get<any[]>(`/api/v1/site/all`); }
+  /** Sites proposés à la création (site à vision globale : tous) et accès transverse. */
+  getContexte(): Observable<{ vision_globale: boolean; id_site: number | null; sites: { id: number; nom: string }[]; voir_tous: boolean }> {
+    return this.http.get<any>(`/api/v1/eval/contre/contexte`);
+  }
   private dateParams(f?: { date_debut?: string | null; date_fin?: string | null }): any {
     const p: any = {};
     if (f?.date_debut) p.date_debut = f.date_debut;
     if (f?.date_fin) p.date_fin = f.date_fin;
     return p;
   }
-  getAll(f?: { date_debut?: string | null; date_fin?: string | null }): Observable<ContreListe[]> {
-    return this.http.get<ContreListe[]>(`/api/v1/eval/contre/all`, { params: this.dateParams(f) });
+  getAll(f?: { date_debut?: string | null; date_fin?: string | null; portee?: 'miennes' | 'toutes' }): Observable<ContreListe[]> {
+    const params = this.dateParams(f);
+    if (f?.portee === 'toutes') params.portee = 'toutes';
+    return this.http.get<ContreListe[]>(`/api/v1/eval/contre/all`, { params });
   }
   getMes(f?: { date_debut?: string | null; date_fin?: string | null }): Observable<ContreListe[]> {
     return this.http.get<ContreListe[]>(`/api/v1/eval/contre/mes`, { params: this.dateParams(f) });

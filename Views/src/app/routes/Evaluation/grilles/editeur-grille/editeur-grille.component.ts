@@ -17,11 +17,13 @@ import { ToastrService } from 'ngx-toastr';
 import {
   EvalGrilleService, GrilleDetail, CategorieErreur, SousCategorieErreur, Erreur,
 } from '../../eval-grille.service';
+import { ConfirmationService } from '@shared/services/confirmation.service';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
   selector: 'app-editeur-grille',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent,
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatChipsModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatCheckboxModule, MatExpansionModule, MatTooltipModule,
   ],
@@ -29,6 +31,7 @@ import {
   styleUrl: './editeur-grille.component.scss',
 })
 export class EditeurGrilleComponent implements OnInit {
+  private readonly confirmation = inject(ConfirmationService);
   private readonly service = inject(EvalGrilleService);
   private readonly route = inject(ActivatedRoute);
   private readonly location = inject(Location);
@@ -94,10 +97,10 @@ export class EditeurGrilleComponent implements OnInit {
     this.handle(this.service.updateGrille(g.id, { nom: g.nom, type_ressource_cible: g.type_ressource_cible }), 'Grille mise à jour.');
   }
 
-  basculerMode(): void {
+  async basculerMode(): Promise<void> {
     if (!this.detail) return;
     const cible = this.detail.grille.mode_ponderation === 'AUTO' ? 'MANUEL' : 'AUTO';
-    if (cible === 'AUTO' && !confirm('Les poids saisis ne seront plus appliqués (ils restent conservés). Confirmer le passage en mode Automatique ?')) return;
+    if (cible === 'AUTO' && !(await this.confirmation.confirmer({ titre: 'Passer en mode automatique', message: 'Les poids saisis ne seront plus appliqués (ils restent conservés). Confirmer le passage en mode Automatique ?', type: 'attention' }))) return;
     this.handle(this.service.changeMode(this.id, cible), `Mode ${cible} appliqué.`);
   }
 
@@ -128,8 +131,8 @@ export class EditeurGrilleComponent implements OnInit {
   }
   archiverCategorie(c: CategorieErreur): void { this.handle(this.service.archiverCategorie(c.id), 'Catégorie archivée.'); }
   reactiverCategorie(c: CategorieErreur): void { this.handle(this.service.reactiverCategorie(c.id), 'Catégorie réactivée.'); }
-  supprimerCategorie(c: CategorieErreur): void {
-    if (!confirm(`Supprimer la catégorie « ${c.libelle} » ?`)) return;
+  async supprimerCategorie(c: CategorieErreur): Promise<void> {
+    if (!(await this.confirmation.confirmer({ titre: 'Supprimer la catégorie', message: `Supprimer la catégorie « ${c.libelle} » ?`, type: 'danger' }))) return;
     this.handle(this.service.deleteCategorie(c.id), 'Catégorie supprimée.');
   }
 
@@ -146,8 +149,8 @@ export class EditeurGrilleComponent implements OnInit {
   }
   archiverSousCat(sc: SousCategorieErreur): void { this.handle(this.service.archiverSousCategorie(sc.id), 'Sous-catégorie archivée.'); }
   reactiverSousCat(sc: SousCategorieErreur): void { this.handle(this.service.reactiverSousCategorie(sc.id), 'Sous-catégorie réactivée.'); }
-  supprimerSousCat(sc: SousCategorieErreur): void {
-    if (!confirm(`Supprimer la sous-catégorie « ${sc.libelle} » ?`)) return;
+  async supprimerSousCat(sc: SousCategorieErreur): Promise<void> {
+    if (!(await this.confirmation.confirmer({ titre: 'Supprimer la sous-catégorie', message: `Supprimer la sous-catégorie « ${sc.libelle} » ?`, type: 'danger' }))) return;
     this.handle(this.service.deleteSousCategorie(sc.id), 'Sous-catégorie supprimée.');
   }
 
@@ -167,8 +170,8 @@ export class EditeurGrilleComponent implements OnInit {
   }
   archiverErreur(e: Erreur): void { this.handle(this.service.archiverErreur(e.id), 'Erreur archivée.'); }
   reactiverErreur(e: Erreur): void { this.handle(this.service.reactiverErreur(e.id), 'Erreur réactivée.'); }
-  supprimerErreur(e: Erreur): void {
-    if (!confirm(`Supprimer l'erreur « ${e.item} » ?`)) return;
+  async supprimerErreur(e: Erreur): Promise<void> {
+    if (!(await this.confirmation.confirmer({ titre: 'Supprimer l\'erreur', message: `Supprimer l'erreur « ${e.item} » ?`, type: 'danger' }))) return;
     this.handle(this.service.deleteErreur(e.id), 'Erreur supprimée.');
   }
 }

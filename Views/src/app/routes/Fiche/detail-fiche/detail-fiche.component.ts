@@ -15,7 +15,7 @@ import {
   DialogLayoutDisplay,
   DisappearanceAnimation,
 } from '@costlydeveloper/ngx-awesome-popup';
-import { catchError, of, Subject, takeUntil, tap } from 'rxjs';
+import { catchError, of, Subject, takeUntil, tap, finalize } from 'rxjs';
 import * as XLSX from 'xlsx';
 import { ToastrService } from 'ngx-toastr';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -24,10 +24,12 @@ import { Location } from '@angular/common';
 import Handsontable from 'handsontable';
 import { HotTableModule } from '@handsontable/angular';
 import { MatButtonModule } from '@angular/material/button';
+import { CanDirective } from '@core/authorization/can.directive';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 @Component({
   selector: 'app-detail-fiche',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent,
     CommonModule,
     MatDialogModule,
     MatTabsModule,
@@ -40,11 +42,13 @@ import { MatButtonModule } from '@angular/material/button';
     MatTooltipModule,
     HotTableModule,
     MatButtonModule,
+    CanDirective,
   ],
   templateUrl: './detail-fiche.component.html',
   styleUrl: './detail-fiche.component.scss',
 })
 export class DetailFicheComponent implements OnInit {
+  chargement = true;
   private readonly route = inject(ActivatedRoute);
   private readonly userService = inject(UserService);
   private readonly sanitizer = inject(DomSanitizer);
@@ -96,9 +100,10 @@ export class DetailFicheComponent implements OnInit {
   @ViewChild(MatSort) sort!: MatSort;
   constructor(private _location: Location) {}
   ngOnInit(): void {
+    this.chargement = true;
     const id = this.route.snapshot.params['id'];
     this.router_id = id;
-    this.userService.getDetailsFicheByIdFiche(id).subscribe({
+    this.userService.getDetailsFicheByIdFiche(id).pipe(finalize(() => (this.chargement = false))).subscribe({
       next: fiche => {
         if (fiche.infos_fiche.extention === '.pdf') {
           this.infos_fiche = fiche.infos_fiche;

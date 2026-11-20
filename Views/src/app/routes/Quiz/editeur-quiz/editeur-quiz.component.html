@@ -10,6 +10,7 @@
       </span>
     }
   </div>
+  @if (chargement) { <app-chargement /> }
 
   <!-- En-tete / parametres du quiz -->
   <mat-card class="m-b-16">
@@ -94,20 +95,37 @@
             </mat-form-field>
           </div>
 
-          <div class="col-sm-12">
+          <div class="col-sm-6">
             <mat-form-field appearance="fill" class="w-100">
-              <mat-label>Sites concernés</mat-label>
-              <mat-select formControlName="sites" multiple>
-                @for (s of sites; track s.id) {
-                  <mat-option [value]="s.id">{{ s.nom }}</mat-option>
-                }
+              <mat-label>État</mat-label>
+              <mat-select formControlName="Etat">
+                <mat-option value="OUVERT">Ouvert</mat-option>
+                <mat-option value="CLOTURER">Clôturé</mat-option>
               </mat-select>
-              <mat-hint>
-                Privé : seuls les utilisateurs de ces sites accèdent, via le code PIN.
-                Public : ils voient le quiz sans code PIN. Aucun site = ouvert à tous.
-              </mat-hint>
+              <mat-hint>Clôturé : plus aucune participation possible</mat-hint>
             </mat-form-field>
           </div>
+          <div class="col-sm-6">
+            <mat-form-field appearance="fill" class="w-100">
+              <mat-label>Statut</mat-label>
+              <mat-select formControlName="statut">
+                <mat-option value="ACTIF">Actif</mat-option>
+                <mat-option value="INACTIF">Inactif</mat-option>
+              </mat-select>
+              <mat-hint>Inactif : quiz mis de côté, invisible pour les participants</mat-hint>
+            </mat-form-field>
+          </div>
+
+          @if (!coteProprietaire) {
+            <div class="col-sm-12">
+              <p class="hint-invite">
+                <mat-icon inline>lock</mat-icon>
+                Seuls la durée, la date de fermeture et l'état sont modifiables : les autres
+                paramètres et les questions sont réservés au site propriétaire.
+              </p>
+            </div>
+          }
+
         </div>
 
         <div class="m-t-8">
@@ -126,12 +144,17 @@
         <div class="d-flex align-items-center justify-content-between flex-wrap m-b-8">
           <h6 class="m-0">Questions ({{ questions.length }})</h6>
           <div class="d-flex" style="gap: 8px">
-            <button mat-flat-button color="primary" (click)="notifierParticipants()">
-              <mat-icon>campaign</mat-icon> Notifier les participants
+            <button mat-flat-button color="primary" (click)="diffusion()">
+              <mat-icon>campaign</mat-icon> Diffusion
             </button>
-            <button mat-flat-button color="primary" (click)="ajouterQuestion()">
-              <mat-icon>add</mat-icon> Ajouter une question
-            </button>
+            @if (coteProprietaire) {
+              <button mat-stroked-button color="primary" (click)="reprendreQuestions()" class="m-r-8">
+                <mat-icon>content_copy</mat-icon> Reprendre des questions
+              </button>
+              <button mat-flat-button color="primary" (click)="ajouterQuestion()">
+                <mat-icon>add</mat-icon> Ajouter une question
+              </button>
+            }
           </div>
         </div>
 
@@ -143,18 +166,23 @@
               <div class="q-meta">
                 <mat-chip-set>
                   <mat-chip>{{ typeLabel(q) }}</mat-chip>
-                  <mat-chip class="ok">Bonne(s) réponse(s) : {{ bonnesReponses(q) }}</mat-chip>
+                  <mat-chip>{{ q.points ?? 5 }} point(s)</mat-chip>
+                  @if (coteProprietaire) {
+                    <mat-chip class="ok">Bonne(s) réponse(s) : {{ bonnesReponses(q) }}</mat-chip>
+                  }
                 </mat-chip-set>
               </div>
             </div>
-            <div class="q-act">
-              <button mat-icon-button (click)="modifierQuestion(q)" matTooltip="Modifier">
-                <mat-icon>edit</mat-icon>
-              </button>
-              <button mat-icon-button color="warn" (click)="supprimerQuestion(q)" matTooltip="Supprimer">
-                <mat-icon>delete</mat-icon>
-              </button>
-            </div>
+            @if (coteProprietaire) {
+              <div class="q-act">
+                <button mat-icon-button (click)="modifierQuestion(q)" matTooltip="Modifier">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" (click)="supprimerQuestion(q)" matTooltip="Supprimer">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            }
           </div>
         } @empty {
           <p class="text-muted text-center p-16">

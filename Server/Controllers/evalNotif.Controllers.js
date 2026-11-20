@@ -17,6 +17,7 @@ const getMesNotifications = async (req, res) => {
        FROM b_notification n
        LEFT JOIN b_evaluation e ON n.nature_objet='EVALUATION' AND n.id_objet=e.id
        WHERE n.id_UTILISATEUR = ? AND n.nature_objet IS NOT NULL
+         AND (n.dateReception IS NULL OR n.dateReception <= NOW())
        ORDER BY n.lu ASC, n.dateReception DESC`, [userId]
     );
     return res.status(200).json(rows);
@@ -26,7 +27,8 @@ const getMesNotifications = async (req, res) => {
 const countNonLues = async (req, res) => {
   try {
     const [[r]] = await db.query(
-      `SELECT COUNT(*) AS n FROM b_notification WHERE id_UTILISATEUR = ? AND nature_objet IS NOT NULL AND lu = 0`,
+      `SELECT COUNT(*) AS n FROM b_notification WHERE id_UTILISATEUR = ? AND nature_objet IS NOT NULL AND lu = 0
+         AND (dateReception IS NULL OR dateReception <= NOW())`,
       [req.auth.userId]
     );
     return res.status(200).json({ count: r.n });
@@ -43,14 +45,4 @@ const marquerLu = async (req, res) => {
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
 
-const marquerToutLu = async (req, res) => {
-  try {
-    await db.query(
-      `UPDATE b_notification SET lu = 1, dateLecture = NOW() WHERE id_UTILISATEUR = ? AND nature_objet IS NOT NULL AND lu = 0`,
-      [req.auth.userId]
-    );
-    return res.status(200).json({ message: "Toutes marquées comme lues." });
-  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
-};
-
-module.exports = { getMesNotifications, countNonLues, marquerLu, marquerToutLu };
+module.exports = { getMesNotifications, countNonLues, marquerLu };

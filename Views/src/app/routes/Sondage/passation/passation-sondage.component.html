@@ -1,6 +1,6 @@
 <div class="passation-wrap">
   @if (chargement) {
-    <mat-progress-bar mode="indeterminate" />
+    <app-chargement />
   } @else if (etat === 'INTROUVABLE') {
     <mat-card class="etat-card">
       <mat-card-content class="text-center">

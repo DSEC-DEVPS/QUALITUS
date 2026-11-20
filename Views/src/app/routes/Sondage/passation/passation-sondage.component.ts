@@ -13,6 +13,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ToastrService } from 'ngx-toastr';
 import { SondageService } from '@shared/services/sondage.service';
 import { ConditionSondage, QuestionSondage, ReponsePassation, Sondage } from '../interfaces';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 interface PageGroupe {
   page: number;
@@ -22,7 +23,7 @@ interface PageGroupe {
 @Component({
   selector: 'app-passation-sondage',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent,
     FormsModule,
     MatCardModule,
     MatButtonModule,

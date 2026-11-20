@@ -7,7 +7,7 @@
   [class.matero-header-fixed]="options.headerPos === 'fixed'"
   [dir]="options.dir"
 >
-  <ng-progress ngProgressRouter />
+  <ng-progress ngProgressRouter ngProgressHttp />
   <!-- Header Above -->
   @if (options.showHeader && options.headerPos === 'above') {
     <app-header

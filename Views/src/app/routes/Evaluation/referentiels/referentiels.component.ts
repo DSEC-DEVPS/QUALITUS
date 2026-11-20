@@ -12,11 +12,16 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ToastrService } from 'ngx-toastr';
 import { EvalAdminService, RefItem, RefType } from '../eval-admin.service';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { Pagination } from '@shared/utils/pagination';
+import { ConfirmationService } from '@shared/services/confirmation.service';
+import { finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
   selector: 'app-referentiels',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent, MatPaginatorModule,
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatButtonToggleModule, MatSlideToggleModule, MatTableModule, MatTooltipModule,
   ],
@@ -24,26 +29,29 @@ import { EvalAdminService, RefItem, RefType } from '../eval-admin.service';
   styleUrl: './referentiels.component.scss',
 })
 export class ReferentielsComponent implements OnInit {
+  chargement = true;
+  private readonly confirmation = inject(ConfirmationService);
   private readonly service = inject(EvalAdminService);
   private readonly toastr = inject(ToastrService);
 
   types: { key: RefType; label: string }[] = [
     { key: 'contexte', label: 'Contextes' },
     { key: 'nature', label: 'Natures de ressource' },
-    { key: 'action', label: 'Actions (plan d’action)' },
     { key: 'statut', label: 'Statuts (plan d’action)' },
-    { key: 'kpi', label: 'KPI' },
     { key: 'statut_evaluation', label: 'Statuts après évaluation' },
   ];
   typeActif: RefType = 'contexte';
-  items: RefItem[] = [];
+  readonly pag = new Pagination<RefItem>();
+  get items(): RefItem[] { return this.pag.donnees; }
+  set items(v: RefItem[]) { this.pag.definir(v); }
   colonnes = ['libelle', 'description', 'ordre', 'etat', 'actions'];
   nouveau = { libelle: '', description: '', ordre: 0 };
 
   ngOnInit(): void { this.charger(); }
 
   charger(): void {
-    this.service.getRef(this.typeActif).subscribe({
+    this.chargement = true;
+    this.service.getRef(this.typeActif).pipe(finalize(() => (this.chargement = false))).subscribe({
       next: i => (this.items = i),
       error: () => this.toastr.error('Impossible de charger le référentiel.'),
     });
@@ -72,8 +80,8 @@ export class ReferentielsComponent implements OnInit {
     this.enregistrer(it);
   }
 
-  supprimer(it: RefItem): void {
-    if (!confirm(`Supprimer « ${it.libelle} » ?`)) return;
+  async supprimer(it: RefItem): Promise<void> {
+    if (!(await this.confirmation.confirmer({ titre: 'Supprimer l\'élément', message: `Supprimer « ${it.libelle} » ?`, type: 'danger' }))) return;
     this.service.deleteRef(this.typeActif, it.id).subscribe({
       next: () => { this.toastr.success('Supprimé.'); this.charger(); },
       error: err => this.toastr.error(err?.error?.message || 'Suppression impossible.'),

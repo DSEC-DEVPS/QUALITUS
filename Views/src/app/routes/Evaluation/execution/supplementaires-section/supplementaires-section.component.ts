@@ -5,15 +5,18 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ToastrService } from 'ngx-toastr';
 import { EvalSuitesService, SupplementairesResult } from '../../eval-suites.service';
+import { finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
   selector: 'app-supplementaires-section',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule],
+  imports: [ChargementComponent, CommonModule, MatButtonModule, MatIconModule],
   templateUrl: './supplementaires-section.component.html',
   styleUrl: './supplementaires-section.component.scss',
 })
 export class SupplementairesSectionComponent implements OnInit {
+  chargement = true;
   private readonly service = inject(EvalSuitesService);
   private readonly router = inject(Router);
   private readonly toastr = inject(ToastrService);
@@ -24,7 +27,8 @@ export class SupplementairesSectionComponent implements OnInit {
   ngOnInit(): void { this.charger(); }
 
   charger(): void {
-    this.service.getSupplementaires(this.idEvaluation).subscribe({
+    this.chargement = true;
+    this.service.getSupplementaires(this.idEvaluation).pipe(finalize(() => (this.chargement = false))).subscribe({
       next: d => (this.data = d),
       error: () => this.toastr.error('Impossible de charger les évaluations supplémentaires.'),
     });

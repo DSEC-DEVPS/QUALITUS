@@ -38,9 +38,9 @@
 
   <mat-card class="cal-card" appearance="outlined">
     <mat-card-content>
-      <div class="cal-empty" *ngIf="chargement"><mat-icon>hourglass_empty</mat-icon><span>Chargement…</span></div>
+      <app-chargement *ngIf="chargement" />
 
-      <table mat-table [dataSource]="evaluations" *ngIf="!chargement && evaluations.length" class="cal-table">
+      <table mat-table [dataSource]="pag.page" *ngIf="!chargement && evaluations.length" class="cal-table">
         <ng-container matColumnDef="date_appel">
           <th mat-header-cell *matHeaderCellDef>Date d'appel</th>
           <td mat-cell *matCellDef="let e">{{ e.date_appel ? (e.date_appel | date: 'dd/MM/yyyy') : '—' }}</td>
@@ -71,6 +71,10 @@
         <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
         <tr mat-row *matRowDef="let row; columns: colonnes" (click)="ouvrir(row)" class="cal-row-link"></tr>
       </table>
+      @if (pag.length) {
+        <mat-paginator [length]="pag.length" [pageIndex]="pag.pageIndex" [pageSize]="pag.pageSize"
+                       [pageSizeOptions]="pag.tailles" showFirstLastButtons (page)="pag.changer($event)" />
+      }
 
       <div class="cal-empty" *ngIf="!chargement && !evaluations.length">
         <mat-icon>fact_check</mat-icon><span>Aucune évaluation</span>

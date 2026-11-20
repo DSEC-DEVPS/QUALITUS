@@ -21,16 +21,30 @@
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Évaluateur</mat-label>
-            <mat-select [(ngModel)]="idEvaluateur" (selectionChange)="onEvaluateur()" name="ev" [disabled]="!idSite">
-              @for (e of evaluateurs; track e.id) { <mat-option [value]="e.id">{{ e.nom }} {{ e.prenom }} ({{ e.login }})</mat-option> }
+            <mat-select [(ngModel)]="idEvaluateur" (selectionChange)="onEvaluateur()" name="ev" [disabled]="!idSite"
+                        (openedChange)="ouverture($event, rechEv, 'evaluateur')">
+              <div class="recherche-select" (click)="$event.stopPropagation()">
+                <mat-icon>search</mat-icon>
+                <input #rechEv [(ngModel)]="rechercheEvaluateur" name="rechEv" placeholder="Nom, prénom ou login…"
+                       (keydown)="$event.stopPropagation()" autocomplete="off" />
+              </div>
+              @for (e of evaluateursFiltres; track e.id) { <mat-option [value]="e.id">{{ e.nom }} {{ e.prenom }} ({{ e.login }})</mat-option> }
+              @if (!evaluateursFiltres.length) { <div class="aucun-select">Aucun évaluateur ne correspond.</div> }
             </mat-select>
           </mat-form-field>
           <mat-form-field appearance="outline" class="grand">
             <mat-label>Évaluation</mat-label>
-            <mat-select [(ngModel)]="idEvaluation" name="eval" [disabled]="!idEvaluateur">
-              @for (e of evaluations; track e.id) {
-                <mat-option [value]="e.id">#{{ e.id }} — {{ e.agent_nom }} {{ e.agent_prenom }} — {{ e.date_appel ? (e.date_appel | date: 'dd/MM/yyyy') : '' }} ({{ e.conclusion }})</mat-option>
+            <mat-select [(ngModel)]="idEvaluation" name="eval" [disabled]="!idEvaluateur"
+                        (openedChange)="ouverture($event, rechEval, 'evaluation')">
+              <div class="recherche-select" (click)="$event.stopPropagation()">
+                <mat-icon>search</mat-icon>
+                <input #rechEval [(ngModel)]="rechercheEvaluation" name="rechEval" placeholder="N° de case, identifiant d'appel ou agent…"
+                       (keydown)="$event.stopPropagation()" autocomplete="off" />
+              </div>
+              @for (e of evaluationsFiltrees; track e.id) {
+                <mat-option [value]="e.id">#{{ e.id }} — {{ e.type_evaluation || 'Évaluation' }} — {{ e.agent_nom }} {{ e.agent_prenom }}{{ e.agent_login ? ' (' + e.agent_login + ')' : '' }} — {{ e.date_evaluation ? (e.date_evaluation | date: 'dd/MM/yyyy') : '' }}{{ e.numero_case ? ' — Case ' + e.numero_case : '' }}{{ e.identifiant_appel ? ' — Appel ' + e.identifiant_appel : '' }} ({{ e.conclusion }})</mat-option>
               }
+              @if (!evaluationsFiltrees.length) { <div class="aucun-select">Aucune évaluation ne correspond.</div> }
             </mat-select>
             @if (idEvaluateur && evaluations.length === 0) { <mat-hint>Aucune évaluation contre-évaluable.</mat-hint> }
           </mat-form-field>
@@ -41,6 +55,12 @@
   }
 
   <div class="cal-filtres-row">
+    @if (voirTous) {
+      <mat-button-toggle-group [(ngModel)]="portee" (change)="charger()" name="portee">
+        <mat-button-toggle value="miennes">Créées par moi</mat-button-toggle>
+        <mat-button-toggle value="toutes">Toutes</mat-button-toggle>
+      </mat-button-toggle-group>
+    }
     <mat-form-field appearance="outline"><mat-label>Du</mat-label>
       <input matInput [matDatepicker]="pd" [(ngModel)]="dateDebut" name="dd" /><mat-datepicker-toggle matSuffix [for]="pd"></mat-datepicker-toggle><mat-datepicker #pd></mat-datepicker>
     </mat-form-field>
@@ -56,7 +76,7 @@
       @if (liste.length === 0) {
         <p class="vide">Aucune contre-évaluation.</p>
       } @else {
-        <table mat-table [dataSource]="liste" class="table">
+        <table mat-table [dataSource]="pag.page" class="table">
           <ng-container matColumnDef="evaluateur">
             <th mat-header-cell *matHeaderCellDef>Évaluateur contrôlé</th>
             <td mat-cell *matCellDef="let c">{{ c.evaluateur_nom }} {{ c.evaluateur_prenom }}</td>
@@ -85,16 +105,24 @@
             <th mat-header-cell *matHeaderCellDef>Visibilité</th>
             <td mat-cell *matCellDef="let c">{{ c.date_visibilite ? (c.date_visibilite | date: 'dd/MM/yyyy') : '—' }}</td>
           </ng-container>
+          <ng-container matColumnDef="responsable">
+            <th mat-header-cell *matHeaderCellDef>Créée par</th>
+            <td mat-cell *matCellDef="let c">{{ c.responsable_nom }} {{ c.responsable_prenom }}</td>
+          </ng-container>
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let c" (click)="$event.stopPropagation()">
-              <button mat-icon-button title="Désactiver" *appCan="'contre_evaluation.desactiver'" (click)="desactiver(c, $event)"><mat-icon>block</mat-icon></button>
-              <button mat-icon-button color="warn" title="Supprimer" *appCan="'contre_evaluation.supprimer'" (click)="supprimer(c, $event)"><mat-icon>delete</mat-icon></button>
+              @if (peut(c, 'contre_evaluation.desactiver')) { <button mat-icon-button title="Désactiver" (click)="desactiver(c, $event)"><mat-icon>block</mat-icon></button> }
+              @if (peut(c, 'contre_evaluation.supprimer')) { <button mat-icon-button color="warn" title="Supprimer" (click)="supprimer(c, $event)"><mat-icon>delete</mat-icon></button> }
             </td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
           <tr mat-row *matRowDef="let row; columns: colonnes" class="ligne" (click)="ouvrir(row)"></tr>
         </table>
+        @if (pag.length) {
+          <mat-paginator [length]="pag.length" [pageIndex]="pag.pageIndex" [pageSize]="pag.pageSize"
+                         [pageSizeOptions]="pag.tailles" showFirstLastButtons (page)="pag.changer($event)" />
+        }
       }
     </mat-card-content>
   </mat-card>

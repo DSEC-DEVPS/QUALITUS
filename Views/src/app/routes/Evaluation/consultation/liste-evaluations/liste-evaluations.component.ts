@@ -14,24 +14,34 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { ToastrService } from 'ngx-toastr';
 import { EvalInstanceService, EvaluationListe, FiltresEvaluation, RefItem } from '../../eval-instance.service';
+import { PermissionsService } from '@core/authorization/permissions.service';
+import { CanDirective } from '@core/authorization/can.directive';
 
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { Pagination } from '@shared/utils/pagination';
+import { ConfirmationService } from '@shared/services/confirmation.service';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 @Component({
   selector: 'app-liste-evaluations-cahier',
   standalone: true,
-  imports: [MatDatepickerModule, 
+  imports: [ChargementComponent, MatPaginatorModule, MatDatepickerModule,
     CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
-    MatTableModule, MatChipsModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatCheckboxModule,
+    MatTableModule, MatChipsModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatCheckboxModule, CanDirective,
   ],
   templateUrl: './liste-evaluations.component.html',
   styleUrl: './liste-evaluations.component.scss',
 })
 export class ListeEvaluationsComponent implements OnInit {
+  private readonly confirmation = inject(ConfirmationService);
   private readonly service = inject(EvalInstanceService);
   private readonly router = inject(Router);
   private readonly toastr = inject(ToastrService);
+  private readonly perms = inject(PermissionsService);
 
-  evaluations: EvaluationListe[] = [];
+  readonly pag = new Pagination<EvaluationListe>();
+  get evaluations(): EvaluationListe[] { return this.pag.donnees; }
+  set evaluations(v: EvaluationListe[]) { this.pag.definir(v); }
   chargement = false;
   colonnes = ['select', 'type', 'agent', 'grille', 'date_appel', 'type_evaluation', 'statut', 'conclusion', 'actions'];
 
@@ -72,17 +82,30 @@ export class ListeEvaluationsComponent implements OnInit {
     if (checked) this.selection.add(id); else this.selection.delete(id);
   }
 
+  // Cette liste ne contient que les évaluations créées par l'utilisateur.
+  /** (Dés)activer : libre avant la fin ; une fois terminée, permission Désactiver. */
+  peutDesactiver(e: EvaluationListe): boolean {
+    return e.statut !== 'TERMINE' || this.perms.can('evaluation.desactiver');
+  }
+  /** Supprimer : permission Supprimer, et jamais une évaluation contre-évaluée. */
+  peutSupprimer(e: EvaluationListe): boolean {
+    return this.perms.can('evaluation.supprimer') && !e.contre_evaluee;
+  }
+
   setActif(e: EvaluationListe, actif: boolean, ev: Event): void {
     ev.stopPropagation();
     this.service.setActif(e.id, actif).subscribe({
       next: () => { this.toastr.success(actif ? 'Réactivée.' : 'Désactivée.'); this.charger(); },
-      error: () => this.toastr.error('Erreur.'),
+      error: err => this.toastr.error(err?.error?.message || 'Erreur.'),
     });
   }
 
-  supprimer(e: EvaluationListe, ev: Event): void {
+  async supprimer(e: EvaluationListe, ev: Event): Promise<void> {
     ev.stopPropagation();
-    if (!confirm('Supprimer définitivement cette évaluation (non terminée) ?')) return;
+    const texte = e.statut === 'TERMINE'
+      ? 'Supprimer définitivement cette évaluation TERMINÉE ? Ses résultats, son analyse BI, son coaching, son plan d\'actions et ses évaluations supplémentaires seront supprimés. L\'agent évalué et son superviseur en seront informés.'
+      : 'Supprimer définitivement cette évaluation ? L\'agent évalué et son superviseur en seront informés.';
+    if (!(await this.confirmation.confirmer({ titre: 'Supprimer l\'évaluation', message: texte, type: 'danger' }))) return;
     this.service.deleteEvaluation(e.id).subscribe({
       next: () => { this.toastr.success('Supprimée.'); this.charger(); },
       error: err => this.toastr.error(err?.error?.message || 'Suppression impossible.'),

@@ -7,7 +7,8 @@
   .petit { width: 100px; }
   .vide { color: rgba(0, 0, 0, 0.6); }
 
-  .liste-arbo { list-style: none; margin: 0; padding: 0; }
+  .recherche-arbo { width: 100%; max-width: 520px; }
+  .liste-arbo { list-style: none; margin: 0; padding: 0; max-height: 260px; overflow: auto; }
   .liste-arbo li { padding: 8px; border-radius: 4px; cursor: pointer; }
   .liste-arbo li:hover { background: rgba(0, 0, 0, 0.03); }
   .liste-arbo li.active { background: #e3f2fd; }

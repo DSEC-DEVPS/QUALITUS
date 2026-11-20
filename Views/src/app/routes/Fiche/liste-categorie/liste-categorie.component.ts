@@ -26,11 +26,12 @@ import {
   DialogLayoutDisplay,
   DisappearanceAnimation,
 } from '@costlydeveloper/ngx-awesome-popup';
-import { catchError, of, Subject, takeUntil, tap } from 'rxjs';
+import { catchError, of, Subject, takeUntil, tap, finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 @Component({
   selector: 'app-table-overview-example',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent,
     MatFormFieldModule,
     MatInputModule,
     MatTableModule,
@@ -51,6 +52,7 @@ import { catchError, of, Subject, takeUntil, tap } from 'rxjs';
   styleUrl: './liste-categorie.component.scss',
 })
 export class ListeCategorieComponent implements OnInit {
+  chargement = true;
   dataSource!: MatTableDataSource<categorie>;
   displayedColums: string[] = ['id', 'nom', 'Etat', 'dateCreationCategorie', 'Actions'];
   msg = '';
@@ -63,7 +65,8 @@ export class ListeCategorieComponent implements OnInit {
   readonly dialog = inject(MatDialog);
   constructor(private userService: UserService) {}
   ngOnInit(): void {
-    this.userService.getAllCategorie().subscribe(user => {
+    this.chargement = true;
+    this.userService.getAllCategorie().pipe(finalize(() => (this.chargement = false))).subscribe(user => {
       this.downloadData = user;
       this.dataSource = new MatTableDataSource(user);
       this.dataSource.paginator = this.paginator;

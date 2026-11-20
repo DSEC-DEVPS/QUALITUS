@@ -6,19 +6,35 @@
           <h5 class="m-0">Rapports de difficulte</h5>
           <p class="text-muted m-0">Quiz tries du plus difficile au plus facile (taux de reussite croissant).</p>
         </div>
+        <div class="d-flex align-items-center flex-wrap" style="gap: 12px">
+          <app-filtre-periode [valeur]="periode" (periodeChange)="changerPeriode($event)" />
         <button mat-flat-button color="primary" (click)="exporter()">
           <mat-icon>download</mat-icon> Exporter Excel
         </button>
+        </div>
       </div>
+      <p class="text-muted m-b-8 periode-info">
+        <mat-icon inline>event</mat-icon> Tentatives prises en compte : {{ libellePeriode }}
+        @if (aDesLimites) {
+          — <mat-icon inline>info</mat-icon> pour les quiz « Limité à votre site », seuls les agents de votre site sont comptés.
+        }
+      </p>
 
-      @if (!rapport.length) {
-        <p class="text-muted text-center p-16">Aucune donnee de quiz.</p>
+      @if (!charge) {
+        <app-chargement />
+      } @else if (!rapport.length) {
+        <p class="text-muted text-center p-16">
+          {{ periode.du || periode.au ? 'Aucun quiz n\'a de tentative sur cette période.' : 'Aucune donnee de quiz.' }}
+        </p>
       } @else {
-        @for (r of rapport; track r.id) {
-          <mat-expansion-panel class="m-b-8" (opened)="chargerDetail(r)">
-            <mat-expansion-panel-header>
+        @for (r of rapportPage; track r.id) {
+          <mat-expansion-panel class="panneau-quiz" (opened)="ouvrir(r)" (closed)="fermer(r)" [expanded]="ouverts.has(r.id)">
+            <mat-expansion-panel-header class="entete-quiz" collapsedHeight="68px" expandedHeight="68px">
               <mat-panel-title>
                 <strong>{{ r.titre }}</strong>
+                @if (r.limite_site === 1) {
+                  <span class="chip-site">Limité à votre site</span>
+                }
               </mat-panel-title>
               <mat-panel-description>
                 <span class="taux" [class]="classeTaux(r.taux_reussite)">
@@ -66,6 +82,8 @@
             }
           </mat-expansion-panel>
         }
+        <mat-paginator [length]="rapport.length" [pageIndex]="pageIndex" [pageSize]="pageSize"
+                       [pageSizeOptions]="[5, 10, 25]" showFirstLastButtons (page)="changerPage($event)" />
       }
     </mat-card-content>
   </mat-card>

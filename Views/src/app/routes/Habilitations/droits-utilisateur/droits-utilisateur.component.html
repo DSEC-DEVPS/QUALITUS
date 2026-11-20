@@ -19,7 +19,8 @@
     </div>
   </mat-card>
 
-  <mat-card *ngIf="selection" class="detail">
+  <app-chargement *ngIf="chargement" />
+  <mat-card *ngIf="selection && !chargement" class="detail">
     <div class="user-tete">
       <div>
         <strong>{{ selection.prenom }} {{ selection.nom }}</strong>

@@ -8,6 +8,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { ToastrService } from 'ngx-toastr';
 import { EvalSuitesService, LettreData } from '../../eval-suites.service';
+import { finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 /**
  * Lettre de félicitation / débriefing (F.39sexies) — restitution à l'agent.
@@ -16,11 +18,12 @@ import { EvalSuitesService, LettreData } from '../../eval-suites.service';
 @Component({
   selector: 'app-lettre-section',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule],
+  imports: [ChargementComponent, CommonModule, FormsModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule],
   templateUrl: './lettre-section.component.html',
   styleUrl: './lettre-section.component.scss',
 })
 export class LettreSectionComponent implements OnInit {
+  chargement = true;
   private readonly service = inject(EvalSuitesService);
   private readonly toastr = inject(ToastrService);
 
@@ -34,7 +37,8 @@ export class LettreSectionComponent implements OnInit {
   enregistrement = false;
 
   ngOnInit(): void {
-    this.service.getLettre(this.idEvaluation).subscribe({
+    this.chargement = true;
+    this.service.getLettre(this.idEvaluation).pipe(finalize(() => (this.chargement = false))).subscribe({
       next: l => { this.lettre = l; this.avis = l.avis_agent || ''; },
       error: err => this.toastr.error(err?.error?.message || 'Lettre indisponible.'),
     });

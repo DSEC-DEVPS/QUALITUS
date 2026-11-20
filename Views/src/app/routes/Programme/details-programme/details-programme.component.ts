@@ -6,15 +6,18 @@ import { ActivatedRoute } from '@angular/router';
 import { Location } from '@angular/common';
 import { UserService } from '@shared/services/user.service';
 import { MatButton, MatButtonModule } from '@angular/material/button';
+import { finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
   selector: 'app-details-programme',
   standalone: true,
-  imports: [MatTableModule, MatPaginator, MatButton, MatButtonModule],
+  imports: [ChargementComponent, MatTableModule, MatPaginator, MatButton, MatButtonModule],
   templateUrl: './details-programme.component.html',
   styleUrl: './details-programme.component.scss',
 })
 export class DetailsProgrammeComponent implements OnInit {
+  chargement = true;
   imageUrl = 'img/site.png';
   private readonly userService = inject(UserService);
   private readonly route = inject(ActivatedRoute);
@@ -26,8 +29,9 @@ export class DetailsProgrammeComponent implements OnInit {
   infos_programme: any[] = [];
   Details_programme: any;
   ngOnInit(): void {
+    this.chargement = true;
     const id = this.route.snapshot.params['id'];
-    this.userService.getDetailsProgrammeById(id).subscribe({
+    this.userService.getDetailsProgrammeById(id).pipe(finalize(() => (this.chargement = false))).subscribe({
       next: resultat => {
         console.log(resultat.utilisateurs);
         this.dataSource = new MatTableDataSource(resultat.utilisateurs);

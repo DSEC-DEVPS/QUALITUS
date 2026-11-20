@@ -1,3 +1,4 @@
+<app-chargement *ngIf="chargement && !session" />
 <div class="cal-page cal-prep" *ngIf="session">
   <mat-card class="cal-panel"><mat-card-header class="cal-band cal-header">
     <button mat-icon-button (click)="retour()"><mat-icon>arrow_back</mat-icon></button>

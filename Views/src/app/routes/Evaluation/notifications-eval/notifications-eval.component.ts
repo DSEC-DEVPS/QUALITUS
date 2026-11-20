@@ -7,11 +7,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { ToastrService } from 'ngx-toastr';
 import { EvalAdminService, NotificationEval } from '../eval-admin.service';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
   selector: 'app-notifications-eval',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatListModule],
+  imports: [ChargementComponent, CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatListModule],
   templateUrl: './notifications-eval.component.html',
   styleUrl: './notifications-eval.component.scss',
 })
@@ -38,10 +39,4 @@ export class NotificationsEvalComponent implements OnInit {
     if (n.id_evaluation) this.router.navigate(['/mon-espace/evaluation/executer', n.id_evaluation]);
   }
 
-  toutLire(): void {
-    this.service.marquerToutLu().subscribe({
-      next: () => { this.toastr.success('Toutes marquées comme lues.'); this.charger(); },
-      error: () => this.toastr.error('Erreur.'),
-    });
-  }
 }

@@ -16,10 +16,13 @@ import { ToastrService } from 'ngx-toastr';
 import { EvalRapportService, AgentPole, FiltresRapport } from '../../eval-rapport.service';
 
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { Pagination } from '@shared/utils/pagination';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 @Component({
   selector: 'app-rapport-pole',
   standalone: true,
-  imports: [MatDatepickerModule,
+  imports: [ChargementComponent, MatPaginatorModule, MatDatepickerModule,
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatSelectModule, MatInputModule, MatTableModule, MatChipsModule, MatTooltipModule,
   ],
@@ -31,9 +34,13 @@ export class RapportPoleComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly toastr = inject(ToastrService);
 
-  agents: AgentPole[] = [];
+  readonly pag = new Pagination<AgentPole>();
+  get agents(): AgentPole[] { return this.pag.donnees; }
+  set agents(v: AgentPole[]) { this.pag.definir(v); }
   chargement = false;
   voirTous = false;
+  /** Site imposé par la portée (voir_tous hors site à vision globale). */
+  siteImpose: number | null = null;
   filtres: FiltresRapport = {};
   sites: { id: number; nom: string }[] = [];
   programmes: { id: number; nom: string }[] = [];
@@ -53,7 +60,13 @@ export class RapportPoleComponent implements OnInit {
     if (this.filtres.date_debut) f.date_debut = toYMD(this.filtres.date_debut);
     if (this.filtres.date_fin) f.date_fin = toYMD(this.filtres.date_fin);
     this.service.getAgentsPole(f).subscribe({
-      next: r => { this.agents = r.agents || []; this.voirTous = !!r.voir_tous; this.chargement = false; },
+      next: r => {
+        this.agents = r.agents || [];
+        this.voirTous = !!r.voir_tous;
+        this.siteImpose = r.site_impose ?? null;
+        if (this.siteImpose !== null) this.filtres.id_site = this.siteImpose;
+        this.chargement = false;
+      },
       error: () => { this.toastr.error('Erreur de chargement du rapport.'); this.chargement = false; },
     });
   }

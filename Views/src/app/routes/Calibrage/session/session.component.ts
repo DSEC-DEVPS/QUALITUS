@@ -13,11 +13,14 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { ToastrService } from 'ngx-toastr';
 import { CalibrageService } from '../calibrage.service';
+import { ConfirmationService } from '@shared/services/confirmation.service';
+import { finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
   selector: 'app-cal-session',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent,
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatCheckboxModule, MatTooltipModule, MatSlideToggleModule, MatButtonToggleModule,
     MatFormFieldModule, MatInputModule,
@@ -26,6 +29,8 @@ import { CalibrageService } from '../calibrage.service';
   styleUrl: './session.component.scss',
 })
 export class SessionComponent implements OnInit, OnDestroy {
+  chargement = true;
+  private readonly confirmation = inject(ConfirmationService);
   private readonly service = inject(CalibrageService);
   private readonly toastr = inject(ToastrService);
   private readonly route = inject(ActivatedRoute);
@@ -64,7 +69,8 @@ export class SessionComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void { this.stopTimer(); }
 
   charger(): void {
-    this.service.getTravail(this.id).subscribe({
+    this.chargement = true;
+    this.service.getTravail(this.id).pipe(finalize(() => (this.chargement = false))).subscribe({
       next: d => {
         this.role = d.role;
         this.session = d.session;
@@ -163,15 +169,15 @@ export class SessionComponent implements OnInit, OnDestroy {
       error: () => this.toastr.error('Erreur.'),
     });
   }
-  cloturerParticipation(): void {
-    if (!confirm('Clôturer votre participation ? Toutes vos transactions seront déclarées terminées et vous ne pourrez plus les modifier.')) return;
+  async cloturerParticipation(): Promise<void> {
+    if (!(await this.confirmation.confirmer({ titre: 'Clôturer votre participation', message: 'Clôturer votre participation ? Toutes vos transactions seront déclarées terminées et vous ne pourrez plus les modifier.', type: 'attention' }))) return;
     this.service.cloturerParticipation(this.id).subscribe({
       next: () => { this.toastr.success('Participation close.'); this.stopTimer(); this.charger(); },
       error: e => this.toastr.error(e?.error?.message || 'Erreur.'),
     });
   }
-  cloturerReference(): void {
-    if (!confirm('Clôturer votre évaluation de référence ?')) return;
+  async cloturerReference(): Promise<void> {
+    if (!(await this.confirmation.confirmer({ titre: 'Clôturer l\'évaluation de référence', message: 'Clôturer votre évaluation de référence ?', type: 'attention' }))) return;
     this.service.cloturerReference(this.id).subscribe({
       next: (r: any) => { this.toastr.success('Référence clôturée.'); this.charger(); },
       error: e => this.toastr.error(e?.error?.message || 'Erreur.'),
@@ -216,8 +222,40 @@ export class SessionComponent implements OnInit, OnDestroy {
     });
   }
 
-  reinitialiser(p: any): void {
-    if (!confirm(`Réinitialiser la participation de ${p.prenom} ${p.nom} ?`)) return;
+  // --- Reprise après coupure (réponses conservées) ---
+  reprise: { pid: number; chargement: boolean; minutes: number; proposees: number; duree: number; derniere: string | null } | null = null;
+  ouvrirReprise(p: any): void {
+    this.reprise = { pid: p.id, chargement: true, minutes: 0, proposees: 0, duree: 0, derniere: null };
+    this.service.propositionReprise(p.id).subscribe({
+      next: r => {
+        if (this.reprise?.pid !== p.id) return;
+        this.reprise = { pid: p.id, chargement: false, minutes: r.minutes_proposees, proposees: r.minutes_proposees,
+          duree: r.duree_minutes, derniere: r.derniere_activite };
+      },
+      error: e => { this.reprise = null; this.toastr.error(e?.error?.message || 'Reprise impossible.'); },
+    });
+  }
+  minutesValides(): boolean {
+    const m = Number(this.reprise?.minutes);
+    return !!this.reprise && Number.isInteger(m) && m >= 1 && m <= Math.max(1, this.reprise.duree);
+  }
+  async confirmerReprise(p: any): Promise<void> {
+    if (!this.reprise || !this.minutesValides()) return;
+    const minutes = Number(this.reprise.minutes);
+    if (!(await this.confirmation.confirmer({ titre: 'Reprendre la participation',
+      message: `Rouvrir la participation de ${p.prenom} ${p.nom} avec ${minutes} minute${minutes > 1 ? 's' : ''} ? Ses réponses sont conservées.`,
+      type: 'attention' }))) return;
+    this.service.reprendre(p.id, minutes).subscribe({
+      next: r => { this.toastr.success(r?.message || 'Participation rouverte.'); this.reprise = null; this.charger(); },
+      error: e => this.toastr.error(e?.error?.message || 'Reprise impossible.'),
+    });
+  }
+  etatParticipation(e: string): string {
+    return e === 'CLOSE' ? 'Clôturée' : e === 'EN_COURS' ? 'En cours' : 'Non commencée';
+  }
+
+  async reinitialiser(p: any): Promise<void> {
+    if (!(await this.confirmation.confirmer({ titre: 'Recommencer à zéro', message: `Recommencer la participation de ${p.prenom} ${p.nom} à zéro ? Toutes ses réponses seront effacées et le chrono repartira du début.`, type: 'danger' }))) return;
     this.service.reinitialiser(p.id).subscribe({
       next: () => { this.toastr.success('Participation réinitialisée.'); this.charger(); },
       error: e => this.toastr.error(e?.error?.message || 'Réinitialisation impossible.'),

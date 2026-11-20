@@ -9,14 +9,15 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, switchMap, finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { HabilitationService, UserLite, DroitItem } from '../habilitation.service';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
   selector: 'app-droits-utilisateur',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent,
     CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatButtonToggleModule, MatTooltipModule,
   ],
@@ -24,6 +25,7 @@ import { HabilitationService, UserLite, DroitItem } from '../habilitation.servic
   styleUrl: './droits-utilisateur.component.scss',
 })
 export class DroitsUtilisateurComponent implements OnInit {
+  chargement = false;
   private readonly service = inject(HabilitationService);
   private readonly toastr = inject(ToastrService);
   private readonly route = inject(ActivatedRoute);
@@ -48,7 +50,8 @@ export class DroitsUtilisateurComponent implements OnInit {
   }
 
   private chargerParId(id: number): void {
-    this.service.getDroitsUtilisateur(id).subscribe({
+    this.chargement = true;
+    this.service.getDroitsUtilisateur(id).pipe(finalize(() => (this.chargement = false))).subscribe({
       next: d => {
         this.selection = d.utilisateur;
         this.admin = d.admin;
@@ -67,9 +70,10 @@ export class DroitsUtilisateurComponent implements OnInit {
   chercher(q: string): void { this.terme = q; this.recherche$.next(q); }
 
   choisir(u: UserLite): void {
+    this.chargement = true;
     this.resultats = [];
     this.terme = `${u.prenom} ${u.nom}`;
-    this.service.getDroitsUtilisateur(u.id).subscribe({
+    this.service.getDroitsUtilisateur(u.id).pipe(finalize(() => (this.chargement = false))).subscribe({
       next: d => {
         this.selection = d.utilisateur;
         this.admin = d.admin;

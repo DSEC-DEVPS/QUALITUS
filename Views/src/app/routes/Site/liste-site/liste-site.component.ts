@@ -28,11 +28,12 @@ import {
   DialogLayoutDisplay,
   DisappearanceAnimation,
 } from '@costlydeveloper/ngx-awesome-popup';
-import { catchError, of, Subject, takeUntil, tap } from 'rxjs';
+import { catchError, of, Subject, takeUntil, tap, finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 @Component({
   selector: 'app-liste-site',
   standalone: true,
-  imports: [CanDirective, 
+  imports: [ChargementComponent, CanDirective,
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
@@ -54,6 +55,7 @@ import { catchError, of, Subject, takeUntil, tap } from 'rxjs';
   styleUrl: './liste-site.component.scss',
 })
 export class ListeSiteComponent implements OnInit {
+  chargement = true;
   displayedColums: string[] = ['id', 'nom', 'Etat', 'dateCreation', 'Actions'];
   dataSource!: MatTableDataSource<site>;
   private readonly userService = inject(UserService);
@@ -68,7 +70,8 @@ export class ListeSiteComponent implements OnInit {
   private readonly router = inject(Router);
 
   ngOnInit(): void {
-    this.userService.getAllSite().subscribe(user => {
+    this.chargement = true;
+    this.userService.getAllSite().pipe(finalize(() => (this.chargement = false))).subscribe(user => {
       this.downloadData = user;
       this.dataSource = new MatTableDataSource(user);
       this.dataSource.paginator = this.paginator;

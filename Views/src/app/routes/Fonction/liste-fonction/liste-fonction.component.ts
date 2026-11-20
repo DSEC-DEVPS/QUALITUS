@@ -27,11 +27,12 @@ import {
   DialogLayoutDisplay,
   DisappearanceAnimation,
 } from '@costlydeveloper/ngx-awesome-popup';
-import { catchError, of, Subject, takeUntil, tap } from 'rxjs';
+import { catchError, of, Subject, takeUntil, tap, finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 @Component({
   selector: 'app-liste-fonction',
   standalone: true,
-  imports: [CanDirective, 
+  imports: [ChargementComponent, CanDirective,
     MatButtonModule,
     MatTooltipModule,
     MatIconModule,
@@ -52,6 +53,7 @@ import { catchError, of, Subject, takeUntil, tap } from 'rxjs';
   styleUrl: './liste-fonction.component.scss',
 })
 export class ListeFonctionComponent implements OnInit {
+  chargement = true;
   private readonly userService = inject(UserService);
   private readonly toastSrv = inject(ToastrService);
   msg = '';
@@ -65,7 +67,8 @@ export class ListeFonctionComponent implements OnInit {
   @ViewChild(MatSort) sort!: MatSort;
   private readonly router = inject(Router);
   ngOnInit(): void {
-    this.userService.getAllFonction().subscribe(user => {
+    this.chargement = true;
+    this.userService.getAllFonction().pipe(finalize(() => (this.chargement = false))).subscribe(user => {
       this.dataSource = new MatTableDataSource(user);
       this.downloadData = user;
       this.dataSource.paginator = this.paginator;

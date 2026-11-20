@@ -7,3 +7,11 @@
   .prop { flex: 1 1 200px; }
   .actions { display: flex; gap: 12px; margin-top: 8px; }
 }
+
+/* Propositions rejetées (motif visible par le proposeur) */
+.rejetees { margin-top: 16px; padding: 10px 12px; border-left: 3px solid #c62828; background: #fff5f5; border-radius: 4px; }
+.titre-rejetees { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font-weight: 600; color: #c62828; }
+.rejet { display: flex; flex-direction: column; gap: 2px; padding: 6px 0; border-top: 1px solid #f3d6d6; }
+.rejet:first-of-type { border-top: none; }
+.rejet .motif { color: #333; }
+.rejet small { color: #757575; }

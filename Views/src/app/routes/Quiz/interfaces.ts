@@ -13,6 +13,8 @@ export interface Question {
   id_Quiz: number;
   type: string; // 'VRAI_FAUX' (extensible)
   libelle: string;
+  /** Barème de la question (1..100, 5 par défaut). */
+  points?: number;
   ordre: number;
   options?: OptionQ[];
 }
@@ -20,6 +22,11 @@ export interface Question {
 export interface Quiz {
   id: number;
   titre: string;
+  /** Côté propriétaire : tentatives / participants (tous sites) et disponibilité,
+   *  pour prévenir avant de modifier les questions d'un quiz déjà passé. */
+  nb_tentatives_total?: number;
+  nb_participants_total?: number;
+  disponible?: number;
   code_pin?: string;
   type?: string | null; // categorie du quiz (Formation / Evaluation / Certification)
   duree?: number | null; // en minutes
@@ -42,7 +49,14 @@ export interface Quiz {
   note_passage: number; // "Seuil de reussite"
   retest_auto: number; // 0 | 1 (conserve en base, hors formulaire)
   nb_retest_max: number;
+  /** État : OUVERT | CLOTURER (participations ouvertes / closes) */
   Etat?: string;
+  /** Statut : ACTIF | INACTIF (quiz en service / mis de côté) */
+  statut?: string;
+  /** 1 = admin / créateur / site propriétaire (questions, statut, tous paramètres) */
+  cote_proprietaire?: number;
+  /** Site de l'utilisateur connecté (Diffusion d'un utilisateur autorisé) */
+  mon_site_id?: number | null;
   dateCreation?: string;
   dateModification?: string;
   nb_questions?: number;
@@ -54,8 +68,11 @@ export interface QuizIp {
   id: number;
   id_Quiz: number;
   adresse_ip: string;
+  /** Site dont les participants sont autorisés sur cette IP. */
+  id_Site?: number | null;
+  site?: string | null;
   libelle?: string | null;
-  agents?: string | null; // nom(s) de l'agent lie(s) a cette IP (via demande)
+  agents?: string | null; // nom(s) de l'agent lie(s) a cette IP (via demande), du même site
   dateCreation?: string;
 }
 
@@ -69,6 +86,7 @@ export interface QuizIpDemande {
   nom: string;
   prenom: string;
   login: string;
+  site?: string | null;
 }
 
 export interface FicheRecente {
@@ -84,6 +102,25 @@ export interface SiteOption {
 }
 
 // Quiz PUBLIC visible sans code PIN (selon le site de l'utilisateur)
+/** Quiz dont on peut reprendre les questions (mon site, actif). */
+export interface QuizSource {
+  id: number;
+  titre: string;
+  Etat?: string;
+  dateCreation?: string;
+  nb_questions: number;
+}
+
+/** Question d'un quiz source ; deja_presente = libellé déjà dans le quiz cible. */
+export interface QuestionSource {
+  id: number;
+  type: string;
+  libelle: string;
+  points: number;
+  options: { libelle: string; est_correcte: number }[];
+  deja_presente: number;
+}
+
 export interface QuizPublic {
   id: number;
   titre: string;
@@ -95,6 +132,8 @@ export interface QuizPublic {
   dateCreation?: string;
   // Temps deja ecoule (serveur) si une tentative est en cours ; null sinon
   temps_ecoule_secondes?: number | null;
+  /** Quiz en cours : PUBLIC ou PRIVATE (reprise sans PIN). */
+  acces?: string;
 }
 
 /* ----- Phase 2 : participation ----- */
@@ -140,6 +179,8 @@ export interface QuizAPasser {
   questions: QuestionAPasser[];
   deja_tente?: boolean;
   peut_participer?: boolean;
+  /** Statut du dernier essai (TEMPS_ECOULE : durée épuisée sans soumission). */
+  derniere_tentative_statut?: string | null;
 }
 
 export interface RetestEchec {
@@ -171,6 +212,8 @@ export interface ResultatSoumission {
   score: number;
   nb_bonnes: number;
   nb_total: number;
+  nb_points?: number;
+  nb_points_total?: number;
   note_passage: number;
   reussi: boolean;
   num_essai: number;
@@ -185,6 +228,8 @@ export interface ScoreHistorique {
   score: number;
   nb_bonnes: number;
   nb_total: number;
+  nb_points?: number | null;
+  nb_points_total?: number | null;
   reussi: number;
   num_essai: number;
   statut: string;
@@ -201,6 +246,9 @@ export interface QuizNotification {
   lu: number;
   dateCreation: string;
   quiz_etat?: string;
+  quiz_titre?: string;
+  /** PUBLIC | PRIVATE */
+  quiz_acces?: string;
 }
 
 export interface Badge {
@@ -224,6 +272,10 @@ export interface RapportQuiz {
   nb_reussis: number;
   score_moyen: number | null;
   taux_reussite: number | null;
+  Etat?: string;
+  statut?: string;
+  /** 1 : utilisateur invité, statistiques limitées aux agents de son site. */
+  limite_site?: number;
 }
 
 export interface RapportQuestion {
@@ -264,6 +316,24 @@ export interface RapportParticipant {
   num_essai: number;
   statut: string;
   temps_secondes: number | null;
+  nb_points?: number | null;
+  nb_points_total?: number | null;
+  /** Nombre d'essais de l'agent sur ce quiz. */
+  nb_essais?: number;
+  /** Demande de réinitialisation en attente (id), sinon null. */
+  reinit_id?: number | null;
+  /** 1 : 1 seul essai, pas de retest ni de demande en cours, quiz disponible. */
+  reinitialisable?: number;
+}
+
+/** Demande de réinitialisation en attente de MA confirmation (agent). */
+export interface ReinitialisationDemande {
+  id: number;
+  id_Quiz: number;
+  quiz_titre: string;
+  score_initial: number | null;
+  dateDemande: string;
+  demandeur: string | null;
 }
 
 export interface TentativeDetail {
@@ -281,5 +351,7 @@ export interface TentativeDetail {
   date_debut?: string | null;
   date_fin?: string | null;
   temps_secondes: number | null;
-  reponses: { id_Question: number; libelle: string; est_correcte: number }[];
+  nb_points?: number | null;
+  nb_points_total?: number | null;
+  reponses: { id_Question: number; libelle: string; points?: number; est_correcte: number }[];
 }

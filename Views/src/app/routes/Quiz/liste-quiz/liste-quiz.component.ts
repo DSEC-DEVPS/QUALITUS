@@ -18,15 +18,20 @@ import {
   DialogLayoutDisplay,
   DisappearanceAnimation,
 } from '@costlydeveloper/ngx-awesome-popup';
-import * as XLSX from 'xlsx';
 import { QuizService } from '@shared/services/quiz.service';
+import { Periode, libellePeriode, suffixePeriode } from '@shared/periode';
+import { FiltrePeriodeComponent } from '../filtre-periode/filtre-periode.component';
+import { ecrireClasseur } from '../export-quiz';
 import { Quiz } from '../interfaces';
 
 import { CanDirective } from '@core/authorization/can.directive';
+import { finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 @Component({
   selector: 'app-liste-quiz',
   standalone: true,
-  imports: [CanDirective, 
+  imports: [ChargementComponent, CanDirective,
+    FiltrePeriodeComponent,
     MatFormFieldModule,
     MatInputModule,
     MatTableModule,
@@ -43,21 +48,27 @@ import { CanDirective } from '@core/authorization/can.directive';
   styleUrl: './liste-quiz.component.scss',
 })
 export class ListeQuizComponent implements OnInit {
+  chargement = true;
   private readonly quizSrv = inject(QuizService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastrService);
 
   dataSource = new MatTableDataSource<Quiz>([]);
-  displayedColumns = ['id', 'titre', 'code_pin', 'fiche_titre', 'nb_questions', 'note_passage', 'Etat', 'actions'];
+  displayedColumns = ['id', 'titre', 'code_pin', 'fiche_titre', 'nb_questions', 'note_passage', 'Etat', 'statut', 'actions'];
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
+  /** Période sur la date de création du quiz (filtre serveur). */
+  periode: Periode = { du: null, au: null };
+  /** Recherche texte en vigueur (reprise dans l'export). */
+  recherche = '';
 
   ngOnInit(): void {
     this.charger();
   }
 
   charger() {
-    this.quizSrv.getAll().subscribe({
+    this.chargement = true;
+    this.quizSrv.getAll(this.periode).pipe(finalize(() => (this.chargement = false))).subscribe({
       next: data => {
         this.dataSource.data = data;
         this.dataSource.paginator = this.paginator;
@@ -69,10 +80,17 @@ export class ListeQuizComponent implements OnInit {
 
   applyFilter(event: Event) {
     const filterValue = (event.target as HTMLInputElement).value;
+    this.recherche = filterValue.trim();
     this.dataSource.filter = filterValue.trim().toLowerCase();
     if (this.dataSource.paginator) {
       this.dataSource.paginator.firstPage();
     }
+  }
+
+  changerPeriode(p: Periode) {
+    this.periode = p;
+    this.paginator?.firstPage();
+    this.charger();
   }
 
   nouveau() {
@@ -99,6 +117,20 @@ export class ListeQuizComponent implements OnInit {
     this.router.navigate(['/mon-espace/quiz/detail', q.id]);
   }
 
+  /** Active / désactive un quiz (site propriétaire) ; met la ligne à jour sans recharger. */
+  basculerStatut(q: Quiz) {
+    const statut = q.statut === 'INACTIF' ? 'ACTIF' : 'INACTIF';
+    this.quizSrv.changerStatut(q.id, statut).subscribe({
+      next: r => {
+        q.statut = r.statut;
+        this.dataSource.data = [...this.dataSource.data];
+        this.toast.success(r.message);
+      },
+      // Erreurs : message du serveur affiché par l'intercepteur global.
+      error: () => {},
+    });
+  }
+
   supprimer(q: Quiz) {
     const box = new ConfirmBoxInitializer();
     box.setTitle('Suppression !');
@@ -123,8 +155,17 @@ export class ListeQuizComponent implements OnInit {
     });
   }
 
+  /**
+   * Exporte le résultat en vigueur : période + recherche appliquées, dans
+   * l'ordre du tri affiché, toutes pages confondues.
+   */
   exporter() {
-    const data = this.dataSource.data.map(q => ({
+    const visibles = this.dataSource.sortData(this.dataSource.filteredData.slice(), this.sort);
+    if (!visibles.length) {
+      this.toast.info('Aucune donnée à exporter');
+      return;
+    }
+    const lignes = visibles.map(q => ({
       Id: q.id,
       Titre: q.titre,
       'Code PIN': q.code_pin || '',
@@ -133,11 +174,20 @@ export class ListeQuizComponent implements OnInit {
       'Nb questions': q.nb_questions ?? 0,
       'Note de passage (%)': q.note_passage,
       'Retest auto': q.retest_auto ? 'Oui' : 'Non',
-      Etat: q.Etat || '',
+      Etat: q.Etat === 'CLOTURER' ? 'Clôturé' : 'Ouvert',
+      Statut: q.statut === 'INACTIF' ? 'Inactif' : 'Actif',
+      'Date de création': q.dateCreation ? new Date(q.dateCreation).toLocaleDateString('fr-FR') : '',
     }));
-    const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(data);
-    const wb: XLSX.WorkBook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Quiz');
-    XLSX.writeFile(wb, `Liste_Quiz_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    ecrireClasseur(`Liste_Quiz_${suffixePeriode(this.periode)}.xlsx`, [
+      {
+        nom: 'Quiz',
+        entete: [
+          `Période (date de création) : ${libellePeriode(this.periode)}`,
+          `Recherche : ${this.recherche || '—'}`,
+          `${lignes.length} quiz`,
+        ],
+        lignes,
+      },
+    ]);
   }
 }

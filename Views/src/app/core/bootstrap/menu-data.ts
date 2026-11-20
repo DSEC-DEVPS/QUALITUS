@@ -18,7 +18,7 @@ export const MENU: Menu[] = [
     route: '',
     name: 'Évaluation',
     type: 'sub',
-    icon: 'fact_check',
+    icon: 'assignment_turned_in',
     children: [
       { route: 'mon-espace/evaluation/evaluations', name: 'Évaluations', type: 'link' },
       { route: 'mon-espace/evaluation/creation/unitaire', name: 'Créer une évaluation', type: 'link' },
@@ -54,6 +54,14 @@ export const MENU: Menu[] = [
     icon: 'quiz',
     children: [
       { route: 'mon-espace/quiz/gestion', name: 'Gestion des quiz', type: 'link' },
+    ],
+  },
+  {
+    route: '',
+    name: 'Quiz Baseco',
+    type: 'sub',
+    icon: 'live_help',
+    children: [
       { route: 'mon-espace/quiz/quiz-en-echecs', name: 'Quiz en échec', type: 'link' },
       { route: 'mon-espace/quiz/Quiz-en-reset', name: 'Quiz en reset', type: 'link' },
     ],

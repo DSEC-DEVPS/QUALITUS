@@ -10,20 +10,26 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ToastrService } from 'ngx-toastr';
 import { CalibrageService } from '../calibrage.service';
+import { ConfirmationService } from '@shared/services/confirmation.service';
+import { finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
   selector: 'app-cal-resultats',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent,
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatCheckboxModule, MatTooltipModule, MatExpansionModule, MatFormFieldModule, MatInputModule,
+    MatCheckboxModule, MatTooltipModule, MatExpansionModule, MatFormFieldModule, MatInputModule, MatSlideToggleModule,
   ],
   templateUrl: './resultats.component.html',
   styleUrl: './resultats.component.scss',
 })
 export class ResultatsComponent implements OnInit {
+  chargement = true;
+  private readonly confirmation = inject(ConfirmationService);
   private readonly service = inject(CalibrageService);
   private readonly toastr = inject(ToastrService);
   private readonly route = inject(ActivatedRoute);
@@ -67,7 +73,8 @@ export class ResultatsComponent implements OnInit {
   }
 
   charger(): void {
-    this.service.getResultats(this.id).subscribe({
+    this.chargement = true;
+    this.service.getResultats(this.id).pipe(finalize(() => (this.chargement = false))).subscribe({
       next: d => {
         this.role = d.role; this.provisoire = d.provisoire; this.statut = d.statut;
         this.nom = d.nom || ''; this.resultatPublie = !!d.resultat_publie; this.visibilite = !!d.visibilite;
@@ -95,6 +102,16 @@ export class ResultatsComponent implements OnInit {
     return this.focusTx ? this.confrontation.filter(t => t.transaction.id === this.focusTx) : this.confrontation;
   }
 
+  // Interrupteur de visibilité (même service que l'écran de session)
+  basculerVisibilite(): void {
+    const cible = !this.visibilite;
+    this.visibilite = cible; // reflet immédiat, annulé en cas d'échec
+    this.service.setVisibilite(this.id, cible).subscribe({
+      next: (r: any) => this.toastr.success(r.message),
+      error: () => { this.visibilite = !cible; this.toastr.error('Erreur.'); },
+    });
+  }
+
   // --- Révision (jauge) ---
   toggleCote(t: any, err: any, cote: 'REFERENCE' | 'PARTICIPANT'): void {
     if (!this.modifiable) return;
@@ -109,10 +126,10 @@ export class ResultatsComponent implements OnInit {
     });
   }
   enregistrerAppreciation(t: any, err: any): void {
-    if (!this.modifiable) return;
+    if (!this.modifiable || !this.selPid || !err.participant) return;
     this.service.setAppreciation(this.id, {
-      id_transaction: t.transaction.id, id_erreur_origine: err.id_erreur_origine,
-      appreciation: err.reference.appreciation_jauge || '',
+      id_transaction: t.transaction.id, id_participant: this.selPid!, id_erreur_origine: err.id_erreur_origine,
+      appreciation: err.participant?.appreciation_jauge || '',
     }).subscribe({ next: () => this.toastr.success('Appréciation enregistrée.'), error: () => this.toastr.error('Erreur.') });
   }
   // Le jauge ne modifie que SON propre commentaire (côté référence)
@@ -138,15 +155,15 @@ export class ResultatsComponent implements OnInit {
       error: e => this.toastr.error(e?.error?.message || 'Erreur.'),
     });
   }
-  valider(): void {
-    if (!confirm('Valider le résultat ? Il devient visible par les participants (si la visibilité est activée). Vous pourrez encore l’ajuster.')) return;
+  async valider(): Promise<void> {
+    if (!(await this.confirmation.confirmer({ titre: 'Valider le résultat', message: 'Valider le résultat ? Il devient visible par les participants (si la visibilité est activée). Vous pourrez encore l’ajuster.', type: 'attention' }))) return;
     this.service.valider(this.id).subscribe({
       next: (r: any) => { this.toastr.success(r?.message || 'Résultat validé.'); this.charger(); },
       error: e => this.toastr.error(e?.error?.message || 'Validation impossible.'),
     });
   }
-  figer(): void {
-    if (!confirm('Figer le résultat ? Cette action est définitive : plus aucune modification ne sera possible.')) return;
+  async figer(): Promise<void> {
+    if (!(await this.confirmation.confirmer({ titre: 'Figer le résultat', message: 'Figer le résultat ? Cette action est définitive : plus aucune modification ne sera possible.', type: 'danger' }))) return;
     this.service.figer(this.id).subscribe({
       next: (r: any) => { this.toastr.success(r?.message || 'Résultat figé.'); this.charger(); },
       error: e => this.toastr.error(e?.error?.message || 'Figement impossible.'),
@@ -155,15 +172,50 @@ export class ResultatsComponent implements OnInit {
   // Relancer un participant même depuis l'écran des résultats (session validée
   // ou figée) : sa participation est remise à zéro et la session ré-ouverte pour
   // qu'il puisse recommencer (ex. coupure réseau ayant clos sa session).
-  relancer(p: any, ev: Event): void {
+  // --- Reprise après coupure (réponses conservées) — mêmes actions que l'écran de session ---
+  reprise: { pid: number; chargement: boolean; minutes: number; proposees: number; duree: number; derniere: string | null } | null = null;
+  ouvrirReprise(p: any, ev: Event): void {
     ev.stopPropagation();
-    if (!confirm(`Relancer la session de ${p.prenom} ${p.nom} ? La session sera ré-ouverte pour permettre la reprise.`)) return;
+    this.reprise = { pid: p.id, chargement: true, minutes: 0, proposees: 0, duree: 0, derniere: null };
+    this.service.propositionReprise(p.id).subscribe({
+      next: r => {
+        if (this.reprise?.pid !== p.id) return;
+        this.reprise = { pid: p.id, chargement: false, minutes: r.minutes_proposees, proposees: r.minutes_proposees,
+          duree: r.duree_minutes, derniere: r.derniere_activite };
+      },
+      error: e => { this.reprise = null; this.toastr.error(e?.error?.message || 'Reprise impossible.'); },
+    });
+  }
+  minutesValides(): boolean {
+    const m = Number(this.reprise?.minutes);
+    return !!this.reprise && Number.isInteger(m) && m >= 1 && m <= Math.max(1, this.reprise.duree);
+  }
+  async confirmerReprise(p: any): Promise<void> {
+    if (!this.reprise || !this.minutesValides()) return;
+    const minutes = Number(this.reprise.minutes);
+    if (!(await this.confirmation.confirmer({ titre: 'Reprendre la participation',
+      message: `Rouvrir la participation de ${p.prenom} ${p.nom} avec ${minutes} minute${minutes > 1 ? 's' : ''} ? Ses réponses sont conservées et la session sera ré-ouverte.`,
+      type: 'attention' }))) return;
+    this.service.reprendre(p.id, minutes).subscribe({
+      next: (r: any) => {
+        this.toastr.success(r?.message || 'Participation rouverte.'); this.reprise = null;
+        this.router.navigate(['/mon-espace/calibrage/session', this.id]);
+      },
+      error: e => this.toastr.error(e?.error?.message || 'Reprise impossible.'),
+    });
+  }
+  // Recommencer à zéro : efface les réponses (confirmation explicite)
+  async recommencer(p: any, ev: Event): Promise<void> {
+    ev.stopPropagation();
+    if (!(await this.confirmation.confirmer({ titre: 'Recommencer à zéro',
+      message: `Recommencer la participation de ${p.prenom} ${p.nom} à zéro ? Toutes ses réponses seront effacées, le chrono repartira du début et la session sera ré-ouverte.`,
+      type: 'danger' }))) return;
     this.service.reinitialiser(p.id).subscribe({
       next: (r: any) => {
         this.toastr.success(r?.message || 'Participation réinitialisée.');
         this.router.navigate(['/mon-espace/calibrage/session', this.id]);
       },
-      error: e => this.toastr.error(e?.error?.message || 'Relance impossible.'),
+      error: e => this.toastr.error(e?.error?.message || 'Réinitialisation impossible.'),
     });
   }
 

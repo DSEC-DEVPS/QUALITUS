@@ -18,7 +18,8 @@ export interface AgentPole {
   nb_evaluations: number;
   evaluations: AgentPoleEval[];
 }
-export interface RapportPoleResult { voir_tous: boolean; agents: AgentPole[]; }
+/** site_impose : site auquel la vue est limitée (null = tous les sites). */
+export interface RapportPoleResult { voir_tous: boolean; site_impose?: number | null; agents: AgentPole[]; }
 export interface UserInfo {
   id: number; nom: string; prenom: string; login?: string; email?: string; telephone?: any;
   site?: string; programme?: string;

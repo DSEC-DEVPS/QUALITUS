@@ -72,6 +72,36 @@
     </mat-card>
   }
 
+  <!-- Quiz commencés et non soumis (privés et publics) : reprise sans code PIN -->
+  @if (enCoursListe.length) {
+    <h6 class="liste-titre">Quiz en cours</h6>
+    @for (q of enCoursListe; track q.id) {
+      <div class="quiz-row en-cours">
+        <div class="quiz-corps">
+          <div class="quiz-titre">{{ q.titre }}</div>
+          <div class="quiz-meta">
+            <mat-chip-set>
+              <mat-chip>{{ q.acces === 'PUBLIC' ? 'Public' : 'Privé' }}</mat-chip>
+              <mat-chip>{{ q.nb_questions }} question(s)</mat-chip>
+              <mat-chip>Seuil {{ q.note_passage }}%</mat-chip>
+              @if (avecChrono(q)) {
+                <mat-chip class="chrono-chip" [class.urgent]="tempsRestant(q) <= 60">
+                  <mat-icon matChipAvatar>timer</mat-icon>
+                  Temps restant : {{ tempsRestantLabel(q) }}
+                </mat-chip>
+              } @else {
+                <mat-chip class="chrono-chip">En cours</mat-chip>
+              }
+            </mat-chip-set>
+          </div>
+        </div>
+        <button mat-flat-button color="primary" (click)="ouvrir(q)">
+          <mat-icon>play_arrow</mat-icon> Reprendre
+        </button>
+      </div>
+    }
+  }
+
   <!-- Liste des quiz disponibles -->
   <h6 class="liste-titre">Liste des quiz publics disponibles</h6>
 

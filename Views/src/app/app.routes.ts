@@ -29,6 +29,12 @@ export const routes: Routes = [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: DashboardComponent },
       {
+        path: 'notifications',
+        canMatch: [canMatchPermission('notification.lire')],
+        loadComponent: () =>
+          import('./routes/Notifications/mes-notifications.component').then(m => m.MesNotificationsComponent),
+      },
+      {
         path: 'Utilisateurs',
         canMatch: [canMatchPermission('utilisateur.lire')],
         loadChildren: () => import('./routes/Utilisateurs/Utilisateurs.routes').then(m => m.routes),
@@ -57,7 +63,7 @@ export const routes: Routes = [
       },
       {
         path: 'Fiche',
-        canMatch: [canMatchPermission('fiche.lire')],
+        canMatch: [canMatchPermission(['fiche.lire', 'chargement.verifier'])],
         loadChildren: () => import('./routes/Fiche/fiche.routes').then(m => m.routes),
       },
       {
@@ -76,7 +82,8 @@ export const routes: Routes = [
       },
       {
         path: 'quiz',
-        canMatch: [canMatchPermission('quiz.lire')],
+        // Mêmes droits que le menu Quiz : consulter, participer (tout profil) ou Baseco.
+        canMatch: [canMatchPermission(['quiz.lire', 'quiz.participer', 'quiz.baseco'])],
         loadChildren: () => import('./routes/Quiz/quiz.routes').then(m => m.routes),
       },
       {
@@ -95,7 +102,7 @@ export const routes: Routes = [
       },
       {
         path: 'habilitations',
-        canMatch: [canMatchPermission('habilitation.lire')],
+        canMatch: [canMatchPermission(['habilitation.lire', 'notification.supprimer'])],
         loadChildren: () => import('./routes/Habilitations/habilitations.routes').then(m => m.routes),
       },
       {

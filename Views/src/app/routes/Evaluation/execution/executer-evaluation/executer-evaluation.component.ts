@@ -22,11 +22,13 @@ import { CoachingSectionComponent } from '../coaching-section/coaching-section.c
 import { PlanActionSectionComponent } from '../plan-action-section/plan-action-section.component';
 import { SupplementairesSectionComponent } from '../supplementaires-section/supplementaires-section.component';
 import { LettreSectionComponent } from '../lettre-section/lettre-section.component';
+import { ConfirmationService } from '@shared/services/confirmation.service';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
   selector: 'app-executer-evaluation',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent,
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatChipsModule,
     MatCheckboxModule, MatFormFieldModule, MatInputModule, MatRadioModule, MatExpansionModule, MatTooltipModule,
     BiSectionComponent,
@@ -39,6 +41,7 @@ import { LettreSectionComponent } from '../lettre-section/lettre-section.compone
   styleUrl: './executer-evaluation.component.scss',
 })
 export class ExecuterEvaluationComponent implements OnInit {
+  private readonly confirmation = inject(ConfirmationService);
   private readonly service = inject(EvalExecutionService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -63,6 +66,11 @@ export class ExecuterEvaluationComponent implements OnInit {
       this.erreurDepliee = null;
       this.charger();
     });
+  }
+
+  /** Saisie verrouillée : évaluation terminée, ou l'utilisateur n'en est pas l'évaluateur. */
+  get figee(): boolean {
+    return this.terminee || !this.detail?.viewer?.peut_executer;
   }
 
   get terminee(): boolean {
@@ -131,10 +139,10 @@ export class ExecuterEvaluationComponent implements OnInit {
     });
   }
 
-  terminer(): void {
+  async terminer(): Promise<void> {
     if (!this.detail) return;
     if (!this.detail.evaluation.resolution) { this.toastr.warning('La résolution est obligatoire.'); return; }
-    if (!confirm('Terminer l’évaluation ? Elle ne sera plus modifiable.')) return;
+    if (!(await this.confirmation.confirmer({ titre: 'Terminer l\'évaluation', message: 'Terminer l’évaluation ? Elle ne sera plus modifiable.', type: 'attention' }))) return;
     this.service.terminer(this.id).subscribe({
       next: r => { this.toastr.success(`Évaluation terminée : ${r.conclusion === 'SUCCES' ? 'Succès' : 'Échec'}.`); this.charger(); },
       error: err => this.toastr.error(err?.error?.message || 'Erreur lors de la clôture.'),

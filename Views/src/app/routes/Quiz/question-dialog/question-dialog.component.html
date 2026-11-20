@@ -16,6 +16,16 @@
         <textarea matInput [(ngModel)]="libelle" rows="3" required></textarea>
       </mat-form-field>
 
+      <mat-form-field appearance="fill" class="champ-points">
+        <mat-label>Points</mat-label>
+        <input matInput type="number" min="1" max="100" step="1" [(ngModel)]="points" required />
+        @if (!pointsValides) {
+          <mat-hint class="hint-erreur">Entier de 1 à 100</mat-hint>
+        } @else {
+          <mat-hint>De 1 à 100</mat-hint>
+        }
+      </mat-form-field>
+
       <label class="d-block m-b-8">
         <strong>Réponses</strong>
         @if (estUnique) {

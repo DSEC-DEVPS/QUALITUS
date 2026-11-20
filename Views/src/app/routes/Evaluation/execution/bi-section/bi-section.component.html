@@ -41,4 +41,16 @@
       <button mat-raised-button color="primary" (click)="enregistrer()"><mat-icon>save</mat-icon> Enregistrer l’analyse</button>
     }
   }
+    @if (rejetees.length) {
+      <div class="rejetees">
+        <p class="titre-rejetees"><mat-icon>block</mat-icon> Propositions rejetées</p>
+        @for (r of rejetees; track $index) {
+          <div class="rejet">
+            <strong>{{ r.niveau }}ᵉ pourquoi — « {{ r.libelle }} »</strong>
+            <span class="motif">Motif : {{ r.motif_rejet }}</span>
+            <small>{{ r.propose_par_nom ? 'Proposée par ' + r.propose_par_nom + ' — ' : '' }}rejetée le {{ r.dateDecision | date: 'dd/MM/yyyy HH:mm' }}</small>
+          </div>
+        }
+      </div>
+    }
 </div>

@@ -10,6 +10,10 @@
 // R_ADMI est traité comme super-utilisateur (toutes permissions).
 //
 // Usage : router.post("/x", auth, permission("EVALUATION","CREER"), ctrl.x)
+// Plusieurs actions possibles (il suffit d'en détenir une) :
+//         permission("QUIZ", ["PARTICIPER","LIRE"])
+// Plusieurs modules possibles (codes complets, il suffit d'en détenir un) :
+//         permission(["reporting.lire","chargement.verifier"])
 // =====================================================================
 const db = require("../config/db");
 
@@ -54,11 +58,14 @@ const permissionsEffectives = async (userId) => {
 };
 
 const permission = (module, action) => async (req, res, next) => {
-  const code = (module + "." + action).toLowerCase();
+  const codes = Array.isArray(module) && action === undefined
+    ? module.map((c) => String(c).toLowerCase())
+    : [].concat(action).map((a) => (module + "." + a).toLowerCase());
+  const code = codes.join(" ou ");
   const userId = req.auth && req.auth.userId;
   try {
     const { role, set } = await permissionsEffectives(userId);
-    const autorise = role === "R_ADMI" || set.has(code);
+    const autorise = role === "R_ADMI" || codes.some((c) => set.has(c));
     if (autorise) return next();
 
     const mode = await getMode();

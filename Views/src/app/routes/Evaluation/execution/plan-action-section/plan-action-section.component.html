@@ -10,10 +10,9 @@
 
   @if (afficherForm && !lectureSeule) {
     <div class="form">
-      <mat-form-field appearance="outline"><mat-label>Action</mat-label>
-        <mat-select [(ngModel)]="nouvelle.id_action" name="act">
-          @for (a of actions; track a.id) { <mat-option [value]="a.id">{{ a.libelle }}</mat-option> }
-        </mat-select>
+      <mat-form-field appearance="outline" class="plein"><mat-label>Action</mat-label>
+        <textarea matInput rows="2" [(ngModel)]="nouvelle.action" name="act" maxlength="2000" required
+                  placeholder="Décrivez l'action à mener"></textarea>
       </mat-form-field>
       <mat-form-field appearance="outline"><mat-label>Porteur</mat-label>
         <input matInput [matAutocomplete]="autoPorteur" [(ngModel)]="porteurRecherche" name="por" placeholder="Nom ou prénom…" />
@@ -44,19 +43,19 @@
         </mat-select>
       </mat-form-field>
       <mat-form-field appearance="outline"><mat-label>KPI</mat-label>
-        <mat-select [(ngModel)]="nouvelle.id_kpi" name="kpi">
-          @for (k of kpis; track k.id) { <mat-option [value]="k.id">{{ k.libelle }}</mat-option> }
-        </mat-select>
+        <input matInput [(ngModel)]="nouvelle.kpi" name="kpi" maxlength="255" placeholder="Indicateur suivi (facultatif)" />
       </mat-form-field>
       <mat-form-field appearance="outline" class="plein"><mat-label>Commentaire</mat-label>
         <input matInput [(ngModel)]="nouvelle.commentaire" name="com" /></mat-form-field>
       <mat-form-field appearance="outline" class="plein"><mat-label>Synthèse (à la clôture / statut Réalisé)</mat-label>
         <textarea matInput rows="2" [(ngModel)]="nouvelle.synthese" name="synth"></textarea></mat-form-field>
-      <button mat-raised-button color="primary" (click)="ajouter()">Enregistrer</button>
+      <button mat-raised-button color="primary" (click)="ajouter()" [disabled]="!(nouvelle.action || '').trim()">Enregistrer</button>
     </div>
   }
 
-  @if (lignes.length === 0) {
+  @if (chargement && lignes.length === 0) {
+    <app-chargement />
+  } @else if (lignes.length === 0) {
     <p class="vide">Aucune action pour le moment.</p>
   } @else {
     <table mat-table [dataSource]="lignes" class="table" [class.lecture]="lectureSeule">

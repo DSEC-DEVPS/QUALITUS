@@ -24,6 +24,8 @@ import {
   QuestionSondageDialogComponent,
   QuestionDialogData,
 } from '../question-dialog/question-sondage-dialog.component';
+import { finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 interface PageGroupe {
   page: number;
@@ -33,7 +35,7 @@ interface PageGroupe {
 @Component({
   selector: 'app-editeur-sondage',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent,
     ReactiveFormsModule,
     MatCardModule,
     MatButtonModule,
@@ -49,6 +51,7 @@ interface PageGroupe {
   styleUrl: './editeur-sondage.component.scss',
 })
 export class EditeurSondageComponent implements OnInit {
+  chargement = false;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
@@ -74,6 +77,7 @@ export class EditeurSondageComponent implements OnInit {
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
       this.sondageId = Number(idParam);
+      this.chargement = true;
       this.charger();
     }
   }
@@ -82,7 +86,7 @@ export class EditeurSondageComponent implements OnInit {
     if (!this.sondageId) {
       return;
     }
-    this.srv.getOne(this.sondageId).subscribe({
+    this.srv.getOne(this.sondageId).pipe(finalize(() => (this.chargement = false))).subscribe({
       next: s => {
         this.sondage = s;
         this.questions = s.questions || [];

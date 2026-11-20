@@ -110,3 +110,12 @@ mat-card-header {
   background-color: #ff8e36;
   justify-content: space-between;
 }
+
+/* Exports Évaluation : site imposé (hors vision globale) */
+.site-impose {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: #555;
+}

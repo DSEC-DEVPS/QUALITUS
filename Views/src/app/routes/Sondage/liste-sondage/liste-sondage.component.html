@@ -9,7 +9,8 @@
       </div>
 
       <div class="mat-elevation-z1" style="overflow-x: auto">
-        <table mat-table [dataSource]="sondages" class="w-100">
+        @if (chargement) { <app-chargement /> }
+        <table [style.display]="chargement ? 'none' : null" mat-table [dataSource]="pag.page" class="w-100">
           <ng-container matColumnDef="id">
             <th mat-header-cell *matHeaderCellDef>#</th>
             <td mat-cell *matCellDef="let s">{{ s.id }}</td>
@@ -73,6 +74,10 @@
             </td>
           </tr>
         </table>
+        @if (pag.length) {
+          <mat-paginator [length]="pag.length" [pageIndex]="pag.pageIndex" [pageSize]="pag.pageSize"
+                         [pageSizeOptions]="pag.tailles" showFirstLastButtons (page)="pag.changer($event)" />
+        }
       </div>
     </mat-card-content>
   </mat-card>

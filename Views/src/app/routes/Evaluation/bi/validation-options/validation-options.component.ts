@@ -10,6 +10,7 @@ import { forkJoin } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { EvalBiService } from '../../eval-bi.service';
 import { EvalCoachingService } from '../../eval-coaching.service';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 interface OptionUnifiee {
   source: 'BI' | 'COACHING';
@@ -26,7 +27,7 @@ interface OptionUnifiee {
 @Component({
   selector: 'app-validation-options',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule],
+  imports: [ChargementComponent, CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule],
   templateUrl: './validation-options.component.html',
   styleUrl: './validation-options.component.scss',
 })

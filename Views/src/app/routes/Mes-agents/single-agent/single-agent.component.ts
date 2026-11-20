@@ -15,7 +15,8 @@ import {
   ReactiveFormsModule,
 } from '@angular/forms';
 
-import { Subscription } from 'rxjs';
+import { Subject, Subscription, catchError, of, switchMap, tap } from 'rxjs';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 import { MatTabsModule } from '@angular/material/tabs';
 import {
@@ -33,6 +34,7 @@ import { MatSort } from '@angular/material/sort';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 
 import { MatFormFieldModule } from '@angular/material/form-field';
 
@@ -56,6 +58,7 @@ import {
 } from '@core';
 
 import { UserService } from '@shared/services/user.service';
+import { toYMD } from '@shared/date-utils';
 export const MY_DATE_FORMATS = {
   parse: {
     dateInput: 'DD/MM/YYYY',
@@ -83,6 +86,7 @@ export const MY_DATE_FORMATS = {
   ],
 
   imports: [
+    MatProgressSpinnerModule,
     MatTableModule,
     MatPaginatorModule,
     MatTabsModule,
@@ -90,6 +94,7 @@ export const MY_DATE_FORMATS = {
     MatTooltipModule,
     TitleCasePipe,
     MatIconModule,
+    MatButtonModule,
     MatFormFieldModule,
     ReactiveFormsModule,
     MatDatepickerModule,
@@ -116,6 +121,12 @@ export class SingleAgentComponent
 
   private readonly datePipe = inject(DatePipe);
 
+  /** Écran d'origine (Mes agents par défaut, ou Gérer les comptes). */
+  readonly retourUrl: string = (() => {
+    const r = this.router.getCurrentNavigation()?.extras.state?.['retour'] ?? history.state?.retour;
+    return typeof r === 'string' && r.startsWith('/mon-espace/') ? r : '/mon-espace/mes-agents/Liste';
+  })();
+
 
   // =========================================================
   // FORMULAIRES
@@ -133,6 +144,11 @@ export class SingleAgentComponent
   private subscription =
     new Subscription();
 
+  /** Cartes statistiques : chargement en cours (spinner dans chaque carte). */
+  chargementStats = false;
+  /** Demandes de statistiques (date au format AAAA-MM-JJ) : seule la dernière compte. */
+  private readonly demandeStats$ = new Subject<{ id: number; date: string }>();
+
   private subscriptionConsultation =
     new Subscription();
 
@@ -141,7 +157,8 @@ export class SingleAgentComponent
   // DONNÉES
   // =========================================================
 
-  private allConsultations: Consultation[] = [];
+  /** Utilisateur affiché (pour recharger les consultations à chaque période). */
+  private agentId!: number;
 
   details_utilisateur?: detailsUtilisateur;
 
@@ -385,13 +402,11 @@ export class SingleAgentComponent
 
 
           // --------------------------------------------------
-          // Filtrage immédiat
+          // Rechargement : comptes et dernière consultation
+          // calculés par le serveur SUR la période
           // --------------------------------------------------
 
-          this.filterConsultations(
-            dateDebut,
-            dateFin
-          );
+          this.loadConsultations();
 
         })
     );
@@ -406,27 +421,22 @@ export class SingleAgentComponent
     id: number
   ): void {
 
+    this.agentId = id;
+    const periode = this.periodeYMD();
+
     this.userService
-      .getDetailsUtilisateur(id)
+      .getDetailsUtilisateur(id, periode?.du, periode?.au)
       .subscribe({
 
         next: result => {
 
           // ------------------------------------------------
-          // CONSERVATION DES CONSULTATIONS ORIGINALES
-          // ------------------------------------------------
-
-          this.allConsultations =
-            result.consultations || [];
-
-
-          // ------------------------------------------------
-          // TABLE CONSULTATIONS
+          // TABLE CONSULTATIONS (déjà calculées sur la période)
           // ------------------------------------------------
 
           this.dataSource =
             new MatTableDataSource<Consultation>(
-              this.allConsultations
+              periode ? result.consultations || [] : []
             );
 
 
@@ -472,32 +482,6 @@ export class SingleAgentComponent
             this.sort;
 
 
-          // ------------------------------------------------
-          // FILTRE INITIAL
-          // ------------------------------------------------
-
-          const dateDebut =
-            this.dateFormConsulation
-              .get('selectedDateDebut')
-              ?.value;
-
-
-          const dateFin =
-            this.dateFormConsulation
-              .get('selectedDateFin')
-              ?.value;
-
-
-          if (
-            dateDebut &&
-            dateFin
-          ) {
-
-            this.filterConsultations(
-              dateDebut,
-              dateFin
-            );
-          }
         },
 
 
@@ -515,137 +499,44 @@ export class SingleAgentComponent
 
 
   // =========================================================
-  // FILTRER LES CONSULTATIONS
+  // PÉRIODE DES CONSULTATIONS (AAAA-MM-JJ) ; null si incomplète ou inversée
   // =========================================================
 
-  private filterConsultations(
-    dateDebut: Date,
-    dateFin: Date
-  ): void {
-
-    // -------------------------------------------------------
-    // DATE DÉBUT
-    // -------------------------------------------------------
-
-    const debut =
-      new Date(dateDebut);
-
-    debut.setHours(
-      0,
-      0,
-      0,
-      0
-    );
-
-
-    // -------------------------------------------------------
-    // DATE FIN
-    // -------------------------------------------------------
-
-    const fin =
-      new Date(dateFin);
-
-    fin.setHours(
-      23,
-      59,
-      59,
-      999
-    );
-
-
-    // -------------------------------------------------------
-    // PÉRIODE INVALIDE
-    // -------------------------------------------------------
-
-    if (debut > fin) {
-
-      this.dataSource.data = [];
-
-      return;
+  private periodeYMD(): { du: string; au: string } | null {
+    const du = toYMD(this.dateFormConsulation.get('selectedDateDebut')?.value);
+    const au = toYMD(this.dateFormConsulation.get('selectedDateFin')?.value);
+    if (!du || !au || du > au) {
+      return null;
     }
-
-
-    // -------------------------------------------------------
-    // FILTRAGE
-    // -------------------------------------------------------
-
-    const consultationsFiltrees =
-      this.allConsultations.filter(
-        consultation => {
-
-          if (
-            !consultation.dateConsultation
-          ) {
-            return false;
-          }
-
-
-          const dateConsultation =
-            this.parseConsultationDate(
-              consultation.dateConsultation
-            );
-
-
-          if (!dateConsultation) {
-            return false;
-          }
-
-
-          return (
-            dateConsultation.getTime() >=
-              debut.getTime()
-            &&
-            dateConsultation.getTime() <=
-              fin.getTime()
-          );
-
-        }
-      );
-
-
-    // -------------------------------------------------------
-    // MISE À JOUR TABLEAU
-    // -------------------------------------------------------
-
-    this.dataSource.data =
-      consultationsFiltrees;
-
-
-    // -------------------------------------------------------
-    // RETOUR PREMIÈRE PAGE
-    // -------------------------------------------------------
-
-    if (this.dataSource.paginator) {
-
-      this.dataSource.paginator.firstPage();
-
-    }
+    return { du, au };
   }
 
 
   // =========================================================
-  // CONVERSION DATE CONSULTATION
+  // RECHARGER LES CONSULTATIONS DE LA PÉRIODE
+  // (nombre et dernière consultation calculés sur la période)
   // =========================================================
 
-  private parseConsultationDate(
-    dateString: string
-  ): Date | null {
-
-    const date =
-      new Date(dateString);
-
-
-    if (
-      isNaN(
-        date.getTime()
-      )
-    ) {
-
-      return null;
+  private loadConsultations(): void {
+    if (!this.dataSource || !this.agentId) {
+      return;
     }
-
-
-    return date;
+    const periode = this.periodeYMD();
+    if (!periode) {
+      this.dataSource.data = [];
+      return;
+    }
+    this.userService
+      .getDetailsUtilisateur(this.agentId, periode.du, periode.au)
+      .subscribe({
+        next: result => {
+          this.dataSource.data = result.consultations || [];
+          this.dataSource.paginator?.firstPage();
+        },
+        error: error => {
+          console.error('Erreur lors du chargement des consultations :', error);
+        },
+      });
   }
 
 
@@ -687,41 +578,37 @@ export class SingleAgentComponent
     id: number
   ): void {
 
-    this.userService
-      .statistic_TC_FOR_SUP({
+    // Une seule requête active : un changement de date annule la précédente,
+    // une ancienne réponse ne peut donc pas écraser la nouvelle.
+    this.subscription.add(
+      this.demandeStats$
+        .pipe(
+          tap(() => (this.chargementStats = true)),
+          switchMap(d =>
+            this.userService
+              .statistic_TC_FOR_SUP({ userId: d.id, date: d.date })
+              .pipe(
+                catchError(error => {
+                  console.error('Erreur statistiques :', error);
+                  return of(null);
+                })
+              )
+          )
+        )
+        .subscribe(resultat => {
+          this.chargementStats = false;
+          if (resultat) {
+            this.updateStatistics(resultat);
+          }
+        })
+    );
 
-        userId: id,
-
-        date:
-          this.todayDate ||
-          '3000-01-01',
-
-      })
-      .subscribe({
-
-        next: resultat => {
-
-          this.updateStatistics(
-            resultat
-          );
-
-        },
-
-        error: error => {
-
-          console.error(
-            'Erreur statistiques :',
-            error
-          );
-
-        },
-
-      });
+    this.demandeStats$.next({ id, date: this.todayDate || '3000-01-01' });
   }
 
 
   // =========================================================
-  // MISE À JOUR STATISTIQUES
+  // MISE À JOUR DES STATISTIQUES
   // =========================================================
 
   private updateStatistics(
@@ -770,44 +657,12 @@ export class SingleAgentComponent
     date: Date
   ): void {
 
-    const formattedDate =
-      this.formatDateForApi(date);
-
-
-    this.userService
-      .statistic_TC_FOR_SUP({
-
-        userId: id,
-
-        date: formattedDate,
-
-      })
-      .subscribe({
-
-        next: resultat => {
-
-          this.updateStatistics(
-            resultat
-          );
-
-        },
-
-        error: error => {
-
-          console.error(
-            'Erreur lors de la récupération des statistiques :',
-            error
-          );
-
-        },
-
-      });
+    this.demandeStats$.next({ id, date: this.formatDateForApi(date) });
   }
 
 
   // =========================================================
   // FORMAT DATE API
-  // yyyy-MM-dd
   // =========================================================
 
   private formatDateForApi(
@@ -844,6 +699,10 @@ export class SingleAgentComponent
   // NAVIGATION FICHE
   // =========================================================
 
+  retour(): void {
+    this.router.navigateByUrl(this.retourUrl);
+  }
+
   lire_fiche(
     id: number
   ): void {
@@ -869,15 +728,29 @@ export class SingleAgentComponent
     }
 
 
+    // Consultations : celles affichées (période choisie), colonnes lisibles.
     const ws1: XLSX.WorkSheet =
       XLSX.utils.json_to_sheet(
-        data.consultations
+        (this.dataSource?.data || []).map(c => ({
+          Fiche: c.titre,
+          Gestionnaire: c.Gestionnaire,
+          'Consultations sur la période': c.nb_consultation,
+          'Dernière consultation': c.dateConsultation
+            ? this.datePipe.transform(c.dateConsultation, 'dd/MM/yyyy HH:mm')
+            : '',
+        }))
       );
 
 
     const ws2: XLSX.WorkSheet =
       XLSX.utils.json_to_sheet(
-        data.commentaires
+        (data.commentaires || []).map(c => ({
+          Fiche: c.titre,
+          Commentaire: c.message,
+          Date: c.dateCommentaire
+            ? this.datePipe.transform(c.dateCommentaire, 'dd/MM/yyyy HH:mm')
+            : '',
+        }))
       );
 
 
@@ -888,14 +761,14 @@ export class SingleAgentComponent
     XLSX.utils.book_append_sheet(
       wb,
       ws1,
-      'Liste_Consultaitons'
+      'Consultations'
     );
 
 
     XLSX.utils.book_append_sheet(
       wb,
       ws2,
-      'Liste_Commentaires'
+      'Commentaires'
     );
 
 

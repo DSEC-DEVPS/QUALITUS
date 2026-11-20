@@ -262,14 +262,15 @@ import { MatMenuModule } from '@angular/material/menu';
 import { Router } from '@angular/router';
 import { Notification } from './notification.interface';
 import { UserService } from './notification.service';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, interval } from 'rxjs';
+import { iconeNotification } from './notification-icon';
 
 
 @Component({
   selector: 'app-notification',
   template: `
     <div class="notification-template">
-      <button mat-icon-button [matMenuTriggerFor]="menu" (menuOpened)="onMenuOpened()">
+      <button mat-icon-button [matMenuTriggerFor]="menu" (menuOpened)="onMenuOpened()" aria-label="Notifications">
         <mat-icon 
           [matBadge]="unreadCount" 
           [matBadgeHidden]="unreadCount === 0"
@@ -283,9 +284,6 @@ import { Subject, takeUntil } from 'rxjs';
       <mat-menu #menu="matMenu" class="notification-menu">
         <div class="notification-header" (click)="$event.stopPropagation()">
           <span class="notification-title">Notifications</span>
-          @if (unreadCount > 0) {
-            <button mat-button class="mark-all-read" (click)="markAllAsRead()">Tout marquer comme lu</button>
-          }
         </div>
         
         <mat-nav-list class="notification-list">
@@ -326,6 +324,9 @@ import { Subject, takeUntil } from 'rxjs';
             }
           }
         </mat-nav-list>
+        <div class="notification-footer">
+          <button mat-button color="primary" (click)="voirTout()">Voir toutes mes notifications</button>
+        </div>
       </mat-menu>
     </div>
   `,
@@ -354,9 +355,11 @@ import { Subject, takeUntil } from 'rxjs';
       font-size: 16px;
     }
 
-    .mark-all-read {
-      font-size: 12px;
-      color: #1976d2;
+    .notification-footer {
+      display: flex;
+      justify-content: center;
+      border-top: 1px solid #e0e0e0;
+      padding: 4px;
     }
 
     .notification-list {
@@ -395,6 +398,21 @@ import { Subject, takeUntil } from 'rxjs';
       font-size: 11px;
       color: #1976d2;
       font-style: italic;
+      /* Message sur 3 lignes au plus (ex. motif d'un rejet) au lieu d'une seule */
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      white-space: normal;
+    }
+
+    /* Le titre de l'élément de liste ne doit plus être coupé sur une ligne */
+    .notification-list .mdc-list-item__primary-text {
+      white-space: normal;
+    }
+
+    .notification-list mat-list-item.mdc-list-item {
+      height: auto !important;
     }
 
     .unread-indicator {
@@ -448,8 +466,37 @@ export class NotificationComponent implements OnInit, OnDestroy {
   table_notification: Notification[] = [];
   unreadCount: number = 0;
 
+  /** Rafraîchissement du badge (appel léger : nombre de non lues seulement). */
+  private static readonly INTERVALLE_BADGE_MS = 60000;
+
   ngOnInit(): void {
     this.loadNotifications();
+    interval(NotificationComponent.INTERVALLE_BADGE_MS)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.rafraichirCompte());
+  }
+
+  /** Badge : nombre de non lues côté serveur ; nouvelle notification -> liste rechargée. */
+  rafraichirCompte(): void {
+    this.userService.getCompte()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: r => {
+          const avant = this.unreadCount;
+          this.unreadCount = r.non_lues;
+          if (r.non_lues > avant && this.compteInitialise) {
+            this.loadNotifications(false);
+          }
+          this.compteInitialise = true;
+        },
+        error: () => {},
+      });
+  }
+  private compteInitialise = false;
+
+  /** Historique complet (page « Mes notifications »). */
+  voirTout(): void {
+    this.router.navigateByUrl('/mon-espace/notifications');
   }
 
   ngOnDestroy(): void {
@@ -457,16 +504,17 @@ export class NotificationComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  loadNotifications(): void {
+  loadNotifications(avecCompte = true): void {
     this.userService.getAllNotification()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: notifications => {
-          // Afficher toutes les notifications, calculer le nombre non lues
+          // Cloche : non lues + lues des 7 derniers jours (30 au plus, côté serveur).
+          // Le badge vient du compteur serveur (toutes les non lues, même au-delà).
           this.table_notification = notifications;
-          console.log("la table de notification");
-          console.log(this.table_notification);
-          this.unreadCount = notifications.filter(n => !n.isRead).length;
+          if (avecCompte) {
+            this.rafraichirCompte();
+          }
         },
         error: error => {
           console.error('Erreur lors du chargement des notifications:', error);
@@ -474,8 +522,9 @@ export class NotificationComponent implements OnInit, OnDestroy {
       });
   }
 
+  /** Ouverture de la cloche : liste rechargée (rien n'est marqué comme lu). */
   onMenuOpened(): void {
-    // Optionnel : vous pouvez ajouter une logique ici si nécessaire
+    this.loadNotifications();
   }
 
   markAsRead(notification: Notification): void {
@@ -495,32 +544,10 @@ export class NotificationComponent implements OnInit, OnDestroy {
     }
   }
 
-  markAllAsRead(): void {
-    if (this.unreadCount === 0) return;
-    this.userService.markAllNotificationsAsRead([])
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.table_notification.forEach(n => n.isRead = true);
-          this.unreadCount = 0;
-        },
-        error: error => {
-          console.error('Erreur lors du marquage de toutes les notifications:', error);
-        }
-      });
-  }
 
+  /** Icône selon le type de notification (gardée une fois lue : seule la couleur change). */
   iconFor(notification: Notification): string {
-    if (notification.isRead) return 'check_circle';
-    switch (notification.nature_objet) {
-      case 'EVALUATION': return 'fact_check';
-      case 'CONTRE_EVALUATION': return 'compare_arrows';
-      case 'CALIBRAGE': return 'tune';
-      case 'QUIZ': return 'quiz';
-      case 'PLAN_ACTION': return 'checklist';
-      case 'COACHING': return 'psychology';
-      default: return notification.id_FICHE ? 'description' : 'notifications';
-    }
+    return iconeNotification(notification);
   }
 
   // Redirige vers l'objet concerné (url unifiée) et marque comme lu

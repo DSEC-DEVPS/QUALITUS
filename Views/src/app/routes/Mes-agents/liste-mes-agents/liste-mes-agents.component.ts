@@ -16,10 +16,12 @@ import { MatIcon } from '@angular/material/icon';
 import { Router } from '@angular/router';
 
 import * as XLSX from 'xlsx';
+import { finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 @Component({
   selector: 'app-liste-mes-agents',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent,
     CommonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -37,6 +39,7 @@ import * as XLSX from 'xlsx';
   styleUrl: './liste-mes-agents.component.scss',
 })
 export class ListeMesAgentsComponent implements OnInit {
+  chargement = true;
   private readonly auth = inject(AuthService);
   private readonly userService = inject(UserService);
   LogoUser = 'img/avatar.png';
@@ -49,6 +52,7 @@ export class ListeMesAgentsComponent implements OnInit {
   @ViewChild(MatSort) sort!: MatSort;
   private readonly router = inject(Router);
   ngOnInit(): void {
+    this.chargement = true;
     this.auth.user().subscribe({
       next: user => {
         this.user = user;
@@ -57,7 +61,7 @@ export class ListeMesAgentsComponent implements OnInit {
         console.log(error);
       },
     });
-    this.userService.getAllAgentBySuperviseur(this.user.id || 0).subscribe(user => {
+    this.userService.getAllAgentBySuperviseur(this.user.id || 0).pipe(finalize(() => (this.chargement = false))).subscribe(user => {
       console.log(user);
       this.dataSource = new MatTableDataSource(user);
       this.downloadData = user;

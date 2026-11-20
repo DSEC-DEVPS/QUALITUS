@@ -31,12 +31,13 @@ import {
   DialogLayoutDisplay,
   DisappearanceAnimation,
 } from '@costlydeveloper/ngx-awesome-popup';
-import { catchError, of, Subject, takeUntil, tap } from 'rxjs';
+import { catchError, of, Subject, takeUntil, tap, finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 @Component({
   selector: 'app-table-overview-example',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent,
     MatFormFieldModule,
     MatInputModule,
     MatTableModule,
@@ -57,6 +58,7 @@ import { ToastrService } from 'ngx-toastr';
   styleUrl: './liste-sla.component.scss',
 })
 export class ListeSlaComponent implements OnInit {
+  chargement = true;
   private readonly toastSrv = inject(ToastrService);
   msg = '';
   destroy$: Subject<boolean> = new Subject<boolean>();
@@ -78,7 +80,8 @@ export class ListeSlaComponent implements OnInit {
   downloadData!: sla[];
   constructor(private userService: UserService) {}
   ngOnInit(): void {
-    this.userService.getAllSla().subscribe(user => {
+    this.chargement = true;
+    this.userService.getAllSla().pipe(finalize(() => (this.chargement = false))).subscribe(user => {
       this.downloadData = user;
       this.dataSource = new MatTableDataSource(user);
       this.dataSource.paginator = this.paginator;

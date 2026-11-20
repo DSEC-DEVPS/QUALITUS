@@ -4,7 +4,7 @@
 // proposition/validation d'options. Tables b_eval_coaching(_option|_niveau).
 // =====================================================================
 const db = require("../config/db");
-const { emit, emitEvaluation } = require("../utils/notify");
+const { emit, emitEvaluation, utilisateursAvecPermission } = require("../utils/notify");
 
 // Notifie {créateur, superviseur, agent} d'une modif coaching/plan si l'éval est TERMINÉE.
 const notifierSiEvalTerminee = async (executor, idEval, { titre, message, exclure }) => {
@@ -23,10 +23,8 @@ const withTx = async (fn) => {
 };
 
 const notifierValidateurs = async (conn, message, idEvaluation) => {
-  const [users] = await conn.query(
-    `SELECT u.id FROM b_utilisateur u JOIN b_fonction f ON u.id_Fonction=f.id
-     WHERE u.status='ACTIF' AND f.Role_Associe IN ('R_RO','R_ADMI','R_AQ')`
-  );
+  // Destinataires : les utilisateurs qui peuvent réellement valider (evaluation.valider).
+  const users = (await utilisateursAvecPermission(conn, "evaluation.valider")).map((id) => ({ id }));
   for (const u of users) {
     await emit(conn, {
       id_utilisateur: u.id, titre: "Validation d'option (coaching)", message, type: "OPTION_COACHING",
@@ -56,6 +54,19 @@ const addOption = async (req, res) => {
     );
     return res.status(201).json({ id: r.insertId, message: "Option ajoutée." });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors de l'ajout." }); }
+};
+
+// Déplacement d'une option sous un autre parent (glisser-déposer de l'arbre).
+const deplacerOptionArbre = async (req, res) => {
+  const { deplacerOption } = require("../utils/deplacerOption");
+  const idParent = req.body.id_parent === null || req.body.id_parent === undefined || req.body.id_parent === "" ? null : Number(req.body.id_parent);
+  try {
+    const r = await withTx((conn) => deplacerOption(conn, "b_eval_coaching_option", Number(req.params.id), idParent, null));
+    return res.status(200).json({ message: r.inchange ? "Option inchangée." : "Option déplacée.", ...r });
+  } catch (e) {
+    if (e.status) return res.status(e.status).json({ message: e.message });
+    console.log(e); return res.status(500).json({ message: "Erreur lors du déplacement." });
+  }
 };
 
 const updateOption = async (req, res) => {
@@ -103,7 +114,18 @@ const getEvaluationCoaching = async (req, res) => {
       const [[p]] = await db.query(`SELECT COUNT(*) AS n FROM b_eval_coaching_option WHERE id_coaching_origine=? AND etat='EN_ATTENTE'`, [coaching.id]);
       enAttente = p.n > 0;
     }
-    return res.status(200).json({ coaching: coaching || null, choix, en_attente_validation: enAttente, eligible: e.conclusion === "ECHEC" });
+    // Propositions rejetées pour ce coaching, avec leur motif
+    let rejetees = [];
+    if (coaching) {
+      [rejetees] = await db.query(
+        `SELECT o.niveau, o.libelle, o.motif_rejet, o.dateDecision,
+                TRIM(CONCAT(COALESCE(u.prenom, ''), ' ', COALESCE(u.nom, ''))) AS propose_par_nom
+           FROM b_eval_coaching_option o LEFT JOIN b_utilisateur u ON u.id = o.propose_par
+          WHERE o.id_coaching_origine=? AND o.etat='REJETE' AND o.motif_rejet IS NOT NULL
+          ORDER BY o.dateDecision DESC`, [coaching.id]
+      );
+    }
+    return res.status(200).json({ coaching: coaching || null, choix, rejetees, en_attente_validation: enAttente, eligible: e.conclusion === "ECHEC" });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors du chargement." }); }
 };
 
@@ -269,13 +291,20 @@ const rejeterOption = async (req, res) => {
         if (pending.n === 0) {
           await conn.query(`UPDATE b_eval_coaching SET statut='NON_TERMINE' WHERE id=? AND statut='EN_ATTENTE_VALIDATION_OPTION'`, [opt.id_coaching_origine]);
         }
+        // Notifier le proposeur (et le superviseur du coaching s'il est une autre
+        // personne), avec le libellé de l'option et le motif du rejet.
         const [[coKo]] = await conn.query(`SELECT id_evaluation, id_superviseur FROM b_eval_coaching WHERE id=?`, [opt.id_coaching_origine]);
-        if (coKo) await emit(conn, {
-          id_utilisateur: coKo.id_superviseur, titre: "Option de coaching rejetée",
-          message: `Proposition rejetée : ${motif.trim()}`,
-          type: "EVALUATION", nature_objet: "EVALUATION", id_objet: coKo.id_evaluation,
-          url: `/mon-espace/evaluation/executer/${coKo.id_evaluation}`,
-        });
+        if (coKo) {
+          const dest = new Set([opt.propose_par, coKo.id_superviseur].filter(Boolean).map(Number));
+          for (const uid of dest) {
+            await emit(conn, {
+              id_utilisateur: uid, titre: `Option de coaching rejetée : « ${String(opt.libelle).slice(0, 60)} »`,
+              message: `Motif : ${motif.trim()}`,
+              type: "EVALUATION", nature_objet: "EVALUATION", id_objet: coKo.id_evaluation,
+              url: `/mon-espace/evaluation/executer/${coKo.id_evaluation}`,
+            });
+          }
+        }
       }
       return { ok: true };
     });
@@ -285,7 +314,7 @@ const rejeterOption = async (req, res) => {
 };
 
 module.exports = {
-  getArbre, addOption, updateOption, deleteOption,
+  getArbre, addOption, updateOption, deplacerOptionArbre, deleteOption,
   getEvaluationCoaching, getOptionsEnfants, saveCoaching, terminerCoaching, proposerOption,
   getOptionsEnAttente, validerOption, rejeterOption,
 };

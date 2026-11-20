@@ -11,11 +11,12 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatTableModule } from '@angular/material/table';
 import { ToastrService } from 'ngx-toastr';
 import { HabilitationService, Matrice, Observation, Permission } from '../habilitation.service';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
   selector: 'app-matrice-droits',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent,
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatCheckboxModule, MatButtonToggleModule, MatTooltipModule, MatTabsModule, MatTableModule,
   ],

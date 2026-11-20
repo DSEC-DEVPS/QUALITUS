@@ -17,10 +17,31 @@
               <ng-template *ngFor="let item of type_donnes" [ngxPermissionsOnly]="item.permissions">
                 <mat-option [value]="item.label">{{ item.label }}</mat-option>
               </ng-template>
+              <!-- Exports Évaluation : seuls ceux autorisés par le serveur -->
+              <mat-option *ngFor="let t of contexte?.types || []" [value]="t.code">{{ t.libelle }}</mat-option>
             </mat-select>
           </mat-form-field>
 
-          <div class="date-range-fields">
+          <ng-container *ngIf="typeEval">
+            <mat-form-field appearance="outline" class="full-width" *ngIf="contexte?.vision_globale">
+              <mat-label>Site</mat-label>
+              <mat-select formControlName="id_site">
+                <mat-option value="TOUS">Tous les sites</mat-option>
+                <mat-option *ngFor="let s of contexte?.sites || []" [value]="s.id">{{ s.nom }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <p class="site-impose" *ngIf="!contexte?.vision_globale">
+              <mat-icon>location_on</mat-icon> Site : <strong>{{ siteImpose }}</strong>
+            </p>
+            <mat-form-field appearance="outline" class="full-width" *ngIf="typeEval.code === 'AGENTS'">
+              <mat-label>Statut</mat-label>
+              <mat-select formControlName="statut">
+                <mat-option *ngFor="let st of statuts" [value]="st.valeur">{{ st.libelle }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </ng-container>
+
+          <div class="date-range-fields" *ngIf="avecDates">
             <mat-form-field appearance="outline">
               <mat-label>Début</mat-label>
               <input matInput [matDatepicker]="startPicker" formControlName="dateDebut" />
@@ -36,7 +57,7 @@
             </mat-form-field>
           </div>
 
-          <mat-slide-toggle formControlName="isActive" color="orange"
+          <mat-slide-toggle formControlName="isActive" color="orange" *ngIf="!typeEval"
             >Utilisateurs actifs</mat-slide-toggle
           >
 
@@ -48,13 +69,14 @@
           </mat-form-field>
         </div>
 
+        <mat-progress-bar mode="indeterminate" *ngIf="isLoading"></mat-progress-bar>
         <div class="export-buttons">
           <button mat-raised-button color="primary" (click)="onPreview()">
             <mat-icon>visibility</mat-icon> Aperçu
           </button>
           <button
             mat-raised-button
-            [disabled]="exportForm.invalid"
+            [disabled]="exportForm.invalid || isLoading"
             color="accent"
             (click)="onExport()"
           >

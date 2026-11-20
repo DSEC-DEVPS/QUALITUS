@@ -23,6 +23,7 @@ export interface QuestionDialogData {
 export interface QuestionDialogResult {
   type: string;
   libelle: string;
+  points: number;
   options: OptionQ[];
 }
 
@@ -53,6 +54,7 @@ interface OptionEdit {
     `.opt-input { flex: 1; }`,
     `.opt-fixe { font-weight: 500; }`,
     `.m-b-8 { margin-bottom: 8px; } .m-t-8 { margin-top: 8px; } .m-t-16 { margin-top: 16px; }`,
+    `.champ-points { width: 200px; margin-bottom: 16px; } .hint-erreur { color: #c62828; }`,
   ],
 })
 export class QuestionDialogComponent implements OnInit {
@@ -61,6 +63,8 @@ export class QuestionDialogComponent implements OnInit {
   titre = '';
   type: 'VRAI_FAUX' | 'QCU' | 'QCM' = 'VRAI_FAUX';
   libelle = '';
+  /** Barème de la question : entier de 1 à 100 (5 par défaut). */
+  points: number = 5;
   options: OptionEdit[] = [];
   bonneIndex = 0; // pour les types a reponse unique (VRAI_FAUX / QCU)
 
@@ -72,6 +76,7 @@ export class QuestionDialogComponent implements OnInit {
     if (q) {
       this.type = (q.type as any) || 'VRAI_FAUX';
       this.libelle = q.libelle || '';
+      this.points = q.points ?? 5;
       const opts = q.options || [];
       this.options = opts.map(o => ({ libelle: o.libelle, correct: !!o.est_correcte }));
       this.bonneIndex = Math.max(0, this.options.findIndex(o => o.correct));
@@ -122,8 +127,13 @@ export class QuestionDialogComponent implements OnInit {
     }
   }
 
+  get pointsValides(): boolean {
+    const n = Number(this.points);
+    return Number.isInteger(n) && n >= 1 && n <= 100;
+  }
+
   valider() {
-    if (!this.libelle.trim()) {
+    if (!this.libelle.trim() || !this.pointsValides) {
       return;
     }
     // Validation selon le type
@@ -149,6 +159,7 @@ export class QuestionDialogComponent implements OnInit {
     this.dialogRef.close({
       type: this.type,
       libelle: this.libelle.trim(),
+      points: Number(this.points),
       options: optionsFinales,
     } as QuestionDialogResult);
   }

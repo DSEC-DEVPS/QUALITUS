@@ -18,8 +18,8 @@ router.post("/eval/evaluation/add", auth, permission("EVALUATION","CREER"), e.cr
 router.post("/eval/evaluation/add-masse", auth, permission("EVALUATION","CREER"), e.createEvaluationMasse);
 
 // Cycle de vie (F.39septies D)
-router.post("/eval/evaluation/desactiver-masse", auth, permission("EVALUATION","CREER"), e.desactiverMasse);
-router.put("/eval/evaluation/:id/actif", auth, permission("EVALUATION","MODIFIER"), e.setActifEvaluation);
+router.post("/eval/evaluation/desactiver-masse", auth, permission("EVALUATION",["CREER","DESACTIVER"]), e.desactiverMasse);
+router.put("/eval/evaluation/:id/actif", auth, permission("EVALUATION",["CREER","DESACTIVER"]), e.setActifEvaluation);
 router.delete("/eval/evaluation/:id", auth, permission("EVALUATION","SUPPRIMER"), e.deleteEvaluation);
 
 module.exports = router;

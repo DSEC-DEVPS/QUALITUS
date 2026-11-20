@@ -190,7 +190,11 @@ CREATE TABLE IF NOT EXISTS B_QZ_QUIZ (
   acces VARCHAR(20) DEFAULT 'PRIVATE',
   alterner_questions TINYINT(1) DEFAULT 0,
   autoriser_machines TINYINT(1) DEFAULT 0,
-  Etat VARCHAR(50) DEFAULT 'ACTIF',
+  -- État : OUVERT | CLOTURER (participations ouvertes / closes)
+  Etat VARCHAR(50) DEFAULT 'OUVERT',
+  -- Statut : ACTIF | INACTIF (quiz en service / mis de côté, comme le sondage)
+  statut VARCHAR(20) NOT NULL DEFAULT 'ACTIF',
+  date_reinitialisation DATETIME NULL,   -- dernière réinitialisation de toutes les tentatives (27_quiz_points.sql)
   id_createur INT NULL,
   dateCreation DATETIME,
   dateModification DATETIME
@@ -207,7 +211,8 @@ CREATE TABLE IF NOT EXISTS B_REPONSE_QUIZ (
   date_Quiz DATETIME,
   date_RETEST DATETIME,
   FOREIGN KEY(id_UTILISATEUR) REFERENCES B_UTILISATEUR(id),
-  FOREIGN KEY(id_FICHE) REFERENCES B_FICHE(id)
+  FOREIGN KEY(id_FICHE) REFERENCES B_FICHE(id),
+  INDEX ix_reponse_quiz_utilisateur_date (id_UTILISATEUR, date_Quiz)
 );
 
 CREATE TABLE IF NOT EXISTS B_R_SUPERVISEUR_AGENT (
@@ -233,7 +238,8 @@ CREATE TABLE IF NOT EXISTS B_NOTIFICATION (
   lu TINYINT(1) DEFAULT 0,
   dateLecture DATETIME,
   FOREIGN KEY(id_UTILISATEUR) REFERENCES B_UTILISATEUR(id),
-  FOREIGN KEY(id_FICHE) REFERENCES B_FICHE(id)
+  FOREIGN KEY(id_FICHE) REFERENCES B_FICHE(id),
+  INDEX ix_notification_utilisateur_lu (id_UTILISATEUR, lu)
 );
 
 -- Schéma de base de données pour le système de notifications
@@ -268,7 +274,8 @@ CREATE TABLE IF NOT EXISTS B_HISTORIQUE (
   id_UTILISATEUR INT,
   id_FICHE INT,
   FOREIGN KEY(id_UTILISATEUR) REFERENCES B_UTILISATEUR(id),
-  FOREIGN KEY(id_FICHE) REFERENCES B_FICHE(id)
+  FOREIGN KEY(id_FICHE) REFERENCES B_FICHE(id),
+  INDEX ix_historique_utilisateur_date (id_UTILISATEUR, dateConsultation)
 );
 
 CREATE TABLE IF NOT EXISTS B_COMMENTAIRE (
@@ -289,7 +296,8 @@ CREATE TABLE IF NOT EXISTS B_SONDAGE (
   exactitude INT,
   dateSondage DATETIME,
   FOREIGN KEY(id_UTILISATEUR) REFERENCES B_UTILISATEUR(id),
-  FOREIGN KEY(id_FICHE) REFERENCES B_FICHE(id)
+  FOREIGN KEY(id_FICHE) REFERENCES B_FICHE(id),
+  INDEX ix_sondage_utilisateur_date (id_UTILISATEUR, dateSondage)
 );
 
 CREATE TABLE IF NOT EXISTS B_ON_TIME (
@@ -494,6 +502,7 @@ CREATE TABLE IF NOT EXISTS B_QZ_QUESTION (
   id_Quiz INT NOT NULL,
   type VARCHAR(20) DEFAULT 'VRAI_FAUX',   -- extensible : QCM, MULTIPLE...
   libelle TEXT NOT NULL,
+  points INT NOT NULL DEFAULT 5,          -- barème de la question (27_quiz_points.sql)
   ordre INT DEFAULT 0,
   dateCreation DATETIME,
   FOREIGN KEY (id_Quiz) REFERENCES B_QZ_QUIZ(id) ON DELETE CASCADE
@@ -517,6 +526,8 @@ CREATE TABLE IF NOT EXISTS B_QZ_TENTATIVE (
   score DECIMAL(5,2) DEFAULT 0,     -- pourcentage de bonnes reponses
   nb_bonnes INT DEFAULT 0,
   nb_total INT DEFAULT 0,
+  nb_points INT NULL,               -- points obtenus (27_quiz_points.sql)
+  nb_points_total INT NULL,         -- points du quiz au moment du calcul
   reussi TINYINT(1) DEFAULT 0,
   num_essai INT DEFAULT 1,          -- 1 = premiere tentative, 2 = 1er retest...
   statut VARCHAR(20),               -- REUSSI | ECHEC_RETEST | ECHEC_FINAL
@@ -544,8 +555,10 @@ CREATE TABLE IF NOT EXISTS B_QZ_NOTIFICATION (
   titre VARCHAR(200),
   message VARCHAR(255),
   lu TINYINT(1) DEFAULT 0,
+  dateLecture DATETIME NULL,   -- 28_notifications_lecture_menage.sql
   dateCreation DATETIME,
-  FOREIGN KEY (id_Quiz) REFERENCES B_QZ_QUIZ(id) ON DELETE CASCADE
+  FOREIGN KEY (id_Quiz) REFERENCES B_QZ_QUIZ(id) ON DELETE CASCADE,
+  INDEX ix_qz_notification_utilisateur_lu (id_UTILISATEUR, lu)
 ) ENGINE=InnoDB;
 
 -- Source: 07_quiz_phase3.sql
@@ -749,11 +762,12 @@ CREATE TABLE IF NOT EXISTS B_QZ_IP_AUTORISEE (
   id           INT AUTO_INCREMENT PRIMARY KEY,
   id_Quiz      INT NOT NULL,
   adresse_ip   VARCHAR(64) NOT NULL,
+  id_Site      INT NULL,              -- site dont les participants sont autorisés (25_quiz_ip_site.sql)
   libelle      VARCHAR(150) NULL,
   dateCreation DATETIME NULL,
   CONSTRAINT fk_qz_ip_quiz FOREIGN KEY (id_Quiz)
     REFERENCES B_QZ_QUIZ(id) ON DELETE CASCADE,
-  UNIQUE KEY uq_quiz_ip (id_Quiz, adresse_ip)
+  UNIQUE KEY uq_quiz_ip_site (id_Quiz, adresse_ip, id_Site)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Source: 17_quiz_ip_demande.sql
@@ -816,6 +830,24 @@ CREATE TABLE IF NOT EXISTS B_QZ_AUTORISE (
   dateCreation   DATETIME NULL,
   UNIQUE KEY uq_qz_autorise (id_Quiz, id_UTILISATEUR),
   CONSTRAINT fk_qz_autorise_quiz FOREIGN KEY (id_Quiz) REFERENCES B_QZ_QUIZ(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Source: 26_quiz_reinitialisation.sql
+-- Réinitialisation de la participation d'un agent (1 seul essai), effective
+-- après confirmation de l'agent. statut : EN_ATTENTE | CONFIRMEE | REFUSEE | ANNULEE | EXPIREE
+CREATE TABLE IF NOT EXISTS B_QZ_REINITIALISATION (
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+  id_Quiz        INT NOT NULL,
+  id_UTILISATEUR INT NOT NULL,
+  id_demandeur   INT NOT NULL,
+  statut         VARCHAR(20) NOT NULL DEFAULT 'EN_ATTENTE',
+  score_initial  DECIMAL(5,2) NULL,
+  dateDemande    DATETIME NOT NULL,
+  dateReponse    DATETIME NULL,
+  id_traitePar   INT NULL,
+  CONSTRAINT fk_qz_reinit_quiz FOREIGN KEY (id_Quiz)
+    REFERENCES B_QZ_QUIZ(id) ON DELETE CASCADE,
+  KEY idx_reinit_agent (id_Quiz, id_UTILISATEUR, statut)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Source: 20_sondage.sql
@@ -1130,9 +1162,13 @@ CREATE TABLE IF NOT EXISTS b_eval_coaching_niveau (
 
 -- 6. PLAN D'ACTION (F.39quinquies B)
 CREATE TABLE IF NOT EXISTS b_eval_plan_action_ligne (
-  id INT AUTO_INCREMENT PRIMARY KEY, id_evaluation INT NOT NULL, id_action INT DEFAULT NULL, id_porteur INT DEFAULT NULL,
+  id INT AUTO_INCREMENT PRIMARY KEY, id_evaluation INT NOT NULL, id_action INT DEFAULT NULL,
+  action TEXT NULL, -- saisie libre (38_plan_action_saisie_libre.sql) ; id_action n'est plus utilisé
+  id_porteur INT DEFAULT NULL,
   date_debut DATETIME DEFAULT NULL, date_attendue DATETIME DEFAULT NULL, date_realisation DATETIME DEFAULT NULL,
-  id_statut INT DEFAULT NULL, id_kpi INT DEFAULT NULL, commentaire TEXT, synthese TEXT,
+  id_statut INT DEFAULT NULL, id_kpi INT DEFAULT NULL,
+  kpi VARCHAR(255) NULL, -- saisie libre ; id_kpi n'est plus utilisé
+  commentaire TEXT, synthese TEXT,
   dateCreation DATETIME DEFAULT NULL, dateModification DATETIME DEFAULT NULL,
   FOREIGN KEY (id_evaluation) REFERENCES b_evaluation(id),
   FOREIGN KEY (id_action) REFERENCES b_eval_ref_action_pa(id),
@@ -1310,6 +1346,9 @@ CREATE TABLE IF NOT EXISTS b_param_habilitation (
 INSERT INTO b_param_habilitation (cle, valeur)
 VALUES ('mode_controle', 'OBSERVATION')
 ON DUPLICATE KEY UPDATE valeur = valeur;
+-- Exportations : site à vision globale (30_export_site_vision_globale.sql) ;
+-- valeur = id du site (ex. DSFO), vide = aucun.
+INSERT IGNORE INTO b_param_habilitation (cle, valeur) VALUES ('site_vision_globale', '');
 
 
 -- =====================================================================
@@ -1338,6 +1377,7 @@ INSERT INTO b_permission (module,action,code,libelle) VALUES
   ('FICHE','MODIFIER','fiche.modifier','Modifier — fiche'),
   ('FICHE','SUPPRIMER','fiche.supprimer','Supprimer — fiche'),
   ('FICHE','GERER','fiche.gerer','Gérer (SLA / catégories) — fiche'),
+  ('FICHE','ARCHIVER','fiche.archiver','Archiver / restaurer — fiche'),
   ('SONDAGE','LIRE','sondage.lire','Consulter — sondage'),
   ('SONDAGE','CREER','sondage.creer','Créer — sondage'),
   ('SONDAGE','MODIFIER','sondage.modifier','Modifier — sondage'),
@@ -1347,6 +1387,7 @@ INSERT INTO b_permission (module,action,code,libelle) VALUES
   ('QUIZ','MODIFIER','quiz.modifier','Modifier — quiz'),
   ('QUIZ','SUPPRIMER','quiz.supprimer','Supprimer — quiz'),
   ('QUIZ','BASECO','quiz.baseco','Baseco (échecs / retests) — quiz'),
+  ('QUIZ','PARTICIPER','quiz.participer','Participer — quiz'),
   ('GRILLE','LIRE','grille.lire','Consulter — grille'),
   ('GRILLE','CREER','grille.creer','Créer — grille'),
   ('GRILLE','MODIFIER','grille.modifier','Modifier — grille'),
@@ -1363,28 +1404,27 @@ INSERT INTO b_permission (module,action,code,libelle) VALUES
   ('EVALUATION','SUPPRIMER','evaluation.supprimer','Supprimer — evaluation'),
   ('CONTRE_EVALUATION','LIRE','contre_evaluation.lire','Consulter — contre-évaluation'),
   ('CONTRE_EVALUATION','CREER','contre_evaluation.creer','Créer — contre-évaluation'),
-  ('CONTRE_EVALUATION','MODIFIER','contre_evaluation.modifier','Modifier — contre-évaluation'),
+  ('CONTRE_EVALUATION','VOIR_TOUS','contre_evaluation.voir_tous','Voir toutes les contre-évaluations (son site ; tous les sites pour le site à vision globale)'),
   ('CONTRE_EVALUATION','DESACTIVER','contre_evaluation.desactiver','Désactiver — contre-évaluation'),
   ('CONTRE_EVALUATION','SUPPRIMER','contre_evaluation.supprimer','Supprimer — contre-évaluation'),
   ('CALIBRAGE','LIRE','calibrage.lire','Consulter — calibrage'),
   ('CALIBRAGE','ORGANISER','calibrage.organiser','Organiser — calibrage'),
   ('NOTIFICATION','LIRE','notification.lire','Consulter — notification'),
+  ('NOTIFICATION','SUPPRIMER','notification.supprimer','Supprimer — notification (ménage)'),
+  ('COMPTE','GERER','compte.gerer','Gérer — comptes du site (mot de passe, programme, détail)'),
+  ('ASSIGNATION','GERER','assignation.gerer','Gérer — assignation agents / superviseurs du site'),
+  ('MA_VOIX','AJOUTER','ma_voix.ajouter','Ajouter — Ma Voix'),
+  ('MA_VOIX','MOTIF','ma_voix.motif','Gérer — motifs Ma Voix'),
+  ('CHARGEMENT','VERIFIER','chargement.verifier','Vérifier — chargements (Gestion Chargements)'),
+  ('UTILISATEUR','EXPORTER','utilisateur.exporter','Exporter — liste des agents (Exportations)'),
+  ('EVALUATION','COACHER','evaluation.coacher','Coacher — coaching et plan d''actions d''une évaluation'),
+  ('EVALUATION','VOIR_TOUS','evaluation.voir_tous','Voir toutes les évaluations (son site ; tous les sites pour le site à vision globale)'),
+  ('EVALUATION','PARAMETRER','evaluation.parametrer','Paramétrer — calendrier, politique, lettres, arbres BI / coaching'),
+  ('EVALUATION','DESACTIVER','evaluation.desactiver','(Dés)activer une évaluation terminée'),
   ('HABILITATION','LIRE','habilitation.lire','Consulter — habilitation'),
   ('HABILITATION','GERER','habilitation.gerer','Gérer — habilitation'),
   ('AGENT_POLE','LIRE','agent_pole.lire','Consulter — agents en pôle'),
   ('AGENT_POLE','VOIR_TOUS','agent_pole.voir_tous','Voir les agents en pôle de tous les sites'),
-  ('BI','LIRE','bi.lire','Consulter — business intelligence'),
-  ('BI','CREER','bi.creer','Créer — business intelligence'),
-  ('BI','MODIFIER','bi.modifier','Modifier — business intelligence'),
-  ('BI','SUPPRIMER','bi.supprimer','Supprimer — business intelligence'),
-  ('VALIDATION_OPTION','LIRE','validation_option.lire','Consulter — validation d''options'),
-  ('VALIDATION_OPTION','CREER','validation_option.creer','Créer — validation d''options'),
-  ('VALIDATION_OPTION','MODIFIER','validation_option.modifier','Modifier — validation d''options'),
-  ('VALIDATION_OPTION','SUPPRIMER','validation_option.supprimer','Supprimer — validation d''options'),
-  ('ARBRE_COACHING','LIRE','arbre_coaching.lire','Consulter — arbre de coaching'),
-  ('ARBRE_COACHING','CREER','arbre_coaching.creer','Créer — arbre de coaching'),
-  ('ARBRE_COACHING','MODIFIER','arbre_coaching.modifier','Modifier — arbre de coaching'),
-  ('ARBRE_COACHING','SUPPRIMER','arbre_coaching.supprimer','Supprimer — arbre de coaching'),
   ('CALENDRIER','LIRE','calendrier.lire','Consulter — périodes / calendrier'),
   ('CALENDRIER','CREER','calendrier.creer','Créer — périodes / calendrier'),
   ('CALENDRIER','MODIFIER','calendrier.modifier','Modifier — périodes / calendrier'),
@@ -1476,6 +1516,7 @@ CREATE TABLE IF NOT EXISTS b_cal_participant (
   date_debut_participation DATETIME DEFAULT NULL,  -- démarre le chrono
   statut_participation VARCHAR(20) DEFAULT 'NON_COMMENCEE', -- NON_COMMENCEE | EN_COURS | CLOSE
   date_cloture DATETIME DEFAULT NULL,
+  date_derniere_activite DATETIME DEFAULT NULL,   -- 40_calibrage_reprise_participation.sql
   dateCreation DATETIME DEFAULT NULL,
   UNIQUE KEY uq_cal_part (id_session, id_evaluateur),
   KEY k_cal_part_session (id_session),
@@ -1529,7 +1570,7 @@ CREATE TABLE IF NOT EXISTS b_cal_evaluation_erreur (
   coche TINYINT(1) DEFAULT 1,                   -- état retenu (courant)
   coche_initial TINYINT(1) DEFAULT NULL,        -- état à la clôture des participations (traçabilité révision)
   commentaire TEXT,                             -- commentaire de l'évaluateur (constat)
-  appreciation_jauge TEXT,                      -- F.47 14quater : appréciation du jauge (sur la référence)
+  appreciation_jauge TEXT,                      -- appréciation du jauge, propre au participant (sa ligne d'erreur)
   modifie_par INT DEFAULT NULL,                 -- auteur d'une correction en révision
   date_modif DATETIME DEFAULT NULL,
   id_erreur_origine INT DEFAULT NULL,           -- clé de confrontation participant<->référence
@@ -1547,6 +1588,8 @@ CREATE TABLE IF NOT EXISTS b_cal_reinitialisation (
   id_session INT NOT NULL,
   id_participant INT NOT NULL,
   id_auteur INT DEFAULT NULL,
+  type VARCHAR(20) NOT NULL DEFAULT 'RECOMMENCER',   -- RECOMMENCER | REPRENDRE (40)
+  minutes_accordees INT DEFAULT NULL,
   dateReinit DATETIME DEFAULT NULL,
   KEY k_cal_reinit_session (id_session)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -1555,10 +1598,46 @@ CREATE TABLE IF NOT EXISTS b_cal_reinitialisation (
 -- =====================================================================
 -- MODULE CALIBRAGE — SEED permission (lire: tous rôles ; organiser: R_ADMI)
 -- =====================================================================
-INSERT INTO b_permission (module,action,code,libelle) VALUES
+-- IGNORE : calibrage.lire est déjà créée plus haut (référentiel des permissions)
+INSERT IGNORE INTO b_permission (module,action,code,libelle) VALUES
   ('CALIBRAGE','LIRE','calibrage.lire','Consulter le calibrage'),
   ('CALIBRAGE','ORGANISER','calibrage.organiser','Organiser un calibrage (jauge)');
-INSERT INTO b_role_permission (id_role,id_permission)
+INSERT IGNORE INTO b_role_permission (id_role,id_permission)
   SELECT r.id, p.id FROM b_role r CROSS JOIN b_permission p WHERE p.code='calibrage.lire';
-INSERT INTO b_role_permission (id_role,id_permission)
+INSERT IGNORE INTO b_role_permission (id_role,id_permission)
   SELECT r.id, p.id FROM b_role r CROSS JOIN b_permission p WHERE p.code='calibrage.organiser' AND r.code='R_ADMI';
+-- Ménage des notifications (28_notifications_lecture_menage.sql)
+INSERT IGNORE INTO b_role_permission (id_role, id_permission)
+  SELECT r.id, p.id FROM b_role r CROSS JOIN b_permission p WHERE p.code='notification.supprimer' AND r.code='R_ADMI';
+-- Menus réservés à un profil -> permissions (29_permissions_menus_profils.sql)
+INSERT IGNORE INTO b_role_permission (id_role, id_permission)
+  SELECT r.id, p.id FROM b_role r JOIN b_permission p
+      ON (p.code IN ('compte.gerer','assignation.gerer') AND r.code = 'R_RO')
+      OR (p.code = 'ma_voix.ajouter' AND r.code = 'R_TC')
+      OR (p.code = 'ma_voix.motif' AND r.code = 'R_ADMI')
+      OR (p.code = 'chargement.verifier' AND r.code = 'R_GE');
+-- Export « Liste des agents » (31_permission_export_agents.sql) : profils ayant utilisateur.creer ou compte.gerer
+INSERT IGNORE INTO b_role_permission (id_role, id_permission)
+  SELECT DISTINCT rp.id_role, px.id FROM b_role_permission rp
+    JOIN b_permission p ON p.id = rp.id_permission AND p.code IN ('utilisateur.creer', 'compte.gerer')
+    JOIN b_permission px ON px.code = 'utilisateur.exporter';
+-- Coaching / plan d'actions (32_permission_evaluation_coacher.sql) : profils ayant evaluation.creer
+INSERT IGNORE INTO b_role_permission (id_role, id_permission)
+  SELECT DISTINCT rp.id_role, px.id FROM b_role_permission rp
+    JOIN b_permission p ON p.id = rp.id_permission AND p.code = 'evaluation.creer'
+    JOIN b_permission px ON px.code = 'evaluation.coacher';
+-- Portée et paramétrage (33_permissions_evaluation_portee.sql)
+INSERT IGNORE INTO b_role_permission (id_role, id_permission)
+  SELECT r.id, p.id FROM b_role r JOIN b_permission p ON p.code = 'evaluation.voir_tous'
+   WHERE r.code IN ('R_ADMI', 'R_AQ', 'R_RO');
+-- Évaluation terminée : (dés)activation (35_evaluation_desactiver.sql) — administrateur seul
+INSERT IGNORE INTO b_role_permission (id_role, id_permission)
+  SELECT r.id, p.id FROM b_role r JOIN b_permission p ON p.code = 'evaluation.desactiver' WHERE r.code = 'R_ADMI';
+-- Contre-évaluation : accès transverse (34_contre_evaluation_portee.sql)
+INSERT IGNORE INTO b_role_permission (id_role, id_permission)
+  SELECT r.id, p.id FROM b_role r JOIN b_permission p ON p.code = 'contre_evaluation.voir_tous'
+   WHERE r.code IN ('R_ADMI', 'R_AQ');
+INSERT IGNORE INTO b_role_permission (id_role, id_permission)
+  SELECT DISTINCT rp.id_role, px.id FROM b_role_permission rp
+    JOIN b_permission p ON p.id = rp.id_permission AND p.code = 'evaluation.modifier'
+    JOIN b_permission px ON px.code = 'evaluation.parametrer';

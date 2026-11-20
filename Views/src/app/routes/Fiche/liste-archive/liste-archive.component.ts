@@ -13,6 +13,7 @@ import { MatGridListModule } from '@angular/material/grid-list';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DatePipe, TitleCasePipe } from '@angular/common';
 import { MatIcon } from '@angular/material/icon';
+import { CanDirective } from '@core/authorization/can.directive';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   AppearanceAnimation,
@@ -21,12 +22,13 @@ import {
   DisappearanceAnimation,
 } from '@costlydeveloper/ngx-awesome-popup';
 import * as XLSX from 'xlsx';
-import { catchError, of, Subject, takeUntil, tap } from 'rxjs';
+import { catchError, of, Subject, takeUntil, tap, finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 @Component({
   selector: 'app-liste-archive',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent,
     MatFormFieldModule,
     MatInputModule,
     MatTableModule,
@@ -39,11 +41,13 @@ import { ToastrService } from 'ngx-toastr';
     MatTooltipModule,
     MatIcon,
     DatePipe,
+    CanDirective,
   ],
   templateUrl: './liste-archive.component.html',
   styleUrl: './liste-archive.component.scss',
 })
 export class ListeArchiveComponent implements OnInit {
+  chargement = true;
   private readonly userService = inject(UserService);
   private readonly router = inject(Router);
   private readonly toatSrv = inject(ToastrService);
@@ -51,12 +55,14 @@ export class ListeArchiveComponent implements OnInit {
 
   displayedColumns: string[] = ['titre', 'type', 'Categorie', 'dateFin', 'archive_par', 'action'];
   filename = 'La_liste_de_mes_archives.xlsx';
-  dataSource!: MatTableDataSource<fiche_by_gestionnaire>;
+  // initialisé vide : ngAfterViewInit s\'exécute avant l\'arrivée des données
+  dataSource = new MatTableDataSource<fiche_by_gestionnaire>([]);
   downloadData!: fiche_by_gestionnaire[];
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
   user!: User;
   ngOnInit(): void {
+    this.chargement = true;
     this.auth.user().subscribe({
       next: user => {
         this.user = user;
@@ -66,7 +72,7 @@ export class ListeArchiveComponent implements OnInit {
       },
     });
 
-    this.userService.getAllArchive().subscribe({
+    this.userService.getAllArchive().pipe(finalize(() => (this.chargement = false))).subscribe({
       next: result => {
         this.dataSource = new MatTableDataSource(result);
         this.downloadData = result;
@@ -123,9 +129,14 @@ export class ListeArchiveComponent implements OnInit {
         tap(value => {
           if (value.success) {
             this.userService.restore_archive(id).subscribe({
-              next: result => {
+              next: (result: any) => {
                 console.log(result);
-                this.toatSrv.success(result.message);
+                if (result?.dateFinRetiree) {
+                  // Date de fin dépassée retirée : avertissement, affiché plus longtemps.
+                  this.toatSrv.warning(result.message, '', { timeOut: 10000 });
+                } else {
+                  this.toatSrv.success(result.message);
+                }
                 this.router.navigateByUrl(`mon-espace/Fiche/Liste`);
               },
               error: error => {

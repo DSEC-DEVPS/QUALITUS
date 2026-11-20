@@ -255,6 +255,16 @@ const getDetailsUtilisateur = async (req, res, next) => {
       .json({ message: "Merci de bien renseigner les parametres" });
   }
   try {
+    // Sans utilisateur.lire, seul compte.gerer donne accès : comptes de son site uniquement.
+    const { permissionsEffectives } = require("../middlewares/permission");
+    const { role, set } = await permissionsEffectives(req.auth.userId);
+    if (role !== "R_ADMI" && !set.has("utilisateur.lire")) {
+      const gestionnaire = await habilitationSite(req.auth.userId, "compte.gerer");
+      const cible = gestionnaire ? await compteGerable(gestionnaire, Number(id)) : { erreur: 403 };
+      if (cible.erreur) {
+        return res.status(403).json({ message: "Accès refusé : cet utilisateur n'est pas dans votre périmètre." });
+      }
+    }
     const Query = `SELECT UT.id, UT.nom,UT.prenom,UT.telephone,UT.email,FCT.nom as Fonction,st.nom as Site,pr.nom as Programme,
      UT.id_EvalGrille, egr.nom as EvalGrille from
      B_UTILISATEUR UT INNER JOIN B_FONCTION FCT
@@ -262,10 +272,27 @@ const getDetailsUtilisateur = async (req, res, next) => {
       INNER JOIN B_SITE st on UT.id_Site=st.id INNER JOIN B_PROGRAMME pr on UT.id_Programme=pr.id
       LEFT JOIN b_eval_grille egr on UT.id_EvalGrille=egr.id
     where UT.id=?`;
-    const Query2 = `SELECT count(*) nb_consultation, fch.id,fch.titre,fch.url, UT.nom_utilisateur as Gestionnaire,max(ht.dateConsultation) as dateConsultation from B_HISTORIQUE ht INNER JOIN B_FICHE fch on ht.id_FICHE=fch.id INNER JOIN B_UTILISATEUR UT on fch.id_gestionnaire=UT.id where ht.id_UTILISATEUR=? GROUP BY fch.id`;
+    // Période facultative ?du=&au= (AAAA-MM-JJ, bornes incluses) : le nombre de
+    // consultations et la dernière consultation sont calculés SUR la période.
+    const jour = (v) => {
+      const t = String(v || "");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(t)) return null;
+      const d = new Date(t + "T00:00:00Z");
+      return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === t ? t : null;
+    };
+    const du = jour(req.query.du);
+    const au = jour(req.query.au);
+    if ((req.query.du && !du) || (req.query.au && !au)) {
+      return res.status(400).json({ message: "Période invalide (format attendu AAAA-MM-JJ)." });
+    }
+    const condPeriode =
+      (du ? " AND ht.dateConsultation >= ?" : "") +
+      (au ? " AND ht.dateConsultation < DATE_ADD(?, INTERVAL 1 DAY)" : "");
+    const paramsPeriode = [du, au].filter(Boolean);
+    const Query2 = `SELECT count(*) nb_consultation, fch.id,fch.titre,fch.url, UT.nom_utilisateur as Gestionnaire,max(ht.dateConsultation) as dateConsultation from B_HISTORIQUE ht INNER JOIN B_FICHE fch on ht.id_FICHE=fch.id INNER JOIN B_UTILISATEUR UT on fch.id_gestionnaire=UT.id where ht.id_UTILISATEUR=?${condPeriode} GROUP BY fch.id ORDER BY dateConsultation DESC`;
     const Query3 = `SELECT fch.id,fch.titre,ct.message,fch.url,UT.nom_utilisateur as Gestionnaire,ct.dateCommentaire  from B_COMMENTAIRE ct INNER JOIN B_FICHE fch on ct.id_FICHE=fch.id INNER JOIN  B_UTILISATEUR UT on fch.id_gestionnaire=UT.id where ct.id_UTILISATEUR=?`;
     const [result] = await db.query(Query, [id]);
-    const [result2] = await db.query(Query2, [id]);
+    const [result2] = await db.query(Query2, [id, ...paramsPeriode]);
     const [result3] = await db.query(Query3, [id]);
     result[0]["consultations"] = result2;
     result[0]["commentaires"] = result3;
@@ -951,55 +978,279 @@ const addNotification = async (req, res, next) => {
 // Cloche unifiée (point cahier) : agrège TOUTES les notifications de l'utilisateur,
 // tous modules confondus — fiches + évaluations/calibrage (B_NOTIFICATION) et quiz
 // (B_QZ_NOTIFICATION) — avec une url de redirection vers l'objet concerné.
+/* ------------------------------------------------------------------ */
+/* NOTIFICATIONS (cloche, compteur, historique, ménage)                 */
+/* ------------------------------------------------------------------ */
+// Union des deux sources : B_NOTIFICATION (CORE : fiches, évaluations,
+// calibrage…) et B_QZ_NOTIFICATION (QUIZ). `categorie` sert aux filtres et au ménage.
+const CLOCHE_JOURS_LUES = 7; // lues récemment encore affichées dans la cloche
+const CLOCHE_MAX = 30; // notifications LUES au plus dans la cloche (les non lues ne sont pas limitées)
+
+const SQL_NOTIFS = `
+  SELECT bn.id, 'CORE' AS source, bn.titre, bn.message, bn.type, bn.nature_objet, bn.id_objet, bn.id_FICHE,
+         -- Une notification de fiche ouvre TOUJOURS la lecture de la fiche.
+         IF(bn.id_FICHE IS NOT NULL, CONCAT('/lecture-fiche/', bn.id_FICHE), NULLIF(bn.url, '')) AS url,
+         bn.lu AS isRead, bn.dateReception AS createdAt, bn.dateLecture AS readAt,
+         CASE
+           WHEN bn.id_FICHE IS NOT NULL THEN 'FICHE'
+           WHEN bn.nature_objet IN ('EVALUATION','CONTRE_EVALUATION') THEN 'EVALUATION'
+           WHEN bn.nature_objet = 'CALIBRAGE' THEN 'CALIBRAGE'
+           WHEN bn.nature_objet IN ('OPTION_COACHING','COACHING','PLAN_ACTION') THEN 'COACHING'
+           WHEN bn.nature_objet = 'OPTION_BI' THEN 'BI'
+           ELSE 'AUTRE'
+         END AS categorie,
+         bn.id_UTILISATEUR AS id_utilisateur,
+         NULL AS quiz_acces, NULL AS quiz_titre
+    FROM B_NOTIFICATION bn
+   WHERE bn.dateReception IS NULL OR bn.dateReception <= NOW()  -- notifications différées (date de visibilité)
+  UNION ALL
+  SELECT qn.id, 'QUIZ' AS source, qn.titre, qn.message, 'QUIZ' AS type, 'QUIZ' AS nature_objet,
+         qn.id_Quiz AS id_objet, NULL AS id_FICHE,
+         CONCAT('/mon-espace/quiz/participer/', qn.id_Quiz) AS url,
+         qn.lu AS isRead, qn.dateCreation AS createdAt, qn.dateLecture AS readAt,
+         'QUIZ' AS categorie,
+         qn.id_UTILISATEUR AS id_utilisateur,
+         q.acces AS quiz_acces, q.titre AS quiz_titre
+    FROM B_QZ_NOTIFICATION qn
+    LEFT JOIN B_QZ_QUIZ q ON q.id = qn.id_Quiz`;
+
+const CATEGORIES_NOTIF = ["FICHE", "EVALUATION", "CALIBRAGE", "COACHING", "BI", "QUIZ", "AUTRE"];
+
+// Lien des notifications de quiz (mêmes règles que l'écran « Nouveautés ») :
+//  - « Autorisation quiz » (site invité) -> détail du quiz ;
+//  - « Réinitialisation demandée » (agent) -> Nouveautés, confirmation ouverte ;
+//  - « Réinitialisation confirmée / refusée » (demandeur) -> détail du quiz ;
+//  - « Score recalculé » (barème modifié) -> Mes scores ;
+//  - « Quiz modifié » (tentatives réinitialisées) -> comme un nouveau quiz (ci-dessous) ;
+//  - quiz privé -> page Participer, saisie du PIN ouverte + message ;
+//  - quiz public -> ouverture directe du quiz.
+const finaliserNotifications = (notifications) => {
+  for (const n of notifications) {
+    if (n.source === "QUIZ") {
+      if (n.titre === "Autorisation quiz") {
+        n.url = `/mon-espace/quiz/detail/${n.id_objet}`;
+      } else if (n.titre === "Réinitialisation demandée") {
+        n.url = `/mon-espace/quiz/nouveautes?reinitialisation=${n.id_objet}`;
+      } else if (n.titre === "Réinitialisation confirmée" || n.titre === "Réinitialisation refusée") {
+        n.url = `/mon-espace/quiz/detail/${n.id_objet}`;
+      } else if (n.titre === "Score recalculé") {
+        n.url = `/mon-espace/quiz/mes-scores`;
+      } else if ((n.quiz_acces || "PRIVATE") !== "PUBLIC") {
+        const titre = n.quiz_titre ? `&quiz=${encodeURIComponent(n.quiz_titre)}` : "";
+        n.url = `/mon-espace/quiz/participer?pin=saisir${titre}`;
+      }
+    }
+    delete n.quiz_acces;
+    delete n.quiz_titre;
+    delete n.id_utilisateur;
+  }
+  return notifications;
+};
+
+// GET /notifications (cloche) : TOUTES les non lues (sans limite), puis les lues
+// depuis moins de CLOCHE_JOURS_LUES jours, CLOCHE_MAX lues au plus.
 const getAllNotification = async (req, res) => {
   try {
     const userId = req.auth.userId;
     if (!userId) {
       return res.status(401).json({ error: "Non authentifié" });
     }
-    const [notifications] = await db.query(
-      `
-      SELECT * FROM (
-        SELECT bn.id,
-               'CORE' AS source,
-               bn.titre,
-               bn.message,
-               bn.type,
-               bn.nature_objet,
-               bn.id_objet,
-               bn.id_FICHE,
-               -- Une notification de fiche doit TOUJOURS ouvrir la lecture de la
-               -- fiche (corrige aussi les anciennes notifs dont l'url pointait
-               -- vers le fichier /chargements/...).
-               IF(bn.id_FICHE IS NOT NULL,
-                  CONCAT('/lecture-fiche/', bn.id_FICHE),
-                  NULLIF(bn.url, '')) AS url,
-               bn.lu AS isRead,
-               bn.dateReception AS createdAt
-          FROM B_NOTIFICATION bn
-         WHERE bn.id_UTILISATEUR = ?
-        UNION ALL
-        SELECT qn.id,
-               'QUIZ' AS source,
-               qn.titre,
-               qn.message,
-               'QUIZ' AS type,
-               'QUIZ' AS nature_objet,
-               qn.id_Quiz AS id_objet,
-               NULL AS id_FICHE,
-               CONCAT('/mon-espace/quiz/participer/', qn.id_Quiz) AS url,
-               qn.lu AS isRead,
-               qn.dateCreation AS createdAt
-          FROM B_QZ_NOTIFICATION qn
-         WHERE qn.id_UTILISATEUR = ?
-      ) t
-      ORDER BY t.createdAt DESC
-      `,
-      [userId, userId],
+    const [nonLues] = await db.query(
+      `SELECT * FROM (${SQL_NOTIFS}) t
+        WHERE t.id_utilisateur = ? AND t.isRead = 0
+        ORDER BY t.createdAt DESC`,
+      [userId]
     );
-    return res.status(200).json(notifications);
+    const [lues] = await db.query(
+      `SELECT * FROM (${SQL_NOTIFS}) t
+        WHERE t.id_utilisateur = ? AND t.isRead = 1
+          AND COALESCE(t.readAt, t.createdAt) >= DATE_SUB(NOW(), INTERVAL ? DAY)
+        ORDER BY t.createdAt DESC
+        LIMIT ?`,
+      [userId, CLOCHE_JOURS_LUES, CLOCHE_MAX]
+    );
+    return res.status(200).json(finaliserNotifications([...nonLues, ...lues]));
   } catch (error) {
     console.error("Erreur lors de la récupération des notifications:", error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+};
+
+// GET /notifications/compte : nombre de non lues (badge de la cloche, appel léger).
+const getCompteNotifications = async (req, res) => {
+  try {
+    const userId = req.auth.userId;
+    const [[r]] = await db.query(
+      `SELECT (SELECT COUNT(*) FROM B_NOTIFICATION WHERE id_UTILISATEUR = ? AND lu = 0
+                      AND (dateReception IS NULL OR dateReception <= NOW()))
+            + (SELECT COUNT(*) FROM B_QZ_NOTIFICATION WHERE id_UTILISATEUR = ? AND lu = 0) AS non_lues`,
+      [userId, userId]
+    );
+    return res.status(200).json({ non_lues: Number(r.non_lues) });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+};
+
+// Filtres de période ?du=&au= (AAAA-MM-JJ, bornes incluses) sur la date de réception.
+const RE_JOUR = /^\d{4}-\d{2}-\d{2}$/;
+
+// GET /notifications/historique?page=&taille=&statut=lues|non_lues&categorie=&du=&au=
+const getHistoriqueNotifications = async (req, res) => {
+  try {
+    const userId = req.auth.userId;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const taille = Math.min(100, Math.max(5, parseInt(req.query.taille, 10) || 20));
+    const where = ["t.id_utilisateur = ?"];
+    const params = [userId];
+    if (req.query.statut === "lues") where.push("t.isRead = 1");
+    else if (req.query.statut === "non_lues") where.push("t.isRead = 0");
+    const cat = String(req.query.categorie || "").toUpperCase();
+    if (CATEGORIES_NOTIF.includes(cat)) {
+      where.push("t.categorie = ?");
+      params.push(cat);
+    }
+    const du = String(req.query.du || "");
+    const au = String(req.query.au || "");
+    if ((du && !RE_JOUR.test(du)) || (au && !RE_JOUR.test(au)) || (du && au && du > au)) {
+      return res.status(400).json({ message: "Période invalide." });
+    }
+    if (du) { where.push("t.createdAt >= ?"); params.push(`${du} 00:00:00`); }
+    if (au) { where.push("t.createdAt < DATE_ADD(?, INTERVAL 1 DAY)"); params.push(`${au} 00:00:00`); }
+    const [[c]] = await db.query(
+      `SELECT COUNT(*) AS total FROM (${SQL_NOTIFS}) t WHERE ${where.join(" AND ")}`,
+      params
+    );
+    const [items] = await db.query(
+      `SELECT * FROM (${SQL_NOTIFS}) t WHERE ${where.join(" AND ")}
+        ORDER BY t.createdAt DESC LIMIT ? OFFSET ?`,
+      [...params, taille, (page - 1) * taille]
+    );
+    return res.status(200).json({ total: Number(c.total), page, taille, items: finaliserNotifications(items) });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+};
+
+// ---------- Ménage manuel (permission notification.supprimer) ----------
+// Contrôlée aussi ici (et pas seulement par le middleware) : action destructive,
+// refusée même en mode OBSERVATION.
+const { permissionsEffectives } = require("../middlewares/permission");
+const peutFaireMenage = async (userId) => {
+  const { role, set } = await permissionsEffectives(userId);
+  return role === "R_ADMI" || set.has("notification.supprimer");
+};
+const MSG_MENAGE_REFUSE = "Accès refusé : habilitation manquante (notification.supprimer).";
+// Critères (au moins un) : lues depuis plus de N jours ; non lues reçues depuis
+// plus de M jours. Portée : tous les utilisateurs ou un utilisateur précis.
+const lireCriteresMenage = (src) => {
+  const lire = (v) => (v === undefined || v === null || v === "" ? null : Number(v));
+  const lues = lire(src.lues_jours);
+  const nonLues = lire(src.non_lues_jours);
+  const util = lire(src.id_utilisateur);
+  const ok = (n) => n === null || (Number.isInteger(n) && n >= 1 && n <= 3650);
+  if (!ok(lues) || !ok(nonLues)) return { erreur: "Le nombre de jours doit être un entier entre 1 et 3650." };
+  if (lues === null && nonLues === null) return { erreur: "Choisissez au moins un critère (lues ou non lues)." };
+  if (util !== null && !Number.isInteger(util)) return { erreur: "Utilisateur invalide." };
+  return { lues, nonLues, util };
+};
+// Condition SQL commune aux deux tables (colonnes de date propres à chacune).
+const condMenage = (c, colRecu) => {
+  const parts = [];
+  const params = [];
+  if (c.lues !== null) {
+    parts.push(`(lu = 1 AND COALESCE(dateLecture, ${colRecu}) < DATE_SUB(NOW(), INTERVAL ? DAY))`);
+    params.push(c.lues);
+  }
+  if (c.nonLues !== null) {
+    parts.push(`(lu = 0 AND ${colRecu} < DATE_SUB(NOW(), INTERVAL ? DAY))`);
+    params.push(c.nonLues);
+  }
+  let sql = `(${parts.join(" OR ")})`;
+  if (c.util !== null) {
+    sql += " AND id_UTILISATEUR = ?";
+    params.push(c.util);
+  }
+  return { sql, params };
+};
+
+// GET /notifications/menage/apercu : nombre de notifications concernées, par catégorie.
+const apercuMenageNotifications = async (req, res) => {
+  if (!(await peutFaireMenage(req.auth.userId))) return res.status(403).json({ message: MSG_MENAGE_REFUSE });
+  const c = lireCriteresMenage(req.query);
+  if (c.erreur) return res.status(400).json({ message: c.erreur });
+  try {
+    const where = [];
+    const params = [];
+    if (c.lues !== null) {
+      where.push("(t.isRead = 1 AND COALESCE(t.readAt, t.createdAt) < DATE_SUB(NOW(), INTERVAL ? DAY))");
+      params.push(c.lues);
+    }
+    if (c.nonLues !== null) {
+      where.push("(t.isRead = 0 AND t.createdAt < DATE_SUB(NOW(), INTERVAL ? DAY))");
+      params.push(c.nonLues);
+    }
+    let sql = `(${where.join(" OR ")})`;
+    if (c.util !== null) { sql += " AND t.id_utilisateur = ?"; params.push(c.util); }
+    const [rows] = await db.query(
+      `SELECT t.categorie, SUM(t.isRead = 1) AS lues, SUM(t.isRead = 0) AS non_lues, COUNT(*) AS total
+         FROM (${SQL_NOTIFS}) t WHERE ${sql} GROUP BY t.categorie ORDER BY total DESC`,
+      params
+    );
+    const parCategorie = rows.map((r) => ({
+      categorie: r.categorie, lues: Number(r.lues), non_lues: Number(r.non_lues), total: Number(r.total),
+    }));
+    return res.status(200).json({ total: parCategorie.reduce((a, r) => a + r.total, 0), par_categorie: parCategorie });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+};
+
+// DELETE /notifications/menage  (mêmes critères, en corps de requête)
+const supprimerMenageNotifications = async (req, res) => {
+  if (!(await peutFaireMenage(req.auth.userId))) return res.status(403).json({ message: MSG_MENAGE_REFUSE });
+  const c = lireCriteresMenage(req.body || {});
+  if (c.erreur) return res.status(400).json({ message: c.erreur });
+  const cx = await db.getConnection();
+  try {
+    await cx.beginTransaction();
+    const core = condMenage(c, "dateReception");
+    const [r1] = await cx.query(`DELETE FROM B_NOTIFICATION WHERE ${core.sql}`, core.params);
+    const quiz = condMenage(c, "dateCreation");
+    const [r2] = await cx.query(`DELETE FROM B_QZ_NOTIFICATION WHERE ${quiz.sql}`, quiz.params);
+    await cx.commit();
+    const total = r1.affectedRows + r2.affectedRows;
+    console.log(`[ménage notifications] utilisateur ${req.auth.userId} : ${total} supprimée(s)`, c);
+    return res.status(200).json({ message: `${total} notification(s) supprimée(s).`, total });
+  } catch (error) {
+    try { await cx.rollback(); } catch (e) {}
+    console.error(error);
+    res.status(500).json({ error: "Erreur serveur" });
+  } finally {
+    cx.release();
+  }
+};
+
+// GET /notifications/menage/utilisateurs?q= : choix de la portée (un utilisateur).
+const rechercherUtilisateursMenage = async (req, res) => {
+  if (!(await peutFaireMenage(req.auth.userId))) return res.status(403).json({ message: MSG_MENAGE_REFUSE });
+  try {
+    const q = String(req.query.q || "").trim();
+    const like = `%${q.replace(/[\\%_]/g, (ch) => "\\" + ch)}%`;
+    const [rows] = await db.query(
+      `SELECT u.id, u.nom, u.prenom, u.nom_utilisateur AS login
+         FROM B_UTILISATEUR u
+        WHERE ? = '' OR u.nom LIKE ? OR u.prenom LIKE ? OR u.nom_utilisateur LIKE ?
+           OR CONCAT(u.prenom, ' ', u.nom) LIKE ?
+        ORDER BY u.nom, u.prenom LIMIT 20`,
+      [q, like, like, like, like]
+    );
+    return res.status(200).json(rows);
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Erreur serveur" });
   }
 };
@@ -1013,7 +1264,7 @@ const redOneNotifcation = async (req, res) => {
       return res.status(401).json({ error: "Non authentifié" });
     }
     if (source === "QUIZ") {
-      await db.query(`UPDATE B_QZ_NOTIFICATION SET lu=1 WHERE id=? AND id_UTILISATEUR=?`, [notificationId, userId]);
+      await db.query(`UPDATE B_QZ_NOTIFICATION SET lu=1, dateLecture=COALESCE(dateLecture, NOW()) WHERE id=? AND id_UTILISATEUR=?`, [notificationId, userId]);
     } else {
       await db.query(`UPDATE B_NOTIFICATION SET lu=1, dateLecture=NOW() WHERE id=? AND id_UTILISATEUR=?`, [notificationId, userId]);
     }
@@ -1024,20 +1275,6 @@ const redOneNotifcation = async (req, res) => {
   }
 };
 // Marque TOUTES les notifications non lues de l'utilisateur comme lues (tous modules)
-const redAllNotification = async (req, res) => {
-  try {
-    const userId = req.auth.userId;
-    if (!userId) {
-      return res.status(401).json({ error: "Non authentifié" });
-    }
-    await db.query(`UPDATE B_NOTIFICATION SET lu=1, dateLecture=NOW() WHERE id_UTILISATEUR=? AND lu=0`, [userId]);
-    await db.query(`UPDATE B_QZ_NOTIFICATION SET lu=1 WHERE id_UTILISATEUR=? AND lu=0`, [userId]);
-    res.json({ success: true, message: "Toutes les notifications ont été marquées comme lues" });
-  } catch (error) {
-    console.error("Erreur lors du marquage des notifications:", error);
-    res.status(500).json({ error: "Erreur serveur" });
-  }
-};
 const createNotification = async (req, res) => {
   try {
     const { userId, id_FICHE, titre } = req.body;
@@ -1069,6 +1306,50 @@ const createNotification = async (req, res) => {
 /** fin de controllers historique */
 /*controlleurs sur les fonctionnalités de  COMMENTAIRE*/
 
+// Notifie un nouveau commentaire de fiche au superviseur de l'auteur (un seul par
+// agent : la dernière affectation) et au gestionnaire qui a inséré la fiche.
+// Une seule notification si c'est la même personne ; jamais à l'auteur lui-même.
+// Le clic ouvre la lecture de la fiche (id_FICHE renseigné).
+const EXTRAIT_COMMENTAIRE = 80;
+const notifierCommentaireFiche = async (auteurId, ficheId, texte) => {
+  const [[fiche]] = await db.query(`SELECT id, titre, id_gestionnaire FROM B_FICHE WHERE id = ?`, [ficheId]);
+  if (!fiche) return 0;
+  const [[auteur]] = await db.query(
+    `SELECT nom, prenom, nom_utilisateur FROM B_UTILISATEUR WHERE id = ?`,
+    [auteurId]
+  );
+  const [[sup]] = await db.query(
+    `SELECT id_SUPERVISEUR FROM B_R_SUPERVISEUR_AGENT
+      WHERE id_AGENT = ? AND id_SUPERVISEUR IS NOT NULL
+      ORDER BY dateCreation DESC, id DESC LIMIT 1`,
+    [auteurId]
+  );
+  const destinataires = new Set(
+    [sup && sup.id_SUPERVISEUR, fiche.id_gestionnaire]
+      .filter((id) => id && Number(id) !== Number(auteurId))
+      .map(Number)
+  );
+  if (!destinataires.size) return 0;
+  const nomAuteur =
+    [auteur && auteur.prenom, auteur && auteur.nom].filter(Boolean).join(" ").trim() ||
+    (auteur && auteur.nom_utilisateur) ||
+    "Un utilisateur";
+  const brut = String(texte || "").replace(/\s+/g, " ").trim();
+  const extrait = brut.length > EXTRAIT_COMMENTAIRE ? brut.slice(0, EXTRAIT_COMMENTAIRE).trimEnd() + "…" : brut;
+  const contenu = `${nomAuteur} a commenté la fiche « ${fiche.titre || "sans titre"} » : « ${extrait} »`;
+  const maintenant = new Date();
+  for (const id of destinataires) {
+    await db.query(
+      // nature_objet reste NULL : la page Notifications du module Évaluation ne
+      // reprend que les notifications ayant un nature_objet.
+      `INSERT INTO B_NOTIFICATION (titre, message, type, dateReception, id_UTILISATEUR, id_FICHE, lu)
+       VALUES (?, ?, 'COMMENTAIRE', ?, ?, ?, 0)`,
+      ["Nouveau commentaire", contenu, maintenant, id, fiche.id]
+    );
+  }
+  return destinataires.size;
+};
+
 const addCommentaire = async (req, res, next) => {
   const { message, id_Fiche } = req.body;
   const userId = req.auth.userId;
@@ -1086,6 +1367,12 @@ const addCommentaire = async (req, res, next) => {
       userId,
       id_Fiche,
     ]);
+    // Le commentaire est enregistré : la notification ne doit jamais le faire échouer.
+    try {
+      await notifierCommentaireFiche(userId, id_Fiche, message);
+    } catch (e) {
+      console.error("Notification du commentaire de fiche :", e);
+    }
     return res
       .status(201)
       .json({ message: "Votre Commentaire a été bien enregistrer." });
@@ -2275,6 +2562,22 @@ const addFiche = async (req, res, next) => {
     return res.status(400).json({ message: "Aucun fichier n'a été envoyé." });
   }
 
+  // Toute fiche doit être rattachée à un site (via son auteur), sinon elle serait
+  // invisible dans Les Chargements / Archives. Règle valable aussi pour l'admin.
+  try {
+    const [[auteur]] = await db.query("SELECT id_Site FROM B_UTILISATEUR WHERE id=?", [userId]);
+    if (!auteur || auteur.id_Site === null || auteur.id_Site === undefined) {
+      fs.unlink(req.file.path, () => {});
+      return res.status(403).json({
+        message: "Vous devez être rattaché à un site pour insérer une fiche. Contactez l'administrateur.",
+      });
+    }
+  } catch (error) {
+    fs.unlink(req.file.path, () => {});
+    console.error("addFiche site error:", error && (error.sqlMessage || error.message));
+    return res.status(500).json({ message: "Erreur lors de l'insertion de la fiche, veuillez réessayer." });
+  }
+
   let data;
   try {
     data = JSON.parse(req.body.data);
@@ -2545,14 +2848,32 @@ const getAllFiche_Archive = async (req, res, next) => {
     res.status(500).json({ message: "Error request" });
   }
 };
+/**
+ * Portée de visibilité des fiches (Les Chargements / Archives) :
+ * - R_ADMI : toutes les fiches, tous sites confondus ;
+ * - autres : fiches insérées par l'utilisateur OU par tout utilisateur du même site
+ *   (FH.id_gestionnaire = auteur de l'insertion, quel que soit son rôle).
+ * Retourne le fragment SQL à ajouter au WHERE et ses paramètres.
+ */
+const porteeSiteFiches = async (userId) => {
+  const [[me]] = await db.query(
+    `SELECT UT.id_Site, FCT.Role_Associe AS role
+       FROM B_UTILISATEUR UT LEFT JOIN B_FONCTION FCT ON UT.id_Fonction = FCT.id
+      WHERE UT.id = ?`,
+    [userId]
+  );
+  if (me && me.role === "R_ADMI") return { clause: "1=1", params: [] };
+  return { clause: "UT.id_Site = ?", params: [me ? me.id_Site : null] };
+};
+
 const getAllFicheByGestionnaire = async (req, res, next) => {
   try {
     const userId = req.auth && req.auth.userId;
+    // Archivage automatique des fiches échues AVANT lecture (états à jour).
+    await Auto_archivage();
     // Portée : l'utilisateur voit les chargements insérés par lui-même OU par
-    // tout autre utilisateur du MÊME SITE (le gestionnaire de la fiche appartient
-    // au même site que le demandeur).
-    const [[me]] = await db.query("SELECT id_Site FROM B_UTILISATEUR WHERE id=?", [userId]);
-    const idSite = me ? me.id_Site : null;
+    // tout autre utilisateur du MÊME SITE ; l'admin voit tous les sites.
+    const portee = await porteeSiteFiches(userId);
     const Query = `SELECT FH.id,FH.titre,SL.source,SL.type,SL.priorite,SL.delai,FH.ETAT,DATE_FORMAT(FH.dateEnregistrement,'%Y-%m-%d %H:%i:%s') as dateEnregistrement,DATE_FORMAT(FH.dateDebut,'%Y-%m-%d %H:%i:%s') as dateDebut,DATE_FORMAT(FH.dateFin,'%Y-%m-%d %H:%i:%s') as dateFin,DATE_FORMAT(FH.date_Archive,'%Y-%m-%d %H:%i:%s') as date_Archive,FH.archive_par,CT.nom as Categorie,SCT.nom as Sous_Categorie,BOT.on_time, UT.nom_utilisateur as Gestionnaire  from
                   B_FICHE FH
                   LEFT JOIN B_UTILISATEUR UT
@@ -2564,9 +2885,9 @@ const getAllFicheByGestionnaire = async (req, res, next) => {
                   LEFT JOIN B_SOUS_CATEGORIE SCT
                   on FH.id_SousCategorie=SCT.id
                   LEFT JOIN B_ON_TIME BOT on FH.id=BOT.id_Fiche
-                  WHERE UT.id_Site = ?
+                  WHERE ${portee.clause}
                   ORDER BY dateDebut DESC`;
-    const [resutat] = await db.query(Query, [idSite]);
+    const [resutat] = await db.query(Query, portee.params);
     return res.status(200).send(resutat);
   } catch (error) {
     console.error("getAllFicheByGestionnaire error:", error && (error.sqlMessage || error.message));
@@ -3029,16 +3350,24 @@ const deleteFiche = async (req, res, next) => {
       .json({ message: "Erreur serveur.", error: error.message });
   }
 };
-const Auto_archivage = async (req, res, next) => {
+/**
+ * Archive automatiquement les fiches dont la date de fin est dépassée.
+ * Ne touche PAS aux fiches déjà archivées (on conserve l'auteur et la date d'un
+ * archivage manuel). Les fiches sans date de fin (NULL) ne sont jamais archivées.
+ * Ne lève jamais d'erreur : retourne le nombre de fiches archivées (0 si échec).
+ */
+const Auto_archivage = async () => {
   try {
-    const Query = `UPDATE B_FICHE set ETAT=?,date_Archive=?,archive_par=? where dateFin<=?`;
+    const Query = `UPDATE B_FICHE set ETAT=?,date_Archive=?,archive_par=?
+                    where dateFin<=? AND (ETAT IS NULL OR ETAT<>?)`;
     const ETAT = "ARCHIVE";
     const Date_current = new Date();
 
-    await db.query(Query, [ETAT, Date_current, "Système", Date_current]);
+    const [resultat] = await db.query(Query, [ETAT, Date_current, "Système", Date_current, ETAT]);
+    return resultat.affectedRows || 0;
   } catch (error) {
-    console.log(error);
-    throw error;
+    console.error("Auto_archivage error:", error && (error.sqlMessage || error.message));
+    return 0;
   }
 };
 const exportFiche = async (req, res, next) => {};
@@ -3047,29 +3376,38 @@ const exportFiche = async (req, res, next) => {};
 const archive_fiche = async (req, res, next) => {
   const { id } = req.params;
   const userId = req.auth.userId;
-  if (!id) {
+  if (!/^\d+$/.test(String(id || ""))) {
     return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner le parametre" });
+      .status(400)
+      .json({ message: "Identifiant de fiche invalide." });
   }
   try {
+    const [[fiche]] = await db.query(`SELECT ETAT from B_FICHE where ID=?`, [id]);
+    if (!fiche) {
+      return res.status(404).json({ message: "Fiche introuvable." });
+    }
+    if (fiche.ETAT === "ARCHIVE") {
+      return res.status(409).json({ message: "Cette fiche est déjà archivée." });
+    }
     const Query1 = `SELECT nom_utilisateur from B_UTILISATEUR where id=? `;
     const Query = `UPDATE B_FICHE SET ETAT=?,date_Archive=?,archive_par=? where ID=?`;
     const ETAT = "ARCHIVE";
     const date_Archive = new Date();
     const [result1] = await db.query(Query1, [userId]);
-    const result = await db.query(Query, [
+    await db.query(Query, [
       ETAT,
       date_Archive,
-      result1[0].nom_utilisateur,
+      result1[0] ? result1[0].nom_utilisateur : null,
       id,
     ]);
     return res
       .status(201)
       .json({ message: "Cette fiche a été archivée avec succes." });
   } catch (error) {
-    console.log(error);
-    throw error;
+    console.error("archive_fiche error:", error && (error.sqlMessage || error.message));
+    return res
+      .status(500)
+      .json({ message: "Erreur lors de l'archivage de la fiche, veuillez réessayer." });
   }
 };
 const getAllArchiveByGestionnaire = async (req, res, next) => {
@@ -3097,11 +3435,12 @@ const getAllArchiveByGestionnaire = async (req, res, next) => {
 const getAllArchive = async (req, res, next) => {
   try {
     const userId = req.auth && req.auth.userId;
+    // Archivage automatique des fiches échues AVANT lecture (états à jour).
+    await Auto_archivage();
     // Portée : archives (ETAT='ARCHIVE', qu'elles soient automatiques ou
     // manuelles) des chargements insérés par l'utilisateur OU par tout autre
-    // utilisateur du MÊME SITE (gestionnaire de la fiche = même site).
-    const [[me]] = await db.query("SELECT id_Site FROM B_UTILISATEUR WHERE id=?", [userId]);
-    const idSite = me ? me.id_Site : null;
+    // utilisateur du MÊME SITE ; l'admin voit tous les sites.
+    const portee = await porteeSiteFiches(userId);
     const Query = ` SELECT FH.id,FH.titre,SL.type,SL.priorite,FH.ETAT,DATE_FORMAT(FH.date_Archive,'%Y-%m-%d %H:%i:%s') as dateFin,FH.archive_par,CT.nom as Categorie,SCT.nom as Sous_Categorie, UT.nom_utilisateur as Gestionnaire from
     B_FICHE FH
     LEFT JOIN B_UTILISATEUR UT
@@ -3112,10 +3451,10 @@ const getAllArchive = async (req, res, next) => {
     on CT.id=FH.id_Categorie
     LEFT JOIN B_SOUS_CATEGORIE SCT
     on FH.id_SousCategorie=SCT.id
-    where FH.ETAT=? AND UT.id_Site = ?
+    where FH.ETAT=? AND ${portee.clause}
     ORDER BY FH.date_Archive DESC`;
     const ETAT = "ARCHIVE";
-    const [resutat] = await db.query(Query, [ETAT, idSite]);
+    const [resutat] = await db.query(Query, [ETAT, ...portee.params]);
     return res.status(200).send(resutat);
   } catch (error) {
     console.error("getAllArchive error:", error && (error.sqlMessage || error.message));
@@ -3124,21 +3463,40 @@ const getAllArchive = async (req, res, next) => {
 };
 const restore_archive = async (req, res, next) => {
   const { id } = req.params;
-  if (!id) {
+  if (!/^\d+$/.test(String(id || ""))) {
     return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
+      .status(400)
+      .json({ message: "Identifiant de fiche invalide." });
   }
   try {
-    const Query_update = `UPDATE B_FICHE SET ETAT=? where id=?`;
+    const [[fiche]] = await db.query(`SELECT ETAT, dateFin from B_FICHE where id=?`, [id]);
+    if (!fiche) {
+      return res.status(404).json({ message: "Fiche introuvable." });
+    }
+    if (fiche.ETAT !== "ARCHIVE") {
+      return res.status(409).json({ message: "Cette fiche n'est pas archivée." });
+    }
     const ETAT_update = "ACTIF";
-    const resultat = await db.query(Query_update, [ETAT_update, id]);
+    // Date de fin dépassée : sans action, l'archivage automatique ré-archiverait
+    // la fiche aussitôt. On retire donc la date de fin et on en informe l'utilisateur.
+    const dateFinDepassee = !!fiche.dateFin && new Date(fiche.dateFin) <= new Date();
+    if (dateFinDepassee) {
+      await db.query(`UPDATE B_FICHE SET ETAT=?, dateFin=NULL where id=?`, [ETAT_update, id]);
+      return res.status(201).json({
+        message:
+          "Fiche restaurée. Sa date de fin étant dépassée, elle a été supprimée : la fiche n'a plus de date de fin, pensez à en définir une nouvelle si nécessaire.",
+        dateFinRetiree: true,
+      });
+    }
+    await db.query(`UPDATE B_FICHE SET ETAT=? where id=?`, [ETAT_update, id]);
     return res
       .status(201)
       .json({ message: "Vous avez restorer cette fiche avec succes." });
   } catch (error) {
-    console.log(error);
-    throw error;
+    console.error("restore_archive error:", error && (error.sqlMessage || error.message));
+    return res
+      .status(500)
+      .json({ message: "Erreur lors de la restauration de la fiche, veuillez réessayer." });
   }
 };
 /**fin de controllers fiches */
@@ -3213,7 +3571,7 @@ const getAllAgentByRo = async (req, res, next) => {
   const userId = req.auth.userId;
   try {
     const Query1 = `SELECT id_Site FROM B_UTILISATEUR where id=? `;
-    const Query2 = `SELECT UT1.id,UT1.nom_utilisateur,UT1.nom,UT1.prenom,FCT.nom as fonction,pr.nom as programme,st.nom as site,UT1.status,UT3.nom_utilisateur as superviseur,UT3.nom as superviseur_nom,UT3.prenom as superviseur_prenom,UT1.dateCreation FROM B_UTILISATEUR UT1 INNER JOIN B_UTILISATEUR UT2 on UT1.id=UT2.id
+    const Query2 = `SELECT UT1.id,UT1.nom_utilisateur,UT1.nom,UT1.prenom,FCT.nom as fonction,UT1.id_Programme,pr.nom as programme,st.nom as site,UT1.status,UT3.nom_utilisateur as superviseur,UT3.nom as superviseur_nom,UT3.prenom as superviseur_prenom,UT1.dateCreation FROM B_UTILISATEUR UT1 INNER JOIN B_UTILISATEUR UT2 on UT1.id=UT2.id
     LEFT JOIN B_FONCTION FCT on UT1.id_Fonction=FCT.id 
     LEFT JOIN B_PROGRAMME pr on UT1.id_Programme=pr.id
     LEFT JOIN B_SITE st on UT1.id_Site=st.id
@@ -3229,6 +3587,126 @@ const getAllAgentByRo = async (req, res, next) => {
     throw error;
   }
 };
+/**
+ * Responsable opérationnel (R_RO) connecté : rôle + site. null si l'utilisateur n'est pas R_RO.
+ */
+const responsableOperationnel = async (userId) => habilitationSite(userId, "compte.gerer");
+
+/**
+ * Utilisateur connecté s'il détient la permission `code` (ou est R_ADMI), avec son
+ * site ; null sinon. Les menus « Gérer les comptes » et « Assignation » ne sont plus
+ * réservés au profil R_RO : la permission suffit, sur le site de l'utilisateur.
+ * Contrôlé ici aussi car le middleware laisse tout passer en mode OBSERVATION.
+ */
+const habilitationSite = async (userId, code) => {
+  const { permissionsEffectives } = require("../middlewares/permission");
+  const { role, set } = await permissionsEffectives(userId);
+  if (role !== "R_ADMI" && !set.has(code)) return null;
+  const [[me]] = await db.query(`SELECT id, id_Site FROM B_UTILISATEUR WHERE id = ?`, [userId]);
+  return me ? { ...me, role } : null;
+};
+
+/** Utilisateur gérable depuis « Gérer les comptes » : même site, ni soi-même, ni admin, ni gestionnaire Baseco. */
+const compteGerable = async (gestionnaire, id) => {
+  const [[u]] = await db.query(
+    `SELECT UT.id, UT.id_Site, FCT.nom AS fonction
+       FROM B_UTILISATEUR UT LEFT JOIN B_FONCTION FCT ON UT.id_Fonction = FCT.id
+      WHERE UT.id = ?`,
+    [id]
+  );
+  if (!u) return { erreur: 404 };
+  const fonction = (u.fonction || "").toLowerCase();
+  if (
+    u.id_Site !== gestionnaire.id_Site ||
+    u.id === gestionnaire.id ||
+    fonction === "administrateur" ||
+    fonction === "gestionnaire baseco"
+  ) {
+    return { erreur: 403 };
+  }
+  return { utilisateur: u };
+};
+
+/** Programmes actifs proposés au RO pour la modification du programme d'un agent. */
+const getProgrammesPourRo = async (req, res, next) => {
+  try {
+    const ro = await responsableOperationnel(req.auth.userId);
+    if (!ro) {
+      return res.status(403).json({ message: "Accès refusé : habilitation manquante (compte.gerer)." });
+    }
+    const [programmes] = await db.query(
+      `SELECT id, nom FROM B_PROGRAMME WHERE Etat = 'ACTIF' ORDER BY nom`
+    );
+    return res.status(200).send(programmes);
+  } catch (error) {
+    console.error("getProgrammesPourRo error:", error && (error.sqlMessage || error.message));
+    return res.status(500).json({ message: "Erreur lors du chargement des programmes, veuillez réessayer." });
+  }
+};
+
+/**
+ * Modification du programme d'un utilisateur par le RO (menu « Gérer les comptes »).
+ * Seul le programme (et la date de modification) est mis à jour. L'utilisateur ciblé
+ * doit faire partie de la liste du RO : même site, ni lui-même, ni administrateur,
+ * ni gestionnaire Baseco (mêmes règles que getAllAgentByRo).
+ */
+const updateProgrammeAgentParRo = async (req, res, next) => {
+  const { id } = req.params;
+  const { id_Programme } = req.body || {};
+  if (!/^\d+$/.test(String(id || "")) || !/^\d+$/.test(String(id_Programme ?? ""))) {
+    return res.status(400).json({ message: "Utilisateur ou programme invalide." });
+  }
+  try {
+    const ro = await responsableOperationnel(req.auth.userId);
+    if (!ro) {
+      return res.status(403).json({ message: "Accès refusé : habilitation manquante (compte.gerer)." });
+    }
+    const [[agent]] = await db.query(
+      `SELECT UT.id, UT.nom_utilisateur, UT.id_Site, UT.id_Programme, FCT.nom AS fonction,
+              PR.nom AS programme
+         FROM B_UTILISATEUR UT
+         LEFT JOIN B_FONCTION FCT ON UT.id_Fonction = FCT.id
+         LEFT JOIN B_PROGRAMME PR ON UT.id_Programme = PR.id
+        WHERE UT.id = ?`,
+      [id]
+    );
+    if (!agent) {
+      return res.status(404).json({ message: "Utilisateur introuvable." });
+    }
+    const fonction = (agent.fonction || "").toLowerCase();
+    if (
+      agent.id_Site !== ro.id_Site ||
+      agent.id === ro.id ||
+      fonction === "administrateur" ||
+      fonction === "gestionnaire baseco"
+    ) {
+      return res.status(403).json({ message: "Vous ne pouvez pas modifier le programme de cet utilisateur." });
+    }
+    const [[programme]] = await db.query(`SELECT id, nom, Etat FROM B_PROGRAMME WHERE id = ?`, [id_Programme]);
+    if (!programme) {
+      return res.status(404).json({ message: "Programme introuvable." });
+    }
+    if (programme.Etat !== "ACTIF") {
+      return res.status(409).json({ message: "Ce programme n'est pas actif." });
+    }
+    if (Number(agent.id_Programme) === Number(programme.id)) {
+      return res.status(409).json({ message: `${agent.nom_utilisateur} est déjà sur le programme ${programme.nom}.` });
+    }
+    await db.query(
+      `UPDATE B_UTILISATEUR SET id_Programme = ?, dateModification = NOW() WHERE id = ?`,
+      [programme.id, agent.id]
+    );
+    return res.status(200).json({
+      message: `Programme de ${agent.nom_utilisateur} mis à jour : ${agent.programme || "aucun"} → ${programme.nom}.`,
+      id_Programme: programme.id,
+      programme: programme.nom,
+    });
+  } catch (error) {
+    console.error("updateProgrammeAgentParRo error:", error && (error.sqlMessage || error.message));
+    return res.status(500).json({ message: "Erreur lors de la modification du programme, veuillez réessayer." });
+  }
+};
+
 const getAllAgentByRo_Assignable = async (req, res, next) => {
   const userId = req.auth.userId;
   try {
@@ -3273,21 +3751,29 @@ const restore_password = async (req, res, next) => {
     return res.status(403).json({ message: "Merci de bien renseigner" });
   }
   try {
+    const gestionnaire = await habilitationSite(req.auth.userId, "compte.gerer");
+    if (!gestionnaire) {
+      return res.status(403).json({ message: "Accès refusé : habilitation manquante (compte.gerer)." });
+    }
+    const cible = await compteGerable(gestionnaire, Number(id));
+    if (cible.erreur === 404) {
+      return res.status(404).json({ message: "Utilisateur introuvable." });
+    }
+    if (cible.erreur) {
+      return res.status(403).json({ message: "Vous ne pouvez pas réinitialiser le mot de passe de cet utilisateur." });
+    }
     const Query = `SELECT default_password from B_UTILISATEUR where id=?`;
     const Query_update = `UPDATE B_UTILISATEUR SET password=? where id=?`;
     const [resultat] = await db.query(Query, [id]);
     const default_password = resultat[0].default_password;
-    console.log("default_password", default_password);
-    const resultat_update = await db.query(Query_update, [
-      default_password,
-      id,
-    ]);
+    // Pas de mot de passe par défaut : on ne touche pas au mot de passe actuel.
     if (default_password == null || default_password == undefined) {
       return res.status(404).json({
         message:
           "Le mot de passe par défaut n'est pas défini pour cet utilisateur.",
       });
     }
+    await db.query(Query_update, [default_password, id]);
     return res
       .status(201)
       .json({ message: "Le mot de passe a été rénitialiser avec succes." });
@@ -3328,7 +3814,32 @@ const change_password = async (req, res, next) => {
 };
 const assignation_agent = async (req, res, next) => {
   const { id_SUPERVISEUR, liste_agents } = req.body;
+  if (!/^\d+$/.test(String(id_SUPERVISEUR ?? "")) || !Array.isArray(liste_agents) || !liste_agents.length) {
+    return res.status(400).json({ message: "Choisissez un superviseur et au moins un agent." });
+  }
   try {
+    // Périmètre : superviseur et agents du site de l'utilisateur (permission assignation.gerer).
+    const moi = await habilitationSite(req.auth.userId, "assignation.gerer");
+    if (!moi) {
+      return res.status(403).json({ message: "Accès refusé : habilitation manquante (assignation.gerer)." });
+    }
+    const [[sup]] = await db.query(
+      `SELECT UT.id FROM B_UTILISATEUR UT LEFT JOIN B_FONCTION FCT ON UT.id_Fonction = FCT.id
+        WHERE UT.id = ? AND UT.id_Site = ? AND FCT.nom = 'Superviseur'`,
+      [id_SUPERVISEUR, moi.id_Site]
+    );
+    if (!sup) {
+      return res.status(403).json({ message: "Ce superviseur n'appartient pas à votre site." });
+    }
+    const [agentsSite] = await db.query(
+      `SELECT UT.nom_utilisateur FROM B_UTILISATEUR UT LEFT JOIN B_FONCTION FCT ON UT.id_Fonction = FCT.id
+        WHERE UT.id_Site = ? AND UT.id != ? AND UT.nom_utilisateur IN (?)
+          AND FCT.nom NOT IN ('Superviseur','Gestionnaire Baseco','administrateur')`,
+      [moi.id_Site, moi.id, liste_agents]
+    );
+    if (agentsSite.length !== new Set(liste_agents).size) {
+      return res.status(403).json({ message: "Certains agents n'appartiennent pas à votre site." });
+    }
     const Query = `select * from B_R_SUPERVISEUR_AGENT RSA INNER JOIN B_UTILISATEUR UT on RSA.id_AGENT=UT.id where  UT.nom_utilisateur=?`;
     const Query_select_id_agent = `SELECT id from B_UTILISATEUR where nom_utilisateur=?`;
     const Query_update = `UPDATE B_R_SUPERVISEUR_AGENT set id_SUPERVISEUR=?,dateCreation=? where id_AGENT=?`;
@@ -3619,78 +4130,106 @@ const statistic = async (req, res, next) => {
     throw error;
   }
 };
-const statistic_TC = async (req, res, next) => {
-  const date = req.body.date + "%";
-  const userId = req.auth.userId;
+// Statistiques d'un agent pour une journée (cartes du tableau de bord agent et de
+// la page « détail agent » du superviseur). Performances : comptages lancés en
+// parallèle, filtre de date en plage [jour, jour + 1[ (utilise les index
+// (agent, date) de la migration 39) au lieu d'un LIKE sur la date.
+const jourValide = (v) => {
+  const d = String(v || "").slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null;
+};
+const compte = async (sql, params, champ) => {
+  const [[r]] = await db.query(sql, params);
+  return Number((r && r[champ]) || 0);
+};
+const ficheLuesDuJour = (u, j) => compte(
+  `SELECT COUNT(DISTINCT id_FICHE) AS n FROM B_HISTORIQUE
+    WHERE id_UTILISATEUR = ? AND dateConsultation >= ? AND dateConsultation < ? + INTERVAL 1 DAY`, [u, j, j], "n");
+const sondagesDuJour = (u, j) => compte(
+  `SELECT COUNT(DISTINCT id_FICHE) AS n FROM B_SONDAGE
+    WHERE id_UTILISATEUR = ? AND dateSondage >= ? AND dateSondage < ? + INTERVAL 1 DAY`, [u, j, j], "n");
+const quizDuJour = (u, j, filtre = "", val = []) => compte(
+  `SELECT COUNT(DISTINCT id_FICHE) AS n FROM B_REPONSE_QUIZ
+    WHERE id_UTILISATEUR = ? AND date_Quiz >= ? AND date_Quiz < ? + INTERVAL 1 DAY ${filtre}`, [u, j, j, ...val], "n");
+const quizTotal = (u, filtre, val) => compte(
+  `SELECT COUNT(DISTINCT id_FICHE) AS n FROM B_REPONSE_QUIZ WHERE id_UTILISATEUR = ? ${filtre}`, [u, ...val], "n");
 
-  if (!date) {
-    return res
-      .status(430)
-      .json({ message: "Merci de bien renseigner les parametres." });
+const statistic_TC = async (req, res, next) => {
+  const jour = jourValide(req.body.date);
+  const userId = req.auth.userId;
+  if (!jour) {
+    return res.status(430).json({ message: "Merci de bien renseigner les parametres." });
   }
   try {
-    const resultat = {};
-    const Query1 = `select COUNT(id_FICHE) as nombre_fiche_lue from ( select id_FICHE from B_HISTORIQUE where dateConsultation like ? and id_UTILISATEUR =?  GROUP BY id_FICHE) A`;
-    const Query2 = `select COUNT(id_FICHE) as nombre_sondage_effectue from ( select id_FICHE from B_SONDAGE where dateSondage like ? and id_UTILISATEUR =?  GROUP BY id_FICHE) A`;
-    const Query3 = `select COUNT(id_FICHE) as nombre_quiz_effectue from ( select id_FICHE from B_REPONSE_QUIZ where date_Quiz like ? and id_UTILISATEUR =?  GROUP BY id_FICHE) A`;
-    const [resultat1] = await db.query(Query1, [date, userId]);
-    const [resultat2] = await db.query(Query2, [date, userId]);
-    const [resultat3] = await db.query(Query3, [date, userId]);
-    resultat["nombre_fiche_lue"] = resultat1[0].nombre_fiche_lue;
-    resultat["nombre_sondage_effectue"] = resultat2[0].nombre_sondage_effectue;
-    resultat["nombre_quiz_effectue"] = resultat3[0].nombre_quiz_effectue;
-    // //console.log(resultat);
-    return res.status(200).send(resultat);
+    const [fiches, sondages, quiz] = await Promise.all([
+      ficheLuesDuJour(userId, jour), sondagesDuJour(userId, jour), quizDuJour(userId, jour),
+    ]);
+    return res.status(200).send({
+      nombre_fiche_lue: fiches, nombre_sondage_effectue: sondages, nombre_quiz_effectue: quiz,
+    });
   } catch (error) {
     console.log(error);
-    throw error;
+    return res.status(500).json({ message: "Erreur lors du calcul des statistiques." });
   }
 };
+// Qui peut voir les statistiques d'un agent (page « détail agent ») : mêmes
+// accès que la page elle-même — administrateur, superviseur de l'agent,
+// utilisateur.lire (gestion des utilisateurs), ou compte.gerer pour un agent
+// de son site (liste « Gérer les comptes »).
+const peutVoirStatsAgent = async (demandeur, agent) => {
+  const { permissionsEffectives } = require("../middlewares/permission");
+  const { role, set } = await permissionsEffectives(demandeur);
+  if (role === "R_ADMI" || set.has("utilisateur.lire")) return true;
+  const [[sup]] = await db.query(
+    `SELECT 1 AS ok FROM B_R_SUPERVISEUR_AGENT WHERE id_SUPERVISEUR = ? AND id_AGENT = ? LIMIT 1`, [demandeur, agent]
+  );
+  if (sup) return true;
+  if (set.has("compte.gerer")) {
+    const [[memeSite]] = await db.query(
+      `SELECT 1 AS ok FROM B_UTILISATEUR a JOIN B_UTILISATEUR d ON d.id = ?
+        WHERE a.id = ? AND a.id_Site IS NOT NULL AND a.id_Site = d.id_Site LIMIT 1`, [demandeur, agent]
+    );
+    if (memeSite) return true;
+  }
+  return false;
+};
+
 const statistic_TC_FOR_SUP = async (req, res, next) => {
-  const { data } = req.body;
-  const date = data.date + "%";
-  const userId = data.userId;
-  console.log(userId);
-  if (!date) {
-    return res
-      .status(430)
-      .json({ message: "Merci de bien renseigner les parametres." });
+  const data = (req.body && req.body.data) || {};
+  const jour = jourValide(data.date);
+  const userId = Number(data.userId);
+  if (!jour || !userId) {
+    return res.status(430).json({ message: "Merci de bien renseigner les parametres." });
   }
   try {
-    const resultat = {};
-    const Query1 = `select COUNT(id_FICHE) as nombre_fiche_lue from ( select id_FICHE from B_HISTORIQUE where dateConsultation like ? and id_UTILISATEUR =?  GROUP BY id_FICHE) A`;
-    const Query2 = `select COUNT(id_FICHE) as nombre_sondage_effectue from ( select id_FICHE from B_SONDAGE where dateSondage like ? and id_UTILISATEUR =?  GROUP BY id_FICHE) A`;
-    const Query3 = `select COUNT(id_FICHE) as nombre_quiz_en_retest from ( select id_FICHE from B_REPONSE_QUIZ where date_Quiz like ? and id_UTILISATEUR =? and STATUT=?  GROUP BY id_FICHE) A`;
-    const Query4 = `select COUNT(id_FICHE) as nombre_quiz_echecs from ( select id_FICHE from B_REPONSE_QUIZ where date_Quiz like ? and id_UTILISATEUR =? and ETAT=?   GROUP BY id_FICHE) A`;
-    const Query5 = `select COUNT(id_FICHE) as nombre_total_quiz_en_retest from ( select id_FICHE from B_REPONSE_QUIZ where  id_UTILISATEUR =? and STATUT=?  GROUP BY id_FICHE) A`;
-    const Query6 = `select COUNT(id_FICHE) as nombre_total_quiz_Echecs from ( select id_FICHE from B_REPONSE_QUIZ where id_UTILISATEUR =? and ETAT=?  GROUP BY id_FICHE) A`;
-    const Query7 = ` SELECT COUNT(BN.id) as nombre_notification_non_lue FROM B_NOTIFICATION BN LEFT JOIN (select id_NOTIFICATION,createdBy from B_notifications where createdBy=?) n on BN.id=n.id_NOTIFICATION where n.ID_NOTIFICATION is null  `;
-    const [resultat1] = await db.query(Query1, [date, userId]);
-    const [resultat2] = await db.query(Query2, [date, userId]);
-    const [resultat3] = await db.query(Query3, [
-      date,
-      userId,
-      "Encours_Retest",
+    if (!(await peutVoirStatsAgent(req.auth.userId, userId))) {
+      return res.status(403).json({ message: "Accès refusé aux statistiques de cet agent." });
+    }
+    const [fiches, sondages, retestJour, echecsJour, retestTotal, echecsTotal, notifCore, notifQuiz] = await Promise.all([
+      ficheLuesDuJour(userId, jour),
+      sondagesDuJour(userId, jour),
+      quizDuJour(userId, jour, "AND STATUT = ?", ["Encours_Retest"]),
+      quizDuJour(userId, jour, "AND ETAT = ?", ["Echecs"]),
+      quizTotal(userId, "AND STATUT = ?", ["Encours_Retest"]),
+      quizTotal(userId, "AND ETAT = ?", ["Echecs"]),
+      // Notifications non lues DE L'AGENT, même règle que sa cloche (hors
+      // notifications différées dont la date n'est pas encore atteinte).
+      compte(`SELECT COUNT(*) AS n FROM B_NOTIFICATION WHERE id_UTILISATEUR = ? AND lu = 0
+               AND (dateReception IS NULL OR dateReception <= NOW())`, [userId], "n"),
+      compte(`SELECT COUNT(*) AS n FROM B_QZ_NOTIFICATION WHERE id_UTILISATEUR = ? AND lu = 0`, [userId], "n"),
     ]);
-    const [resultat4] = await db.query(Query4, [date, userId, "Echecs"]);
-    const [resultat5] = await db.query(Query5, [userId, "Encours_Retest"]);
-    const [resultat6] = await db.query(Query6, [userId, "Echecs"]);
-    const [resultat7] = await db.query(Query7, [userId]);
-    resultat["nombre_fiche_lue"] = resultat1[0].nombre_fiche_lue;
-    resultat["nombre_sondage_effectue"] = resultat2[0].nombre_sondage_effectue;
-    resultat["nombre_quiz_en_retest"] = resultat3[0].nombre_quiz_en_retest;
-    resultat["nombre_quiz_Echecs"] = resultat4[0].nombre_quiz_echecs;
-    resultat["nombre_total_quiz_en_retest"] =
-      resultat5[0].nombre_total_quiz_en_retest;
-    resultat["nombre_total_quiz_Echecs"] =
-      resultat6[0].nombre_total_quiz_Echecs;
-    resultat["nombre_notification_non_lue"] =
-      resultat7[0].nombre_notification_non_lue;
-    //console.log(resultat);
-    return res.status(200).send(resultat);
+    return res.status(200).send({
+      nombre_fiche_lue: fiches,
+      nombre_sondage_effectue: sondages,
+      nombre_quiz_en_retest: retestJour,
+      nombre_quiz_Echecs: echecsJour,
+      nombre_total_quiz_en_retest: retestTotal,
+      nombre_total_quiz_Echecs: echecsTotal,
+      nombre_notification_non_lue: notifCore + notifQuiz,
+    });
   } catch (error) {
     console.log(error);
-    throw error;
+    return res.status(500).json({ message: "Erreur lors du calcul des statistiques." });
   }
 };
 /** fin des controller sur les stats */
@@ -3937,6 +4476,11 @@ module.exports = {
   deleteFonction,
   addNotification,
   getAllNotification,
+  getCompteNotifications,
+  getHistoriqueNotifications,
+  apercuMenageNotifications,
+  supprimerMenageNotifications,
+  rechercherUtilisateursMenage,
   getDetailsProgramme,
   addCommentaire,
   getAllCommentaireByIdFiche,
@@ -3983,6 +4527,8 @@ module.exports = {
   getAllFicheByIdCategorieAndIdSousCategorie,
   archive_fiche,
   getAllAgentByRo,
+  getProgrammesPourRo,
+  updateProgrammeAgentParRo,
   getStatistique_par_site,
   getAllArchive,
   getOneSite,
@@ -4017,6 +4563,5 @@ module.exports = {
   getAllFiche_Archive,
   statistic_TC_FOR_SUP,
   redOneNotifcation,
-  redAllNotification,
   createNotification,
 };

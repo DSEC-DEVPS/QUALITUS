@@ -10,11 +10,12 @@ import { ToastrService } from 'ngx-toastr';
 import * as XLSX from 'xlsx';
 import { SondageService } from '@shared/services/sondage.service';
 import { QuestionRapport, RapportSondage, TYPES_QUESTION } from '../interfaces';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
   selector: 'app-rapport-sondage',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent,
     DecimalPipe,
     MatCardModule,
     MatButtonModule,

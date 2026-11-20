@@ -18,10 +18,13 @@ import { ToastrService } from 'ngx-toastr';
 import { EvalContreService, ContreDetail, ContreCategorie, ContreErreur } from '../../eval-contre.service';
 
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { ConfirmationService } from '@shared/services/confirmation.service';
+import { finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 @Component({
   selector: 'app-contre-executer',
   standalone: true,
-  imports: [MatDatepickerModule, 
+  imports: [ChargementComponent, MatDatepickerModule,
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatCheckboxModule,
     MatFormFieldModule, MatInputModule, MatRadioModule, MatChipsModule, MatExpansionModule, MatTooltipModule,
   ],
@@ -29,6 +32,8 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
   styleUrl: './contre-executer.component.scss',
 })
 export class ContreExecuterComponent implements OnInit {
+  chargement = true;
+  private readonly confirmation = inject(ConfirmationService);
   private readonly service = inject(EvalContreService);
   private readonly route = inject(ActivatedRoute);
   private readonly location = inject(Location);
@@ -45,7 +50,8 @@ export class ContreExecuterComponent implements OnInit {
   get estResponsable(): boolean { return !!this.detail?.est_responsable; }
 
   charger(): void {
-    this.service.getDetail(this.id).subscribe({
+    this.chargement = true;
+    this.service.getDetail(this.id).pipe(finalize(() => (this.chargement = false))).subscribe({
       next: d => {
         this.detail = d;
         const prec = this.categorieActive?.id;
@@ -90,10 +96,10 @@ export class ContreExecuterComponent implements OnInit {
     });
   }
 
-  terminer(): void {
+  async terminer(): Promise<void> {
     if (!this.detail) return;
     if (!this.detail.contre.date_visibilite) { this.toastr.warning('La date de visibilité est obligatoire.'); return; }
-    if (!confirm('Terminer la contre-évaluation ?')) return;
+    if (!(await this.confirmation.confirmer({ titre: 'Terminer la contre-évaluation', message: 'Terminer la contre-évaluation ?', type: 'attention' }))) return;
     this.service.terminer(this.id).subscribe({
       next: r => { this.toastr.success(`Terminée : ${r.conclusion === 'SUCCES' ? 'Succès' : 'Échec'}.`); this.charger(); },
       error: err => this.toastr.error(err?.error?.message || 'Erreur.'),

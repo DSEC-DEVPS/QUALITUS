@@ -4,7 +4,7 @@
     <button mat-stroked-button color="primary" (click)="creer()"><mat-icon>add</mat-icon> Créer une supplémentaire</button>
   </div>
 
-  @if (data) {
+  @if (chargement && !data) { <app-chargement /> } @else if (data) {
     <p class="compteur">
       Réalisées : <strong>{{ data.realisees }}</strong> / attendues : <strong>{{ data.attendues ?? '—' }}</strong>
       @if (data.attendues !== null && data.realisees < data.attendues) { <span class="manque">— {{ data.attendues - data.realisees }} restante(s)</span> }

@@ -32,6 +32,11 @@ export class CalibrageService {
   private readonly http = inject(HttpClient);
   private base = '/api/v1/calibrage';
 
+  /** Sites où l'utilisateur peut organiser un calibrage (site à vision globale : tous). */
+  getContexte(): Observable<{ vision_globale: boolean; id_site: number | null; sites: { id: number; nom: string }[] }> {
+    return this.http.get<any>(`${this.base}/contexte`);
+  }
+
   getSessions(f: FiltresSession = {}): Observable<CalSessionListe[]> {
     const params: any = {};
     if (f.id_site) params.id_site = f.id_site;
@@ -84,6 +89,12 @@ export class CalibrageService {
   cloturerReference(id: number) { return this.http.post(`${this.base}/session/${id}/cloturer-reference`, {}); }
   setVisibilite(id: number, visible: boolean) { return this.http.put(`${this.base}/session/${id}/visibilite`, { visible }); }
   reinitialiser(pid: number) { return this.http.put(`${this.base}/participant/${pid}/reinitialiser`, {}); }
+  /** Reprise après coupure : temps proposé (minutes restantes au dernier enregistrement du participant). */
+  propositionReprise(pid: number) {
+    return this.http.get<{ statut_participation: string; duree_minutes: number; derniere_activite: string | null; minutes_proposees: number }>(
+      `${this.base}/participant/${pid}/reprise`);
+  }
+  reprendre(pid: number, minutes: number) { return this.http.put<{ message: string }>(`${this.base}/participant/${pid}/reprendre`, { minutes }); }
 
   // --- Phase 3 : résultats (F.47) ---
   getResultats(id: number): Observable<any> { return this.http.get<any>(`${this.base}/session/${id}/resultats`); }
@@ -91,7 +102,7 @@ export class CalibrageService {
   modifierCote(id: number, body: { cote: 'REFERENCE' | 'PARTICIPANT'; id_transaction: number; id_participant?: number; id_erreur_origine: number; coche: boolean }) {
     return this.http.put(`${this.base}/session/${id}/cote`, body);
   }
-  setAppreciation(id: number, body: { id_transaction: number; id_erreur_origine: number; appreciation: string }) {
+  setAppreciation(id: number, body: { id_transaction: number; id_participant: number; id_erreur_origine: number; appreciation: string }) {
     return this.http.put(`${this.base}/session/${id}/appreciation`, body);
   }
   setCommentaireJauge(id: number, body: { id_transaction: number; id_erreur_origine: number; commentaire: string }) {

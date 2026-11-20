@@ -45,3 +45,28 @@
     font-weight: 600;
   }
 }
+
+.chip-site {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  background: #e3f2fd;
+  color: #1565c0;
+}
+.periode-info mat-icon { vertical-align: middle; }
+
+/* Panneaux : marge verticale entre eux, en-tête (replié) aéré. */
+.panneau-quiz {
+  margin-bottom: 16px;
+}
+.mat-expansion-panel-header.entete-quiz {
+  padding: 0 28px;
+}
+.entete-quiz mat-panel-title {
+  align-items: center;
+  gap: 4px;
+}
+.entete-quiz mat-panel-description {
+  align-items: center;
+}

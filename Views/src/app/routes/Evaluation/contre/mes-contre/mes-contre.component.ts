@@ -13,6 +13,8 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { toYMD } from '@shared/date-utils';
 import { ToastrService } from 'ngx-toastr';
 import { EvalContreService, ContreListe } from '../../eval-contre.service';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { Pagination } from '@shared/utils/pagination';
 
 /**
  * « Mes contre-évaluations » — les contre-évaluations qui portent sur les
@@ -22,7 +24,7 @@ import { EvalContreService, ContreListe } from '../../eval-contre.service';
 @Component({
   selector: 'app-mes-contre',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatChipsModule, MatFormFieldModule, MatInputModule, MatDatepickerModule],
+  imports: [MatPaginatorModule, CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatChipsModule, MatFormFieldModule, MatInputModule, MatDatepickerModule],
   template: `
     <div class="contre-liste">
       <mat-card class="cal-panel">
@@ -46,7 +48,7 @@ import { EvalContreService, ContreListe } from '../../eval-contre.service';
               @if (liste.length === 0) {
                 <p class="vide">Aucune contre-évaluation visible pour le moment.</p>
               } @else {
-                <table mat-table [dataSource]="liste" class="table">
+                <table mat-table [dataSource]="pag.page" class="table">
                   <ng-container matColumnDef="responsable">
                     <th mat-header-cell *matHeaderCellDef>Responsable</th>
                     <td mat-cell *matCellDef="let c">{{ c.responsable_nom }} {{ c.responsable_prenom }}</td>
@@ -70,6 +72,10 @@ import { EvalContreService, ContreListe } from '../../eval-contre.service';
                   <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
                   <tr mat-row *matRowDef="let row; columns: colonnes" class="ligne" (click)="ouvrir(row)"></tr>
                 </table>
+                @if (pag.length) {
+                  <mat-paginator [length]="pag.length" [pageIndex]="pag.pageIndex" [pageSize]="pag.pageSize"
+                                 [pageSizeOptions]="pag.tailles" showFirstLastButtons (page)="pag.changer($event)" />
+                }
               }
             </mat-card-content>
           </mat-card>
@@ -83,7 +89,9 @@ export class MesContreComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly toastr = inject(ToastrService);
 
-  liste: ContreListe[] = [];
+  readonly pag = new Pagination<ContreListe>();
+  get liste(): ContreListe[] { return this.pag.donnees; }
+  set liste(v: ContreListe[]) { this.pag.definir(v); }
   colonnes = ['responsable', 'appel', 'conclusion', 'visibilite'];
   dateDebut: any = null;
   dateFin: any = null;

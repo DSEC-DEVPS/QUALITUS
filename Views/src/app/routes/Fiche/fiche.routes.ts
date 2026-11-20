@@ -11,14 +11,15 @@ import { DetailFicheComponent } from './detail-fiche/detail-fiche.component';
 import { UpdateFicheComponent } from './update-fiche/update-fiche.component';
 import { VerificationComponent } from './verification/verification.component';
 export const routes: Routes = [
-  { path: 'Liste', component: ChargementsComponent },
-  { path: 'ListeCategorie', component: ListeCategorieComponent },
-  { path: 'ListeSla', component: ListeSlaComponent },
-  { path: 'ListeSousCategorie', component: ListeSousCategorieComponent },
-  { path: 'lecture-fiche/:id', component: LectureFicheComponent },
-  { path: 'archives', component: ListeArchiveComponent },
+  { path: 'Liste', component: ChargementsComponent, canMatch: [canMatchPermission('fiche.lire')] },
+  { path: 'ListeCategorie', component: ListeCategorieComponent, canMatch: [canMatchPermission('fiche.lire')] },
+  { path: 'ListeSla', component: ListeSlaComponent, canMatch: [canMatchPermission('fiche.lire')] },
+  { path: 'ListeSousCategorie', component: ListeSousCategorieComponent, canMatch: [canMatchPermission('fiche.lire')] },
+  { path: 'lecture-fiche/:id', component: LectureFicheComponent, canMatch: [canMatchPermission('fiche.lire')] },
+  { path: 'archives', component: ListeArchiveComponent, canMatch: [canMatchPermission('fiche.lire')] },
   { path: 'Ajouter', component: AjouterFicheComponent, canMatch: [canMatchPermission('fiche.creer')] },
-  { path: 'details/:id', component: DetailFicheComponent },
+  { path: 'details/:id', component: DetailFicheComponent, canMatch: [canMatchPermission('fiche.lire')] },
   { path: 'update/:id', component: UpdateFicheComponent, canMatch: [canMatchPermission('fiche.modifier')] },
-  { path: 'ge-chargement', component: VerificationComponent },
+  // Gestion Chargements : permission dédiée (accessible sans fiche.lire)
+  { path: 'ge-chargement', component: VerificationComponent, canMatch: [canMatchPermission('chargement.verifier')] },
 ];

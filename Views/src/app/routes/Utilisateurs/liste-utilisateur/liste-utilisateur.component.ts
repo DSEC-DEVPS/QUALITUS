@@ -31,7 +31,7 @@ import {
   DialogLayoutDisplay,
   DisappearanceAnimation,
 } from '@costlydeveloper/ngx-awesome-popup';
-import { catchError, of, Subject, takeUntil, tap } from 'rxjs';
+import { catchError, of, Subject, takeUntil, tap, finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import {
   MAT_DIALOG_DATA,
@@ -42,10 +42,11 @@ import {
   MatDialogRef,
   MatDialogTitle,
 } from '@angular/material/dialog';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 @Component({
   selector: 'app-table-overview-example',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent,
     MatFormFieldModule,
     MatInputModule,
     MatTableModule,
@@ -64,6 +65,7 @@ import {
   styleUrl: './liste-utilisateur.component.scss',
 })
 export class ListeUtilisateurComponent implements OnInit {
+  chargement = true;
   displayedColumns: string[] = [
     'id',
     'nom_utilisateur',
@@ -87,7 +89,8 @@ export class ListeUtilisateurComponent implements OnInit {
   private readonly userService = inject(UserService);
   private readonly taostSrv = inject(ToastrService);
   ngOnInit(): void {
-    this.userService.getAllUtilisateur().subscribe(user => {
+    this.chargement = true;
+    this.userService.getAllUtilisateur().pipe(finalize(() => (this.chargement = false))).subscribe(user => {
       this.dataSource = new MatTableDataSource(user);
       this.downloadData = user;
       this.dataSource.paginator = this.paginator;

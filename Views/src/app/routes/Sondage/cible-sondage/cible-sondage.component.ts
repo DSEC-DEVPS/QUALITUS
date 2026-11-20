@@ -20,11 +20,15 @@ import {
 } from '@costlydeveloper/ngx-awesome-popup';
 import { SondageService } from '@shared/services/sondage.service';
 import { CibleSondage, OptionRef, Sondage, UtilisateurCible } from '../interfaces';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { Pagination } from '@shared/utils/pagination';
+import { finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
   selector: 'app-cible-sondage',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent, MatPaginatorModule,
     FormsModule,
     MatCardModule,
     MatButtonModule,
@@ -41,6 +45,7 @@ import { CibleSondage, OptionRef, Sondage, UtilisateurCible } from '../interface
   styleUrl: './cible-sondage.component.scss',
 })
 export class CibleSondageComponent implements OnInit {
+  chargementCibles = true;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly srv = inject(SondageService);
@@ -55,11 +60,15 @@ export class CibleSondageComponent implements OnInit {
   fonctionsSel: number[] = [];
   ancienneteMin: number | null = null;
 
-  resultats: UtilisateurCible[] = [];
+  readonly pagResultats = new Pagination<UtilisateurCible>();
+  get resultats(): UtilisateurCible[] { return this.pagResultats.donnees; }
+  set resultats(v: UtilisateurCible[]) { this.pagResultats.definir(v); }
   selection = new Set<number>();
   colsResultats = ['sel', 'nom', 'fonction', 'site', 'anciennete'];
 
-  cibles: CibleSondage[] = [];
+  readonly pagCibles = new Pagination<CibleSondage>();
+  get cibles(): CibleSondage[] { return this.pagCibles.donnees; }
+  set cibles(v: CibleSondage[]) { this.pagCibles.definir(v); }
   colsCibles = ['nom', 'email', 'telephone', 'source', 'envoi', 'actions'];
 
   fichier: File | null = null;
@@ -81,7 +90,8 @@ export class CibleSondageComponent implements OnInit {
   }
 
   chargerCibles() {
-    this.srv.getCibles(this.sondageId).subscribe({
+    this.chargementCibles = true;
+    this.srv.getCibles(this.sondageId).pipe(finalize(() => (this.chargementCibles = false))).subscribe({
       next: c => (this.cibles = c),
       error: () => {},
     });

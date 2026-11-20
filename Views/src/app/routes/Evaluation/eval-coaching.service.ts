@@ -13,6 +13,8 @@ export interface CoachingChoix { niveau: number; id_option: number | null; libel
 export interface EvaluationCoaching {
   coaching: { id: number; statut: string } | null;
   choix: CoachingChoix[];
+  /** Propositions rejetées pour ce coaching, avec leur motif. */
+  rejetees?: import('./eval-bi.service').OptionRejetee[];
   en_attente_validation: boolean;
   eligible: boolean;
 }
@@ -41,6 +43,10 @@ export class EvalCoachingService {
   }
   updateOption(id: number, libelle: string) {
     return this.http.put(`/api/v1/eval/coaching/option/${id}`, { libelle });
+  }
+  /** Déplace l'option (et ses sous-options) sous un autre parent ; null = niveau 1. */
+  deplacerOption(id: number, id_parent: number | null) {
+    return this.http.put<{ message: string }>(`/api/v1/eval/coaching/option/${id}/deplacer`, { id_parent });
   }
   deleteOption(id: number) {
     return this.http.delete(`/api/v1/eval/coaching/option/${id}`);

@@ -15,21 +15,36 @@ import { toYMD } from '@shared/date-utils';
 import { ToastrService } from 'ngx-toastr';
 import { EvalContreService, ContreListe } from '../../eval-contre.service';
 import { CanDirective } from '@core/authorization/can.directive';
+import { PermissionsService } from '@core/authorization/permissions.service';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { Pagination } from '@shared/utils/pagination';
+import { ConfirmationService } from '@shared/services/confirmation.service';
 
 @Component({
   selector: 'app-contre-liste',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatChipsModule, MatFormFieldModule, MatSelectModule, MatInputModule, MatDatepickerModule, CanDirective],
+  imports: [MatPaginatorModule, CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatChipsModule, MatFormFieldModule, MatSelectModule, MatInputModule, MatDatepickerModule, MatButtonToggleModule, CanDirective],
   templateUrl: './contre-liste.component.html',
   styleUrl: './contre-liste.component.scss',
 })
 export class ContreListeComponent implements OnInit {
+  private readonly confirmation = inject(ConfirmationService);
   private readonly service = inject(EvalContreService);
   private readonly router = inject(Router);
   private readonly toastr = inject(ToastrService);
+  private readonly perms = inject(PermissionsService);
 
-  liste: ContreListe[] = [];
-  colonnes = ['evaluateur', 'agent', 'appel', 'statut', 'conclusion', 'visibilite', 'actions'];
+  readonly pag = new Pagination<ContreListe>();
+  get liste(): ContreListe[] { return this.pag.donnees; }
+  set liste(v: ContreListe[]) { this.pag.definir(v); }
+  /** « Créées par moi » ou, avec contre_evaluation.voir_tous, « Toutes » (périmètre de site). */
+  portee: 'miennes' | 'toutes' = 'miennes';
+  voirTous = false;
+  get colonnes(): string[] {
+    const c = ['evaluateur', 'agent', 'appel', 'statut', 'conclusion', 'visibilite'];
+    return this.portee === 'toutes' ? [...c, 'responsable', 'actions'] : [...c, 'actions'];
+  }
   dateDebut: any = null;
   dateFin: any = null;
 
@@ -41,14 +56,46 @@ export class ContreListeComponent implements OnInit {
   idSite: number | null = null;
   idEvaluateur: number | null = null;
   idEvaluation: number | null = null;
+  // Recherche dans les listes déroulantes (mot par mot, sans casse ni accents)
+  rechercheEvaluateur = '';
+  rechercheEvaluation = '';
+  private static normaliser(v: any): string {
+    return (v ?? '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  }
+  private static filtrer<T extends { id: number }>(liste: T[], recherche: string, champs: (x: T) => any[], selection: number | null): T[] {
+    const mots = ContreListeComponent.normaliser(recherche).split(/\s+/).filter(m => m);
+    if (!mots.length) return liste;
+    return liste.filter(x => x.id === selection ||
+      mots.every(m => champs(x).some(c => ContreListeComponent.normaliser(c).includes(m))));
+  }
+  get evaluateursFiltres(): any[] {
+    return ContreListeComponent.filtrer(this.evaluateurs, this.rechercheEvaluateur, e => [e.nom, e.prenom, e.login], this.idEvaluateur);
+  }
+  /** Recherche : n° de case, identifiant d'appel, agent évalué (nom, prénom, login). */
+  get evaluationsFiltrees(): any[] {
+    return ContreListeComponent.filtrer(this.evaluations, this.rechercheEvaluation,
+      e => [e.numero_case, e.identifiant_appel, e.agent_nom, e.agent_prenom, e.agent_login], this.idEvaluation);
+  }
+  /** À l'ouverture : focus sur la recherche ; à la fermeture : on la vide. */
+  ouverture(ouvert: boolean, champ: HTMLInputElement, liste: 'evaluateur' | 'evaluation'): void {
+    if (ouvert) { setTimeout(() => champ.focus()); return; }
+    if (liste === 'evaluateur') this.rechercheEvaluateur = ''; else this.rechercheEvaluation = '';
+  }
 
   ngOnInit(): void {
     this.charger();
-    this.service.getSites().subscribe({ next: s => (this.sites = s || []) });
+    this.service.getContexte().subscribe({
+      next: c => {
+        this.sites = c.sites || [];
+        this.voirTous = c.voir_tous;
+        // Hors site à vision globale : son site est imposé.
+        if (!c.vision_globale && this.sites.length === 1) { this.idSite = this.sites[0].id; this.onSite(); }
+      },
+    });
   }
 
   charger(): void {
-    this.service.getAll({ date_debut: toYMD(this.dateDebut), date_fin: toYMD(this.dateFin) })
+    this.service.getAll({ date_debut: toYMD(this.dateDebut), date_fin: toYMD(this.dateFin), portee: this.portee })
       .subscribe({ next: l => (this.liste = l), error: () => this.toastr.error('Erreur de chargement.') });
   }
   reinitialiserFiltres(): void { this.dateDebut = null; this.dateFin = null; this.charger(); }
@@ -70,6 +117,11 @@ export class ContreListeComponent implements OnInit {
     });
   }
 
+  /** Créateur : tant que la contre-évaluation n'est pas terminée ; sinon la permission dédiée. */
+  peut(c: ContreListe, code: string): boolean {
+    return this.perms.can(code) || (!!Number(c.est_createur) && c.statut !== 'TERMINE');
+  }
+
   ouvrir(c: ContreListe): void { this.router.navigate(['/mon-espace/evaluation/contre-executer', c.id]); }
 
   desactiver(c: ContreListe, ev: Event): void {
@@ -77,9 +129,9 @@ export class ContreListeComponent implements OnInit {
     this.service.setActif(c.id, false).subscribe({ next: () => { this.toastr.success('Désactivée.'); this.charger(); }, error: (e: any) => this.toastr.error(e?.error?.message || 'Erreur.') });
   }
 
-  supprimer(c: ContreListe, ev: Event): void {
+  async supprimer(c: ContreListe, ev: Event): Promise<void> {
     ev.stopPropagation();
-    if (!confirm('Supprimer définitivement cette contre-évaluation ?')) return;
+    if (!(await this.confirmation.confirmer({ titre: 'Supprimer la contre-évaluation', message: 'Supprimer définitivement cette contre-évaluation ?', type: 'danger' }))) return;
     this.service.supprimer(c.id).subscribe({
       next: () => { this.toastr.success('Contre-évaluation supprimée.'); this.charger(); },
       error: (e: any) => this.toastr.error(e?.error?.message || 'Suppression impossible.'),

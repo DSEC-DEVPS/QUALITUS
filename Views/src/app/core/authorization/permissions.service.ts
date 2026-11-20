@@ -51,21 +51,20 @@ export class PermissionsService {
       // l'admin voit tout : on ajoute tous les modules connus + ceux du set
       ['utilisateur', 'site', 'programme', 'fonction', 'fiche', 'sondage', 'quiz', 'grille',
        'referentiel', 'evaluation', 'contre_evaluation', 'calibrage', 'notification',
-       'habilitation', 'agent_pole', 'reporting', 'bi', 'validation_option',
-       'arbre_coaching', 'calendrier', 'creation_masse'].forEach(m => this.modules.add(m));
+       'habilitation', 'agent_pole', 'reporting',
+       'calendrier', 'creation_masse'].forEach(m => this.modules.add(m));
     }
     // Permissions synthétiques de GESTION : présentes seulement si l'utilisateur
     // possède lire+creer+modifier+supprimer d'un module (ET). Gèrent l'accès aux
-    // sous-menus d'administration (ex. gestion des quiz / sondages).
+    // sous-menus d'administration (ex. sondages). Le menu Quiz n'en dépend plus :
+    // chaque sous-menu exige la permission qui correspond à son usage.
     const synth = new Set<string>();
     const gestion = (mod: string) => ['lire', 'creer', 'modifier', 'supprimer']
       .every(a => this.admin || this.set.has(`${mod}.${a}`));
-    if (gestion('quiz')) synth.add('quiz.gestion');
     if (gestion('sondage')) synth.add('sondage.gestion');
-    // Contre-évaluation : la « gestion » (accès au sous-menu Contre-évaluation)
-    // exige les 4 permissions ; contre_evaluation.lire seul ne donne accès qu'à
-    // « Mes contre-évaluations ».
-    if (gestion('contre_evaluation')) synth.add('contre_evaluation.gestion');
+    // Contre-évaluation : le sous-menu « Contre-évaluation » s'ouvre avec
+    // contre_evaluation.creer ou voir_tous (34_contre_evaluation_portee.sql) ;
+    // contre_evaluation.lire seul ne donne accès qu'à « Mes contre-évaluations ».
     // Référentiel : le menu « Référentiels » exige les 4 permissions ;
     // referentiel.lire seul ne suffit pas.
     if (gestion('referentiel')) synth.add('referentiel.gestion');
@@ -81,26 +80,19 @@ export class PermissionsService {
     if (gestion('utilisateur')) synth.add('utilisateur.gestion');
     // Site : le menu « Gestion Site » exige les 4 permissions (HABILITATIONS 14).
     if (gestion('site')) synth.add('site.gestion');
-    // Évaluation « gestion complète » : les 6 permissions du module réunies
-    // (lire + creer + executer + modifier + supprimer + valider). Ouvre les
-    // sous-menus d'évaluation avancés (HABILITATIONS 14).
-    const evalComplete = this.admin || ['lire', 'creer', 'executer', 'modifier', 'supprimer', 'valider']
-      .every(a => this.set.has(`evaluation.${a}`));
-    if (evalComplete) synth.add('evaluation.gestion_complete');
-    // BI : le sous-menu « Arborescences BI » exige les 4 permissions ;
-    // bi.lire seul ne suffit pas.
-    if (gestion('bi')) synth.add('bi.gestion');
-    // Validation d'options : le sous-menu exige les 4 permissions ;
-    // validation_option.lire seul ne suffit pas.
-    if (gestion('validation_option')) synth.add('validation_option.gestion');
-    // Arbre de coaching : le sous-menu exige les 4 permissions.
-    if (gestion('arbre_coaching')) synth.add('arbre_coaching.gestion');
+    // Évaluation : chaque sous-menu suit la permission de son usage (menu.json) :
+    // « Mes Évaluations » / « Créer une évaluation » -> evaluation.creer ;
+    // « Mes évaluations » (vue agent) -> evaluation.lire sans evaluation.creer ;
+    // « Évaluations de mes agents » et « Mes coaching » -> evaluation.coacher.
+    // Arborescences BI et Arbre de coaching : evaluation.parametrer ; Validation
+    // d'options : evaluation.valider (migrations 36 et 37).
     // Périodes / Calendrier : le sous-menu exige les 4 permissions.
     if (gestion('calendrier')) synth.add('calendrier.gestion');
     // Création en masse : le sous-menu exige les 4 permissions.
     if (gestion('creation_masse')) synth.add('creation_masse.gestion');
-    // Fiche / Gestion Contenu : les 4 permissions ouvrent Nouveau / Liste Fiche /
+    // Fiche / Gestion Contenu : les 4 permissions ouvrent Nouveau / Les Chargements /
     // Archives ; fiche.gerer en plus ouvre aussi SLA / Catégories.
+    // (« Les Chargements » est aussi visible pour le rôle R_GB.)
     if (gestion('fiche')) synth.add('fiche.gestion');
     if (this.admin || (gestion('fiche') && this.set.has('fiche.gerer'))) synth.add('fiche.gestion_complete');
     // Habilitation : le menu « Habilitations » exige lire ET gerer

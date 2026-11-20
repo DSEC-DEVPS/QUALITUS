@@ -31,14 +31,15 @@ import {
   DialogLayoutDisplay,
   DisappearanceAnimation,
 } from '@costlydeveloper/ngx-awesome-popup';
-import { catchError, of, Subject, takeUntil, tap } from 'rxjs';
+import { catchError, of, Subject, takeUntil, tap, finalize } from 'rxjs';
 import { UpdateProgrammeComponent } from '../update-programme/update-programme.component';
 import { ToastrService } from 'ngx-toastr';
 import { CanDirective } from '@core/authorization/can.directive';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 @Component({
   selector: 'app-table-overview-example',
   standalone: true,
-  imports: [CanDirective, 
+  imports: [ChargementComponent, CanDirective,
     MatFormFieldModule,
     MatInputModule,
     MatTableModule,
@@ -59,7 +60,9 @@ import { CanDirective } from '@core/authorization/can.directive';
   styleUrl: './liste-programme.component.scss',
 })
 export class ListeProgrammeComponent implements OnInit, AfterViewInit {
-  dataSource!: MatTableDataSource<programme>;
+  chargement = true;
+  // initialisé vide : ngAfterViewInit s\'exécute avant l\'arrivée des données
+  dataSource = new MatTableDataSource<programme>([]);
   private readonly toastSrv = inject(ToastrService);
   private readonly route = inject(Router);
   msg = '';
@@ -72,7 +75,8 @@ export class ListeProgrammeComponent implements OnInit, AfterViewInit {
   readonly dialog = inject(MatDialog);
   constructor(private userService: UserService) {}
   ngOnInit(): void {
-    this.userService.getAllProgramme().subscribe(user => {
+    this.chargement = true;
+    this.userService.getAllProgramme().pipe(finalize(() => (this.chargement = false))).subscribe(user => {
       this.downloadData = user;
       this.dataSource = new MatTableDataSource(user);
       this.dataSource.paginator = this.paginator;

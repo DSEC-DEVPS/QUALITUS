@@ -17,11 +17,14 @@ import { UserService } from '@shared/services/user.service';
 import { CanDirective } from '@core/authorization/can.directive';
 import { PermissionsService } from '@core/authorization/permissions.service';
 import { CalibrageService, CalSessionListe, FiltresSession } from '../calibrage.service';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { Pagination } from '@shared/utils/pagination';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
   selector: 'app-cal-liste-sessions',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent, MatPaginatorModule,
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatDatepickerModule,
     MatTableModule, MatTooltipModule, MatChipsModule, CanDirective,
@@ -41,7 +44,9 @@ export class ListeSessionsComponent implements OnInit {
   get peutOrganiser(): boolean { return this.perms.can('calibrage.organiser'); }
 
   filtres: FiltresSession = {};
-  sessions: CalSessionListe[] = [];
+  readonly pag = new Pagination<CalSessionListe>();
+  get sessions(): CalSessionListe[] { return this.pag.donnees; }
+  set sessions(v: CalSessionListe[]) { this.pag.definir(v); }
   sites: any[] = [];
   chargement = false;
   colonnes = ['nom', 'date', 'site', 'grille', 'statut', 'participants', 'actions'];

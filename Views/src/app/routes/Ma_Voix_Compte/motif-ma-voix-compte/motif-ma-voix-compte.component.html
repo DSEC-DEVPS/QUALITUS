@@ -21,7 +21,8 @@
   </mat-card-header>
   <mat-card-content>
     <div class="mat-elevation-z8">
-      <table mat-table [dataSource]="tableau_motifs">
+      @if (chargement) { <app-chargement /> }
+      <table [style.display]="chargement ? 'none' : null" mat-table [dataSource]="tableau_motifs">
         <!-- Position Column -->
         <ng-container matColumnDef="id">
           <th mat-header-cell *matHeaderCellDef>ID</th>

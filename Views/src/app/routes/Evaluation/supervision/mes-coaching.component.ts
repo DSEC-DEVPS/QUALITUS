@@ -11,21 +11,27 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { Pagination } from '@shared/utils/pagination';
+import { correspondRecherche } from '@shared/utils/recherche';
 import { toYMD } from '@shared/date-utils';
 import { ToastrService } from 'ngx-toastr';
 import { EvalInstanceService, EvaluationListe } from '../eval-instance.service';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 /**
  * « Mes coaching » (superviseur) : évaluations de ses agents nécessitant un
- * coaching (échec), avec filtre période + filtre sur l'état du coaching.
+ * coaching (échec), avec filtre période + filtre sur l'état du coaching
+ * (serveur) et recherche agent (login, nom, prénom ; à l'écran).
  */
 @Component({
   selector: 'app-mes-coaching',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent,
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule, MatChipsModule,
-    MatFormFieldModule, MatInputModule, MatSelectModule, MatDatepickerModule,
+    MatFormFieldModule, MatInputModule, MatSelectModule, MatDatepickerModule, MatPaginatorModule,
   ],
+  styles: ['.login { color: rgba(0, 0, 0, 0.54); margin-left: 4px; }'],
   template: `
     <div class="cal-page">
       <mat-card class="cal-panel">
@@ -47,17 +53,22 @@ import { EvalInstanceService, EvaluationListe } from '../eval-instance.service';
               </mat-select>
             </mat-form-field>
             <button mat-flat-button color="primary" (click)="charger()"><mat-icon>search</mat-icon> Filtrer</button>
+            <mat-form-field appearance="outline"><mat-label>Rechercher un agent</mat-label>
+              <mat-icon matPrefix>search</mat-icon>
+              <input matInput [(ngModel)]="recherche" (ngModelChange)="appliquer()" name="rech" placeholder="Login, nom ou prénom" autocomplete="off" />
+            </mat-form-field>
             <button mat-button (click)="reinitialiser()">Réinitialiser</button>
           </div>
           <mat-card>
             <mat-card-content>
-              @if (chargement) { <p>Chargement…</p> }
-              @else if (evaluations.length === 0) { <p class="vide">Aucun coaching à mener.</p> }
+              @if (chargement) { <app-chargement /> }
+              @else if (toutes.length === 0) { <p class="vide">Aucun coaching à mener.</p> }
+              @else if (pag.length === 0) { <p class="vide">Aucun agent ne correspond à la recherche.</p> }
               @else {
-                <table mat-table [dataSource]="evaluations" class="table">
+                <table mat-table [dataSource]="pag.page" class="table">
                   <ng-container matColumnDef="agent">
                     <th mat-header-cell *matHeaderCellDef>Agent</th>
-                    <td mat-cell *matCellDef="let e">{{ e.agent_nom }} {{ e.agent_prenom }}</td>
+                    <td mat-cell *matCellDef="let e">{{ e.agent_nom }} {{ e.agent_prenom }}@if (e.agent_login) { <span class="login">({{ e.agent_login }})</span> }</td>
                   </ng-container>
                   <ng-container matColumnDef="evaluateur">
                     <th mat-header-cell *matHeaderCellDef>Évaluateur</th>
@@ -77,6 +88,8 @@ import { EvalInstanceService, EvaluationListe } from '../eval-instance.service';
                   <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
                   <tr mat-row *matRowDef="let row; columns: colonnes" class="ligne" (click)="ouvrir(row)"></tr>
                 </table>
+                <mat-paginator [length]="pag.length" [pageIndex]="pag.pageIndex" [pageSize]="pag.pageSize"
+                               [pageSizeOptions]="pag.tailles" showFirstLastButtons (page)="pag.changer($event)" />
               }
             </mat-card-content>
           </mat-card>
@@ -90,7 +103,10 @@ export class MesCoachingComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly toastr = inject(ToastrService);
 
-  evaluations: EvaluationListe[] = [];
+  /** Liste reçue du serveur ; `pag` = liste filtrée par la recherche, paginée. */
+  toutes: EvaluationListe[] = [];
+  readonly pag = new Pagination<EvaluationListe>();
+  recherche = '';
   chargement = false;
   colonnes = ['agent', 'evaluateur', 'date', 'coaching'];
   dateDebut: any = null;
@@ -106,10 +122,16 @@ export class MesCoachingComponent implements OnInit {
     if (this.dateFin) f.date_fin = toYMD(this.dateFin);
     if (this.coachingTermine) f.coaching_termine = this.coachingTermine;
     this.service.getEvaluations(f).subscribe({
-      next: e => { this.evaluations = e; this.chargement = false; },
+      next: e => { this.toutes = e || []; this.appliquer(); this.chargement = false; },
       error: () => { this.toastr.error('Impossible de charger les coaching.'); this.chargement = false; },
     });
   }
-  reinitialiser(): void { this.dateDebut = null; this.dateFin = null; this.coachingTermine = undefined; this.charger(); }
+  appliquer(): void {
+    this.pag.definir(this.toutes.filter(e => correspondRecherche(this.recherche, [e.agent_login, e.agent_nom, e.agent_prenom])));
+  }
+  reinitialiser(): void {
+    this.dateDebut = null; this.dateFin = null; this.coachingTermine = undefined; this.recherche = '';
+    this.charger();
+  }
   ouvrir(e: EvaluationListe): void { this.router.navigate(['/mon-espace/evaluation/executer', e.id]); }
 }

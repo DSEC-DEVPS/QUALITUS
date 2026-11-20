@@ -1,5 +1,5 @@
 <div class="lettre-section">
-  @if (lettre) {
+  @if (chargement) { <app-chargement /> } @else if (lettre) {
     <div class="entete">
       <h3>{{ lettre.type === 'FELICITATION' ? 'Lettre de félicitation' : 'Lettre de débriefing' }}</h3>
       <button mat-stroked-button (click)="imprimer()"><mat-icon>print</mat-icon> Imprimer</button>

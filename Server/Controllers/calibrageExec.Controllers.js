@@ -150,7 +150,9 @@ const getTravail = async (req, res) => {
         );
         const [participants] = await conn.query(
           `SELECT p.id, p.id_evaluateur, p.invite, p.statut_participation, p.date_debut_participation, p.date_cloture,
-                  u.nom, u.prenom
+                  p.date_derniere_activite, u.nom, u.prenom,
+                  (SELECT COUNT(*) FROM b_cal_reinitialisation r WHERE r.id_participant=p.id AND r.type='REPRENDRE') AS nb_reprises,
+                  (SELECT COUNT(*) FROM b_cal_reinitialisation r WHERE r.id_participant=p.id AND r.type='RECOMMENCER') AS nb_recommencements
              FROM b_cal_participant p LEFT JOIN b_utilisateur u ON p.id_evaluateur=u.id
             WHERE p.id_session=? ORDER BY u.nom, u.prenom`, [id]
         );
@@ -276,6 +278,10 @@ const toggleErreur = async (req, res) => {
       if (ev.etat === "NON_COMMENCEE") {
         await conn.query("UPDATE b_cal_evaluation SET etat='EN_COURS', dateModification=NOW() WHERE id=?", [evalId]);
       }
+      // dernier enregistrement du participant (base du temps proposé en cas de reprise)
+      if (ctx.role === "participant") {
+        await conn.query("UPDATE b_cal_participant SET date_derniere_activite=NOW() WHERE id=?", [ctx.p.id]);
+      }
       return { ok: true };
     });
     if (out.notFound) return res.status(404).json({ message: "Élément introuvable." });
@@ -294,6 +300,9 @@ const terminerTransaction = async (req, res) => {
     const [[ev]] = await db.query("SELECT * FROM b_cal_evaluation WHERE id_transaction=? AND id_evaluateur=?", [tid, uid]);
     if (!ev) return res.status(404).json({ message: "Évaluation introuvable." });
     await db.query("UPDATE b_cal_evaluation SET etat='TERMINEE', dateModification=NOW() WHERE id=?", [ev.id]);
+    await db.query(
+      "UPDATE b_cal_participant SET date_derniere_activite=NOW() WHERE id_session=? AND id_evaluateur=?", [ev.id_session, uid]
+    );
     return res.status(200).json({ message: "Transaction déclarée terminée." });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
@@ -350,10 +359,24 @@ const setVisibilite = async (req, res) => {
   const uid = req.auth.userId;
   const { visible } = req.body;
   try {
-    const [[s]] = await db.query("SELECT id_jauge FROM b_cal_session WHERE id=?", [id]);
+    const [[s]] = await db.query("SELECT id_jauge, nom, visibilite, resultat_publie FROM b_cal_session WHERE id=?", [id]);
     if (!s) return res.status(404).json({ message: "Session introuvable." });
     if (s.id_jauge !== uid) return res.status(403).json({ message: "Réservé au jauge." });
     await db.query("UPDATE b_cal_session SET visibilite=?, dateModification=NOW() WHERE id=?", [visible ? 1 : 0, id]);
+    // Visibilité ouverte APRÈS validation du résultat : les participants n'ont
+    // pas pu le consulter jusque-là, on les prévient qu'il est disponible.
+    if (visible && !s.visibilite && s.resultat_publie) {
+      const [ps] = await db.query("SELECT id_evaluateur FROM b_cal_participant WHERE id_session=?", [id]);
+      for (const p of ps) {
+        await emit(db, {
+          id_utilisateur: p.id_evaluateur,
+          titre: "Résultats de calibrage disponibles",
+          message: `Les résultats de la session « ${s.nom} » sont validés et consultables.`,
+          type: "CALIBRAGE", nature_objet: "CALIBRAGE", id_objet: id,
+          url: `/mon-espace/calibrage/resultats/${id}`,
+        });
+      }
+    }
     return res.status(200).json({ message: visible ? "Visibilité accordée." : "Visibilité retirée." });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
@@ -386,7 +409,7 @@ const reinitialiserParticipant = async (req, res) => {
         [p.id_session, p.id_evaluateur]
       );
       await conn.query(
-        "UPDATE b_cal_participant SET statut_participation='NON_COMMENCEE', date_debut_participation=NULL, date_cloture=NULL WHERE id=?", [pid]
+        "UPDATE b_cal_participant SET statut_participation='NON_COMMENCEE', date_debut_participation=NULL, date_cloture=NULL, date_derniere_activite=NULL WHERE id=?", [pid]
       );
       // Si la session avait quitté l'état OUVERTE (parce que toutes les
       // participations étaient closes), on la ré-ouvre pour permettre la reprise.
@@ -399,7 +422,7 @@ const reinitialiserParticipant = async (req, res) => {
         reouverte = true;
       }
       await conn.query(
-        "INSERT INTO b_cal_reinitialisation (id_session, id_participant, id_auteur, dateReinit) VALUES (?, ?, ?, NOW())",
+        "INSERT INTO b_cal_reinitialisation (id_session, id_participant, id_auteur, type, dateReinit) VALUES (?, ?, ?, 'RECOMMENCER', NOW())",
         [p.id_session, pid, uid]
       );
       await emit(conn, {
@@ -421,7 +444,110 @@ const reinitialiserParticipant = async (req, res) => {
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
 
+// ---------------------------------------------------------------------
+// REPRISE d'une participation (coupure réseau / courant) — réservée au jauge.
+// Les réponses déjà saisies sont conservées ; la participation repasse « En
+// cours » avec un temps accordé par le jauge (proposé : le temps qui restait au
+// dernier enregistrement du participant). Le chrono est recalé en déplaçant la
+// date de début : restant = durée - (maintenant - début).
+// ---------------------------------------------------------------------
+const derniereActivite = async (conn, p) => {
+  if (p.date_derniere_activite) return new Date(p.date_derniere_activite);
+  const [[r]] = await conn.query(
+    "SELECT MAX(dateModification) AS d FROM b_cal_evaluation WHERE id_session=? AND id_evaluateur=?",
+    [p.id_session, p.id_evaluateur]
+  );
+  return r && r.d ? new Date(r.d) : null;
+};
+const minutesProposees = (s, p, derniere) => {
+  const duree = num(s.duree_minutes);
+  if (!p.date_debut_participation || !derniere) return Math.max(1, duree);
+  const ecoule = Math.max(0, (derniere.getTime() - new Date(p.date_debut_participation).getTime()) / 1000);
+  return Math.min(Math.max(1, duree), Math.max(1, Math.ceil((duree * 60 - ecoule) / 60)));
+};
+const chargerPourReprise = async (conn, pid, uid) => {
+  const [[p]] = await conn.query("SELECT * FROM b_cal_participant WHERE id=?", [pid]);
+  if (!p) return { notFound: true };
+  const ctx = await contexte(conn, p.id_session, uid);
+  if (ctx.notFound || ctx.role !== "jauge") return { forbidden: true };
+  if (!p.date_debut_participation || p.statut_participation === "NON_COMMENCEE") return { pasCommencee: true };
+  return { p, s: ctx.s };
+};
+
+// GET proposition de reprise (temps restant au dernier enregistrement)
+const propositionReprise = async (req, res) => {
+  try {
+    const out = await withTx(async (conn) => {
+      const r = await chargerPourReprise(conn, req.params.pid, req.auth.userId);
+      if (!r.p) return r;
+      const derniere = await derniereActivite(conn, r.p);
+      return {
+        ok: true, statut_participation: r.p.statut_participation, duree_minutes: num(r.s.duree_minutes),
+        date_debut_participation: r.p.date_debut_participation, derniere_activite: derniere,
+        minutes_proposees: minutesProposees(r.s, r.p, derniere),
+      };
+    });
+    if (out.notFound) return res.status(404).json({ message: "Participant introuvable." });
+    if (out.forbidden) return res.status(403).json({ message: "Réservé au jauge." });
+    if (out.pasCommencee) return res.status(409).json({ message: "Ce participant n'a pas commencé : rien à reprendre." });
+    delete out.ok;
+    return res.status(200).json(out);
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
+};
+
+// PUT reprise de la participation avec { minutes } accordées
+const reprendreParticipant = async (req, res) => {
+  const minutes = Number((req.body || {}).minutes);
+  try {
+    const out = await withTx(async (conn) => {
+      const r = await chargerPourReprise(conn, req.params.pid, req.auth.userId);
+      if (!r.p) return r;
+      const { p, s } = r;
+      const duree = num(s.duree_minutes);
+      if (!Number.isInteger(minutes) || minutes < 1 || minutes > Math.max(1, duree)) return { minutesInvalides: duree };
+      // chrono recalé : il reste exactement `minutes` à partir de maintenant
+      await conn.query(
+        `UPDATE b_cal_participant
+            SET statut_participation='EN_COURS', date_cloture=NULL,
+                date_debut_participation = NOW() - INTERVAL ? SECOND
+          WHERE id=?`, [Math.max(0, duree * 60 - minutes * 60), p.id]
+      );
+      let reouverte = false;
+      if (["RESULTATS_EN_REVISION", "VALIDEE", "CLOTUREE"].includes(s.statut)) {
+        await conn.query(
+          "UPDATE b_cal_session SET statut='OUVERTE', resultat_publie=0, dateCloture=NULL, dateModification=NOW() WHERE id=?",
+          [s.id]
+        );
+        reouverte = true;
+      }
+      await conn.query(
+        `INSERT INTO b_cal_reinitialisation (id_session, id_participant, id_auteur, type, minutes_accordees, dateReinit)
+         VALUES (?, ?, ?, 'REPRENDRE', ?, NOW())`, [s.id, p.id, req.auth.userId, minutes]
+      );
+      await emit(conn, {
+        id_utilisateur: p.id_evaluateur,
+        titre: "Calibrage : participation rouverte",
+        message: `Votre participation à « ${s.nom} » a été rouverte : ${minutes} minute${minutes > 1 ? "s" : ""} pour terminer. Vos réponses sont conservées.`,
+        type: "CALIBRAGE", nature_objet: "CALIBRAGE", id_objet: s.id,
+        url: `/mon-espace/calibrage/session/${s.id}`,
+      });
+      return { ok: true, reouverte };
+    });
+    if (out.notFound) return res.status(404).json({ message: "Participant introuvable." });
+    if (out.forbidden) return res.status(403).json({ message: "Réservé au jauge." });
+    if (out.pasCommencee) return res.status(409).json({ message: "Ce participant n'a pas commencé : rien à reprendre." });
+    if (out.minutesInvalides !== undefined) {
+      return res.status(400).json({ message: `Temps accordé invalide (de 1 à ${Math.max(1, out.minutesInvalides)} minutes).` });
+    }
+    return res.status(200).json({
+      message: out.reouverte
+        ? "Participation rouverte : la session a été ré-ouverte pour permettre la reprise."
+        : "Participation rouverte.",
+    });
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors de la reprise." }); }
+};
+
 module.exports = {
   getTravail, getGrilleTransaction, toggleErreur, terminerTransaction,
-  cloturerParticipation, cloturerReference, setVisibilite, reinitialiserParticipant,
+  cloturerParticipation, cloturerReference, setVisibilite, reinitialiserParticipant, propositionReprise, reprendreParticipant,
 };

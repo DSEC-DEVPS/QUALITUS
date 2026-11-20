@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { canMatchPermission } from '@core/authorization/permission.guard';
 import { QuizEnEchecsComponent } from './quiz-en-echecs/quiz-en-echecs.component';
 import { QuizEnResetComponent } from './quiz-en-reset/quiz-en-reset.component';
 import { ListeQuizComponent } from './liste-quiz/liste-quiz.component';
@@ -17,7 +18,8 @@ export const routes: Routes = [
   { path: 'Quiz-en-reset', component: QuizEnResetComponent },
   // Nouveau generateur de quiz (creation / gestion)
   { path: 'gestion', component: ListeQuizComponent },
-  { path: 'creer', component: EditeurQuizComponent },
+  // Création : quiz.creer (accès direct à l'URL compris)
+  { path: 'creer', component: EditeurQuizComponent, canMatch: [canMatchPermission('quiz.creer')] },
   { path: 'editer/:id', component: EditeurQuizComponent },
   { path: 'detail/:id', component: DetailQuizComponent },
   // Participation (Phase 2)
@@ -25,7 +27,12 @@ export const routes: Routes = [
   { path: 'participer/:id', component: ParticiperQuizComponent },
   { path: 'mes-scores', component: MesScoresComponent },
   // Phase 3 : nouveautes (notifications) + rapports
-  { path: 'nouveautes', component: NouveautesComponent },
+  // Nouveautés : quiz.participer ou quiz.lire (accès direct à l'URL compris)
+  {
+    path: 'nouveautes',
+    component: NouveautesComponent,
+    canMatch: [canMatchPermission(['quiz.participer', 'quiz.lire'])],
+  },
   { path: 'rapports', component: RapportsComponent },
   // Superviseur : autorisation des retests
   { path: 'retests', component: RetestsComponent },

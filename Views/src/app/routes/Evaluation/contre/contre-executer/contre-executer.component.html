@@ -1,7 +1,7 @@
 <div class="contre-executer">
   <button mat-button (click)="retour()"><mat-icon>arrow_back</mat-icon> Retour</button>
 
-  @if (detail) {
+  @if (chargement && !detail) { <app-chargement /> } @else if (detail) {
     <mat-card class="entete">
       <mat-card-content>
         <div class="ligne">

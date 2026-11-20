@@ -10,11 +10,12 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ToastrService } from 'ngx-toastr';
 import { QuizService } from '@shared/services/quiz.service';
 import { QuestionAPasser, QuizAPasser, ResultatSoumission } from '../interfaces';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
   selector: 'app-participer-quiz',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent,
     FormsModule,
     MatCardModule,
     MatButtonModule,
@@ -60,7 +61,7 @@ export class ParticiperQuizComponent implements OnInit, OnDestroy {
     this.choix = {};
     this.tempsEcoule = false;
     this.arreterChrono();
-    this.quizSrv.getQuizAPasser(this.quizId).subscribe({
+    this.quizSrv.getQuizAPasser(this.quizId, this.route.snapshot.queryParamMap.get('pin')).subscribe({
       next: q => {
         this.quiz = q;
         this.bloque = q.peut_participer === false;
@@ -181,9 +182,22 @@ export class ParticiperQuizComponent implements OnInit, OnDestroy {
         );
         window.scrollTo({ top: 0, behavior: 'smooth' });
       },
-      error: () => {
-        this.toast.error("Une erreur s'est produite");
+      error: err => {
         this.envoiEnCours = false;
+        // Temps épuisé côté serveur : passage clôturé, on affiche l'état à jour.
+        if (err?.error?.code === 'TEMPS_ECOULE') {
+          this.toast.warning(err.error.message);
+          this.charger();
+          return;
+        }
+        // Quiz modifié pendant le passage : on recharge la nouvelle version.
+        if (err?.error?.code === 'QUIZ_MODIFIE') {
+          this.toast.warning(err.error.message);
+          this.choix = {};
+          this.charger();
+          return;
+        }
+        this.toast.error(err?.error?.message || "Une erreur s'est produite");
       },
     });
   }

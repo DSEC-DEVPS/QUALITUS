@@ -286,21 +286,30 @@ const getAllEvaluations = async (req, res) => {
         where.push(`NOT EXISTS (SELECT 1 FROM b_eval_coaching co WHERE co.id_evaluation=e.id AND co.statut='TERMINE')`);
       }
     }
-    // Portée par rôle (matrice des droits) — appliquée seulement hors vues dédiées
-    else if (["R_ADMI", "R_AQ", "R_RO"].includes(role)) {
-      // accès à toutes les évaluations
-    } else if (role === "R_SUP") {
-      where.push(`(e.id_evaluateur=? OR e.id_agent=? OR e.id_agent IN (SELECT id_AGENT FROM b_r_superviseur_agent WHERE id_SUPERVISEUR=?))`);
-      params.push(userId, userId, userId);
-    } else if (role === "R_TC") {
-      // Agent évalué : uniquement ses évaluations, et seulement une fois terminées
-      // (il ne doit rien voir tant que l'évaluation n'est pas terminée).
-      where.push(`e.id_agent=?`);
-      where.push(`e.statut='TERMINE'`);
-      params.push(userId);
-    } else {
-      where.push(`e.id_evaluateur=?`);
-      params.push(userId);
+    // Portée (hors vues dédiées), par permission et non plus par profil :
+    //  - administrateur : tout ;
+    //  - evaluation.voir_tous : tous les sites pour le site à vision globale,
+    //    sinon toutes les évaluations de son site ;
+    //  - en plus, pour tous : celles qu'on a faites, celles des agents qu'on
+    //    supervise, et les siennes une fois terminées.
+    else if (role !== "R_ADMI") {
+      const { permissionsEffectives } = require("../middlewares/permission");
+      const { porteeSite } = require("../utils/siteVisionGlobale");
+      const { set } = await permissionsEffectives(userId);
+      const portee = set.has("evaluation.voir_tous") ? await porteeSite(userId) : null;
+      if (!(portee && portee.visionGlobale)) {
+        const ou = [
+          `e.id_evaluateur=?`,
+          `e.id_agent IN (SELECT id_AGENT FROM b_r_superviseur_agent WHERE id_SUPERVISEUR=?)`,
+          `(e.id_agent=? AND e.statut='TERMINE')`,
+        ];
+        params.push(userId, userId, userId);
+        if (portee && portee.idSite !== null) {
+          ou.push(`e.id_site=?`);
+          params.push(portee.idSite);
+        }
+        where.push(`(${ou.join(" OR ")})`);
+      }
     }
 
     // actif / inactif
@@ -329,8 +338,11 @@ const getAllEvaluations = async (req, res) => {
 
     const [rows] = await db.query(
       `SELECT e.id, e.type_ressource, e.statut, e.conclusion, e.date_appel, e.date_creation,
-              e.identifiant_appel, e.numero_case, e.numero_appel, e.actif, e.id_evaluation_parente,
-              ag.nom AS agent_nom, ag.prenom AS agent_prenom,
+              e.identifiant_appel, e.numero_case, e.numero_appel, e.actif, e.id_evaluation_parente, e.id_evaluateur,
+              EXISTS (SELECT 1 FROM b_eval_contre_evaluation ce
+                       WHERE ce.id_evaluation_initiale = e.id
+                          OR ce.id_evaluation_initiale IN (SELECT s2.id FROM b_evaluation s2 WHERE s2.id_evaluation_parente = e.id)) AS contre_evaluee,
+              ag.nom AS agent_nom, ag.prenom AS agent_prenom, ag.nom_utilisateur AS agent_login,
               ev.nom AS evaluateur_nom, ev.prenom AS evaluateur_prenom,
               t.libelle AS type_evaluation, t.code AS type_code, ctx.libelle AS contexte, gr.nom AS grille, s.nom AS site,
               (SELECT co.statut FROM b_eval_coaching co WHERE co.id_evaluation=e.id ORDER BY co.id DESC LIMIT 1) AS coaching_statut
@@ -355,16 +367,32 @@ const getAllEvaluations = async (req, res) => {
 const peutModifierCycle = (role, evaluationCreateurId, userId) =>
   role === "R_ADMI" || Number(evaluationCreateurId) === Number(userId);
 
+// (Dés)activation : réservée au CRÉATEUR de l'évaluation (ou à l'administrateur).
+// Évaluation NON terminée : le créateur seul suffit ; évaluation TERMINÉE : le
+// créateur doit en plus détenir evaluation.desactiver. Ni le superviseur de
+// l'agent ni evaluation.voir_tous ne permettent de désactiver.
+const peutDesactiver = async (userId, role, e) => {
+  if (role === "R_ADMI") return true;
+  if (Number(e.id_evaluateur) !== Number(userId)) return false;
+  if (e.statut !== "TERMINE") return true;
+  const { set } = await permissionsEffectives(userId);
+  return set.has("evaluation.desactiver");
+};
+
 const setActifEvaluation = async (req, res) => {
   const id = req.params.id;
   const userId = req.auth.userId;
   const actif = req.body.actif ? 1 : 0;
   try {
     const role = await getUserRole(userId);
-    const [[e]] = await db.query(`SELECT id_evaluateur FROM b_evaluation WHERE id=?`, [id]);
+    const [[e]] = await db.query(`SELECT id, id_evaluateur, id_agent, id_site, statut FROM b_evaluation WHERE id=?`, [id]);
     if (!e) return res.status(404).json({ message: "Évaluation introuvable." });
-    if (!peutModifierCycle(role, e.id_evaluateur, userId)) {
-      return res.status(403).json({ message: "Vous ne pouvez (dés)activer qu'une évaluation que vous avez créée." });
+    if (!(await peutDesactiver(userId, role, e))) {
+      return res.status(403).json({
+        message: Number(e.id_evaluateur) !== Number(userId)
+          ? "Vous ne pouvez (dés)activer qu'une évaluation que vous avez créée."
+          : "Une évaluation terminée ne peut être (dés)activée qu'avec la permission Désactiver.",
+      });
     }
     await withTx(async (conn) => {
       await conn.query(`UPDATE b_evaluation SET actif=? WHERE id=?`, [actif, id]);
@@ -384,20 +412,48 @@ const desactiverMasse = async (req, res) => {
     let ignorees = 0;
     await withTx(async (conn) => {
       for (const id of ids) {
-        const [[e]] = await conn.query(`SELECT id_evaluateur FROM b_evaluation WHERE id=?`, [id]);
-        if (!e || !peutModifierCycle(role, e.id_evaluateur, userId)) { ignorees++; continue; }
+        const [[e]] = await conn.query(`SELECT id, id_evaluateur, id_agent, id_site, statut FROM b_evaluation WHERE id=?`, [id]);
+        if (!e || !(await peutDesactiver(userId, role, e))) { ignorees++; continue; }
         await conn.query(`UPDATE b_evaluation SET actif=0 WHERE id=?`, [id]);
         await conn.query(`UPDATE b_evaluation SET actif=0 WHERE id_evaluation_parente=?`, [id]);
       }
     });
     const traitees = ids.length - ignorees;
-    const suffixe = ignorees ? ` (${ignorees} ignorée(s) : non créée(s) par vous)` : "";
+    const suffixe = ignorees ? ` (${ignorees} ignorée(s) : non créée(s) par vous, ou terminée(s) sans la permission dédiée)` : "";
     return res.status(200).json({ message: `${traitees} évaluation(s) désactivée(s)${suffixe}.` });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
 
 // Suppression définitive — réservée au CRÉATEUR disposant de la permission
-// EVALUATION.SUPPRIMER (l'administrateur conserve un accès transverse).
+// EVALUATION.SUPPRIMER (l'administrateur conserve un accès transverse), y compris
+// pour une évaluation terminée, SAUF si elle (ou une de ses supplémentaires) a
+// été contre-évaluée. Supprime aussi ses résultats, son analyse BI, son coaching,
+// son plan d'actions, l'historique d'avis et ses évaluations supplémentaires.
+// L'agent évalué et son superviseur sont notifiés (et le créateur si ce n'est
+// pas lui qui supprime).
+const supprimerEvaluationCascade = async (conn, eid) => {
+  await conn.query(`DELETE FROM b_evaluation_bi WHERE id_evaluation=?`, [eid]);
+  // options BI / coaching proposées depuis cette évaluation : on retire celles en
+  // attente (du niveau le plus profond au plus haut), on détache les autres.
+  await conn.query(`DELETE FROM b_eval_bi_option WHERE id_evaluation_origine=? AND etat='EN_ATTENTE' ORDER BY niveau DESC`, [eid]);
+  await conn.query(`UPDATE b_eval_bi_option SET id_evaluation_origine=NULL WHERE id_evaluation_origine=?`, [eid]);
+  const [cos] = await conn.query(`SELECT id FROM b_eval_coaching WHERE id_evaluation=?`, [eid]);
+  for (const co of cos) {
+    await conn.query(`DELETE FROM b_eval_coaching_niveau WHERE id_coaching=?`, [co.id]);
+    await conn.query(`DELETE FROM b_eval_coaching_option WHERE id_coaching_origine=? AND etat='EN_ATTENTE' ORDER BY niveau DESC`, [co.id]);
+    await conn.query(`UPDATE b_eval_coaching_option SET id_coaching_origine=NULL WHERE id_coaching_origine=?`, [co.id]);
+  }
+  await conn.query(`DELETE FROM b_eval_coaching WHERE id_evaluation=?`, [eid]);
+  await conn.query(
+    `DELETE c FROM b_eval_plan_action_contributeur c JOIN b_eval_plan_action_ligne l ON l.id=c.id_ligne WHERE l.id_evaluation=?`, [eid]
+  );
+  await conn.query(`DELETE FROM b_eval_plan_action_ligne WHERE id_evaluation=?`, [eid]);
+  await conn.query(`DELETE FROM b_evaluation_avis_histo WHERE id_evaluation=?`, [eid]);
+  // S6 : on ne supprime PAS les notifications liées ; le lien devient simplement inopérant.
+  await conn.query(`DELETE FROM b_evaluation_erreur WHERE id_evaluation=?`, [eid]);
+  await conn.query(`DELETE FROM b_evaluation_categorie WHERE id_evaluation=?`, [eid]);
+};
+
 const deleteEvaluation = async (req, res) => {
   const id = req.params.id;
   const userId = req.auth.userId;
@@ -410,25 +466,38 @@ const deleteEvaluation = async (req, res) => {
     if (!aDroit) {
       return res.status(403).json({ message: "Suppression réservée au créateur disposant de la permission Supprimer." });
     }
+    const { emitEvaluation } = require("../utils/notify");
     const out = await withTx(async (conn) => {
-      const [[e]] = await conn.query(`SELECT statut FROM b_evaluation WHERE id=?`, [id]);
+      const [[e]] = await conn.query(
+        `SELECT e.id, e.id_evaluateur, e.id_agent, e.numero_case, e.date_evaluation, e.date_appel,
+                TRIM(CONCAT(COALESCE(u.prenom, ''), ' ', COALESCE(u.nom, ''))) AS auteur
+           FROM b_evaluation e LEFT JOIN b_utilisateur u ON u.id=?
+          WHERE e.id=?`, [userId, id]
+      );
       if (!e) return { notFound: true };
-      if (e.statut === "TERMINE") return { terminee: true };
-      // supprime l'évaluation, ses résultats, et ses supplémentaires (atomique)
       const [sups] = await conn.query(`SELECT id FROM b_evaluation WHERE id_evaluation_parente=?`, [id]);
-      const tous = [id, ...sups.map((s) => s.id)];
-      for (const eid of tous) {
-        await conn.query(`DELETE FROM b_evaluation_bi WHERE id_evaluation=?`, [eid]);
-        // S6 : on ne supprime PAS les notifications liées ; le lien devient simplement inopérant.
-        await conn.query(`DELETE FROM b_evaluation_erreur WHERE id_evaluation=?`, [eid]);
-        await conn.query(`DELETE FROM b_evaluation_categorie WHERE id_evaluation=?`, [eid]);
-      }
+      const tous = [Number(id), ...sups.map((s) => s.id)];
+      const [[contre]] = await conn.query(
+        `SELECT COUNT(*) AS n FROM b_eval_contre_evaluation WHERE id_evaluation_initiale IN (?)`, [tous]
+      );
+      if (contre.n > 0) return { contreEvaluee: true };
+      for (const eid of tous) await supprimerEvaluationCascade(conn, eid);
       await conn.query(`DELETE FROM b_evaluation WHERE id_evaluation_parente=?`, [id]);
       await conn.query(`DELETE FROM b_evaluation WHERE id=?`, [id]);
+      // Information de l'agent évalué, de son superviseur et du créateur (hors auteur).
+      const d = e.date_evaluation || e.date_appel;
+      const dateTxt = d ? new Date(d).toLocaleDateString("fr-FR") : null;
+      await emitEvaluation(conn, e, {
+        titre: `Évaluation supprimée : n° ${e.id}${dateTxt ? " du " + dateTxt : ""}`,
+        message: `${e.numero_case ? "Case " + e.numero_case + " — " : ""}supprimée par ${e.auteur || "un utilisateur"}.`,
+        url: null, exclure: userId,
+      });
       return { ok: true };
     });
     if (out.notFound) return res.status(404).json({ message: "Évaluation introuvable." });
-    if (out.terminee) return res.status(409).json({ message: "Une évaluation terminée ne peut pas être supprimée (désactivez-la)." });
+    if (out.contreEvaluee) {
+      return res.status(409).json({ message: "Cette évaluation a été contre-évaluée : elle ne peut pas être supprimée (désactivez-la)." });
+    }
     return res.status(200).json({ message: "Évaluation supprimée." });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors de la suppression." }); }
 };

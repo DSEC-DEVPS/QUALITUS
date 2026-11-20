@@ -12,7 +12,6 @@ const router = express.Router();
 // Notifications (destinataire connecté)
 router.get("/eval/notifications/mes", auth, permission("NOTIFICATION","LIRE"), notif.getMesNotifications);
 router.get("/eval/notifications/count", auth, permission("NOTIFICATION","LIRE"), notif.countNonLues);
-router.patch("/eval/notifications/lu-tout", auth, permission("NOTIFICATION","LIRE"), notif.marquerToutLu);
 router.patch("/eval/notifications/:id/lu", auth, permission("NOTIFICATION","LIRE"), notif.marquerLu);
 
 // Référentiels paramétrables (admin) — :type ∈ contexte|nature|action|statut|kpi

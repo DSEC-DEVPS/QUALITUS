@@ -25,7 +25,8 @@
 
   <mat-card-content>
     <div class="mat-elevation-z8">
-      <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8">
+      @if (chargement) { <app-chargement /> }
+      <table [style.display]="chargement ? 'none' : null" mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8">
         <!-- ID Column -->
         <ng-container matColumnDef="titre">
           <th mat-header-cell *matHeaderCellDef mat-sort-header>Fiche</th>

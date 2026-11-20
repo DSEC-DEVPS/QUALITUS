@@ -1,0 +1,123 @@
+<div class="cascade">
+  @for (i of niveauxCascade; track i) {
+    <mat-form-field appearance="outline" class="choix-niveau" subscriptSizing="dynamic">
+      <mat-label>Niveau {{ i + 1 }}</mat-label>
+      <mat-select [value]="valeurNiveau(i)" (selectionChange)="choisir(i, $event.value)" [attr.name]="'niveau' + (i + 1)"
+                  (openedChange)="ouvertureListe($event, i, rech)">
+        <div class="recherche-select" (click)="$event.stopPropagation()">
+          <mat-icon>search</mat-icon>
+          <input #rech [ngModel]="rechercheNiveau[i] || ''" (ngModelChange)="rechercheNiveau[i] = $event" [name]="'rechNiveau' + i"
+                 placeholder="Rechercher…" (keydown)="$event.stopPropagation()" autocomplete="off" />
+        </div>
+        <mat-option [value]="null"><em>{{ i === 0 ? 'Tout l\'arbre' : 'Toute la branche' }}</em></mat-option>
+        @for (o of choixNiveau(i); track o.id) { <mat-option [value]="o.id">{{ o.libelle }}</mat-option> }
+      </mat-select>
+    </mat-form-field>
+    @if (i < niveauxCascade.length - 1 || selection[i] !== undefined) { <mat-icon class="fleche">chevron_right</mat-icon> }
+  }
+  @if (selection.length) {
+    <button mat-stroked-button (click)="effacerSelection()"><mat-icon>close</mat-icon> Effacer la sélection</button>
+  }
+</div>
+
+<div class="arbre-outils">
+  <mat-form-field appearance="outline" class="recherche" subscriptSizing="dynamic">
+    <mat-icon matPrefix>search</mat-icon>
+    <mat-label>{{ focus ? 'Rechercher dans « ' + focus.libelle + ' »' : 'Rechercher une option' }}</mat-label>
+    <input matInput name="rechercheArbre" [(ngModel)]="recherche" (ngModelChange)="calculer()" autocomplete="off" />
+    @if (recherche) {
+      <button matSuffix mat-icon-button aria-label="Effacer" (click)="viderRecherche()"><mat-icon>close</mat-icon></button>
+    }
+  </mat-form-field>
+  @if (recherche.trim()) {
+    <span class="nb-resultats">{{ nbResultats }} option(s) trouvée(s)</span>
+  } @else {
+    <button mat-stroked-button (click)="toutDeplier()"><mat-icon>unfold_more</mat-icon> Tout déplier</button>
+    <button mat-stroked-button (click)="toutReplier()"><mat-icon>unfold_less</mat-icon> Tout replier</button>
+  }
+</div>
+
+@if (modifiable) {
+  <!-- toujours présente (pas d'insertion pendant le glisser, que Chrome interromprait) -->
+  <div class="zone-racine" [class.active]="glisseId !== null" [class.cible]="cibleId === 'racine'"
+       (dragover)="survol($event, null)" (dragleave)="quitter(null)" (drop)="deposer($event, null)">
+    <mat-icon>vertical_align_top</mat-icon> Glisser une option ici pour la placer au niveau 1
+  </div>
+}
+
+@if (chemin.length) {
+  <div class="chemin"><mat-icon>account_tree</mat-icon>
+    @for (o of chemin; track o.id; let dernier = $last) { <span [class.dernier]="dernier">{{ o.libelle }}</span>@if (!dernier) { <span class="sep">›</span> } }
+  </div>
+}
+<div class="arbre" role="tree">
+  @for (l of lignes; track l.o.id) {
+    <div class="noeud" role="treeitem" [attr.aria-expanded]="l.nbEnfants ? l.ouvert : null"
+         [style.padding-left.px]="8 + l.profondeur * 24"
+         [class.glisse]="glisseId === l.o.id" [class.cible]="cibleId === l.o.id"
+         [attr.draggable]="modifiable && editionId !== l.o.id"
+         (dragstart)="debutGlisser($event, l)" (dragend)="finGlisser()"
+         (dragover)="survol($event, l.o)" (dragleave)="quitter(l.o)" (drop)="deposer($event, l.o)">
+      @if (modifiable) { <mat-icon class="poignee" matTooltip="Glisser pour déplacer">drag_indicator</mat-icon> }
+      <button mat-icon-button class="chevron" [disabled]="!l.nbEnfants || !!recherche.trim()" (click)="basculer(l)"
+              [attr.aria-label]="l.ouvert ? 'Replier' : 'Déplier'">
+        @if (l.nbEnfants) { <mat-icon>{{ l.ouvert ? 'expand_more' : 'chevron_right' }}</mat-icon> }
+      </button>
+      <span class="niveau">N{{ l.o.niveau }}</span>
+      @if (editionId === l.o.id) {
+        <mat-form-field appearance="outline" class="saisie saisie-edition" subscriptSizing="dynamic">
+          <input matInput name="edition" [(ngModel)]="editionTexte" maxlength="255"
+                 (keydown.enter)="validerEdition()" (keydown.escape)="annulerEdition()" />
+        </mat-form-field>
+        <button mat-icon-button color="primary" matTooltip="Enregistrer" (click)="validerEdition()"><mat-icon>check</mat-icon></button>
+        <button mat-icon-button matTooltip="Annuler" (click)="annulerEdition()"><mat-icon>close</mat-icon></button>
+      } @else {
+        <span class="libelle" (click)="basculer(l)">{{ l.avant }}@if (l.trouve) {<mark>{{ l.trouve }}</mark>}{{ l.apres }}</span>
+        @if (l.nbDescendantes) { <span class="compteur">{{ l.nbDescendantes }} sous-option{{ l.nbDescendantes > 1 ? 's' : '' }}</span> }
+        <span class="spacer"></span>
+        @if (modifiable) {
+          <span class="actions">
+            @if (l.o.niveau < niveauMax) {
+              <button mat-icon-button matTooltip="Ajouter une sous-option" (click)="ouvrirAjout(l.o)"><mat-icon>add</mat-icon></button>
+            }
+            <button mat-icon-button matTooltip="Renommer" (click)="ouvrirEdition(l.o)"><mat-icon>edit</mat-icon></button>
+            <button mat-icon-button color="warn" matTooltip="Supprimer" (click)="demanderSuppression(l)"><mat-icon>delete</mat-icon></button>
+          </span>
+        }
+      }
+    </div>
+    @if (ajoutParent === l.o.id) {
+      <div class="noeud ajout" [style.padding-left.px]="8 + (l.profondeur + 1) * 24 + 40">
+        <span class="niveau">N{{ l.o.niveau + 1 }}</span>
+        <mat-form-field appearance="outline" class="saisie saisie-ajout" subscriptSizing="dynamic">
+          <input matInput name="ajout" [(ngModel)]="ajoutTexte" maxlength="255" placeholder="Libellé de la sous-option"
+                 (keydown.enter)="validerAjout()" (keydown.escape)="annulerAjout()" />
+        </mat-form-field>
+        <button mat-icon-button color="primary" matTooltip="Ajouter" [disabled]="!ajoutTexte.trim()" (click)="validerAjout()"><mat-icon>check</mat-icon></button>
+        <button mat-icon-button matTooltip="Fermer" (click)="annulerAjout()"><mat-icon>close</mat-icon></button>
+      </div>
+    }
+  } @empty {
+    <p class="vide">{{ recherche.trim() ? 'Aucune option ne correspond à la recherche.' : 'Aucune option définie.' }}</p>
+  }
+</div>
+
+@if (modifiable) {
+  @if (ajoutParent === null) {
+    <div class="noeud ajout racine">
+      <span class="niveau">N1</span>
+      <mat-form-field appearance="outline" class="saisie saisie-ajout" subscriptSizing="dynamic">
+        <input matInput name="ajoutRacine" [(ngModel)]="ajoutTexte" maxlength="255" placeholder="Libellé de l'option de niveau 1"
+               (keydown.enter)="validerAjout()" (keydown.escape)="annulerAjout()" />
+      </mat-form-field>
+      <button mat-icon-button color="primary" matTooltip="Ajouter" [disabled]="!ajoutTexte.trim()" (click)="validerAjout()"><mat-icon>check</mat-icon></button>
+      <button mat-icon-button matTooltip="Fermer" (click)="annulerAjout()"><mat-icon>close</mat-icon></button>
+    </div>
+  } @else if (focus) {
+    @if (focus.niveau < niveauMax) {
+      <button mat-button color="primary" class="ajout-racine" (click)="ouvrirAjoutBas()"><mat-icon>add</mat-icon> Ajouter une sous-option à « {{ focus.libelle }} »</button>
+    }
+  } @else {
+    <button mat-button color="primary" class="ajout-racine" (click)="ouvrirAjout(null)"><mat-icon>add</mat-icon> Ajouter une option de niveau 1</button>
+  }
+}

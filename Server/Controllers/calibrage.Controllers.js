@@ -6,6 +6,52 @@
 // =====================================================================
 const db = require("../config/db");
 const { emit } = require("../utils/notify");
+const { permissionsEffectives } = require("../middlewares/permission");
+const { porteeSite } = require("../utils/siteVisionGlobale");
+
+// ---------------------------------------------------------------------
+// Périmètre d'organisation :
+//  - seul le jauge d'une session (son créateur) — ou l'administrateur — peut
+//    la modifier, l'ouvrir, la supprimer, gérer ses participants et transactions ;
+//  - site : hors site à vision globale (et administrateur), une session ne peut
+//    être créée / déplacée que sur son propre site.
+// Toujours contrôlé, quel que soit le mode OBSERVATION / ACTIF.
+// ---------------------------------------------------------------------
+const porteeCalibrage = async (userId) => {
+  const { role } = await permissionsEffectives(userId);
+  const admin = role === "R_ADMI";
+  return { admin, ...(await porteeSite(userId, admin)) };
+};
+const siteAutorise = (p, idSite) => p.visionGlobale || (p.idSite !== null && Number(idSite) === p.idSite);
+
+/** GET /calibrage/contexte : sites proposés à la création / modification d'une session. */
+const getContexteCalibrage = async (req, res) => {
+  try {
+    const p = await porteeCalibrage(req.auth.userId);
+    const [sites] = p.visionGlobale
+      ? await db.query("SELECT id, nom FROM b_site ORDER BY nom")
+      : await db.query("SELECT id, nom FROM b_site WHERE id=?", [p.idSite ?? -1]);
+    return res.status(200).json({ vision_globale: p.visionGlobale, id_site: p.idSite, sites });
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
+};
+
+/** Middleware : réserve l'action au jauge de la session (ou à l'administrateur). */
+const garderJauge = (resoudre) => async (req, res, next) => {
+  try {
+    const idSession = await resoudre(req);
+    const [[s]] = await db.query("SELECT id_jauge FROM b_cal_session WHERE id=?", [idSession ?? -1]);
+    if (!s) return res.status(404).json({ message: "Session introuvable." });
+    if (Number(s.id_jauge) !== Number(req.auth.userId) && !(await porteeCalibrage(req.auth.userId)).admin) {
+      return res.status(403).json({ message: "Seul le jauge de cette session peut la modifier." });
+    }
+    return next();
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors du contrôle d'accès." }); }
+};
+const parSession = async (req) => req.params.id;
+const parTransaction = async (req) => {
+  const [[t]] = await db.query("SELECT id_session FROM b_cal_transaction WHERE id=?", [req.params.tid]);
+  return t ? t.id_session : null;
+};
 
 const num = (v) => (v === null || v === undefined || v === "" ? 0 : Number(v));
 
@@ -27,6 +73,9 @@ const createSession = async (req, res) => {
     return res.status(400).json({ message: "Champs obligatoires manquants (nom, date, site, grille, nombre de transactions, durée)." });
   }
   try {
+    if (!siteAutorise(await porteeCalibrage(req.auth.userId), id_site)) {
+      return res.status(403).json({ message: "Vous ne pouvez organiser un calibrage que pour votre site." });
+    }
     const [[g]] = await db.query(
       "SELECT id, type_ressource_cible, statut FROM b_eval_grille WHERE id=?", [id_grille]
     );
@@ -105,6 +154,9 @@ const updateSession = async (req, res) => {
     const [[s]] = await db.query("SELECT * FROM b_cal_session WHERE id=?", [id]);
     if (!s) return res.status(404).json({ message: "Session introuvable." });
     if (!enBrouillon(s)) return res.status(409).json({ message: "Session non modifiable (déjà ouverte ou close)." });
+    if (id_site && Number(id_site) !== Number(s.id_site) && !siteAutorise(await porteeCalibrage(req.auth.userId), id_site)) {
+      return res.status(403).json({ message: "Vous ne pouvez organiser un calibrage que pour votre site." });
+    }
     let type = s.type_ressource_cible;
     if (id_grille && id_grille !== s.id_grille) {
       const [[g]] = await db.query("SELECT type_ressource_cible, statut FROM b_eval_grille WHERE id=?", [id_grille]);
@@ -381,6 +433,7 @@ const dupliquerTransactions = async (req, res) => {
 };
 
 module.exports = {
+  getContexteCalibrage, garderJauge, parSession, parTransaction,
   createSession, getSessions, getSessionDetail, updateSession, deleteSession, ouvrirSession,
   getEvaluateursDisponibles, setParticipants, removeParticipant, inviterParticipants,
   addTransaction, getTransactions, updateTransaction, deleteTransaction, dupliquerTransactions,

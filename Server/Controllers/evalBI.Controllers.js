@@ -5,7 +5,7 @@
 // Tables b_eval_bi_arborescence / b_eval_bi_option / b_evaluation_bi.
 // =====================================================================
 const db = require("../config/db");
-const { emit } = require("../utils/notify");
+const { emit, utilisateursAvecPermission } = require("../utils/notify");
 
 const withTx = async (fn) => {
   const conn = await db.getConnection();
@@ -13,12 +13,10 @@ const withTx = async (fn) => {
   catch (e) { await conn.rollback(); throw e; } finally { conn.release(); }
 };
 
-// Notifie les utilisateurs habilités à valider les options (rôles RO / Admin / AQ).
+// Notifie les utilisateurs habilités à valider les options (evaluation.valider).
 const notifierValidateurs = async (conn, message, idEvaluation) => {
-  const [users] = await conn.query(
-    `SELECT u.id FROM b_utilisateur u JOIN b_fonction f ON u.id_Fonction=f.id
-     WHERE u.status='ACTIF' AND f.Role_Associe IN ('R_RO','R_ADMI','R_AQ')`
-  );
+  // Destinataires : les utilisateurs qui peuvent réellement valider (evaluation.valider).
+  const users = (await utilisateursAvecPermission(conn, "evaluation.valider")).map((id) => ({ id }));
   for (const u of users) {
     await emit(conn, {
       id_utilisateur: u.id, titre: "Validation d'option BI", message, type: "OPTION_BI",
@@ -90,6 +88,19 @@ const addOption = async (req, res) => {
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors de l'ajout." }); }
 };
 
+// Déplacement d'une option sous un autre parent (glisser-déposer de l'arbre).
+const deplacerOptionArbre = async (req, res) => {
+  const { deplacerOption } = require("../utils/deplacerOption");
+  const idParent = req.body.id_parent === null || req.body.id_parent === undefined || req.body.id_parent === "" ? null : Number(req.body.id_parent);
+  try {
+    const r = await withTx((conn) => deplacerOption(conn, "b_eval_bi_option", Number(req.params.id), idParent, "id_arborescence"));
+    return res.status(200).json({ message: r.inchange ? "Option inchangée." : "Option déplacée.", ...r });
+  } catch (e) {
+    if (e.status) return res.status(e.status).json({ message: e.message });
+    console.log(e); return res.status(500).json({ message: "Erreur lors du déplacement." });
+  }
+};
+
 const updateOption = async (req, res) => {
   const { libelle } = req.body;
   if (!libelle || !libelle.trim()) return res.status(400).json({ message: "Le libellé est obligatoire." });
@@ -131,9 +142,18 @@ const getEvaluationBI = async (req, res) => {
     const [[pending]] = await db.query(
       `SELECT COUNT(*) AS n FROM b_eval_bi_option WHERE id_evaluation_origine=? AND etat='EN_ATTENTE'`, [idEval]
     );
+    // Propositions rejetées pour cette évaluation, avec leur motif
+    const [rejetees] = await db.query(
+      `SELECT o.niveau, o.libelle, o.motif_rejet, o.dateDecision,
+              TRIM(CONCAT(COALESCE(u.prenom, ''), ' ', COALESCE(u.nom, ''))) AS propose_par_nom
+         FROM b_eval_bi_option o LEFT JOIN b_utilisateur u ON u.id = o.propose_par
+        WHERE o.id_evaluation_origine=? AND o.etat='REJETE' AND o.motif_rejet IS NOT NULL
+        ORDER BY o.dateDecision DESC`, [idEval]
+    );
     return res.status(200).json({
       arborescence: arbo || null,
       choix,
+      rejetees,
       en_attente_validation: pending.n > 0,
       resolution: e.resolution,
     });
@@ -315,13 +335,18 @@ const rejeterOption = async (req, res) => {
             [opt.id_evaluation_origine]
           );
         }
+        // Notifier le proposeur (et l'évaluateur s'il est une autre personne), avec
+        // le libellé de l'option et le motif du rejet.
         const [[evKo]] = await conn.query(`SELECT id_evaluateur FROM b_evaluation WHERE id=?`, [opt.id_evaluation_origine]);
-        if (evKo) await emit(conn, {
-          id_utilisateur: evKo.id_evaluateur, titre: "Option rejetée",
-          message: `Votre proposition d'option a été rejetée : ${motif.trim()}`,
-          type: "EVALUATION", nature_objet: "EVALUATION", id_objet: opt.id_evaluation_origine,
-          url: `/mon-espace/evaluation/executer/${opt.id_evaluation_origine}`,
-        });
+        const dest = new Set([opt.propose_par, evKo && evKo.id_evaluateur].filter(Boolean).map(Number));
+        for (const uid of dest) {
+          await emit(conn, {
+            id_utilisateur: uid, titre: `Option BI rejetée : « ${String(opt.libelle).slice(0, 60)} »`,
+            message: `Motif : ${motif.trim()}`,
+            type: "EVALUATION", nature_objet: "EVALUATION", id_objet: opt.id_evaluation_origine,
+            url: `/mon-espace/evaluation/executer/${opt.id_evaluation_origine}`,
+          });
+        }
       }
       return { ok: true };
     });
@@ -342,7 +367,7 @@ const deleteDependentsSetRejected = async (conn, id, validePar, motif) => {
 };
 
 module.exports = {
-  getArborescences, addArborescence, getArbreOptions, addOption, updateOption, deleteOption,
+  getArborescences, addArborescence, getArbreOptions, addOption, updateOption, deplacerOptionArbre, deleteOption,
   getEvaluationBI, getOptionsEnfants, saveEvaluationBI, proposerOption,
   getOptionsEnAttente, validerOption, rejeterOption,
 };

@@ -39,7 +39,8 @@ export class CreerSessionComponent implements OnInit {
   };
 
   ngOnInit(): void {
-    this.userService.getAllSite().subscribe({ next: s => (this.sites = s || []) });
+    // Sites autorisés : son site, ou tous pour le site à vision globale.
+    this.service.getContexte().subscribe({ next: c => (this.sites = c.sites || []) });
     this.userService.getEvalGrillesActives().subscribe({ next: g => (this.grilles = g || []) });
   }
 

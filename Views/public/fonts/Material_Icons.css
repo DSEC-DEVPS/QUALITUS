@@ -3,7 +3,9 @@
   font-style: normal;
   font-weight: 400;
   font-display: block;
-  src: url(./flUhRq6tzZclQEJ-Vdg-IuiaDsNcIhQ8tQ.woff2) format('woff2');
+  /* Police complète « material-icons » v1.13.14 (npm). Le nom du fichier porte la
+     version : un navigateur ne peut pas réutiliser une ancienne police en cache. */
+  src: url(./material-icons-v1.13.14.woff2) format('woff2');
 }
 
 .material-icons {

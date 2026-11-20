@@ -1,3 +1,4 @@
+@if (chargement) { <app-chargement /> }
 <div class="container-fluid" style="padding-top: 0px">
   <div
     class="row justify-content-between text-end"
@@ -29,6 +30,7 @@
             >edit</mat-icon
           >
           <mat-icon
+            *appCan="'fiche.archiver'"
             (click)="
               deleteSomething('Êtes vous sûr de vouloir archiver cette fiche ?', 'archivage')
             "

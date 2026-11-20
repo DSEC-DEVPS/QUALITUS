@@ -19,13 +19,15 @@ export interface SupplementairesResult {
 export interface LignePlanAction {
   id: number;
   id_evaluation: number;
-  id_action: number | null;
+  /** Action (saisie libre). */
+  action: string | null;
   id_porteur: number | null;
   date_debut: string | null;
   date_attendue: string | null;
   date_realisation: string | null;
   id_statut: number | null;
-  id_kpi: number | null;
+  /** KPI (saisie libre). */
+  kpi: string | null;
   commentaire: string | null;
   synthese?: string | null;
   action_libelle?: string;

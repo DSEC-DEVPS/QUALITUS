@@ -1,3 +1,4 @@
+<app-chargement *ngIf="chargement && !session" />
 <div class="cal-page cal-session" *ngIf="session">
   <!-- Bandeau supérieur -->
   <mat-card class="cal-panel"><mat-card-header class="cal-band cal-header">
@@ -134,14 +135,44 @@
           </div>
         </div>
 
-        <div class="eval-item" *ngFor="let p of participants">
-          <div>
-            <strong>{{ p.prenom }} {{ p.nom }}</strong>
-            <span class="sub">{{ p.statut_participation }}<span *ngIf="!p.invite"> · non invité</span></span>
+        <div class="eval-item participant" *ngFor="let p of participants">
+          <div class="participant-ligne">
+            <div>
+              <strong>{{ p.prenom }} {{ p.nom }}</strong>
+              <span class="sub">{{ etatParticipation(p.statut_participation) }}<span *ngIf="!p.invite"> · non invité</span>
+                <span *ngIf="p.nb_reprises"> · {{ p.nb_reprises }} reprise{{ p.nb_reprises > 1 ? 's' : '' }}</span>
+                <span *ngIf="p.nb_recommencements"> · {{ p.nb_recommencements }} recommencement{{ p.nb_recommencements > 1 ? 's' : '' }}</span>
+              </span>
+            </div>
+            <span class="actions-participant">
+              <button mat-icon-button color="primary" matTooltip="Reprendre (réponses conservées)"
+                      *ngIf="p.statut_participation === 'EN_COURS' || p.statut_participation === 'CLOSE'"
+                      (click)="ouvrirReprise(p)"><mat-icon>play_circle</mat-icon></button>
+              <button mat-icon-button color="warn" matTooltip="Recommencer à zéro (réponses effacées)" (click)="reinitialiser(p)">
+                <mat-icon>restart_alt</mat-icon>
+              </button>
+            </span>
           </div>
-          <button mat-icon-button matTooltip="Réinitialiser la participation" (click)="reinitialiser(p)">
-            <mat-icon>restart_alt</mat-icon>
-          </button>
+          <div class="reprise" *ngIf="reprise?.pid === p.id ? reprise : null as r">
+            <app-chargement *ngIf="r.chargement" [diametre]="24" texte="" />
+            <ng-container *ngIf="!r.chargement">
+              <p class="hint">
+                Les réponses déjà saisies sont conservées.
+                <ng-container *ngIf="r.derniere; else jamais">Dernier enregistrement à {{ r.derniere | date: 'HH:mm' }} :
+                  il restait {{ r.proposees }} min.</ng-container>
+                <ng-template #jamais>Aucun enregistrement du participant : durée complète proposée.</ng-template>
+              </p>
+              <mat-form-field appearance="outline" class="minutes" subscriptSizing="dynamic">
+                <mat-label>Temps accordé (min)</mat-label>
+                <input matInput type="number" min="1" [max]="r.duree" [(ngModel)]="r.minutes" name="minutesReprise" />
+                <mat-hint>de 1 à {{ r.duree }} min</mat-hint>
+              </mat-form-field>
+              <button mat-flat-button color="primary" (click)="confirmerReprise(p)" [disabled]="!minutesValides()">
+                <mat-icon>play_arrow</mat-icon> Reprendre
+              </button>
+              <button mat-button (click)="reprise = null">Annuler</button>
+            </ng-container>
+          </div>
         </div>
         <div class="vide" *ngIf="!participants.length">Aucun participant.</div>
         <p class="note-ref" [class.ok]="referenceComplete">

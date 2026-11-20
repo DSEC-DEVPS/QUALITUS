@@ -9,6 +9,7 @@ const ce = require("../Controllers/evalContre.Controllers");
 const router = express.Router();
 
 // Matrice de droits dédiée à la contre-évaluation (module CONTRE_EVALUATION).
+router.get("/eval/contre/contexte", auth, permission("CONTRE_EVALUATION",["CREER","VOIR_TOUS"]), ce.getContexteContre);
 router.get("/eval/contre/all", auth, permission("CONTRE_EVALUATION","LIRE"), ce.getAllContre);
 router.get("/eval/contre/mes", auth, permission("CONTRE_EVALUATION","LIRE"), ce.getMesContre);
 router.get("/eval/contre/evaluateurs/:idSite", auth, permission("CONTRE_EVALUATION","CREER"), ce.getEvaluateursBySite);
@@ -19,7 +20,9 @@ router.get("/eval/contre/:id", auth, permission("CONTRE_EVALUATION","LIRE"), ce.
 router.put("/eval/contre/:id/erreur/:idErreur", auth, permission("CONTRE_EVALUATION","CREER"), ce.toggleErreur);
 router.put("/eval/contre/:id/resolution", auth, permission("CONTRE_EVALUATION","CREER"), ce.setResolution);
 router.post("/eval/contre/:id/terminer", auth, permission("CONTRE_EVALUATION","CREER"), ce.terminerContre);
-router.put("/eval/contre/:id/actif", auth, permission("CONTRE_EVALUATION","DESACTIVER"), ce.setActifContre);
-router.delete("/eval/contre/:id", auth, permission("CONTRE_EVALUATION","SUPPRIMER"), ce.supprimerContre);
+// Désactiver / supprimer : le créateur (creer) tant que la contre-évaluation n'est pas
+// terminée, sinon la permission dédiée — règle exacte appliquée par le contrôleur.
+router.put("/eval/contre/:id/actif", auth, permission("CONTRE_EVALUATION",["DESACTIVER","CREER"]), ce.setActifContre);
+router.delete("/eval/contre/:id", auth, permission("CONTRE_EVALUATION",["SUPPRIMER","CREER"]), ce.supprimerContre);
 
 module.exports = router;

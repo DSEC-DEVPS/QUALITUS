@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -36,6 +36,7 @@ import { QuizPublic } from '../interfaces';
 export class ParticiperListeComponent implements OnInit, OnDestroy {
   private readonly quizSrv = inject(QuizService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly toast = inject(ToastrService);
 
   pin = '';
@@ -48,7 +49,10 @@ export class ParticiperListeComponent implements OnInit, OnDestroy {
 
   // Quiz PUBLICS visibles selon le site (accessibles sans code PIN)
   publics: QuizPublic[] = [];
+  /** Quiz commencés et non soumis (privés et publics) : reprise sans code PIN. */
+  enCoursListe: QuizPublic[] = [];
   private publicsChargeAt = 0; // ms : instant de reception (pour un chrono vivant)
+  private enCoursChargeAt = 0;
   private tickId: ReturnType<typeof setInterval> | null = null;
 
   // Filtres par date de creation (via datepicker Material)
@@ -68,7 +72,12 @@ export class ParticiperListeComponent implements OnInit, OnDestroy {
   get publicsFiltres(): QuizPublic[] {
     const deb = this.toYmd(this.dateDebut);
     const fin = this.toYmd(this.dateFin);
+    // Les quiz en cours sont affichés dans leur propre section.
+    const enCoursIds = new Set(this.enCoursListe.map(q => q.id));
     return this.publics.filter(q => {
+      if (enCoursIds.has(q.id)) {
+        return false;
+      }
       const d = (q.dateCreation || '').slice(0, 10);
       if (deb && (!d || d < deb)) {
         return false;
@@ -86,6 +95,19 @@ export class ParticiperListeComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // ?pin=saisir (notification d'un quiz privé, depuis la cloche ou « Nouveautés ») :
+    // ouvre directement la saisie du PIN et indique à l'utilisateur quoi faire.
+    const params = this.route.snapshot.queryParamMap;
+    if (params.get('pin') === 'saisir') {
+      this.afficherPin = true;
+      const titre = params.get('quiz') ? `« ${params.get('quiz')} »` : 'Ce quiz';
+      this.toast.info(
+        `${titre} est un quiz privé : saisissez le code PIN qui vous a été communiqué pour y accéder.`,
+        '',
+        { timeOut: 8000 }
+      );
+    }
+    this.chargerEnCours();
     this.chargerPublics();
     // Rafraichit l'affichage du temps restant chaque seconde
     this.tickId = setInterval(() => {}, 1000);
@@ -96,6 +118,16 @@ export class ParticiperListeComponent implements OnInit, OnDestroy {
       clearInterval(this.tickId);
       this.tickId = null;
     }
+  }
+
+  chargerEnCours() {
+    this.quizSrv.getQuizEnCours().subscribe({
+      next: l => {
+        this.enCoursListe = l;
+        this.enCoursChargeAt = Date.now();
+      },
+      error: () => {},
+    });
   }
 
   chargerPublics() {
@@ -110,15 +142,21 @@ export class ParticiperListeComponent implements OnInit, OnDestroy {
 
   /** Une tentative est-elle en cours (demarree, non soumise) pour ce quiz ? */
   enCours(q: QuizPublic): boolean {
-    return q.temps_ecoule_secondes != null && !!q.duree;
+    return q.temps_ecoule_secondes != null;
+  }
+
+  /** Chrono affiché seulement pour un quiz à durée limitée. */
+  avecChrono(q: QuizPublic): boolean {
+    return this.enCours(q) && !!q.duree;
   }
 
   /** Secondes restantes (chrono vivant : deduit le temps ecoule depuis le chargement). */
   tempsRestant(q: QuizPublic): number {
-    if (!this.enCours(q)) {
+    if (!this.avecChrono(q)) {
       return 0;
     }
-    const depuisChargement = Math.floor((Date.now() - this.publicsChargeAt) / 1000);
+    const recuA = this.enCoursListe.includes(q) ? this.enCoursChargeAt : this.publicsChargeAt;
+    const depuisChargement = Math.floor((Date.now() - recuA) / 1000);
     return Math.max(0, (q.duree as number) * 60 - (q.temps_ecoule_secondes as number) - depuisChargement);
   }
 
@@ -130,6 +168,7 @@ export class ParticiperListeComponent implements OnInit, OnDestroy {
   }
 
   ouvrir(q: QuizPublic) {
+    // Quiz privé en cours : le serveur reconnaît le passage ouvert, pas de PIN à ressaisir.
     this.router.navigate(['/mon-espace/quiz/participer', q.id]);
   }
 
@@ -146,21 +185,19 @@ export class ParticiperListeComponent implements OnInit, OnDestroy {
         this.envoi = false;
         switch (q.etat) {
           case 'OK':
-            this.router.navigate(['/mon-espace/quiz/participer', q.id]);
+            // Quiz privé : le PIN accompagne l'ouverture (contrôlé côté serveur).
+            this.router.navigate(['/mon-espace/quiz/participer', q.id], { queryParams: { pin: code } });
             break;
           case 'EN_ATTENTE':
             // Machine non encore autorisee
             this.enAttente = true;
             this.quizEnAttente = q.titre || '';
             break;
-          case 'PROFIL_EXCLU':
-            this.toast.error('Ce profil ne participe pas aux quiz.');
+          case 'NON_PARTICIPANT':
+            this.toast.error("Vous n'êtes pas participant à ce quiz.");
             break;
           case 'INDISPONIBLE':
-            this.toast.error("Ce quiz n'est pas disponible");
-            break;
-          case 'HORS_SITE':
-            this.toast.error("Ce quiz n'est pas destiné à votre site.");
+            this.toast.error((q as any).message || "Ce quiz n'est pas disponible");
             break;
           default:
             this.toast.error('Code PIN invalide');

@@ -214,12 +214,12 @@
           <label class="reporting-date">
             Du
             <input type="date" #dateDebutRapport [value]="dateRapportDebut()"
-              (input)="dateRapportDebut.set(dateDebutRapport.value)">
+              (input)="dateRapportDebut.set(dateDebutRapport.value); rapportsPageIndex.set(0)">
           </label>
           <label class="reporting-date">
             Au
             <input type="date" #dateFinRapport [value]="dateRapportFin()"
-              (input)="dateRapportFin.set(dateFinRapport.value)">
+              (input)="dateRapportFin.set(dateFinRapport.value); rapportsPageIndex.set(0)">
           </label>
           <div class="reporting-buttons">
             <button mat-stroked-button type="button" (click)="chargement_reporting()">Charger</button>
@@ -236,7 +236,7 @@
           <div class="cards-container">
               <div
                 class="card"
-                *ngFor="let element of rapportsFiltres(); let i = index"
+                *ngFor="let element of rapportsPage(); let i = index"
                 (mouseenter)="hoveredCard = element.id_CONTROLE"
                 (mouseleave)="hoveredCard = null"
                 [class.hovered]="hoveredCard === element.id_CONTROLE"
@@ -272,6 +272,9 @@
               </div>
               </div>
             </div>
+          <mat-paginator *ngIf="rapportsFiltres().length" [length]="rapportsFiltres().length" [pageIndex]="rapportsPageIndex()"
+                         [pageSize]="rapportsPageSize()" [pageSizeOptions]="taillesRapports" showFirstLastButtons
+                         (page)="changerPageRapports($event)" />
       </mat-tab>
     </mat-tab-group>
   </mat-card-content>

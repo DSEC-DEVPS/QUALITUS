@@ -35,7 +35,8 @@
   </mat-card-header>
   <mat-card-content>
     <div class="mat-elevation-z8">
-      <table mat-table [dataSource]="dataSource" id="table-data" matSort>
+      @if (chargement) { <app-chargement /> }
+      <table [style.display]="chargement ? 'none' : null" mat-table [dataSource]="dataSource" id="table-data" matSort>
         <ng-container matColumnDef="id">
           <th mat-header-cell *matHeaderCellDef mat-sort-header>No.</th>
           <td mat-cell *matCellDef="let element">

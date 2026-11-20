@@ -238,3 +238,24 @@
   color: #444;
   min-width: 16px;
 }
+
+/* Recherche dans la liste des participants (onglet Diffusion) */
+.recherche-participants {
+  width: 100%;
+  max-width: 420px;
+  margin-bottom: 4px;
+}
+
+.reinit-attente {
+  display: inline-block;
+  margin: 0 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  background: #fff3e0;
+  color: #e65100;
+  vertical-align: middle;
+}
+.actions-participant {
+  white-space: nowrap;
+}

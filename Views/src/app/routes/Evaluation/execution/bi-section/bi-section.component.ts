@@ -27,8 +27,12 @@ export class BiSectionComponent implements OnChanges {
   private readonly toastr = inject(ToastrService);
   private readonly perms = inject(PermissionsService);
 
-  /** Proposer une option au niveau des 5 pourquoi exige bi.lire (HABILITATIONS 9). */
-  get peutProposer(): boolean { return this.perms.can('bi.lire'); }
+  /** Proposer une option au niveau des 5 pourquoi : evaluation.creer, comme côté serveur. */
+  get peutProposer(): boolean { return this.perms.can('evaluation.creer'); }
+  /** Les arborescences ne sont lues que si l'utilisateur peut choisir (sinon : libellés enregistrés). */
+  private get peutChoisir(): boolean {
+    return !this.terminee && this.perms.can('evaluation.creer');
+  }
 
   @Input() idEvaluation!: number;
   @Input() resolution: string | null = null;
@@ -38,6 +42,8 @@ export class BiSectionComponent implements OnChanges {
   arbo: Arborescence | null = null;
   chargee = false;
   niveaux = [1, 2, 3, 4, 5];
+  /** Propositions rejetées (libellé, motif, date). */
+  rejetees: { niveau: number; libelle: string; motif_rejet: string; dateDecision: string | null; propose_par_nom?: string }[] = [];
   options: Record<number, BiOption[]> = {};
   selection: Record<number, number | null> = {};
   propositionOuverte: Record<number, boolean> = {};
@@ -52,6 +58,7 @@ export class BiSectionComponent implements OnChanges {
   private charger(): void {
     this.service.getEvaluationBi(this.idEvaluation).subscribe({
       next: async d => {
+        this.rejetees = d.rejetees || [];
         this.arbo = d.arborescence;
         this.chargee = true;
         this.options = {}; this.selection = {};
@@ -61,6 +68,13 @@ export class BiSectionComponent implements OnChanges {
         for (const ch of d.choix.sort((a, b) => a.niveau - b.niveau)) {
           this.selection[ch.niveau] = ch.id_option;
           if (ch.niveau < 5 && ch.id_option) await this.loadNiveau(ch.niveau + 1);
+        }
+        // Sans droit de choisir (lecture seule), les arbres ne sont pas lisibles :
+        // on affiche les libellés enregistrés avec l'évaluation.
+        for (const ch of d.choix) {
+          if (ch.id_option && !(this.options[ch.niveau] || []).some(o => o.id === ch.id_option)) {
+            this.options[ch.niveau] = [...(this.options[ch.niveau] || []), { id: ch.id_option, libelle: ch.libelle } as any];
+          }
         }
       },
       error: () => this.toastr.error('Impossible de charger l’analyse BI.'),
@@ -72,7 +86,7 @@ export class BiSectionComponent implements OnChanges {
   }
 
   private loadNiveau(niveau: number): Promise<void> {
-    if (!this.arbo) return Promise.resolve();
+    if (!this.arbo || !this.peutChoisir) return Promise.resolve();
     if (niveau > 1 && !this.selection[niveau - 1]) { this.options[niveau] = []; return Promise.resolve(); }
     return new Promise(resolve => {
       this.service.getOptionsEnfants({

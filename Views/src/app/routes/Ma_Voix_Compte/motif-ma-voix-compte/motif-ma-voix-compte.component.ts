@@ -13,17 +13,19 @@ import {
   DialogLayoutDisplay,
   DisappearanceAnimation,
 } from '@costlydeveloper/ngx-awesome-popup';
-import { catchError, of, Subject, takeUntil, tap } from 'rxjs';
+import { catchError, of, Subject, takeUntil, tap, finalize } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { UpdateMotifVoixCompteComponent } from '../update-motif-voix-compte/update-motif-voix-compte.component';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 @Component({
   selector: 'app-motif-ma-voix-compte',
   standalone: true,
-  imports: [MatCardModule, MatIconModule, MatTableModule, MatPaginatorModule],
+  imports: [ChargementComponent, MatCardModule, MatIconModule, MatTableModule, MatPaginatorModule],
   templateUrl: './motif-ma-voix-compte.component.html',
   styleUrl: './motif-ma-voix-compte.component.scss',
 })
 export class MotifMaVoixCompteComponent implements OnInit {
+  chargement = true;
   private readonly userService = inject(UserService);
   private readonly toastSrv = inject(ToastrService);
   readonly dialog = inject(MatDialog);
@@ -32,7 +34,8 @@ export class MotifMaVoixCompteComponent implements OnInit {
   displayedColumns: string[] = ['id', 'nomMotif', 'dateCreation', 'actions'];
   tableau_motifs!: MatTableDataSource<motif_ma_voix_compte>;
   ngOnInit(): void {
-    this.userService.getAllMotifMaVoix().subscribe({
+    this.chargement = true;
+    this.userService.getAllMotifMaVoix().pipe(finalize(() => (this.chargement = false))).subscribe({
       next: data => {
         this.tableau_motifs = new MatTableDataSource(data);
       },

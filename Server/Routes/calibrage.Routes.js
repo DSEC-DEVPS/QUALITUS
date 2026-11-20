@@ -4,26 +4,30 @@ const auth = require("../middlewares/auth");
 const { permission } = require("../middlewares/permission");
 const c = require("../Controllers/calibrage.Controllers");
 const router = express.Router();
+// Organisation : réservée au jauge de la session (ou à l'administrateur) — c.garderJauge.
+const jauge = c.garderJauge(c.parSession);
+const jaugeTransaction = c.garderJauge(c.parTransaction);
 
 // Sessions
 router.get("/calibrage/session/all", auth, permission("CALIBRAGE", "LIRE"), c.getSessions);
+router.get("/calibrage/contexte", auth, permission("CALIBRAGE", "ORGANISER"), c.getContexteCalibrage);
 router.post("/calibrage/session", auth, permission("CALIBRAGE", "ORGANISER"), c.createSession);
 router.get("/calibrage/session/:id", auth, permission("CALIBRAGE", "LIRE"), c.getSessionDetail);
-router.put("/calibrage/session/:id", auth, permission("CALIBRAGE", "ORGANISER"), c.updateSession);
-router.delete("/calibrage/session/:id", auth, permission("CALIBRAGE", "ORGANISER"), c.deleteSession);
-router.put("/calibrage/session/:id/ouvrir", auth, permission("CALIBRAGE", "ORGANISER"), c.ouvrirSession);
+router.put("/calibrage/session/:id", auth, permission("CALIBRAGE", "ORGANISER"), jauge, c.updateSession);
+router.delete("/calibrage/session/:id", auth, permission("CALIBRAGE", "ORGANISER"), jauge, c.deleteSession);
+router.put("/calibrage/session/:id/ouvrir", auth, permission("CALIBRAGE", "ORGANISER"), jauge, c.ouvrirSession);
 
 // Participants
-router.get("/calibrage/session/:id/evaluateurs-disponibles", auth, permission("CALIBRAGE", "ORGANISER"), c.getEvaluateursDisponibles);
-router.post("/calibrage/session/:id/participants", auth, permission("CALIBRAGE", "ORGANISER"), c.setParticipants);
-router.delete("/calibrage/session/:id/participant/:pid", auth, permission("CALIBRAGE", "ORGANISER"), c.removeParticipant);
-router.post("/calibrage/session/:id/inviter", auth, permission("CALIBRAGE", "ORGANISER"), c.inviterParticipants);
+router.get("/calibrage/session/:id/evaluateurs-disponibles", auth, permission("CALIBRAGE", "ORGANISER"), jauge, c.getEvaluateursDisponibles);
+router.post("/calibrage/session/:id/participants", auth, permission("CALIBRAGE", "ORGANISER"), jauge, c.setParticipants);
+router.delete("/calibrage/session/:id/participant/:pid", auth, permission("CALIBRAGE", "ORGANISER"), jauge, c.removeParticipant);
+router.post("/calibrage/session/:id/inviter", auth, permission("CALIBRAGE", "ORGANISER"), jauge, c.inviterParticipants);
 
 // Transactions
 router.get("/calibrage/session/:id/transactions", auth, permission("CALIBRAGE", "LIRE"), c.getTransactions);
-router.post("/calibrage/session/:id/transaction", auth, permission("CALIBRAGE", "ORGANISER"), c.addTransaction);
-router.post("/calibrage/session/:id/dupliquer-transactions", auth, permission("CALIBRAGE", "ORGANISER"), c.dupliquerTransactions);
-router.put("/calibrage/transaction/:tid", auth, permission("CALIBRAGE", "ORGANISER"), c.updateTransaction);
-router.delete("/calibrage/transaction/:tid", auth, permission("CALIBRAGE", "ORGANISER"), c.deleteTransaction);
+router.post("/calibrage/session/:id/transaction", auth, permission("CALIBRAGE", "ORGANISER"), jauge, c.addTransaction);
+router.post("/calibrage/session/:id/dupliquer-transactions", auth, permission("CALIBRAGE", "ORGANISER"), jauge, c.dupliquerTransactions);
+router.put("/calibrage/transaction/:tid", auth, permission("CALIBRAGE", "ORGANISER"), jaugeTransaction, c.updateTransaction);
+router.delete("/calibrage/transaction/:tid", auth, permission("CALIBRAGE", "ORGANISER"), jaugeTransaction, c.deleteTransaction);
 
 module.exports = router;

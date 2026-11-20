@@ -45,6 +45,7 @@ app.use("/api/v1", require("./Routes/evalCoaching.Routes"));
 app.use("/api/v1", require("./Routes/evalCalendrier.Routes"));
 app.use("/api/v1", require("./Routes/evalContre.Routes"));
 app.use("/api/v1", require("./Routes/evalRapport.Routes"));
+app.use("/api/v1", require("./Routes/evalExport.Routes")); // Exportations : exports Évaluation
 app.use("/api/v1", require("./Routes/habilitation.Routes")); // socle S5
 app.use("/api/v1", require("./Routes/calibrage.Routes")); // module calibrage
 app.use("/api/v1", require("./Routes/calibrageExec.Routes")); // calibrage - deroulement

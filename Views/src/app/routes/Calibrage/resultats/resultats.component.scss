@@ -42,3 +42,8 @@ table.croise th, table.croise td { border: 1px solid #eee; padding: 6px 10px; te
 .appr { width: 100%; max-width: 560px; }
 .plein { width: 100%; }
 .actions { display: flex; justify-content: flex-end; }
+.actions-participant { white-space: nowrap; }
+.ligne-reprise td { text-align: left !important; background: rgba(255, 142, 54, 0.06); }
+.reprise { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 4px 4px; white-space: normal; }
+.reprise .hint { flex: 1 1 100%; margin: 0; font-size: 12px; line-height: 1.4; color: rgba(0, 0, 0, 0.6); }
+.reprise .minutes { width: 170px; }

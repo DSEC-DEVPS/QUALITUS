@@ -15,10 +15,12 @@ import { DatePipe, TitleCasePipe } from '@angular/common';
 import { MatIcon } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import * as XLSX from 'xlsx';
+import { finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 @Component({
   selector: 'app-chargements',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent,
     MatFormFieldModule,
     MatInputModule,
     MatTableModule,
@@ -37,6 +39,7 @@ import * as XLSX from 'xlsx';
   styleUrl: './chargements.component.scss',
 })
 export class ChargementsComponent implements OnInit {
+  chargement = true;
   private readonly userService = inject(UserService);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
@@ -51,12 +54,14 @@ export class ChargementsComponent implements OnInit {
   ];
   filename = 'La_liste_de_mes_chargements.xlsx';
   filename_global = 'Tous_les_chargements_de_BASECO.xlsx';
-  dataSource!: MatTableDataSource<Fiche>;
+  // initialisé vide : ngAfterViewInit s\'exécute avant l\'arrivée des données
+  dataSource = new MatTableDataSource<Fiche>([]);
   downloadData!: Fiche[];
   user!: User;
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
   ngOnInit(): void {
+    this.chargement = true;
     this.auth.user().subscribe({
       next: user => {
         this.user = user;
@@ -65,7 +70,7 @@ export class ChargementsComponent implements OnInit {
         console.log(error);
       },
     });
-    this.userService.getAllFicheByGestionnaire().subscribe({
+    this.userService.getAllFicheByGestionnaire().pipe(finalize(() => (this.chargement = false))).subscribe({
       next: result => {
         this.dataSource = new MatTableDataSource(result);
         this.downloadData = result;

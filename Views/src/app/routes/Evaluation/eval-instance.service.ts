@@ -37,8 +37,12 @@ export interface EvaluationListe {
   numero_appel?: string | null;
   actif?: number;
   id_evaluation_parente?: number | null;
+  id_evaluateur?: number | null;
+  /** 1 si l'évaluation (ou une de ses supplémentaires) a été contre-évaluée */
+  contre_evaluee?: number;
   agent_nom: string | null;
   agent_prenom: string | null;
+  agent_login?: string | null;
   evaluateur_nom: string | null;
   evaluateur_prenom: string | null;
   type_evaluation: string | null;

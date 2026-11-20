@@ -26,8 +26,12 @@ export class CoachingSectionComponent implements OnChanges {
   private readonly toastr = inject(ToastrService);
   private readonly perms = inject(PermissionsService);
 
-  /** Proposer une option au niveau des 5 pourquoi exige arbre_coaching.lire (HABILITATIONS 9). */
-  get peutProposer(): boolean { return this.perms.can('arbre_coaching.lire'); }
+  /** Proposer une option de coaching : evaluation.coacher, comme côté serveur. */
+  get peutProposer(): boolean { return this.perms.can('evaluation.coacher'); }
+  /** Les arbres ne sont lus que si l'utilisateur peut choisir (sinon : libellés enregistrés). */
+  private get peutChoisir(): boolean {
+    return !this.lectureSeule && !this.estTermine && this.perms.can('evaluation.coacher');
+  }
 
   @Input() idEvaluation!: number;
   @Input() lectureSeule = false;
@@ -36,6 +40,8 @@ export class CoachingSectionComponent implements OnChanges {
   idCoaching = 0;
   statut = '';
   niveaux = [1, 2, 3, 4, 5];
+  /** Propositions rejetées (libellé, motif, date). */
+  rejetees: { niveau: number; libelle: string; motif_rejet: string; dateDecision: string | null; propose_par_nom?: string }[] = [];
   options: Record<number, CoachingOption[]> = {};
   selection: Record<number, number | null> = {};
   propositionOuverte: Record<number, boolean> = {};
@@ -48,6 +54,7 @@ export class CoachingSectionComponent implements OnChanges {
   private charger(): void {
     this.service.getEvaluationCoaching(this.idEvaluation).subscribe({
       next: async d => {
+        this.rejetees = d.rejetees || [];
         this.eligible = d.eligible;
         this.idCoaching = d.coaching?.id || 0;
         this.statut = d.coaching?.statut || '';
@@ -58,6 +65,13 @@ export class CoachingSectionComponent implements OnChanges {
           this.selection[ch.niveau] = ch.id_option;
           if (ch.niveau < 5 && ch.id_option) await this.loadNiveau(ch.niveau + 1);
         }
+        // Sans droit de choisir (lecture seule), les arbres ne sont pas lisibles :
+        // on affiche les libellés enregistrés avec l'évaluation.
+        for (const ch of d.choix) {
+          if (ch.id_option && !(this.options[ch.niveau] || []).some(o => o.id === ch.id_option)) {
+            this.options[ch.niveau] = [...(this.options[ch.niveau] || []), { id: ch.id_option, libelle: ch.libelle } as any];
+          }
+        }
       },
       error: () => this.toastr.error('Impossible de charger le coaching.'),
     });
@@ -66,6 +80,7 @@ export class CoachingSectionComponent implements OnChanges {
   private parentId(n: number): number | null { return n === 1 ? null : this.selection[n - 1] || null; }
 
   private loadNiveau(n: number): Promise<void> {
+    if (!this.peutChoisir) return Promise.resolve();
     if (n > 1 && !this.selection[n - 1]) { this.options[n] = []; return Promise.resolve(); }
     return new Promise(resolve => {
       this.service.getOptionsEnfants({ id_parent: this.parentId(n), niveau: n, id_coaching: this.idCoaching }).subscribe({

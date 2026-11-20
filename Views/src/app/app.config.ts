@@ -1,4 +1,5 @@
-import { HttpClient, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { HttpClient, provideHttpClient, withInterceptors, withInterceptorsFromDi } from '@angular/common/http';
+import { progressInterceptor, provideNgProgressHttp } from 'ngx-progressbar/http';
 import { ApplicationConfig, importProvidersFrom } from '@angular/core';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
@@ -30,7 +31,10 @@ export function TranslateHttpLoaderFactory(http: HttpClient) {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideAnimationsAsync(),
-    provideHttpClient(withInterceptorsFromDi()),
+    // Barre de progression globale pendant les appels à l'API (sauf rafraîchissements
+    // périodiques du badge de notifications, silencieux).
+    provideHttpClient(withInterceptorsFromDi(), withInterceptors([progressInterceptor])),
+    provideNgProgressHttp({ silentApis: ['notifications/compte', 'eval/notifications/count'] }),
     importProvidersFrom(NgxAwesomePopupModule.forRoot(), ConfirmBoxConfigModule.forRoot()),
     provideRouter(
       routes,

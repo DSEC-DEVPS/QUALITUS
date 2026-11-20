@@ -1485,3 +1485,10 @@ html {
 
   color: $text-dark;
 }
+
+.barre-retour {
+  padding: 12px 0 4px;
+}
+
+// Spinner dans les cartes statistiques pendant le chargement
+.spinner-carte { display: inline-block; vertical-align: middle; margin: 2px auto; }

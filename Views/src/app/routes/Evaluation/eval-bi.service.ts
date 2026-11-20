@@ -25,9 +25,19 @@ export interface ChoixBi {
   libelle: string;
 }
 
+export interface OptionRejetee {
+  niveau: number;
+  libelle: string;
+  motif_rejet: string;
+  dateDecision: string | null;
+  propose_par_nom?: string;
+}
+
 export interface EvaluationBi {
   arborescence: Arborescence | null;
   choix: ChoixBi[];
+  /** Propositions rejetées pour cette évaluation, avec leur motif. */
+  rejetees?: OptionRejetee[];
   en_attente_validation: boolean;
   resolution: string | null;
 }
@@ -68,6 +78,10 @@ export class EvalBiService {
   }
   updateOption(id: number, libelle: string) {
     return this.http.put(`/api/v1/eval/bi/option/${id}`, { libelle });
+  }
+  /** Déplace l'option (et ses sous-options) sous un autre parent ; null = niveau 1. */
+  deplacerOption(id: number, id_parent: number | null) {
+    return this.http.put<{ message: string }>(`/api/v1/eval/bi/option/${id}/deplacer`, { id_parent });
   }
   deleteOption(id: number) {
     return this.http.delete(`/api/v1/eval/bi/option/${id}`);

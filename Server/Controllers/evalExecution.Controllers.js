@@ -111,8 +111,14 @@ const getEvaluationDetail = async (req, res) => {
     }
     // L'agent évalué ne fait que consulter (coaching/plan en lecture seule,
     // section « évaluations supplémentaires » masquée).
-    const lecture_seule = is_agent && !is_evaluateur && !is_superviseur && !["R_ADMI", "R_AQ", "R_RO"].includes(role);
-    const viewer = { role, is_agent, is_evaluateur, is_superviseur, lecture_seule };
+    // Droits effectifs (périmètre + permissions) pour l'affichage.
+    const { droitsEvaluation } = require("../middlewares/accesEvaluation");
+    const d = await droitsEvaluation(uid, e);
+    const lecture_seule = is_agent && !is_evaluateur && !is_superviseur && !d.voirTous;
+    const { permissionsEffectives } = require("../middlewares/permission");
+    const { set: perms } = await permissionsEffectives(uid);
+    const peut_executer = d.executer && (role === "R_ADMI" || perms.has("evaluation.executer"));
+    const viewer = { role, is_agent, is_evaluateur, is_superviseur, lecture_seule, peut_executer, peut_coacher: d.coacher };
 
     return res.status(200).json({ evaluation: e, categories: cats, conclusion_live, viewer });
   } catch (err) { console.log(err); return res.status(500).json({ message: "Erreur lors du chargement." }); }

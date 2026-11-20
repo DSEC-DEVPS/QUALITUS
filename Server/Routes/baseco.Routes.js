@@ -36,6 +36,11 @@ const {
   deleteProgramme,
   addProgramme,
   getAllNotification,
+  getCompteNotifications,
+  getHistoriqueNotifications,
+  apercuMenageNotifications,
+  supprimerMenageNotifications,
+  rechercherUtilisateursMenage,
   addNotification,
   getAllCommentaireByIdFiche,
   exportCommentaire,
@@ -73,6 +78,8 @@ const {
   restore_password,
   archive_fiche,
   getAllAgentByRo,
+  getProgrammesPourRo,
+  updateProgrammeAgentParRo,
   getAllArchive,
   response_Quiz,
   reponse_utilite,
@@ -117,7 +124,6 @@ const {
   getOneMotifMaVoixCompte,
   getStatistique_par_site,
   redOneNotifcation,
-  redAllNotification,
   createNotification,
 } = require("../Controllers/baseco.Controllers");
 
@@ -133,7 +139,8 @@ router.post("/login", login);
 
 router.get("/utilisateur/all", auth, permission("UTILISATEUR","LIRE"), getAllUtilisateur);
 router.get("/utilisateur/:id", auth, permission("UTILISATEUR","LIRE"), getOneUtilisateur);
-router.get("/utilisateur/details/:id", auth, permission("UTILISATEUR","LIRE"), getDetailsUtilisateur);
+// utilisateur.lire, ou compte.gerer (« Détails » de Gérer les comptes, limité aux comptes du site)
+router.get("/utilisateur/details/:id", auth, permission(["utilisateur.lire","compte.gerer"]), getDetailsUtilisateur);
 router.post("/utilisateur/addUser", auth, permission("UTILISATEUR","CREER"), addUtilisateur);
 router.put("/utilisateur/update/:id", auth, permission("UTILISATEUR","MODIFIER"), updateUtilisateur);
 router.delete("/utilisateur/delete/:id", auth, permission("UTILISATEUR","SUPPRIMER"), deleteUtilisateur);
@@ -218,15 +225,15 @@ router.post("/commentaire/add", auth, addCommentaire);
 
 router.get("/ma_voix_compte_export", auth, exportMaVoixCompte);
 router.post("/ma_voix_compte/all", auth, getAllExport);
-router.post("/ma_voix_compte/add", auth, addMaVoixCompte);
+router.post("/ma_voix_compte/add", auth, permission("MA_VOIX","AJOUTER"), addMaVoixCompte);
 /** fin de Routes pour les Ma voix compte */
 //Routes pour les motif_ma voix compte**/
 
-router.get("/motif_ma_voix_compte/all", auth, getAllMotifMaVoixCompte);
-router.get("/motif_ma_voix_compte/:id", auth, getOneMotifMaVoixCompte);
-router.post("/motif_ma_voix_compte/add", auth, addMotifMaVoixCompte);
-router.put("/motif_ma_voix_compte/:id", auth, updateMotifMaVoixCompte);
-router.delete("/motif_ma_voix_compte/:id", auth, deleteMotifMaVoixCompte);
+router.get("/motif_ma_voix_compte/all", auth, permission("MA_VOIX",["AJOUTER","MOTIF"]), getAllMotifMaVoixCompte);
+router.get("/motif_ma_voix_compte/:id", auth, permission("MA_VOIX","MOTIF"), getOneMotifMaVoixCompte);
+router.post("/motif_ma_voix_compte/add", auth, permission("MA_VOIX","MOTIF"), addMotifMaVoixCompte);
+router.put("/motif_ma_voix_compte/:id", auth, permission("MA_VOIX","MOTIF"), updateMotifMaVoixCompte);
+router.delete("/motif_ma_voix_compte/:id", auth, permission("MA_VOIX","MOTIF"), deleteMotifMaVoixCompte);
 /** fin de Routes pour les Programme */
 //Routes pour les fonctions**/
 
@@ -262,8 +269,9 @@ router.delete("/grille/:id", auth, permission("GRILLE","SUPPRIMER"), deleteGrill
 router.get("/fiche/all", auth, permission("FICHE","LIRE"), getAllFiche);
 router.get("/fiche_Archive/all", auth, permission("FICHE","LIRE"), getAllFiche_Archive);
 router.get("/fiche_by_gestionnaire/all", auth, permission("FICHE","LIRE"), getAllFicheByGestionnaire);
-router.get("/fiche_by_id_Fiche/:id", auth, permission("FICHE","LIRE"), getAllFicheByIDFiche);
-router.get("/excel_fiche_by_id_Fiche/:id", auth, permission("FICHE","LIRE"), getExcelFile);
+// fiche.lire, ou chargement.verifier (consultation des fiches depuis Gestion Chargements)
+router.get("/fiche_by_id_Fiche/:id", auth, permission(["fiche.lire","chargement.verifier"]), getAllFicheByIDFiche);
+router.get("/excel_fiche_by_id_Fiche/:id", auth, permission(["fiche.lire","chargement.verifier"]), getExcelFile);
 router.get("/fiche_export/all", auth, permission("FICHE","LIRE"), exportFiche);
 router.get("/one_fiche/:id", auth, permission("FICHE","LIRE"), getOneFiche);
 router.post("/fiche/add", auth, permission("FICHE","CREER"), multer.single("file"), addFiche);
@@ -286,16 +294,19 @@ router.get(
   getAllArchiveByGestionnaire
 );
 router.get("/archive_by_gestionnaire/all", auth, permission("FICHE","LIRE"), getAllArchive);
-router.put("/restore_archive/:id", auth, permission("FICHE","MODIFIER"), restore_archive);
-router.put("/archive_fiche/:id", auth, permission("FICHE","MODIFIER"), archive_fiche);
+router.put("/restore_archive/:id", auth, permission("FICHE","ARCHIVER"), restore_archive);
+router.put("/archive_fiche/:id", auth, permission("FICHE","ARCHIVER"), archive_fiche);
 /**fin de routes archives */
 /**Routes pour les Archive */
-router.get("/agents_by_RO/all", auth, getAllAgentByRo);
-router.get("/agents_by_RO_assignable/all", auth, getAllAgentByRo_Assignable);
-router.get("/superviseur_by_ro", auth, getAllSuperviseurByRo);
-router.put("/renitialize/:id", auth, restore_password);
+router.get("/agents_by_RO/all", auth, permission("COMPTE","GERER"), getAllAgentByRo);
+// Modification du programme d'un agent par le RO (contrôle du rôle R_RO dans le contrôleur)
+router.get("/agents_by_RO/programmes", auth, permission("COMPTE","GERER"), getProgrammesPourRo);
+router.put("/agents_by_RO/:id/programme", auth, permission("COMPTE","GERER"), updateProgrammeAgentParRo);
+router.get("/agents_by_RO_assignable/all", auth, permission("ASSIGNATION","GERER"), getAllAgentByRo_Assignable);
+router.get("/superviseur_by_ro", auth, permission("ASSIGNATION","GERER"), getAllSuperviseurByRo);
+router.put("/renitialize/:id", auth, permission("COMPTE","GERER"), restore_password);
 router.put("/change_password", auth, change_password);
-router.put("/assigne_agent", auth, assignation_agent);
+router.put("/assigne_agent", auth, permission("ASSIGNATION","GERER"), assignation_agent);
 /**fin de routes archives */
 /**Routes pour les Archive */
 router.post("/response_quiz/:id", auth, response_Quiz);
@@ -318,17 +329,18 @@ router.get("/export_dashboard/all", auth, permission("REPORTING","LIRE"), getAll
 router.get("/export_statistique_par_site", getStatistique_par_site);
 router.get("/export_dashboard_amin/all", auth, permission("REPORTING","LIRE"), getAllDashboard_admin);
 /** fin d routes pour utilité et exactitude */
-router.get("/brouillons_controle", auth, getBrouillonsControle);
-router.patch("/brouillons_controle/:id", auth, modifierBrouillonControle);
-router.post("/resultat_controle_actif",auth, controle_actif);
-router.post("/resultat_controle_m_1", auth,controle_m_1);
+router.get("/brouillons_controle", auth, permission("CHARGEMENT","VERIFIER"), getBrouillonsControle);
+router.patch("/brouillons_controle/:id", auth, permission("CHARGEMENT","VERIFIER"), modifierBrouillonControle);
+router.post("/resultat_controle_actif", auth, permission("CHARGEMENT","VERIFIER"), controle_actif);
+router.post("/resultat_controle_m_1", auth, permission("CHARGEMENT","VERIFIER"), controle_m_1);
 router.get("/hello", async (req, res, next) => {
   return res.status(201).json({ message: "Hello word " });
 });
 /** Routes pour   Controle et reporting*/
-router.post("/add_controle", auth, addControle);
-router.get("/get_reporting", auth, permission("REPORTING","LIRE"), getReporting);
-router.get("/get_reporting/:id", auth, permission("REPORTING","LIRE"), getDetailReporting);
+router.post("/add_controle", auth, permission("CHARGEMENT","VERIFIER"), addControle);
+// reporting.lire, ou chargement.verifier (reporting de Gestion Chargements)
+router.get("/get_reporting", auth, permission(["reporting.lire","chargement.verifier"]), getReporting);
+router.get("/get_reporting/:id", auth, permission(["reporting.lire","chargement.verifier"]), getDetailReporting);
 
 /***** les notifications */
 
@@ -338,6 +350,13 @@ router.get("/get_reporting/:id", auth, permission("REPORTING","LIRE"), getDetail
  * Récupère toutes les notifications de l'utilisateur connecté
  */
 router.get('/notifications', auth, permission("NOTIFICATION","LIRE"), getAllNotification);
+// Badge de la cloche (nombre de non lues) et historique complet (page « Mes notifications »)
+router.get('/notifications/compte', auth, permission("NOTIFICATION","LIRE"), getCompteNotifications);
+router.get('/notifications/historique', auth, permission("NOTIFICATION","LIRE"), getHistoriqueNotifications);
+// Ménage manuel des notifications (Habilitations) : permission dédiée notification.supprimer
+router.get('/notifications/menage/apercu', auth, permission("NOTIFICATION","SUPPRIMER"), apercuMenageNotifications);
+router.get('/notifications/menage/utilisateurs', auth, permission("NOTIFICATION","SUPPRIMER"), rechercherUtilisateursMenage);
+router.delete('/notifications/menage', auth, permission("NOTIFICATION","SUPPRIMER"), supprimerMenageNotifications);
 
 /**
  * PATCH /api/notifications/:id/read
@@ -345,11 +364,6 @@ router.get('/notifications', auth, permission("NOTIFICATION","LIRE"), getAllNoti
  */
 router.patch('/notifications/:id/read', auth, permission("NOTIFICATION","LIRE"), redOneNotifcation);
 
-/**
- * PATCH /api/notifications/read-all
- * Marque plusieurs notifications comme lues
- */
-router.patch('/notifications/read-all', auth, permission("NOTIFICATION","LIRE"), redAllNotification);
 
 /**
  * POST /api/notifications

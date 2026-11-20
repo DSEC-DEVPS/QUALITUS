@@ -17,11 +17,14 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { ToastrService } from 'ngx-toastr';
 import { UserService } from '@shared/services/user.service';
 import { CalibrageService, CalSession, CalParticipant, CalTransaction, EvaluateurDispo, CalSessionListe } from '../calibrage.service';
+import { ConfirmationService } from '@shared/services/confirmation.service';
+import { finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
   selector: 'app-cal-preparer-session',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent,
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatDatepickerModule,
     MatTableModule, MatCheckboxModule, MatTooltipModule, MatExpansionModule, MatAutocompleteModule,
@@ -30,6 +33,8 @@ import { CalibrageService, CalSession, CalParticipant, CalTransaction, Evaluateu
   styleUrl: './preparer-session.component.scss',
 })
 export class PreparerSessionComponent implements OnInit {
+  chargement = true;
+  private readonly confirmation = inject(ConfirmationService);
   private readonly service = inject(CalibrageService);
   private readonly userService = inject(UserService);
   private readonly toastr = inject(ToastrService);
@@ -86,13 +91,15 @@ export class PreparerSessionComponent implements OnInit {
 
   ngOnInit(): void {
     this.id = Number(this.route.snapshot.paramMap.get('id'));
-    this.userService.getAllSite().subscribe({ next: s => (this.sites = s || []) });
+    // Sites autorisés : son site, ou tous pour le site à vision globale.
+    this.service.getContexte().subscribe({ next: c => (this.sites = c.sites || []), error: () => (this.sites = []) });
     this.userService.getEvalGrillesActives().subscribe({ next: g => (this.grilles = g || []) });
     this.charger();
   }
 
   charger(): void {
-    this.service.getSession(this.id).subscribe({
+    this.chargement = true;
+    this.service.getSession(this.id).pipe(finalize(() => (this.chargement = false))).subscribe({
       next: d => {
         this.session = d.session;
         this.participants = d.participants;
@@ -134,8 +141,8 @@ export class PreparerSessionComponent implements OnInit {
       error: err => this.toastr.error(err?.error?.message || 'Erreur.'),
     });
   }
-  retirer(p: CalParticipant): void {
-    if (!confirm(`Retirer ${p.prenom} ${p.nom} ?`)) return;
+  async retirer(p: CalParticipant): Promise<void> {
+    if (!(await this.confirmation.confirmer({ titre: 'Retirer le participant', message: `Retirer ${p.prenom} ${p.nom} ?`, type: 'danger' }))) return;
     this.service.removeParticipant(this.id, p.id).subscribe({
       next: () => { this.toastr.success('Participant retiré.'); this.charger(); },
       error: err => this.toastr.error(err?.error?.message || 'Retrait impossible.'),
@@ -176,8 +183,8 @@ export class PreparerSessionComponent implements OnInit {
       error: err => this.toastr.error(err?.error?.message || 'Erreur.'),
     });
   }
-  supprimerTx(t: CalTransaction): void {
-    if (!confirm('Supprimer cette transaction ?')) return;
+  async supprimerTx(t: CalTransaction): Promise<void> {
+    if (!(await this.confirmation.confirmer({ titre: 'Supprimer la transaction', message: 'Supprimer cette transaction ?', type: 'danger' }))) return;
     this.service.deleteTransaction(t.id).subscribe({
       next: () => { this.toastr.success('Transaction supprimée.'); this.rechargerTx(); },
       error: err => this.toastr.error(err?.error?.message || 'Erreur.'),

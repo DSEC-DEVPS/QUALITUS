@@ -3,7 +3,7 @@
 
   <button mat-button (click)="retour()"><mat-icon>arrow_back</mat-icon> Retour</button>
 
-  @if (chargement && !detail) { <p>Chargement…</p> }
+  @if (chargement && !detail) { <app-chargement /> }
 
   @if (detail) {
     <!-- EN-TÊTE -->

@@ -74,17 +74,19 @@
       margin-left: 0.75rem;
     }
 
+    // Icônes des sous-menus : visibles, dans le retrait de la sous-entrée
+    // (le thème d'origine ne les montrait que menu replié).
     &.submenu-icon {
       position: absolute;
-      left: 0.75rem;
+      left: 1.25rem;
       width: 1.5rem;
       height: 1.5rem;
-      font-size: 1rem;
+      font-size: 1.1rem;
       line-height: 1.5rem;
-      opacity: 0;
+      opacity: 1;
 
       [dir='rtl'] & {
-        right: 0.75rem;
+        right: 1.25rem;
         left: 0;
       }
     }

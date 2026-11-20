@@ -18,6 +18,41 @@ const withTx = async (fn) => {
   catch (e) { await conn.rollback(); throw e; } finally { conn.release(); }
 };
 
+// Notification « Résultat de calibrage modifié » après publication du résultat.
+// N'envoie rien tant que le résultat n'est pas publié ou que la visibilité
+// est fermée (le participant ne pourrait pas consulter le détail). Une seule
+// notification NON LUE par participant et par session : si elle existe déjà,
+// elle est mise à jour (message + date) au lieu d'en créer une nouvelle.
+const TITRE_MODIF = "Résultat de calibrage modifié";
+const notifierModification = async (conn, s, destinataires, idTransaction) => {
+  if (!s.resultat_publie || !s.visibilite) return;
+  let detail = "";
+  if (idTransaction) {
+    const [[t]] = await conn.query("SELECT identifiant_appel, ordre_passage FROM b_cal_transaction WHERE id=?", [idTransaction]);
+    if (t) detail = ` (dernière modification : transaction ${t.ordre_passage}${t.identifiant_appel ? " — " + t.identifiant_appel : ""})`;
+  }
+  const message = `Le résultat de la session « ${s.nom} » a été ajusté par le jauge${detail}.`;
+  for (const dest of new Set(destinataires.filter(Boolean).map(Number))) {
+    const [[deja]] = await conn.query(
+      `SELECT id FROM b_notification WHERE id_UTILISATEUR=? AND nature_objet='CALIBRAGE' AND id_objet=? AND titre=? AND lu=0
+        ORDER BY id DESC LIMIT 1`, [dest, s.id, TITRE_MODIF]
+    );
+    if (deja) {
+      await conn.query("UPDATE b_notification SET message=?, dateReception=NOW() WHERE id=?", [message, deja.id]);
+    } else {
+      await emit(conn, {
+        id_utilisateur: dest, titre: TITRE_MODIF, message,
+        type: "CALIBRAGE", nature_objet: "CALIBRAGE", id_objet: s.id,
+        url: `/mon-espace/calibrage/resultats/${s.id}`,
+      });
+    }
+  }
+};
+const tousLesParticipants = async (conn, sessionId) => {
+  const [ps] = await conn.query("SELECT id_evaluateur FROM b_cal_participant WHERE id_session=?", [sessionId]);
+  return ps.map((p) => p.id_evaluateur);
+};
+
 const contexte = async (conn, sessionId, userId) => {
   const [[s]] = await conn.query("SELECT * FROM b_cal_session WHERE id=?", [sessionId]);
   if (!s) return { notFound: true };
@@ -104,7 +139,7 @@ const getResultats = async (req, res) => {
         // un participant ne voit que sa propre ligne
         const ev = uid;
         return {
-          role: "participant", provisoire, statut: ctx.s.statut, nom: nomSession,
+          role: "participant", provisoire, statut: ctx.s.statut, nom: nomSession, resultat_publie: !!ctx.s.resultat_publie,
           transactions: r.transactions,
           participants: r.participants.filter((p) => p.id_evaluateur === ev),
           grid: { [ev]: r.grid[ev] || {} }, global: { [ev]: r.global[ev] },
@@ -156,9 +191,10 @@ const construireConfrontation = async (conn, sessionId, participantEvaluateur) =
           id_erreur_origine: re.id_erreur_origine, item: re.item, referentiel: re.referentiel, poids: num(re.poids),
           conforme,
           reference: { coche: re.coche, coche_initial: re.coche_initial, commentaire: re.commentaire,
-                       appreciation_jauge: re.appreciation_jauge, modifie_par: re.modifie_par, date_modif: re.date_modif },
+                       modifie_par: re.modifie_par, date_modif: re.date_modif },
+          // L'appréciation du jauge est propre à CE participant (sa ligne d'erreur)
           participant: pe ? { coche: pe.coche, coche_initial: pe.coche_initial, commentaire: pe.commentaire,
-                       modifie_par: pe.modifie_par, date_modif: pe.date_modif } : null,
+                       appreciation_jauge: pe.appreciation_jauge, modifie_par: pe.modifie_par, date_modif: pe.date_modif } : null,
         });
       }
       const satisfaite = reussite(score, rc.comparateur, rc.seuil_reussite);
@@ -232,27 +268,10 @@ const modifierCote = async (req, res) => {
         [coche ? 1 : 0, uid, evalRow.id, id_erreur_origine]
       );
       if (r.affectedRows === 0) return { notFound: true };
-      // Après publication : notifier le(s) évaluateur(s) dont le résultat change.
-      if (ctx.s.resultat_publie) {
-        let destinataires = [];
-        if (cote === "PARTICIPANT") {
-          destinataires = [Number(id_participant)];
-        } else {
-          // une modification de la référence impacte tous les participants
-          const [ps] = await conn.query("SELECT id_evaluateur FROM b_cal_participant WHERE id_session=?", [id]);
-          destinataires = ps.map((p) => p.id_evaluateur);
-        }
-        for (const dest of destinataires) {
-          if (!dest) continue;
-          await emit(conn, {
-            id_utilisateur: dest,
-            titre: "Résultat de calibrage modifié",
-            message: `Le résultat de la session « ${ctx.s.nom} » a été ajusté par le jauge.`,
-            type: "CALIBRAGE", nature_objet: "CALIBRAGE", id_objet: id,
-            url: `/mon-espace/calibrage/resultats/${id}`,
-          });
-        }
-      }
+      // Après publication : notifier le(s) évaluateur(s) dont le résultat change
+      // (côté participant : lui seul ; côté référence : tous les participants).
+      const destinataires = cote === "PARTICIPANT" ? [id_participant] : await tousLesParticipants(conn, id);
+      await notifierModification(conn, ctx.s, destinataires, id_transaction);
       return { ok: true };
     });
     if (out.forbidden) return res.status(403).json({ message: "Réservé au jauge." });
@@ -263,29 +282,44 @@ const modifierCote = async (req, res) => {
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
 
-// PUT appréciation du jauge sur une erreur de la référence (pas de recalcul)
+// PUT appréciation du jauge sur un item d'une transaction D'UN participant
+// (pas de recalcul). Stockée sur la ligne d'erreur du participant : elle n'est
+// visible que dans SA confrontation, pour cette transaction et cet item.
 const setAppreciation = async (req, res) => {
   const id = req.params.id;
   const uid = req.auth.userId;
-  const { id_transaction, id_erreur_origine, appreciation } = req.body;
+  const { id_transaction, id_participant, id_erreur_origine, appreciation } = req.body;
+  if (!id_transaction || !id_participant || id_erreur_origine == null) {
+    return res.status(400).json({ message: "Paramètres invalides." });
+  }
   try {
-    const ctx = await contexte(db, id, uid);
-    if (ctx.notFound || ctx.role !== "jauge") return res.status(403).json({ message: "Réservé au jauge." });
-    if (ctx.s.statut === "CLOTUREE") return res.status(409).json({ message: "Session clôturée." });
-    const [[refEval]] = await db.query(
-      "SELECT id FROM b_cal_evaluation WHERE id_session=? AND id_transaction=? AND est_reference=1", [id, id_transaction]
-    );
-    if (!refEval) return res.status(404).json({ message: "Référence introuvable." });
-    await db.query(
-      "UPDATE b_cal_evaluation_erreur SET appreciation_jauge=? WHERE id_cal_evaluation=? AND id_erreur_origine=?",
-      [appreciation || null, refEval.id, id_erreur_origine]
-    );
+    const out = await withTx(async (conn) => {
+      const ctx = await contexte(conn, id, uid);
+      if (ctx.notFound || ctx.role !== "jauge") return { forbidden: true };
+      if (ctx.s.statut === "CLOTUREE") return { locked: true };
+      const [[ligne]] = await conn.query(
+        `SELECT x.id, x.appreciation_jauge FROM b_cal_evaluation_erreur x
+           JOIN b_cal_evaluation e ON e.id = x.id_cal_evaluation
+          WHERE e.id_session=? AND e.id_transaction=? AND e.id_evaluateur=? AND e.est_reference=0
+            AND x.id_erreur_origine=?`, [id, id_transaction, id_participant, id_erreur_origine]
+      );
+      if (!ligne) return { notFound: true };
+      const valeur = appreciation && String(appreciation).trim() ? String(appreciation) : null;
+      if ((ligne.appreciation_jauge || null) === valeur) return { ok: true }; // rien n'a changé
+      await conn.query("UPDATE b_cal_evaluation_erreur SET appreciation_jauge=? WHERE id=?", [valeur, ligne.id]);
+      await notifierModification(conn, ctx.s, [id_participant], id_transaction);
+      return { ok: true };
+    });
+    if (out.forbidden) return res.status(403).json({ message: "Réservé au jauge." });
+    if (out.locked) return res.status(409).json({ message: "Session clôturée." });
+    if (out.notFound) return res.status(404).json({ message: "Item introuvable pour ce participant." });
     return res.status(200).json({ message: "Appréciation enregistrée." });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
 
 // PUT commentaire du jauge sur une erreur de SA référence (révision) — le jauge
 // ne peut modifier QUE ses propres commentaires (jamais ceux des participants).
+// La référence étant commune, un changement est notifié à tous les participants.
 const setCommentaireJauge = async (req, res) => {
   const id = req.params.id;
   const uid = req.auth.userId;
@@ -294,18 +328,26 @@ const setCommentaireJauge = async (req, res) => {
     return res.status(400).json({ message: "Paramètres invalides." });
   }
   try {
-    const ctx = await contexte(db, id, uid);
-    if (ctx.notFound || ctx.role !== "jauge") return res.status(403).json({ message: "Réservé au jauge." });
-    if (ctx.s.statut === "CLOTUREE") return res.status(409).json({ message: "Session clôturée." });
-    const [[refEval]] = await db.query(
-      "SELECT id FROM b_cal_evaluation WHERE id_session=? AND id_transaction=? AND est_reference=1", [id, id_transaction]
-    );
-    if (!refEval) return res.status(404).json({ message: "Référence introuvable." });
-    const [r] = await db.query(
-      "UPDATE b_cal_evaluation_erreur SET commentaire=? WHERE id_cal_evaluation=? AND id_erreur_origine=?",
-      [commentaire !== undefined ? commentaire : null, refEval.id, id_erreur_origine]
-    );
-    if (r.affectedRows === 0) return res.status(404).json({ message: "Erreur introuvable." });
+    const out = await withTx(async (conn) => {
+      const ctx = await contexte(conn, id, uid);
+      if (ctx.notFound || ctx.role !== "jauge") return { forbidden: true };
+      if (ctx.s.statut === "CLOTUREE") return { locked: true };
+      const [[ligne]] = await conn.query(
+        `SELECT x.id, x.commentaire FROM b_cal_evaluation_erreur x
+           JOIN b_cal_evaluation e ON e.id = x.id_cal_evaluation
+          WHERE e.id_session=? AND e.id_transaction=? AND e.est_reference=1 AND x.id_erreur_origine=?`,
+        [id, id_transaction, id_erreur_origine]
+      );
+      if (!ligne) return { notFound: true };
+      const valeur = commentaire !== undefined ? commentaire : null;
+      if ((ligne.commentaire || "") === (valeur || "")) return { ok: true }; // rien n'a changé
+      await conn.query("UPDATE b_cal_evaluation_erreur SET commentaire=? WHERE id=?", [valeur, ligne.id]);
+      await notifierModification(conn, ctx.s, await tousLesParticipants(conn, id), id_transaction);
+      return { ok: true };
+    });
+    if (out.forbidden) return res.status(403).json({ message: "Réservé au jauge." });
+    if (out.locked) return res.status(409).json({ message: "Session clôturée." });
+    if (out.notFound) return res.status(404).json({ message: "Erreur introuvable." });
     return res.status(200).json({ message: "Commentaire enregistré." });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
@@ -336,7 +378,9 @@ const validerSession = async (req, res) => {
       if (ctx.notFound || ctx.role !== "jauge") return { forbidden: true };
       if (ctx.s.statut !== "RESULTATS_EN_REVISION") return { mauvaisStatut: true };
       await conn.query("UPDATE b_cal_session SET statut='VALIDEE', resultat_publie=1, dateModification=NOW() WHERE id=?", [id]);
-      const [parts] = await conn.query("SELECT id_evaluateur FROM b_cal_participant WHERE id_session=?", [id]);
+      // Visibilité fermée : les participants seront prévenus à son ouverture.
+      const [parts] = ctx.s.visibilite
+        ? await conn.query("SELECT id_evaluateur FROM b_cal_participant WHERE id_session=?", [id]) : [[]];
       for (const p of parts) {
         await emit(conn, {
           id_utilisateur: p.id_evaluateur,
@@ -389,5 +433,6 @@ const figerSession = async (req, res) => {
 };
 
 module.exports = {
+  calculer, // réutilisé par l'export Calibrages (menu Exportations)
   getResultats, getConfrontation, modifierCote, setAppreciation, setCommentaireJauge, setConclusions, validerSession, figerSession,
 };

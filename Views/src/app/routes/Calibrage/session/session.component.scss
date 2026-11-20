@@ -46,3 +46,11 @@
 .note-ref { display: flex; align-items: center; gap: 6px; padding: 10px; color: #b26a00; font-size: 13px; }
 .note-ref.ok { color: #2e7d32; }
 .vide { padding: 16px; text-align: center; color: rgba(0,0,0,.5); }
+
+// Participants (jauge) : reprise après coupure
+.participant { flex-direction: column; align-items: stretch; }
+.participant-ligne { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.actions-participant { white-space: nowrap; }
+.reprise { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 0 4px; }
+.reprise .hint { flex: 1 1 100%; margin: 0; font-size: 12px; line-height: 1.4; color: rgba(0, 0, 0, 0.6); }
+.reprise .minutes { width: 170px; }

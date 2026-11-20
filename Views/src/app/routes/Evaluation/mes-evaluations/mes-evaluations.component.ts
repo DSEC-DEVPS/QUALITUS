@@ -13,11 +13,14 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { ToastrService } from 'ngx-toastr';
 import { EvalInstanceService, EvaluationListe, FiltresEvaluation } from '../eval-instance.service';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { Pagination } from '@shared/utils/pagination';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
   selector: 'app-mes-evaluations',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent, MatPaginatorModule,
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatTableModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatDatepickerModule,
   ],
@@ -29,7 +32,9 @@ export class MesEvaluationsComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly toastr = inject(ToastrService);
 
-  evaluations: EvaluationListe[] = [];
+  readonly pag = new Pagination<EvaluationListe>();
+  get evaluations(): EvaluationListe[] { return this.pag.donnees; }
+  set evaluations(v: EvaluationListe[]) { this.pag.definir(v); }
   chargement = false;
   filtres: FiltresEvaluation = {};
   colonnes = ['date_appel', 'grille', 'type_evaluation', 'statut', 'conclusion', 'actions'];

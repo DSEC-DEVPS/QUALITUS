@@ -12,11 +12,15 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { ToastrService } from 'ngx-toastr';
 import { EvalGrilleService, Grille } from '../../eval-grille.service';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { Pagination } from '@shared/utils/pagination';
+import { ConfirmationService } from '@shared/services/confirmation.service';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
   selector: 'app-liste-grilles',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent, MatPaginatorModule,
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatTableModule, MatChipsModule, MatFormFieldModule, MatInputModule, MatSelectModule,
   ],
@@ -24,11 +28,14 @@ import { EvalGrilleService, Grille } from '../../eval-grille.service';
   styleUrl: './liste-grilles.component.scss',
 })
 export class ListeGrillesComponent implements OnInit {
+  private readonly confirmation = inject(ConfirmationService);
   private readonly service = inject(EvalGrilleService);
   private readonly router = inject(Router);
   private readonly toastr = inject(ToastrService);
 
-  grilles: Grille[] = [];
+  readonly pag = new Pagination<Grille>();
+  get grilles(): Grille[] { return this.pag.donnees; }
+  set grilles(v: Grille[]) { this.pag.definir(v); }
   chargement = false;
   colonnes = ['nom', 'mode', 'type', 'statut', 'actions'];
 
@@ -80,9 +87,9 @@ export class ListeGrillesComponent implements OnInit {
     });
   }
 
-  supprimer(g: Grille, event: Event): void {
+  async supprimer(g: Grille, event: Event): Promise<void> {
     event.stopPropagation();
-    if (!confirm(`Supprimer la grille « ${g.nom} » ? Action définitive.`)) return;
+    if (!(await this.confirmation.confirmer({ titre: 'Supprimer la grille', message: `Supprimer la grille « ${g.nom} » ? Action définitive.`, type: 'danger' }))) return;
     this.service.deleteGrille(g.id).subscribe({
       next: () => { this.toastr.success('Grille supprimée.'); this.charger(); },
       error: err => this.toastr.error(err?.error?.message || 'Suppression impossible.'),

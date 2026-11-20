@@ -3,7 +3,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component } from '@angular/core';
 import { TestBed, inject } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { AuthService, TokenService, authGuard } from '@core/authentication';
+import { AuthService, TokenService, authGuard, isSafeReturnUrl } from '@core/authentication';
 import { LocalStorageService, MemoryStorageService } from '@shared/services/storage.service';
 
 @Component({
@@ -58,5 +58,22 @@ describe('authGuard function unit test', () => {
 
       expect(authGuard(route, state)).toEqual(router.parseUrl('/auth/login'));
     });
+  });
+
+  it('redirige vers /auth/login avec returnUrl quand la page demandée est connue', () => {
+    spyOn(authService, 'check').and.returnValue(false);
+    const result = TestBed.runInInjectionContext(() =>
+      authGuard(route, { url: '/mon-espace/Fiche/details/1' } as any)
+    );
+
+    expect(result).toEqual(router.parseUrl('/auth/login?returnUrl=%2Fmon-espace%2FFiche%2Fdetails%2F1'));
+  });
+
+  it('isSafeReturnUrl refuse les URL externes et les pages /auth', () => {
+    expect(isSafeReturnUrl('/mon-espace/Fiche/Liste')).toBeTrue();
+    expect(isSafeReturnUrl('//evil.example.com')).toBeFalse();
+    expect(isSafeReturnUrl('https://evil.example.com')).toBeFalse();
+    expect(isSafeReturnUrl('/auth/login')).toBeFalse();
+    expect(isSafeReturnUrl(null)).toBeFalse();
   });
 });

@@ -1,25 +1,26 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { MatPaginatorIntl } from '@angular/material/paginator';
-import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
 
+/**
+ * Libellés français des paginations (MatPaginator) de toute l'application.
+ *
+ * Ils sont définis ici directement : le chargement des fichiers de traduction
+ * (ngx-translate) est désactivé au démarrage et il n'existe pas de fichier
+ * français, ce qui faisait afficher les clés brutes
+ * (« paginator.items_per_page_label », « paginator.range_page_label_2 »).
+ */
 @Injectable({
   providedIn: 'root',
 })
 export class PaginatorI18nService {
-  private readonly translate = inject(TranslateService);
-
   paginatorIntl = new MatPaginatorIntl();
 
-  constructor() {
-    this.translate.onLangChange.subscribe((event: LangChangeEvent) => this.getPaginatorIntl());
-  }
-
   getPaginatorIntl() {
-    this.paginatorIntl.itemsPerPageLabel = this.translate.instant('paginator.items_per_page_label');
-    this.paginatorIntl.previousPageLabel = this.translate.instant('paginator.previous_page_label');
-    this.paginatorIntl.nextPageLabel = this.translate.instant('paginator.next_page_label');
-    this.paginatorIntl.firstPageLabel = this.translate.instant('paginator.first_page_label');
-    this.paginatorIntl.lastPageLabel = this.translate.instant('paginator.last_page_label');
+    this.paginatorIntl.itemsPerPageLabel = 'Éléments par page :';
+    this.paginatorIntl.previousPageLabel = 'Page précédente';
+    this.paginatorIntl.nextPageLabel = 'Page suivante';
+    this.paginatorIntl.firstPageLabel = 'Première page';
+    this.paginatorIntl.lastPageLabel = 'Dernière page';
     this.paginatorIntl.getRangeLabel = this.getRangeLabel.bind(this);
 
     this.paginatorIntl.changes.next();
@@ -29,19 +30,15 @@ export class PaginatorI18nService {
 
   private getRangeLabel(page: number, pageSize: number, length: number): string {
     if (length === 0 || pageSize === 0) {
-      return this.translate.instant('paginator.range_page_label_1', { length });
+      return 'Aucun élément';
     }
     length = Math.max(length, 0);
 
     const startIndex = page * pageSize;
-    // If the start index exceeds the list length, do not try and fix the end index to the end.
+    // Si l'index de départ dépasse la longueur, on ne borne pas l'index de fin.
     const endIndex =
       startIndex < length ? Math.min(startIndex + pageSize, length) : startIndex + pageSize;
 
-    return this.translate.instant('paginator.range_page_label_2', {
-      startIndex: startIndex + 1,
-      endIndex,
-      length,
-    });
+    return `${startIndex + 1} – ${endIndex} sur ${length}`;
   }
 }

@@ -1,4 +1,5 @@
 <div class="container-fluid p-16">
+  @if (chargement && !quiz) { <app-chargement /> }
   <div class="d-flex align-items-center m-b-16">
     <button mat-icon-button (click)="retour()" matTooltip="Retour a la liste">
       <mat-icon>arrow_back</mat-icon>
@@ -17,9 +18,12 @@
         <div class="entete-left">
           <h3 class="titre">{{ quiz?.titre }}</h3>
           <div class="pin">PIN: {{ quiz?.code_pin || '—' }}</div>
-          <button mat-flat-button class="btn-add-q" (click)="ajouterQuestion()">
-            Ajouter une question
-          </button>
+          <!-- Questions : réservées au site propriétaire -->
+          @if (quiz?.cote_proprietaire === 1) {
+            <button mat-flat-button class="btn-add-q" (click)="ajouterQuestion()">
+              Ajouter une question
+            </button>
+          }
         </div>
 
         <div class="entete-sep"></div>
@@ -32,9 +36,8 @@
           </div>
           <div class="meta-row"><span class="k">Duree:</span><span class="v">{{ quiz?.duree ? quiz?.duree + 'Mn' : '—' }}</span></div>
           <div class="meta-row"><span class="k">Seuil de Reussite:</span><span class="v">{{ quiz?.note_passage }}%</span></div>
-          <div class="meta-row"><span class="k">Nombre de participants:</span><span class="v">{{ quiz?.nb_participants ?? 0 }}</span></div>
+          <div class="meta-row"><span class="k">Nombre de participants{{ coteProprietaire ? '' : ' (votre site)' }}:</span><span class="v">{{ quiz?.nb_participants ?? 0 }}</span></div>
           <div class="meta-row"><span class="k">Total des points:</span><span class="v">{{ totalPoints }}</span></div>
-          <div class="meta-row"><span class="k">Sites:</span><span class="v">{{ sitesLabel }}</span></div>
         </div>
       </div>
     </mat-card-content>
@@ -43,8 +46,9 @@
   <!-- Onglets -->
   <mat-card>
     <mat-card-content>
-      <mat-tab-group animationDuration="0ms">
-        <!-- Diffusion : désignation des participants (Partie II) -->
+      <mat-tab-group animationDuration="0ms" (selectedTabChange)="changementOnglet($event)">
+        <!-- Diffusion : désignation des participants (Partie II) — exige quiz.modifier -->
+        @if (peutGerer) {
         <mat-tab label="Diffusion">
           <div class="p-16">
             <p class="text-muted">
@@ -57,9 +61,13 @@
             <div class="d-flex flex-wrap" style="gap: 12px; align-items: center">
               <mat-form-field appearance="outline" style="min-width: 180px">
                 <mat-label>Site</mat-label>
-                <mat-select multiple [(ngModel)]="diffSites" (selectionChange)="chargerCandidats()">
-                  @for (s of sitesOptions; track s.id) { <mat-option [value]="s.id">{{ s.nom }}</mat-option> }
+                <mat-select multiple [(ngModel)]="diffSites" (selectionChange)="chargerCandidats()"
+                            [disabled]="!coteProprietaire">
+                  @for (s of sitesDiffusion; track s.id) { <mat-option [value]="s.id">{{ s.nom }}</mat-option> }
                 </mat-select>
+                @if (!coteProprietaire) {
+                  <mat-hint>Limité à votre site</mat-hint>
+                }
               </mat-form-field>
               <mat-form-field appearance="outline" style="min-width: 180px">
                 <mat-label>Poste</mat-label>
@@ -95,7 +103,7 @@
 
             <!-- Population filtrée -->
             <div class="mat-elevation-z0" style="overflow-x: auto; max-height: 360px; overflow-y: auto">
-              <table mat-table [dataSource]="candidatsFiltres()" class="w-100">
+              <table mat-table [dataSource]="pagCandidats.page" class="w-100">
                 <ng-container matColumnDef="sel">
                   <th mat-header-cell *matHeaderCellDef></th>
                   <td mat-cell *matCellDef="let u">
@@ -132,6 +140,10 @@
                   <td class="mat-cell text-center p-16" colspan="6">Aucun utilisateur pour ces filtres.</td>
                 </tr>
               </table>
+              @if (pagCandidats.length) {
+                <mat-paginator [length]="pagCandidats.length" [pageIndex]="pagCandidats.pageIndex" [pageSize]="pagCandidats.pageSize"
+                               [pageSizeOptions]="pagCandidats.tailles" showFirstLastButtons (page)="pagCandidats.changer($event)" />
+              }
             </div>
 
             <!-- Retenus hors du filtre courant (signalement, point 6) -->
@@ -151,9 +163,26 @@
             }
 
             <!-- Participants déjà diffusés -->
-            <h3 class="m-t-16">Participants ({{ participantsDiffuses.length }})</h3>
+            <h3 class="m-t-16">
+              Participants
+              @if (rechercheParticipant.trim()) {
+                ({{ participantsFiltres.length }} / {{ participantsDiffuses.length }})
+              } @else {
+                ({{ participantsDiffuses.length }})
+              }
+            </h3>
+            <mat-form-field appearance="outline" class="recherche-participants">
+              <mat-label>Rechercher un participant</mat-label>
+              <mat-icon matPrefix>search</mat-icon>
+              <input matInput [(ngModel)]="rechercheParticipant" placeholder="Login, nom, prénom, site…" />
+              @if (rechercheParticipant) {
+                <button mat-icon-button matSuffix (click)="rechercheParticipant = ''" matTooltip="Effacer">
+                  <mat-icon>close</mat-icon>
+                </button>
+              }
+            </mat-form-field>
             <div class="mat-elevation-z0" style="overflow-x: auto; max-height: 300px; overflow-y: auto">
-              <table mat-table [dataSource]="participantsDiffuses" class="w-100">
+              <table mat-table [dataSource]="pagDiffuses.page" class="w-100">
                 <ng-container matColumnDef="login">
                   <th mat-header-cell *matHeaderCellDef>Login</th>
                   <td mat-cell *matCellDef="let p"
@@ -174,12 +203,19 @@
                 <tr mat-header-row *matHeaderRowDef="['login','nom','site','date']"></tr>
                 <tr mat-row *matRowDef="let row; columns: ['login','nom','site','date']"></tr>
                 <tr class="mat-row" *matNoDataRow>
-                  <td class="mat-cell text-center p-16" colspan="4">Aucun participant diffusé pour le moment.</td>
+                  <td class="mat-cell text-center p-16" colspan="4">
+                    {{ rechercheParticipant.trim() ? 'Aucun participant ne correspond à la recherche.' : 'Aucun participant diffusé pour le moment.' }}
+                  </td>
                 </tr>
               </table>
+              @if (pagDiffuses.length) {
+                <mat-paginator [length]="pagDiffuses.length" [pageIndex]="pagDiffuses.pageIndex" [pageSize]="pagDiffuses.pageSize"
+                               [pageSizeOptions]="pagDiffuses.tailles" showFirstLastButtons (page)="pagDiffuses.changer($event)" />
+              }
             </div>
           </div>
         </mat-tab>
+        }
 
         <!-- Questions -->
         <mat-tab label="Questions">
@@ -199,17 +235,19 @@
               </ng-container>
               <ng-container matColumnDef="point">
                 <th mat-header-cell *matHeaderCellDef>Point</th>
-                <td mat-cell *matCellDef="let q">{{ POINT_PAR_QUESTION }}</td>
+                <td mat-cell *matCellDef="let q">{{ q.points ?? 5 }}</td>
               </ng-container>
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef class="text-right">Action</th>
                 <td mat-cell *matCellDef="let q" class="text-right">
-                  <button mat-icon-button (click)="modifierQuestion(q)" matTooltip="Modifier">
-                    <mat-icon>edit</mat-icon>
-                  </button>
-                  <button mat-icon-button color="warn" (click)="supprimerQuestion(q)" matTooltip="Supprimer">
-                    <mat-icon>delete</mat-icon>
-                  </button>
+                  @if (quiz?.cote_proprietaire === 1) {
+                    <button mat-icon-button (click)="modifierQuestion(q)" matTooltip="Modifier">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" (click)="supprimerQuestion(q)" matTooltip="Supprimer">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  }
                 </td>
               </ng-container>
 
@@ -231,8 +269,9 @@
             <mat-tab label="Tous participants">
               <div class="filtres">
                 <mat-form-field appearance="outline">
-                  <mat-label>ID AGENT</mat-label>
-                  <input matInput [(ngModel)]="filtreAgent" (keyup.enter)="chargerParticipants()" />
+                  <mat-label>Agent</mat-label>
+                  <input matInput [(ngModel)]="filtreAgent" (keyup.enter)="chargerParticipants()"
+                         placeholder="Login, nom ou prénom" />
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>Statut</mat-label>
@@ -244,12 +283,17 @@
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>Site</mat-label>
-                  <mat-select [(ngModel)]="filtreSite">
-                    <mat-option value="">-- Tous --</mat-option>
-                    @for (s of sitesOptions; track s.id) {
-                      <mat-option [value]="s.id">{{ s.nom }}</mat-option>
+                  <mat-select [(ngModel)]="filtreSite" [disabled]="rapportLimiteSite">
+                    @if (!rapportLimiteSite) {
+                      <mat-option value="">-- Tous --</mat-option>
+                    }
+                    @for (s of sitesDiffusion; track s.id) {
+                      <mat-option [value]="'' + s.id">{{ s.nom }}</mat-option>
                     }
                   </mat-select>
+                  @if (rapportLimiteSite) {
+                    <mat-hint>Limité à votre site</mat-hint>
+                  }
                 </mat-form-field>
                 <button mat-flat-button class="btn-actualiser" (click)="chargerParticipants()">
                   ACTUALISER
@@ -260,7 +304,7 @@
               </div>
 
               <div class="mat-elevation-z0" style="overflow-x: auto">
-                <table mat-table [dataSource]="participants" class="w-100">
+                <table mat-table [dataSource]="pagParticipants.page" class="w-100">
                   <ng-container matColumnDef="num">
                     <th mat-header-cell *matHeaderCellDef>#</th>
                     <td mat-cell *matCellDef="let p; let i = index">{{ i + 1 }}</td>
@@ -281,13 +325,17 @@
                     <th mat-header-cell *matHeaderCellDef>Statut</th>
                     <td mat-cell *matCellDef="let p">
                       <span class="badge-termine" [class.ko]="!p.reussi">
-                        {{ p.reussi ? 'Terminé' : 'Échec' }}
+                        {{ p.reussi ? 'Terminé' : p.statut === 'TEMPS_ECOULE' ? 'Temps écoulé' : 'Échec' }}
                       </span>
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="point">
-                    <th mat-header-cell *matHeaderCellDef>Point</th>
-                    <td mat-cell *matCellDef="let p">{{ p.score }}</td>
+                    <th mat-header-cell *matHeaderCellDef>Score</th>
+                    <td mat-cell *matCellDef="let p">{{ scoreLabel(p.score) }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="points">
+                    <th mat-header-cell *matHeaderCellDef>Points</th>
+                    <td mat-cell *matCellDef="let p">{{ pointsLabel(p.nb_points, p.nb_points_total) }}</td>
                   </ng-container>
                   <ng-container matColumnDef="temps">
                     <th mat-header-cell *matHeaderCellDef>Temps</th>
@@ -299,10 +347,26 @@
                   </ng-container>
                   <ng-container matColumnDef="actions">
                     <th mat-header-cell *matHeaderCellDef class="text-right">Action</th>
-                    <td mat-cell *matCellDef="let p" class="text-right">
+                    <td mat-cell *matCellDef="let p" class="text-right actions-participant">
                       <button mat-icon-button (click)="voirTentative(p)" matTooltip="Voir le détail">
                         <mat-icon>visibility</mat-icon>
                       </button>
+                      @if (peutReinitialiser) {
+                        @if (p.reinit_id) {
+                          <span class="reinit-attente" matTooltip="En attente de la confirmation de l'agent">
+                            Réinitialisation en attente
+                          </span>
+                          <button mat-icon-button (click)="annulerReinitialisation(p)"
+                                  matTooltip="Annuler la demande de réinitialisation">
+                            <mat-icon>cancel</mat-icon>
+                          </button>
+                        } @else if (p.reinitialisable) {
+                          <button mat-icon-button color="warn" (click)="demanderReinitialisation(p)"
+                                  matTooltip="Réinitialiser la participation (confirmation de l'agent requise)">
+                            <mat-icon>replay</mat-icon>
+                          </button>
+                        }
+                      }
                     </td>
                   </ng-container>
 
@@ -312,6 +376,10 @@
                     <td class="mat-cell text-center p-16" colspan="9">Aucun participant pour le moment.</td>
                   </tr>
                 </table>
+                @if (pagParticipants.length) {
+                  <mat-paginator [length]="pagParticipants.length" [pageIndex]="pagParticipants.pageIndex" [pageSize]="pagParticipants.pageSize"
+                                 [pageSizeOptions]="pagParticipants.tailles" showFirstLastButtons (page)="pagParticipants.changer($event)" />
+                }
               </div>
             </mat-tab>
 
@@ -329,6 +397,8 @@
                       <span class="col-q libelle">{{ q.libelle }}</span>
                       <span class="col-n nb">{{ q.nb_agents }}</span>
                     </div>
+                    <!-- Détail des réponses : côté propriétaire uniquement -->
+                    @if (coteProprietaire) {
                     <div class="chart">
                       @for (o of optionsFausses(q.options); track o.id; let i = $index) {
                         <div class="chart-ligne">
@@ -345,6 +415,7 @@
                         <p class="text-muted m-0">Aucune mauvaise réponse enregistrée.</p>
                       }
                     </div>
+                    }
                   </div>
                 } @empty {
                   <p class="text-center text-muted p-16">Aucune question ratée pour le moment.</p>
@@ -371,7 +442,7 @@
 
                   <!-- Autorisés actuels -->
                   <div class="mat-elevation-z0" style="overflow-x: auto; max-height: 260px; overflow-y: auto">
-                    <table mat-table [dataSource]="autorises" class="w-100">
+                    <table mat-table [dataSource]="pagAutorises.page" class="w-100">
                       <ng-container matColumnDef="login">
                         <th mat-header-cell *matHeaderCellDef>Login</th>
                         <td mat-cell *matCellDef="let a"
@@ -403,6 +474,10 @@
                         <td class="mat-cell text-center p-16" colspan="5">Aucun utilisateur autorisé.</td>
                       </tr>
                     </table>
+                    @if (pagAutorises.length) {
+                      <mat-paginator [length]="pagAutorises.length" [pageIndex]="pagAutorises.pageIndex" [pageSize]="pagAutorises.pageSize"
+                                     [pageSizeOptions]="pagAutorises.tailles" showFirstLastButtons (page)="pagAutorises.changer($event)" />
+                    }
                   </div>
 
                   <!-- Ajouter des autorisés (même filtrage que la diffusion) -->
@@ -453,7 +528,7 @@
                     </div>
                   }
                   <div class="mat-elevation-z0" style="overflow-x: auto; max-height: 300px; overflow-y: auto">
-                    <table mat-table [dataSource]="candidatsAutoFiltres()" class="w-100">
+                    <table mat-table [dataSource]="pagCandidatsAuto.page" class="w-100">
                       <ng-container matColumnDef="sel">
                         <th mat-header-cell *matHeaderCellDef></th>
                         <td mat-cell *matCellDef="let u">
@@ -486,6 +561,10 @@
                         <td class="mat-cell text-center p-16" colspan="5">Aucun utilisateur pour ces filtres.</td>
                       </tr>
                     </table>
+                    @if (pagCandidatsAuto.length) {
+                      <mat-paginator [length]="pagCandidatsAuto.length" [pageIndex]="pagCandidatsAuto.pageIndex" [pageSize]="pagCandidatsAuto.pageSize"
+                                     [pageSizeOptions]="pagCandidatsAuto.tailles" showFirstLastButtons (page)="pagCandidatsAuto.changer($event)" />
+                    }
                   </div>
                 }
               </div>
@@ -505,7 +584,8 @@
             } @else {
               <p class="hint hint-lock">
                 « Autoriser les machines à faire le quiz » = <strong>Non</strong> :
-                <strong>seules les adresses IP listées ci-dessous</strong> peuvent accéder au quiz.
+                <strong>seules les adresses IP listées ci-dessous</strong> peuvent accéder au quiz,
+                et uniquement pour les participants du <strong>site</strong> indiqué.
                 Sans aucune adresse, <strong>aucune machine</strong> ne peut y accéder.
               </p>
             }
@@ -523,6 +603,10 @@
                       <td mat-cell *matCellDef="let d">
                         {{ d.prenom }} {{ d.nom }} <span class="login">({{ d.login }})</span>
                       </td>
+                    </ng-container>
+                    <ng-container matColumnDef="site">
+                      <th mat-header-cell *matHeaderCellDef>Site</th>
+                      <td mat-cell *matCellDef="let d">{{ d.site || '—' }}</td>
                     </ng-container>
                     <ng-container matColumnDef="adresse_ip">
                       <th mat-header-cell *matHeaderCellDef>Adresse IP</th>
@@ -556,6 +640,17 @@
                 <input matInput [(ngModel)]="nouvelleIp" placeholder="192.168.1.10" (keyup.enter)="ajouterIp()" />
               </mat-form-field>
               <mat-form-field appearance="outline">
+                <mat-label>Site</mat-label>
+                <mat-select [(ngModel)]="nouvelleIpSite" [disabled]="!coteProprietaire" required>
+                  @for (s of sitesDiffusion; track s.id) {
+                    <mat-option [value]="+s.id">{{ s.nom }}</mat-option>
+                  }
+                </mat-select>
+                @if (!coteProprietaire) {
+                  <mat-hint>Limité à votre site</mat-hint>
+                }
+              </mat-form-field>
+              <mat-form-field appearance="outline">
                 <mat-label>Libelle (optionnel)</mat-label>
                 <input matInput [(ngModel)]="nouvelleIpLibelle" placeholder="Salle A / Plateau" (keyup.enter)="ajouterIp()" />
               </mat-form-field>
@@ -569,6 +664,10 @@
                 <ng-container matColumnDef="adresse_ip">
                   <th mat-header-cell *matHeaderCellDef>Adresse IP</th>
                   <td mat-cell *matCellDef="let ip"><strong>{{ ip.adresse_ip }}</strong></td>
+                </ng-container>
+                <ng-container matColumnDef="site">
+                  <th mat-header-cell *matHeaderCellDef>Site</th>
+                  <td mat-cell *matCellDef="let ip">{{ ip.site || 'Aucun (à supprimer)' }}</td>
                 </ng-container>
                 <ng-container matColumnDef="libelle">
                   <th mat-header-cell *matHeaderCellDef>Libelle</th>

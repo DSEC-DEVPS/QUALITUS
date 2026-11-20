@@ -7,7 +7,7 @@
   </div>
 
   @if (chargement) {
-    <mat-progress-bar mode="indeterminate" />
+    <app-chargement />
   } @else if (quiz) {
 
     <!-- Quiz deja tente, en attente d'autorisation de retest du superviseur -->
@@ -16,11 +16,20 @@
         <mat-card-content class="d-flex align-items-center" style="gap: 12px">
           <mat-icon class="big">lock</mat-icon>
           <div>
-            <div class="h6 m-0">Retest non disponible</div>
-            <div class="text-muted">
-              Vous avez deja passe ce quiz. Vous pourrez le refaire uniquement
-              lorsque votre superviseur aura autorise un retest.
-            </div>
+            @if (quiz.derniere_tentative_statut === 'TEMPS_ECOULE') {
+              <div class="h6 m-0">Temps écoulé</div>
+              <div class="text-muted">
+                Le temps imparti pour ce quiz est écoulé : votre passage a été clôturé.
+                Vous pourrez le refaire uniquement après un retest autorisé ou une
+                réinitialisation de votre participation.
+              </div>
+            } @else {
+              <div class="h6 m-0">Retest non disponible</div>
+              <div class="text-muted">
+                Vous avez deja passe ce quiz. Vous pourrez le refaire uniquement
+                lorsque votre superviseur aura autorise un retest.
+              </div>
+            }
           </div>
         </mat-card-content>
         <mat-card-content>
@@ -43,6 +52,9 @@
                   {{ resultat.reussi ? 'Reussi !' : 'Echoue' }} — {{ resultat.score }}%
                 </div>
                 <div class="text-muted">
+                  @if (resultat.nb_points_total != null) {
+                    {{ resultat.nb_points }} / {{ resultat.nb_points_total }} points ({{ resultat.score }} %) ·
+                  }
                   {{ resultat.nb_bonnes }}/{{ resultat.nb_total }} bonnes reponses
                   (seuil {{ resultat.note_passage }}%) — essai n°{{ resultat.num_essai }}
                 </div>

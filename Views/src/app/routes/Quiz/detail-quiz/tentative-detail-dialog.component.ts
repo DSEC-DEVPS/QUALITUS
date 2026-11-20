@@ -21,9 +21,12 @@ import { TentativeDetail } from '../interfaces';
         </div>
         <mat-chip-set>
           <mat-chip [class.ok]="data.reussi" [class.ko]="!data.reussi">
-            {{ data.reussi ? 'Réussi' : 'Échec' }}
+            {{ data.reussi ? 'Réussi' : data.statut === 'TEMPS_ECOULE' ? 'Temps écoulé' : 'Échec' }}
           </mat-chip>
           <mat-chip>Score : {{ data.score }}%</mat-chip>
+          @if (data.nb_points_total != null) {
+            <mat-chip>Points : {{ data.nb_points }} / {{ data.nb_points_total }}</mat-chip>
+          }
           <mat-chip>Temps : {{ tempsLabel }}</mat-chip>
         </mat-chip-set>
         <div class="dates">
@@ -40,6 +43,9 @@ import { TentativeDetail } from '../interfaces';
               {{ r.est_correcte ? 'check_circle' : 'cancel' }}
             </mat-icon>
             <span>{{ i + 1 }}. {{ r.libelle }}</span>
+            @if (r.points != null) {
+              <span class="pts">{{ r.est_correcte ? r.points : 0 }} / {{ r.points }} pt(s)</span>
+            }
           </li>
         } @empty {
           <li class="muted">Aucune réponse enregistrée.</li>
@@ -56,6 +62,7 @@ import { TentativeDetail } from '../interfaces';
       .nom { font-weight: 600; font-size: 1.1rem; }
       .sous { color: #6b6b6b; margin-bottom: 8px; }
       .dates { color: #8a8a8a; font-size: 0.85rem; margin-top: 6px; }
+      .pts { margin-left: auto; color: #6b6b6b; font-size: 0.85rem; white-space: nowrap; }
       mat-chip.ok { --mdc-chip-label-text-color: #1b5e20; }
       mat-chip.ko { --mdc-chip-label-text-color: #b71c1c; }
       h4 { margin: 14px 0 6px; }

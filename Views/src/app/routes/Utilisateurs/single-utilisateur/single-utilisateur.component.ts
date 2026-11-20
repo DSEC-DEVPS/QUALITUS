@@ -15,10 +15,12 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { ToastrService } from 'ngx-toastr';
 import * as XLSX from 'xlsx';
+import { finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 @Component({
   selector: 'app-single-agent',
   standalone: true,
-  imports: [
+  imports: [ChargementComponent,
     MatTableModule,
     MatPaginatorModule,
     MatTabsModule,
@@ -35,6 +37,7 @@ import * as XLSX from 'xlsx';
   styleUrl: './single-utilisateur.component.scss',
 })
 export class SingleUtilisateurComponent implements OnInit {
+  chargement = true;
   imageUrl = 'img/person.png';
   private readonly route = inject(ActivatedRoute);
   private readonly userService = inject(UserService);
@@ -45,16 +48,18 @@ export class SingleUtilisateurComponent implements OnInit {
   idEvalGrilleSel: number | null = null;
   displayedColumns: string[] = ['nb_consultation', 'titre', 'Gestionnaire', 'dateConsultation'];
   displayedColumns_messages: string[] = ['titre', 'message', 'dateCommentaire'];
-  details_utilisateur!: detailsUtilisateur;
+  details_utilisateur?: detailsUtilisateur;
   filename!: string;
-  dataSource!: MatTableDataSource<Consultation>;
+  // initialisé vide : ngAfterViewInit s\'exécute avant l\'arrivée des données
+  dataSource = new MatTableDataSource<Consultation>([]);
   dataSource_messages!: MatTableDataSource<Commentaire>;
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
   ngOnInit(): void {
+    this.chargement = true;
     const id = this.route.snapshot.params['id'];
     this.userId = Number(id);
-    this.userService.getDetailsUtilisateur(id).subscribe({
+    this.userService.getDetailsUtilisateur(id).pipe(finalize(() => (this.chargement = false))).subscribe({
       next: result => {
         this.dataSource = new MatTableDataSource(result.consultations);
         this.dataSource_messages = new MatTableDataSource(result.commentaires);
@@ -89,6 +94,7 @@ export class SingleUtilisateurComponent implements OnInit {
 
   download() {
     const data = this.details_utilisateur;
+    if (!data) return;
     const data2 = this.details_utilisateur;
 
     const ws1: XLSX.WorkSheet = XLSX.utils.json_to_sheet(data.consultations);

@@ -10,13 +10,14 @@ import {
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { filter } from 'rxjs/operators';
 
-import { AuthService, TokenService } from '@core/authentication';
+import { AuthService, TokenService, isSafeReturnUrl } from '@core/authentication';
 import { CommonModule } from '@angular/common';
 import { MatIcon, MatIconModule } from '@angular/material/icon';
 import { ToastrService } from 'ngx-toastr';
+import { PermissionsService } from '@core/authorization/permissions.service';
 
 @Component({
   selector: 'app-login',
@@ -38,9 +39,11 @@ import { ToastrService } from 'ngx-toastr';
 export class LoginComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly auth = inject(AuthService);
   private readonly tokenService = inject(TokenService);
   private readonly toastSrv = inject(ToastrService);
+  private readonly permissions = inject(PermissionsService);
   public loading = false;
   loginForm!: FormGroup;
   imageOrangeLogo = 'img/Orange_logo.png';
@@ -85,7 +88,15 @@ export class LoginComponent implements OnInit {
 
             this.router.navigateByUrl('auth/change-password');
           } else {
-            this.router.navigateByUrl('');
+            // Retour à la page d'origine (session expirée) si l'URL est sûre.
+            // On attend le chargement des permissions : les routes protégées par
+            // canMatchPermission en ont besoin, sinon redirection vers le tableau de bord.
+            const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+            if (isSafeReturnUrl(returnUrl)) {
+              this.permissions.load().subscribe(() => this.router.navigateByUrl(returnUrl));
+            } else {
+              this.router.navigateByUrl('');
+            }
           }
         },
         error: (errorRes: HttpErrorResponse) => {

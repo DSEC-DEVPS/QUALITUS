@@ -16,10 +16,13 @@ import { EvalSuitesService, LignePlanAction } from '../../eval-suites.service';
 import { EvalAdminService, RefItem } from '../../eval-admin.service';
 
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { ConfirmationService } from '@shared/services/confirmation.service';
+import { finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 @Component({
   selector: 'app-plan-action-section',
   standalone: true,
-  imports: [MatDatepickerModule,
+  imports: [ChargementComponent, MatDatepickerModule,
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatAutocompleteModule, MatChipsModule, MatTableModule,
   ],
@@ -27,6 +30,8 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
   styleUrl: './plan-action-section.component.scss',
 })
 export class PlanActionSectionComponent implements OnInit {
+  chargement = true;
+  private readonly confirmation = inject(ConfirmationService);
   private readonly service = inject(EvalSuitesService);
   private readonly admin = inject(EvalAdminService);
   private readonly toastr = inject(ToastrService);
@@ -35,9 +40,7 @@ export class PlanActionSectionComponent implements OnInit {
   @Input() lectureSeule = false;
 
   lignes: LignePlanAction[] = [];
-  actions: RefItem[] = [];
   statuts: RefItem[] = [];
-  kpis: RefItem[] = [];
   users: { id: number; nom: string; prenom: string }[] = [];
   colonnes = ['action', 'porteur', 'echeance', 'statut', 'synthese', 'kpi', 'actions'];
   get colonnesAff(): string[] {
@@ -53,18 +56,17 @@ export class PlanActionSectionComponent implements OnInit {
 
   ngOnInit(): void {
     this.charger();
-    this.admin.getRef('action').subscribe({ next: a => (this.actions = a) });
     this.admin.getRef('statut').subscribe({ next: s => (this.statuts = s) });
-    this.admin.getRef('kpi').subscribe({ next: k => (this.kpis = k) });
     this.service.getUtilisateurs().subscribe({ next: u => (this.users = u || []) });
   }
 
   private vide() {
-    return { id_action: null, id_porteur: null, date_debut: null as any, date_attendue: null as any, date_realisation: '', id_statut: null, id_kpi: null, commentaire: '', synthese: '', contributeurs: [] as number[] };
+    return { action: '', id_porteur: null, date_debut: null as any, date_attendue: null as any, date_realisation: '', id_statut: null, kpi: '', commentaire: '', synthese: '', contributeurs: [] as number[] };
   }
 
   charger(): void {
-    this.service.getPlanAction(this.idEvaluation).subscribe({
+    this.chargement = true;
+    this.service.getPlanAction(this.idEvaluation).pipe(finalize(() => (this.chargement = false))).subscribe({
       next: l => (this.lignes = l),
       error: () => this.toastr.error('Impossible de charger le plan d’action.'),
     });
@@ -113,14 +115,14 @@ export class PlanActionSectionComponent implements OnInit {
 
   enregistrerLigne(l: LignePlanAction): void {
     this.service.updateLigne(l.id, {
-      id_action: l.id_action, id_porteur: l.id_porteur, date_debut: l.date_debut, date_attendue: l.date_attendue,
-      date_realisation: l.date_realisation, id_statut: l.id_statut, id_kpi: l.id_kpi, commentaire: l.commentaire,
+      action: l.action, id_porteur: l.id_porteur, date_debut: l.date_debut, date_attendue: l.date_attendue,
+      date_realisation: l.date_realisation, id_statut: l.id_statut, kpi: l.kpi, commentaire: l.commentaire,
       synthese: l.synthese,
     }).subscribe({ next: () => this.toastr.success('Mis à jour.'), error: () => this.toastr.error('Erreur.') });
   }
 
-  supprimer(l: LignePlanAction): void {
-    if (!confirm('Supprimer cette ligne ?')) return;
+  async supprimer(l: LignePlanAction): Promise<void> {
+    if (!(await this.confirmation.confirmer({ titre: 'Supprimer l\'action', message: 'Supprimer cette ligne ?', type: 'danger' }))) return;
     this.service.deleteLigne(l.id).subscribe({
       next: () => { this.toastr.success('Supprimée.'); this.charger(); },
       error: () => this.toastr.error('Erreur.'),

@@ -11,7 +11,7 @@ import {
 import { MatSort } from '@angular/material/sort';
 import { DetailRapportControle, reporting_resultat } from '@core';
 import { MatRadioModule } from '@angular/material/radio';
-import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -115,6 +115,18 @@ export class VerificationComponent implements OnInit {
       (!debut || dateControle >= debut) && (!fin || dateControle <= fin)
     );
   });
+  // Pagination des rapports (après filtre de dates)
+  readonly taillesRapports = [10, 25, 50, 100];
+  readonly rapportsPageIndex = signal(0);
+  readonly rapportsPageSize = signal(10);
+  readonly rapportsPage = computed(() => {
+    const debut = this.rapportsPageIndex() * this.rapportsPageSize();
+    return this.rapportsFiltres().slice(debut, debut + this.rapportsPageSize());
+  });
+  changerPageRapports(e: PageEvent): void {
+    this.rapportsPageIndex.set(e.pageIndex);
+    this.rapportsPageSize.set(e.pageSize);
+  }
   @ViewChild(MatSort) sort!: MatSort;
   ngOnInit() {
     this.form = this.fb.group({
@@ -211,6 +223,7 @@ export class VerificationComponent implements OnInit {
     this.userService.getReporting().subscribe({
       next: rapports => {
         this.rapports.set(rapports);
+        this.rapportsPageIndex.set(0);
         this.rapportsCharges.set(true);
       },
       error: () => this.toast.error('Impossible de charger les rapports de contrôle.'),
@@ -220,6 +233,7 @@ export class VerificationComponent implements OnInit {
   reinitialiserFiltreRapports(): void {
     this.dateRapportDebut.set('');
     this.dateRapportFin.set('');
+    this.rapportsPageIndex.set(0);
   }
 
   validerControle(type: TypeControleExactitude): void {

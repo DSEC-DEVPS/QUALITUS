@@ -54,7 +54,7 @@
       "icon": "settings_backup_restore",
       "permissions": {
         "only": [
-          "R_RO"
+          "compte.gerer"
         ]
       }
     },
@@ -65,7 +65,7 @@
       "icon": "edit_attributes",
       "permissions": {
         "only": [
-          "R_RO"
+          "assignation.gerer"
         ]
       }
     },
@@ -118,17 +118,7 @@
           "icon": "colorize",
           "permissions": {
             "only": [
-              "R_GB"
-            ]
-          }
-        },
-        {
-          "route": "Liste",
-          "name": "Liste Fiche",
-          "type": "link",
-          "icon": "flag",
-          "permissions": {
-            "only": [
+              "R_GB",
               "fiche.gestion"
             ]
           }
@@ -183,9 +173,10 @@
           "route": "motif",
           "name": "Liste Motif",
           "type": "link",
+          "icon": "list_alt",
           "permissions": {
             "only": [
-              "R_ADMI"
+              "ma_voix.motif"
             ]
           }
         },
@@ -193,17 +184,18 @@
           "route": "ajouter",
           "name": "Ajouter",
           "type": "link",
+          "icon": "add_circle",
           "permissions": {
             "only": [
-              "R_TC"
+              "ma_voix.ajouter"
             ]
           }
         }
       ],
       "permissions": {
         "only": [
-          "R_TC",
-          "R_ADMI"
+          "ma_voix.ajouter",
+          "ma_voix.motif"
         ]
       }
     },
@@ -212,10 +204,10 @@
       "name": "Gestion Chargements",
       "type": "link",
       "icon": "insert_drive_file",
-      "module": "fiche",
+      "module": "chargement",
       "permissions": {
         "only": [
-          "R_GE"
+          "chargement.verifier"
         ]
       }
     },
@@ -230,6 +222,7 @@
           "route": "gestion",
           "name": "Gestion des sondages",
           "type": "link",
+          "icon": "format_list_bulleted",
           "permissions": {
             "only": [
               "sondage.gestion"
@@ -240,6 +233,7 @@
           "route": "creer",
           "name": "Nouveau sondage",
           "type": "link",
+          "icon": "add_circle",
           "permissions": {
             "only": [
               "sondage.gestion"
@@ -269,12 +263,12 @@
       "route": "mon-espace/quiz",
       "name": "Quiz",
       "type": "sub",
-      "icon": "quiz",
+      "icon": "question_answer",
       "module": "quiz",
       "permissions": {
         "only": [
           "quiz.lire",
-          "quiz.baseco"
+          "quiz.participer"
         ]
       },
       "children": [
@@ -285,7 +279,7 @@
           "icon": "add_circle",
           "permissions": {
             "only": [
-              "quiz.gestion"
+              "quiz.creer"
             ]
           }
         },
@@ -296,7 +290,7 @@
           "icon": "list",
           "permissions": {
             "only": [
-              "quiz.gestion"
+              "quiz.lire"
             ]
           }
         },
@@ -307,7 +301,7 @@
           "icon": "bar_chart",
           "permissions": {
             "only": [
-              "quiz.gestion"
+              "quiz.lire"
             ]
           }
         },
@@ -315,10 +309,10 @@
           "route": "participer",
           "name": "Participer",
           "type": "link",
-          "icon": "play_circle",
+          "icon": "play_circle_filled",
           "permissions": {
             "only": [
-              "quiz.lire"
+              "quiz.participer"
             ]
           }
         },
@@ -329,6 +323,7 @@
           "icon": "notifications_active",
           "permissions": {
             "only": [
+              "quiz.participer",
               "quiz.lire"
             ]
           }
@@ -340,7 +335,7 @@
           "icon": "history",
           "permissions": {
             "only": [
-              "quiz.lire"
+              "quiz.participer"
             ]
           }
         },
@@ -351,10 +346,24 @@
           "icon": "lock_open",
           "permissions": {
             "only": [
-              "quiz.gestion"
+              "quiz.modifier"
             ]
           }
-        },
+        }
+      ]
+    },
+    {
+      "route": "mon-espace/quiz",
+      "name": "Quiz Baseco",
+      "type": "sub",
+      "icon": "live_help",
+      "module": "quiz",
+      "permissions": {
+        "only": [
+          "quiz.baseco"
+        ]
+      },
+      "children": [
         {
           "route": "quiz-en-echecs",
           "name": "Quiz en echecs",
@@ -370,7 +379,7 @@
           "route": "Quiz-en-reset",
           "name": "Quiz en retest",
           "type": "link",
-          "icon": "restart_alt",
+          "icon": "replay",
           "permissions": {
             "only": [
               "quiz.baseco"
@@ -390,11 +399,11 @@
           "route": "evaluations",
           "name": "Mes Évaluations",
           "type": "link",
-          "icon": "fact_check",
+          "icon": "assignment_turned_in",
           "module": "evaluation",
           "permissions": {
             "only": [
-              "evaluation.gestion_complete"
+              "evaluation.creer"
             ]
           }
         },
@@ -402,14 +411,14 @@
           "route": "mes-evaluations",
           "name": "Mes évaluations",
           "type": "link",
-          "icon": "fact_check",
+          "icon": "assignment_turned_in",
           "module": "evaluation",
           "permissions": {
             "only": [
               "evaluation.lire"
             ],
             "except": [
-              "evaluation.gestion_complete"
+              "evaluation.creer"
             ]
           }
         },
@@ -417,11 +426,11 @@
           "route": "mes-agents-evaluations",
           "name": "Évaluations de mes agents",
           "type": "link",
-          "icon": "groups",
+          "icon": "group",
           "module": "evaluation",
           "permissions": {
             "only": [
-              "evaluation.gestion_complete"
+              "evaluation.coacher"
             ]
           }
         },
@@ -429,23 +438,11 @@
           "route": "mes-coaching",
           "name": "Mes coaching",
           "type": "link",
-          "icon": "psychology",
+          "icon": "school",
           "module": "evaluation",
           "permissions": {
             "only": [
-              "evaluation.gestion_complete"
-            ]
-          }
-        },
-        {
-          "route": "creation/unitaire",
-          "name": "Créer une évaluation",
-          "type": "link",
-          "icon": "add_circle",
-          "module": "evaluation",
-          "permissions": {
-            "only": [
-              "evaluation.gestion_complete"
+              "evaluation.coacher"
             ]
           }
         },
@@ -469,7 +466,8 @@
           "module": "contre_evaluation",
           "permissions": {
             "only": [
-              "contre_evaluation.gestion"
+              "contre_evaluation.creer",
+              "contre_evaluation.voir_tous"
             ]
           }
         },
@@ -477,7 +475,7 @@
           "route": "mes-contre-evaluations",
           "name": "Mes contre-évaluations",
           "type": "link",
-          "icon": "fact_check",
+          "icon": "assignment_turned_in",
           "module": "contre_evaluation",
           "permissions": {
             "only": [
@@ -514,10 +512,10 @@
           "name": "Arborescences BI",
           "type": "link",
           "icon": "account_tree",
-          "module": "bi",
+          "module": "evaluation",
           "permissions": {
             "only": [
-              "bi.gestion"
+              "evaluation.parametrer"
             ]
           }
         },
@@ -525,11 +523,11 @@
           "route": "bi/validation",
           "name": "Validation d'options",
           "type": "link",
-          "icon": "rule",
-          "module": "validation_option",
+          "icon": "playlist_add_check",
+          "module": "evaluation",
           "permissions": {
             "only": [
-              "validation_option.gestion"
+              "evaluation.valider"
             ]
           }
         },
@@ -549,11 +547,11 @@
           "route": "coaching/arbre",
           "name": "Arbre de coaching",
           "type": "link",
-          "icon": "psychology",
-          "module": "arbre_coaching",
+          "icon": "device_hub",
+          "module": "evaluation",
           "permissions": {
             "only": [
-              "arbre_coaching.gestion"
+              "evaluation.parametrer"
             ]
           }
         },
@@ -599,7 +597,7 @@
           "route": "sessions",
           "name": "Sessions de calibrage",
           "type": "link",
-          "icon": "fact_check",
+          "icon": "assignment_turned_in",
           "module": "calibrage",
           "permissions": {
             "only": [
@@ -613,11 +611,12 @@
       "route": "mon-espace/habilitations",
       "name": "Habilitations",
       "type": "sub",
-      "icon": "admin_panel_settings",
+      "icon": "verified_user",
       "module": "habilitation",
       "permissions": {
         "only": [
-          "habilitation.gestion"
+          "habilitation.gestion",
+          "notification.supprimer"
         ]
       },
       "children": [
@@ -636,7 +635,7 @@
           "route": "droits-utilisateur",
           "name": "Droits par utilisateur",
           "type": "link",
-          "icon": "manage_accounts",
+          "icon": "how_to_reg",
           "permissions": {
             "only": [
               "habilitation.gestion"
@@ -651,6 +650,17 @@
           "permissions": {
             "only": [
               "habilitation.gestion"
+            ]
+          }
+        },
+        {
+          "route": "menage-notifications",
+          "name": "Ménage des notifications",
+          "type": "link",
+          "icon": "delete_sweep",
+          "permissions": {
+            "only": [
+              "notification.supprimer"
             ]
           }
         }

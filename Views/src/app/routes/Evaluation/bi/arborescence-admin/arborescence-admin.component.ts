@@ -9,17 +9,31 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { ToastrService } from 'ngx-toastr';
+import { PermissionsService } from '../../../../core/authorization/permissions.service';
 import { EvalBiService, Arborescence, BiOption } from '../../eval-bi.service';
 import { EvalGrilleService, Grille } from '../../eval-grille.service';
+import { ConfirmationService } from '@shared/services/confirmation.service';
+import { finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
+import { ArbreOptionsComponent, DemandeAjout, DemandeDeplacement, OptionArbre } from '../../arbre-options/arbre-options.component';
+import { correspondRecherche } from '@shared/utils/recherche';
 
 @Component({
   selector: 'app-arborescence-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule],
+  imports: [ArbreOptionsComponent, ChargementComponent, CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule],
   templateUrl: './arborescence-admin.component.html',
   styleUrl: './arborescence-admin.component.scss',
 })
 export class ArborescenceAdminComponent implements OnInit {
+  chargementOptions = false;
+  chargement = true;
+  private readonly confirmation = inject(ConfirmationService);
+  private readonly perms = inject(PermissionsService);
+  /** Paramétrage réservé à evaluation.parametrer (lecture seule sinon). */
+  get peutParametrer(): boolean {
+    return this.perms.can('evaluation.parametrer');
+  }
   private readonly service = inject(EvalBiService);
   private readonly grilleService = inject(EvalGrilleService);
   private readonly http = inject(HttpClient);
@@ -28,13 +42,16 @@ export class ArborescenceAdminComponent implements OnInit {
   grilles: Grille[] = [];
   sites: { id: number; nom: string }[] = [];
   arborescences: Arborescence[] = [];
+  /** Recherche dans la liste des arborescences (grille, site, point de départ). */
+  rechercheArbo = '';
+  get arborescencesFiltrees(): Arborescence[] {
+    return this.arborescences.filter(a => correspondRecherche(this.rechercheArbo, [a.grille, a.site, a.point_depart_libelle]));
+  }
 
   nouvelle = { id_grille: null as number | null, id_site: null as number | null, point_depart_libelle: '' };
 
   arboSelectionnee?: Arborescence;
   options: BiOption[] = [];
-  niveaux = [1, 2, 3, 4, 5];
-  nouvelleOption = { niveau: 1, id_parent: null as number | null, libelle: '' };
 
   ngOnInit(): void {
     this.grilleService.getGrilles().subscribe({ next: g => (this.grilles = g) });
@@ -43,7 +60,8 @@ export class ArborescenceAdminComponent implements OnInit {
   }
 
   charger(): void {
-    this.service.getArborescences().subscribe({ next: a => (this.arborescences = a) });
+    this.chargement = true;
+    this.service.getArborescences().pipe(finalize(() => (this.chargement = false))).subscribe({ next: a => (this.arborescences = a) });
   }
 
   creer(): void {
@@ -66,35 +84,41 @@ export class ArborescenceAdminComponent implements OnInit {
 
   chargerOptions(): void {
     if (!this.arboSelectionnee) return;
-    this.service.getArbreOptions(this.arboSelectionnee.id).subscribe({ next: o => (this.options = o) });
+    this.chargementOptions = true;
+    this.service.getArbreOptions(this.arboSelectionnee.id).pipe(finalize(() => (this.chargementOptions = false))).subscribe({ next: o => (this.options = o) });
   }
 
-  optionsDuNiveau(n: number): BiOption[] {
-    return this.options.filter(o => o.niveau === n);
-  }
-  parentsPossibles(): BiOption[] {
-    return this.nouvelleOption.niveau <= 1 ? [] : this.options.filter(o => o.niveau === this.nouvelleOption.niveau - 1);
-  }
-  libelleParent(o: BiOption): string {
-    const p = this.options.find(x => x.id === o.id_parent);
-    return p ? p.libelle : '—';
-  }
 
-  ajouterOption(): void {
+
+
+  // ---------- arbre (composant commun) ----------
+  ajouterOptionArbre(d: DemandeAjout): void {
     if (!this.arboSelectionnee) return;
-    const { niveau, id_parent, libelle } = this.nouvelleOption;
-    if (!libelle.trim()) { this.toastr.warning('Libellé obligatoire.'); return; }
-    if (niveau > 1 && !id_parent) { this.toastr.warning('Sélectionnez le parent (niveau précédent).'); return; }
-    this.service.addOption({ id_arborescence: this.arboSelectionnee.id, id_parent: niveau > 1 ? id_parent : null, niveau, libelle: libelle.trim() }).subscribe({
-      next: () => { this.toastr.success('Option ajoutée.'); this.nouvelleOption.libelle = ''; this.chargerOptions(); },
+    this.service.addOption({ id_arborescence: this.arboSelectionnee.id, ...d }).subscribe({
+      next: () => { this.toastr.success('Option ajoutée.'); this.chargerOptions(); },
       error: err => this.toastr.error(err?.error?.message || 'Erreur.'),
     });
   }
-
-  supprimerOption(o: BiOption): void {
-    if (!confirm(`Supprimer « ${o.libelle} » et ses options dépendantes ?`)) return;
-    this.service.deleteOption(o.id).subscribe({
+  renommerOptionArbre(d: { id: number; libelle: string }): void {
+    this.service.updateOption(d.id, d.libelle).subscribe({
+      next: () => { this.toastr.success('Option renommée.'); this.chargerOptions(); },
+      error: err => this.toastr.error(err?.error?.message || 'Erreur.'),
+    });
+  }
+  async supprimerOptionArbre(d: { option: OptionArbre; nbDescendantes: number }): Promise<void> {
+    const sous = d.nbDescendantes ? ` et ses ${d.nbDescendantes} sous-option${d.nbDescendantes > 1 ? 's' : ''}` : '';
+    if (!(await this.confirmation.confirmer({ titre: 'Supprimer l\'option', message: `Supprimer « ${d.option.libelle} »${sous} ?`, type: 'danger' }))) return;
+    this.service.deleteOption(d.option.id).subscribe({
       next: () => { this.toastr.success('Supprimée.'); this.chargerOptions(); },
+      error: err => this.toastr.error(err?.error?.message || 'Erreur.'),
+    });
+  }
+  async deplacerOptionArbre(d: DemandeDeplacement): Promise<void> {
+    const sous = d.nbDescendantes ? ` (avec ses ${d.nbDescendantes} sous-option${d.nbDescendantes > 1 ? 's' : ''})` : '';
+    const cible = d.parent ? `sous « ${d.parent.libelle} » (niveau ${d.parent.niveau + 1})` : 'au niveau 1';
+    if (!(await this.confirmation.confirmer({ titre: 'Déplacer l\'option', message: `Déplacer « ${d.option.libelle} »${sous} ${cible} ?`, type: 'attention' }))) return;
+    this.service.deplacerOption(d.option.id, d.parent ? d.parent.id : null).subscribe({
+      next: () => { this.toastr.success('Option déplacée.'); this.chargerOptions(); },
       error: err => this.toastr.error(err?.error?.message || 'Erreur.'),
     });
   }

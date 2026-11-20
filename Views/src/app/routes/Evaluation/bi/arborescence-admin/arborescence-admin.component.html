@@ -3,6 +3,7 @@
 
   
 
+  @if (peutParametrer) {
   <mat-card class="form-creation">
     <mat-card-content>
       <span class="titre">Nouvelle arborescence (couple grille / site)</span>
@@ -27,13 +28,23 @@
       </div>
     </mat-card-content>
   </mat-card>
+  }
 
   <mat-card>
     <mat-card-content>
       <span class="titre">Arborescences existantes</span>
-      @if (arborescences.length === 0) { <p class="vide">Aucune arborescence.</p> }
+      @if (arborescences.length > 5) {
+        <mat-form-field appearance="outline" class="recherche-arbo" subscriptSizing="dynamic">
+          <mat-icon matPrefix>search</mat-icon>
+          <mat-label>Rechercher (grille, site, point de départ)</mat-label>
+          <input matInput [(ngModel)]="rechercheArbo" name="rechArbo" autocomplete="off" />
+        </mat-form-field>
+      }
+      @if (chargement) { <app-chargement /> }
+      @else if (arborescences.length === 0) { <p class="vide">Aucune arborescence.</p> }
+      @else if (arborescencesFiltrees.length === 0) { <p class="vide">Aucune arborescence ne correspond.</p> }
       <ul class="liste-arbo">
-        @for (a of arborescences; track a.id) {
+        @for (a of arborescencesFiltrees; track a.id) {
           <li [class.active]="arboSelectionnee?.id === a.id" (click)="ouvrir(a)">
             <strong>{{ a.grille }}</strong> / {{ a.site }} — <em>{{ a.point_depart_libelle }}</em>
           </li>
@@ -47,42 +58,11 @@
       <mat-card-content>
         <span class="titre">Options — {{ arboSelectionnee.grille }} / {{ arboSelectionnee.site }}</span>
 
-        <div class="ligne ajout-option">
-          <mat-form-field appearance="outline" class="petit">
-            <mat-label>Niveau</mat-label>
-            <mat-select [(ngModel)]="nouvelleOption.niveau" name="niv">
-              @for (n of niveaux; track n) { <mat-option [value]="n">{{ n }}</mat-option> }
-            </mat-select>
-          </mat-form-field>
-          @if (nouvelleOption.niveau > 1) {
-            <mat-form-field appearance="outline">
-              <mat-label>Parent (niveau {{ nouvelleOption.niveau - 1 }})</mat-label>
-              <mat-select [(ngModel)]="nouvelleOption.id_parent" name="par">
-                @for (p of parentsPossibles(); track p.id) { <mat-option [value]="p.id">{{ p.libelle }}</mat-option> }
-              </mat-select>
-            </mat-form-field>
-          }
-          <mat-form-field appearance="outline" class="grand">
-            <mat-label>Libellé de l'option</mat-label>
-            <input matInput [(ngModel)]="nouvelleOption.libelle" name="lib" />
-          </mat-form-field>
-          <button mat-stroked-button color="primary" (click)="ajouterOption()"><mat-icon>add</mat-icon> Ajouter</button>
-        </div>
-
-        @for (n of niveaux; track n) {
-          @if (optionsDuNiveau(n).length) {
-            <div class="niveau-bloc">
-              <h4>Niveau {{ n }}</h4>
-              @for (o of optionsDuNiveau(n); track o.id) {
-                <div class="option-ligne">
-                  <span>{{ o.libelle }}</span>
-                  @if (n > 1) { <span class="parent">↳ parent : {{ libelleParent(o) }}</span> }
-                  <span class="spacer"></span>
-                  <button mat-icon-button color="warn" (click)="supprimerOption(o)"><mat-icon>delete</mat-icon></button>
-                </div>
-              }
-            </div>
-          }
+        @if (chargementOptions && !options.length) { <app-chargement /> }
+        @else {
+          <app-arbre-options [options]="options" [modifiable]="peutParametrer"
+                             (ajouter)="ajouterOptionArbre($event)" (renommer)="renommerOptionArbre($event)"
+                             (supprimer)="supprimerOptionArbre($event)" (deplacer)="deplacerOptionArbre($event)" />
         }
       </mat-card-content>
     </mat-card>

@@ -153,12 +153,10 @@ const getPlanAction = async (req, res) => {
   const idEval = req.params.id;
   try {
     const [lignes] = await db.query(
-      `SELECT l.*, a.libelle AS action_libelle, s.libelle AS statut_libelle, k.libelle AS kpi_libelle,
+      `SELECT l.*, l.action AS action_libelle, s.libelle AS statut_libelle, l.kpi AS kpi_libelle,
               po.nom AS porteur_nom, po.prenom AS porteur_prenom
        FROM b_eval_plan_action_ligne l
-       LEFT JOIN b_eval_ref_action_pa a ON l.id_action=a.id
        LEFT JOIN b_eval_ref_statut_pa s ON l.id_statut=s.id
-       LEFT JOIN b_eval_ref_kpi k ON l.id_kpi=k.id
        LEFT JOIN b_utilisateur po ON l.id_porteur=po.id
        WHERE l.id_evaluation=? ORDER BY l.id`, [idEval]
     );
@@ -173,17 +171,25 @@ const getPlanAction = async (req, res) => {
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors du chargement." }); }
 };
 
+// Action et KPI : saisie libre (au cas par cas), plus de référentiel.
+const texteLibre = (v, max) => {
+  const t = String(v ?? "").trim();
+  return t ? t.slice(0, max) : null;
+};
+
 const addLignePlanAction = async (req, res) => {
   const b = req.body;
   if (!b.id_evaluation) return res.status(400).json({ message: "Évaluation obligatoire." });
+  const action = texteLibre(b.action, 2000);
+  if (!action) return res.status(400).json({ message: "L'action est obligatoire." });
   try {
     const out = await withTx(async (conn) => {
       const [r] = await conn.query(
         `INSERT INTO b_eval_plan_action_ligne
-         (id_evaluation, id_action, id_porteur, date_debut, date_attendue, date_realisation, id_statut, id_kpi, commentaire, synthese, dateCreation)
+         (id_evaluation, action, id_porteur, date_debut, date_attendue, date_realisation, id_statut, kpi, commentaire, synthese, dateCreation)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-        [b.id_evaluation, b.id_action || null, b.id_porteur || null, toDateSql(b.date_debut), toDateSql(b.date_attendue),
-         toDateSql(b.date_realisation), b.id_statut || null, b.id_kpi || null, b.commentaire || null, b.synthese || null]
+        [b.id_evaluation, action, b.id_porteur || null, toDateSql(b.date_debut), toDateSql(b.date_attendue),
+         toDateSql(b.date_realisation), b.id_statut || null, texteLibre(b.kpi, 255), b.commentaire || null, b.synthese || null]
       );
       const ligneId = r.insertId;
       for (const idu of b.contributeurs || []) {
@@ -199,14 +205,16 @@ const addLignePlanAction = async (req, res) => {
 const updateLignePlanAction = async (req, res) => {
   const id = req.params.id;
   const b = req.body;
+  const action = texteLibre(b.action, 2000);
+  if (!action) return res.status(400).json({ message: "L'action est obligatoire." });
   try {
     await withTx(async (conn) => {
       await conn.query(
         `UPDATE b_eval_plan_action_ligne
-         SET id_action=?, id_porteur=?, date_debut=?, date_attendue=?, date_realisation=?, id_statut=?, id_kpi=?, commentaire=?, synthese=?, dateModification=NOW()
+         SET action=?, id_porteur=?, date_debut=?, date_attendue=?, date_realisation=?, id_statut=?, kpi=?, commentaire=?, synthese=?, dateModification=NOW()
          WHERE id=?`,
-        [b.id_action || null, b.id_porteur || null, toDateSql(b.date_debut), toDateSql(b.date_attendue),
-         toDateSql(b.date_realisation), b.id_statut || null, b.id_kpi || null, b.commentaire || null, b.synthese || null, id]
+        [action, b.id_porteur || null, toDateSql(b.date_debut), toDateSql(b.date_attendue),
+         toDateSql(b.date_realisation), b.id_statut || null, texteLibre(b.kpi, 255), b.commentaire || null, b.synthese || null, id]
       );
       if (Array.isArray(b.contributeurs)) {
         await conn.query(`DELETE FROM b_eval_plan_action_contributeur WHERE id_ligne=?`, [id]);

@@ -21,9 +21,13 @@
 
   <mat-card>
     <mat-card-content>
-      <h5 class="m-b-16">Mes scores</h5>
+      <div class="d-flex align-items-center justify-content-between flex-wrap m-b-8" style="gap: 12px">
+        <h5 class="m-0">Mes scores</h5>
+        <app-filtre-periode [valeur]="periode" (periodeChange)="changerPeriode($event)" />
+      </div>
       <div style="overflow-x: auto">
-        <table mat-table [dataSource]="dataSource" class="w-100">
+        @if (chargement) { <app-chargement /> }
+        <table [style.display]="chargement ? 'none' : null" mat-table [dataSource]="pag.page" class="w-100">
           <ng-container matColumnDef="date_tentative">
             <th mat-header-cell *matHeaderCellDef>Date</th>
             <td mat-cell *matCellDef="let s">{{ s.date_tentative | date: 'dd/MM/yyyy HH:mm' }}</td>
@@ -41,7 +45,14 @@
 
           <ng-container matColumnDef="score">
             <th mat-header-cell *matHeaderCellDef>Score</th>
-            <td mat-cell *matCellDef="let s">{{ s.score }}% ({{ s.nb_bonnes }}/{{ s.nb_total }})</td>
+            <td mat-cell *matCellDef="let s">
+              {{ s.score }}%
+              @if (s.nb_points_total != null) {
+                ({{ s.nb_points }} / {{ s.nb_points_total }} points)
+              } @else {
+                ({{ s.nb_bonnes }}/{{ s.nb_total }})
+              }
+            </td>
           </ng-container>
 
           <ng-container matColumnDef="statut">
@@ -49,7 +60,7 @@
             <td mat-cell *matCellDef="let s">
               <mat-chip-set>
                 <mat-chip [class.ok]="s.reussi === 1" [class.ko]="s.reussi === 0">
-                  {{ s.reussi === 1 ? 'Reussi' : 'Echoue' }}
+                  {{ s.reussi === 1 ? 'Reussi' : s.statut === 'TEMPS_ECOULE' ? 'Temps écoulé' : 'Echoue' }}
                 </mat-chip>
               </mat-chip-set>
             </td>
@@ -60,10 +71,14 @@
 
           <tr class="mat-row" *matNoDataRow>
             <td class="mat-cell text-center p-16" [attr.colspan]="displayedColumns.length">
-              Aucune tentative pour le moment.
+              {{ periode.du || periode.au ? 'Aucune tentative sur cette période.' : 'Aucune tentative pour le moment.' }}
             </td>
           </tr>
         </table>
+        @if (pag.length) {
+          <mat-paginator [length]="pag.length" [pageIndex]="pag.pageIndex" [pageSize]="pag.pageSize"
+                         [pageSizeOptions]="pag.tailles" showFirstLastButtons (page)="pag.changer($event)" />
+        }
       </div>
     </mat-card-content>
   </mat-card>

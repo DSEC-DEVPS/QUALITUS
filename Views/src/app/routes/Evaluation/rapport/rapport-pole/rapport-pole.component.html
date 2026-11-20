@@ -7,7 +7,7 @@
     <mat-card-content>
       @if (voirTous) {
         <mat-form-field appearance="outline"><mat-label>Site</mat-label>
-          <mat-select [(ngModel)]="filtres.id_site" name="site">
+          <mat-select [(ngModel)]="filtres.id_site" name="site" [disabled]="siteImpose !== null">
             <mat-option [value]="undefined">Tous</mat-option>
             @for (s of sites; track s.id) { <mat-option [value]="s.id">{{ s.nom }}</mat-option> }
           </mat-select>
@@ -39,11 +39,11 @@
   <mat-card>
     <mat-card-content>
       @if (chargement) {
-        <p>Chargement…</p>
+        <app-chargement />
       } @else if (agents.length === 0) {
         <p class="vide">Aucun agent en pôle sur ce périmètre.</p>
       } @else {
-        <table mat-table [dataSource]="agents" class="table">
+        <table mat-table [dataSource]="pag.page" class="table">
           <ng-container matColumnDef="agent">
             <th mat-header-cell *matHeaderCellDef>Agent</th>
             <td mat-cell *matCellDef="let a">{{ a.nom }} {{ a.prenom }}<br /><small>{{ a.login }}</small></td>
@@ -79,6 +79,10 @@
           <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
           <tr mat-row *matRowDef="let row; columns: colonnes" class="ligne" (click)="ouvrirDetail(row)"></tr>
         </table>
+        @if (pag.length) {
+          <mat-paginator [length]="pag.length" [pageIndex]="pag.pageIndex" [pageSize]="pag.pageSize"
+                         [pageSizeOptions]="pag.tailles" showFirstLastButtons (page)="pag.changer($event)" />
+        }
       }
     </mat-card-content>
   </mat-card>

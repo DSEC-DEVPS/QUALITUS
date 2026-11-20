@@ -64,6 +64,10 @@ export interface ViewerInfo {
   is_agent: boolean;
   is_evaluateur: boolean;
   is_superviseur: boolean;
+  /** Peut remplir l'évaluation (évaluateur ou administrateur, avec evaluation.executer). */
+  peut_executer?: boolean;
+  /** Peut faire le coaching et le plan d'actions (evaluation.coacher + périmètre). */
+  peut_coacher?: boolean;
   lecture_seule: boolean;
 }
 

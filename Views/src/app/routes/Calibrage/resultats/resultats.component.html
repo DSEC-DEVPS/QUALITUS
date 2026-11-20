@@ -1,3 +1,4 @@
+<app-chargement *ngIf="chargement && !role" />
 <div class="cal-page cal-res" *ngIf="role">
   <mat-card class="cal-panel"><mat-card-header class="cal-band cal-header">
     <button mat-icon-button (click)="retour()"><mat-icon>arrow_back</mat-icon></button>
@@ -9,6 +10,10 @@
       </h2>
     </div>
     <div class="cal-actions">
+      <mat-slide-toggle *ngIf="estJauge" [checked]="visibilite" (change)="basculerVisibilite()"
+                        matTooltip="Ouvre/ferme l'accès des participants à leurs résultats">
+        Visibilité participants {{ visibilite ? '(ouverte)' : '(fermée)' }}
+      </mat-slide-toggle>
       <button mat-flat-button color="primary" *ngIf="modifiable && !resultatPublie" (click)="valider()">
         <mat-icon>verified</mat-icon> Valider le résultat
       </button>
@@ -40,12 +45,17 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let p of participants">
+          <ng-container *ngFor="let p of participants">
+          <tr>
             <td class="col-eval">
               <button class="lien" (click)="ouvrirConfrontation(p, null)">{{ p.prenom }} {{ p.nom }}</button>
-              <button mat-icon-button class="btn-relance" *ngIf="estJauge" matTooltip="Relancer la session de ce participant" (click)="relancer(p, $event)">
-                <mat-icon>restart_alt</mat-icon>
-              </button>
+              <span class="actions-participant" *ngIf="estJauge">
+                <button mat-icon-button color="primary" class="btn-reprendre" matTooltip="Reprendre (réponses conservées)"
+                        *ngIf="p.statut_participation === 'EN_COURS' || p.statut_participation === 'CLOSE'"
+                        (click)="ouvrirReprise(p, $event)"><mat-icon>play_circle</mat-icon></button>
+                <button mat-icon-button color="warn" class="btn-recommencer" matTooltip="Recommencer à zéro (réponses effacées)"
+                        (click)="recommencer(p, $event)"><mat-icon>restart_alt</mat-icon></button>
+              </span>
             </td>
             <td *ngFor="let t of transactions" class="cell">
               <button class="pastille" [attr.data-c]="cellule(p.id_evaluateur, t.id)" (click)="ouvrirConfrontation(p, t.id)">
@@ -54,6 +64,32 @@
             </td>
             <td class="col-concl"><span class="cal-badge" [attr.data-c]="global[p.id_evaluateur]">{{ global[p.id_evaluateur] }}</span></td>
           </tr>
+          <!-- Reprise après coupure : réponses conservées, temps accordé par le jauge -->
+          <tr class="ligne-reprise" *ngIf="reprise?.pid === p.id ? reprise : null as r">
+            <td [attr.colspan]="transactions.length + 2">
+              <div class="reprise">
+                <app-chargement *ngIf="r.chargement" [diametre]="24" texte="" />
+                <ng-container *ngIf="!r.chargement">
+                  <p class="hint">
+                    Reprendre la participation de <b>{{ p.prenom }} {{ p.nom }}</b> : ses réponses sont conservées et la session sera ré-ouverte.
+                    <ng-container *ngIf="r.derniere; else jamais">Dernier enregistrement à {{ r.derniere | date: 'HH:mm' }} :
+                      il restait {{ r.proposees }} min.</ng-container>
+                    <ng-template #jamais>Aucun enregistrement du participant : durée complète proposée.</ng-template>
+                  </p>
+                  <mat-form-field appearance="outline" class="minutes" subscriptSizing="dynamic">
+                    <mat-label>Temps accordé (min)</mat-label>
+                    <input matInput type="number" min="1" [max]="r.duree" [(ngModel)]="r.minutes" name="minutesReprise" />
+                    <mat-hint>de 1 à {{ r.duree }} min</mat-hint>
+                  </mat-form-field>
+                  <button mat-flat-button color="primary" (click)="confirmerReprise(p)" [disabled]="!minutesValides()">
+                    <mat-icon>play_arrow</mat-icon> Reprendre
+                  </button>
+                  <button mat-button (click)="reprise = null">Annuler</button>
+                </ng-container>
+              </div>
+            </td>
+          </tr>
+          </ng-container>
         </tbody>
       </table>
     </div>
@@ -114,14 +150,14 @@
                 <strong>Commentaire du participant :</strong> {{ e.participant?.commentaire || '—' }}
               </div>
 
-              <!-- Appréciation complémentaire du jauge (révision) -->
-              <mat-form-field appearance="outline" class="appr" *ngIf="modifiable">
-                <mat-label>Appréciation complémentaire du jauge</mat-label>
-                <textarea matInput rows="2" [(ngModel)]="e.reference.appreciation_jauge"
+              <!-- Appréciation du jauge : propre à CE participant (transaction + item) -->
+              <mat-form-field appearance="outline" class="appr" *ngIf="modifiable && e.participant">
+                <mat-label>Appréciation du jauge pour {{ selNom }}</mat-label>
+                <textarea matInput rows="2" [(ngModel)]="e.participant.appreciation_jauge"
                           (blur)="enregistrerAppreciation(t, e)"></textarea>
               </mat-form-field>
-              <div class="comm appr-ro" *ngIf="!modifiable && e.reference?.appreciation_jauge">
-                <strong>Appréciation du jauge :</strong> {{ e.reference.appreciation_jauge }}
+              <div class="comm appr-ro" *ngIf="!modifiable && e.participant?.appreciation_jauge">
+                <strong>Appréciation du jauge :</strong> {{ e.participant.appreciation_jauge }}
               </div>
             </div>
           </div>

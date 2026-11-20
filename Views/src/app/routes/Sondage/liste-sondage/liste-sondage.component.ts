@@ -18,10 +18,14 @@ import { SondageService } from '@shared/services/sondage.service';
 import { Sondage } from '../interfaces';
 
 import { CanDirective } from '@core/authorization/can.directive';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { Pagination } from '@shared/utils/pagination';
+import { finalize } from 'rxjs';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 @Component({
   selector: 'app-liste-sondage',
   standalone: true,
-  imports: [CanDirective, 
+  imports: [ChargementComponent, MatPaginatorModule, CanDirective,
     MatCardModule,
     MatTableModule,
     MatButtonModule,
@@ -34,11 +38,14 @@ import { CanDirective } from '@core/authorization/can.directive';
   styleUrl: './liste-sondage.component.scss',
 })
 export class ListeSondageComponent implements OnInit {
+  chargement = true;
   private readonly srv = inject(SondageService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastrService);
 
-  sondages: Sondage[] = [];
+  readonly pag = new Pagination<Sondage>();
+  get sondages(): Sondage[] { return this.pag.donnees; }
+  set sondages(v: Sondage[]) { this.pag.definir(v); }
   cols = ['id', 'nom', 'langue', 'statut', 'nb_questions', 'actions'];
 
   ngOnInit(): void {
@@ -46,7 +53,8 @@ export class ListeSondageComponent implements OnInit {
   }
 
   charger() {
-    this.srv.getAll().subscribe({
+    this.chargement = true;
+    this.srv.getAll().pipe(finalize(() => (this.chargement = false))).subscribe({
       next: d => (this.sondages = d),
       error: () => this.toast.error('Impossible de charger les sondages'),
     });

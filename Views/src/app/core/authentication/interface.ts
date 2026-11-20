@@ -303,11 +303,16 @@ export interface Notification {
 export interface Responsable_Operation {
   id: number;
   nom_utilisateur: string;
+  nom?: string;
+  prenom?: string;
   fonction: string;
+  id_Programme?: number | null;
   programme: string;
   site: string;
   status: string;
   superviseur?: string;
+  superviseur_nom?: string;
+  superviseur_prenom?: string;
   dateCreation: string;
 }
 export interface Quiz_reponse {

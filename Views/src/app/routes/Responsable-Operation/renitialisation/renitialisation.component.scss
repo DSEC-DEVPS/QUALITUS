@@ -123,3 +123,27 @@ p {
 .mat-mdc-row:hover {
   background-color: #e8f0fe !important;
 }
+
+/* Icône de modification du programme (Gérer les comptes) */
+.programme-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.edit-programme {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  color: #ff8e36;
+  cursor: pointer;
+}
+
+.voir-details {
+  color: #1976d2;
+  cursor: pointer;
+}
+
+/* En-têtes sur une seule ligne */
+.table-comptes th.mat-mdc-header-cell {
+  white-space: nowrap;
+}

@@ -14,12 +14,13 @@ import {
   DialogLayoutDisplay,
   DisappearanceAnimation,
 } from '@costlydeveloper/ngx-awesome-popup';
-import { catchError, of, Subject, takeUntil, tap } from 'rxjs';
+import { catchError, of, Subject, takeUntil, tap, finalize } from 'rxjs';
 import { CommonModule, DatePipe } from '@angular/common';
 import { UserService } from '@shared/services/user.service';
 import { Quiz_reponse } from '@core';
 import { ToastrService } from 'ngx-toastr';
 import { Router } from '@angular/router';
+import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 /** Constants used to fill up our data base. */
 
@@ -31,7 +32,7 @@ import { Router } from '@angular/router';
   standalone: true,
   templateUrl: './quiz-en-echecs.component.html',
   styleUrl: './quiz-en-echecs.component.scss',
-  imports: [
+  imports: [ChargementComponent,
     CommonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -45,6 +46,7 @@ import { Router } from '@angular/router';
   ],
 })
 export class QuizEnEchecsComponent implements OnInit, OnDestroy {
+  chargement = true;
   private readonly userService = inject(UserService);
   private readonly toastSrv = inject(ToastrService);
   private readonly router = inject(Router);
@@ -56,7 +58,8 @@ export class QuizEnEchecsComponent implements OnInit, OnDestroy {
   @ViewChild(MatSort) sort!: MatSort;
 
   ngOnInit(): void {
-    this.userService.Quiz_en_echecs().subscribe({
+    this.chargement = true;
+    this.userService.Quiz_en_echecs().pipe(finalize(() => (this.chargement = false))).subscribe({
       next: resultat => {
         this.dataSource = new MatTableDataSource(resultat);
         this.dataSource.paginator = this.paginator;
@@ -72,12 +75,6 @@ export class QuizEnEchecsComponent implements OnInit, OnDestroy {
 
     if (this.dataSource.paginator) {
       this.dataSource.paginator.firstPage();
-    }
-  }
-  restore() {
-    const shouldDelete = window.confirm('Êtes vous sûr de relancer le Retest ?');
-    if (shouldDelete) {
-      window.alert('vous avez confirmer');
     }
   }
   download() {

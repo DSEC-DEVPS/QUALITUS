@@ -21,10 +21,12 @@
         <button mat-raised-button color="primary" (click)="ajouter()"><mat-icon>add</mat-icon> Ajouter</button>
       </div>
 
-      @if (items.length === 0) {
+      @if (chargement) {
+        <app-chargement />
+      } @else if (items.length === 0) {
         <p class="vide">Aucun élément.</p>
       } @else {
-        <table mat-table [dataSource]="items" class="table">
+        <table mat-table [dataSource]="pag.page" class="table">
           <ng-container matColumnDef="libelle">
             <th mat-header-cell *matHeaderCellDef>Libellé</th>
             <td mat-cell *matCellDef="let it" [class.inactif]="it.etat === 'INACTIF'">
@@ -57,6 +59,10 @@
           <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
           <tr mat-row *matRowDef="let row; columns: colonnes"></tr>
         </table>
+        @if (pag.length) {
+          <mat-paginator [length]="pag.length" [pageIndex]="pag.pageIndex" [pageSize]="pag.pageSize"
+                         [pageSizeOptions]="pag.tailles" showFirstLastButtons (page)="pag.changer($event)" />
+        }
       }
     </mat-card-content>
   </mat-card>
