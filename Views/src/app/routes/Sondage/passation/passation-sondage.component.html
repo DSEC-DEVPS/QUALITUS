@@ -1,4 +1,16 @@
-<div class="passation-wrap">
+<div class="passation-wrap" [class.public]="mode === 'public'">
+  <!-- En-tête commun aux deux modes (lien public et sondage obligatoire) -->
+  <header class="entete-public">
+    <img src="img/Orange_logo.png" alt="Logo" class="logo" />
+    <span class="marque">QUALITUS</span>
+    <span class="sous-titre">Sondage</span>
+  </header>
+  @if (mode === 'obligatoire' && sondage && !termine) {
+    <div class="bandeau-oblig">
+      <mat-icon>assignment_late</mat-icon>
+      <span>Ce sondage vous a été attribué : merci d'y répondre pour accéder à l'application.</span>
+    </div>
+  }
   @if (chargement) {
     <app-chargement />
   } @else if (etat === 'INTROUVABLE') {
@@ -38,11 +50,19 @@
       <mat-card-content>
         <h2 class="titre">{{ sondage.nom }}</h2>
 
-        <!-- Barre de progression -->
+        <!-- Barre de progression (pages déjà complétées) -->
         <div class="progress-zone">
+          <div class="progress-entete">
+            @if (nbPagesVisibles > 1) {
+              <span>Page {{ numeroPage }} sur {{ nbPagesVisibles }}</span>
+            } @else {
+              <span>{{ nbQuestionsPage }} question{{ nbQuestionsPage > 1 ? 's' : '' }}</span>
+            }
+            <span class="progress-label">{{ progression }} %</span>
+          </div>
           <mat-progress-bar mode="determinate" [value]="progression" />
-          <div class="progress-label">{{ progression }}%</div>
         </div>
+        <div class="legende-oblig">Les questions marquées <span class="req">*</span> sont obligatoires.</div>
 
         <!-- Questions de la page courante (celles dont les conditions sont remplies) -->
         @for (q of questionsAffichees; track q.id) {
@@ -52,7 +72,7 @@
               <div>{{ q.libelle }}</div>
             </div>
           } @else {
-            <div class="question">
+            <div class="question" [class.repondue]="estReponduAffiche(q)">
               <div class="q-libelle">
                 {{ q.libelle }}
                 @if (q.obligatoire === 1) { <span class="req">*</span> }
@@ -66,19 +86,24 @@
                     (ngModelChange)="setChoixUnique(q, $event)"
                   >
                     @for (o of q.options; track o.id) {
-                      <mat-radio-button [value]="o.id">{{ o.libelle }}</mat-radio-button>
+                      <div class="option" [class.choisie]="choixUnique(q) === o.id">
+                        <mat-radio-button [value]="o.id">{{ o.libelle }}</mat-radio-button>
+                      </div>
                     }
                   </mat-radio-group>
                 }
                 @case ('CHOIX_MULTIPLE') {
                   <div class="choix-col">
+                    <div class="q-aide">Plusieurs réponses possibles</div>
                     @for (o of q.options; track o.id) {
-                      <mat-checkbox
-                        [checked]="estCoche(q, o.id!)"
-                        (change)="basculer(q, o.id!, $event.checked)"
-                      >
-                        {{ o.libelle }}
-                      </mat-checkbox>
+                      <div class="option" [class.choisie]="estCoche(q, o.id!)">
+                        <mat-checkbox
+                          [checked]="estCoche(q, o.id!)"
+                          (change)="basculer(q, o.id!, $event.checked)"
+                        >
+                          {{ o.libelle }}
+                        </mat-checkbox>
+                      </div>
                     }
                   </div>
                 }
@@ -90,12 +115,14 @@
                 }
                 @case ('CURSEUR') {
                   <div class="curseur">
-                    <span class="borne">{{ q.curseur_min }}</span>
+                    <span class="borne">{{ q.curseur_min ?? 1 }}</span>
                     <mat-slider [min]="q.curseur_min || 1" [max]="q.curseur_max || 10" step="1" discrete>
                       <input matSliderThumb [(ngModel)]="reponses[q.id!]" />
                     </mat-slider>
-                    <span class="borne">{{ q.curseur_max }}</span>
-                    <span class="valeur">{{ reponses[q.id!] ?? '—' }}</span>
+                    <span class="borne">{{ q.curseur_max ?? 10 }}</span>
+                    <span class="valeur" [class.vide]="reponses[q.id!] == null">
+                      {{ reponses[q.id!] ?? 'À choisir' }}
+                    </span>
                   </div>
                 }
                 @case ('CLASSEMENT') {

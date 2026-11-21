@@ -20,3 +20,9 @@
   border-color: #c62828;
   color: #c62828;
 }
+
+.filtres { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 12px; }
+.filtres .f-recherche { flex: 1 1 260px; }
+.filtres .f-statut { flex: 0 0 170px; }
+.filtres .f-champ { flex: 0 0 210px; }
+.nb-rep { color: rgba(0, 0, 0, .5); font-size: 12px; margin-left: 4px; }

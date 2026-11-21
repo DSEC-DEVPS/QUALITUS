@@ -39,6 +39,7 @@ const {
   getSourcesQuestions,
   getQuestionsSource,
   reprendreQuestions,
+  repartirPoints,
   getRapportParticipants,
   getTentativeDetail,
   getRapportQuestionsRatees,
@@ -123,6 +124,8 @@ router.post("/quiz/question/add", auth, permission("QUIZ","CREER"), addQuestion)
 router.get("/quiz/:id/sources-questions", auth, permission("QUIZ","CREER"), getSourcesQuestions);
 router.get("/quiz/:id/sources-questions/:source", auth, permission("QUIZ","CREER"), getQuestionsSource);
 router.post("/quiz/:id/reprendre-questions", auth, permission("QUIZ","CREER"), reprendreQuestions);
+// Barème : répartit équitablement les 100 points entre les questions.
+router.post("/quiz/:id/repartir-points", auth, permission("QUIZ","MODIFIER"), repartirPoints);
 router.put("/quiz/question/:id", auth, permission("QUIZ","MODIFIER"), updateQuestion);
 router.delete("/quiz/question/:id", auth, permission("QUIZ","SUPPRIMER"), deleteQuestion);
 

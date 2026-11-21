@@ -158,6 +158,23 @@
           </div>
         </div>
 
+        @if (questions.length) {
+          <div class="bareme" [class.ok]="baremeConforme" [class.sur]="totalPoints > 100">
+            <mat-icon>{{ baremeConforme ? 'check_circle' : 'warning' }}</mat-icon>
+            <div class="bareme-txt">
+              <b>Barème : {{ totalPoints }} / 100 points</b>
+              @if (totalPoints < 100) { — il reste {{ 100 - totalPoints }} point(s) à répartir. }
+              @if (totalPoints > 100) { — {{ totalPoints - 100 }} point(s) de trop. }
+              @if (!baremeConforme) { <span class="bareme-bloc">Le quiz ne peut être ni activé, ni ouvert, ni diffusé tant que le total n'est pas de 100.</span> }
+            </div>
+            <div class="bareme-jauge"><div [style.width.%]="totalPoints > 100 ? 100 : totalPoints"></div></div>
+            @if (coteProprietaire && !baremeConforme) {
+              <button mat-stroked-button color="primary" class="btn-repartir" (click)="repartirPoints()">
+                <mat-icon>balance</mat-icon> Répartir équitablement
+              </button>
+            }
+          </div>
+        }
         @for (q of questions; track q.id; let i = $index) {
           <div class="question-ligne">
             <div class="q-num">Q{{ i + 1 }}</div>

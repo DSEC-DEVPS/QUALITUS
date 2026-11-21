@@ -14,16 +14,162 @@
   margin-top: 16px;
 }
 
-.q-titre {
-  font-weight: 500;
-  margin-bottom: 8px;
-}
-
-.choix {
+.titre-quiz {
   display: flex;
-  gap: 24px;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.titre-quiz .infos {
+  font-size: 0.82rem;
+  color: #6b6b6b;
 }
 
+/* ---- Cartes de question ---- */
+.question {
+  background: #fff;
+  border: 1px solid #e6e2dc;
+  border-left: 4px solid #e6e2dc;
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: border-color 0.15s ease;
+}
+.question.repondue {
+  border-left-color: #1b8a3a;
+}
+.q-tete {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.q-num {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fdeee0;
+  color: #c2560c;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.question.repondue .q-num {
+  background: #e3f4e8;
+  color: #1b8a3a;
+}
+.q-titre {
+  flex: 1 1 auto;
+  font-weight: 600;
+  font-size: 1rem;
+  padding-top: 4px;
+  color: #2b2b2b;
+}
+.q-ok {
+  color: #1b8a3a;
+  flex: 0 0 auto;
+}
+.q-aide {
+  margin: 6px 0 0 42px;
+  font-size: 0.8rem;
+  color: #8a8a8a;
+  font-style: italic;
+}
+
+/* ---- Options en tuiles cliquables ---- */
+.options {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0 42px;
+}
+.option {
+  display: flex;
+  align-items: center;
+  border: 1px solid #e0dcd6;
+  border-radius: 8px;
+  padding: 0 8px;
+  background: #fafafa;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.option:hover {
+  background: #fff7f0;
+  border-color: #f0b07a;
+}
+.option.choisie {
+  background: #fff1e5;
+  border-color: #f57c00;
+  box-shadow: inset 0 0 0 1px #f57c00;
+}
+.option mat-radio-button,
+.option mat-checkbox {
+  width: 100%;
+}
+/* Couleur orange de l'application (prioritaire sur le thème) */
+.option ::ng-deep .mat-mdc-radio-button,
+.option ::ng-deep .mat-mdc-checkbox {
+  --mdc-radio-selected-icon-color: #f57c00;
+  --mdc-radio-selected-focus-icon-color: #f57c00;
+  --mdc-radio-selected-hover-icon-color: #f57c00;
+  --mdc-radio-selected-pressed-icon-color: #f57c00;
+  --mat-radio-checked-ripple-color: #f57c00;
+  --mdc-checkbox-selected-icon-color: #f57c00;
+  --mdc-checkbox-selected-focus-icon-color: #f57c00;
+  --mdc-checkbox-selected-hover-icon-color: #f57c00;
+  --mdc-checkbox-selected-pressed-icon-color: #f57c00;
+  --mdc-checkbox-selected-focus-state-layer-color: #f57c00;
+}
+/* Toute la tuile est cliquable : le libellé occupe la largeur restante */
+.option ::ng-deep .mdc-form-field {
+  width: 100%;
+}
+.option ::ng-deep .mdc-form-field > label {
+  flex: 1 1 auto;
+  cursor: pointer;
+  padding: 10px 8px 10px 0;
+}
+
+/* ---- Pied figé d'envoi ---- */
+.pied-envoi {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  margin-top: 8px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+}
+.pied-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #555;
+  font-size: 0.9rem;
+}
+.pied-info .ok {
+  color: #1b8a3a;
+}
+
+@media (max-width: 600px) {
+  .options, .q-aide {
+    margin-left: 0;
+  }
+}
+
+/* Cartes opaques (le style global rend les cartes semi-transparentes) */
+.resultat.mat-mdc-card,
+.bloque.mat-mdc-card {
+  background-color: #fff !important;
+  border-radius: 10px;
+}
 .resultat.ok {
   border-left: 6px solid #1b8a3a;
 }
@@ -72,42 +218,58 @@
   color: #c62828;
 }
 
-/* Barre figee : chrono + progression (reste visible au defilement) */
+/* Barre figée : progression + chrono (reste visible au défilement) */
 .barre-chrono {
   position: sticky;
   top: 0;
   z-index: 20;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
+  gap: 20px;
   padding: 10px 16px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   background: #fff;
   border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
+  border-radius: 10px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
+.barre-chrono .progression {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.barre-chrono .progression-texte {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #444;
+  font-size: 0.9rem;
+}
+.barre-chrono mat-progress-bar {
+  border-radius: 4px;
+  --mdc-linear-progress-active-indicator-color: #f57c00;
+  --mdc-linear-progress-track-color: #fde3cc;
+  --mdc-linear-progress-track-height: 6px;
+  --mdc-linear-progress-active-indicator-height: 6px;
+}
 .barre-chrono .chrono {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 6px;
   font-weight: 700;
   font-size: 1.25rem;
-  color: #1976d2;
+  color: #c2560c;
   font-variant-numeric: tabular-nums;
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: #fff4ea;
 }
 .barre-chrono .chrono.urgent {
   color: #c62828;
+  background: #fdecea;
   animation: pulse 1s ease-in-out infinite;
-}
-.barre-chrono .progression {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #444;
-  font-weight: 500;
 }
 .barre-chrono mat-icon {
   font-size: 20px;

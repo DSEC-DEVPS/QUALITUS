@@ -7,6 +7,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { ScoreSeuilComponent } from '../../Evaluation/execution/score-seuil/score-seuil.component';
 import { ToastrService } from 'ngx-toastr';
 import { QuizService } from '@shared/services/quiz.service';
 import { QuestionAPasser, QuizAPasser, ResultatSoumission } from '../interfaces';
@@ -23,6 +25,8 @@ import { ChargementComponent } from '@shared/components/chargement/chargement.co
     MatRadioModule,
     MatCheckboxModule,
     MatProgressBarModule,
+    MatTooltipModule,
+    ScoreSeuilComponent,
   ],
   templateUrl: './participer-quiz.component.html',
   styleUrl: './participer-quiz.component.scss',
@@ -81,8 +85,9 @@ export class ParticiperQuizComponent implements OnInit, OnDestroy {
           }
         }
       },
-      error: () => {
-        this.toast.error('Quiz introuvable');
+      error: e => {
+        // 403 / 404 / 500 : la page d'erreur affiche déjà le motif (intercepteur).
+        if (![403, 404, 500].includes(e?.status)) this.toast.error('Quiz introuvable');
         this.chargement = false;
       },
     });
@@ -121,6 +126,12 @@ export class ParticiperQuizComponent implements OnInit, OnDestroy {
       return 0;
     }
     return this.quiz.questions.filter(q => (this.choix[q.id] || []).length > 0).length;
+  }
+  get pourcentage(): number {
+    return this.totalQuestions ? Math.round((100 * this.nbRepondues) / this.totalQuestions) : 0;
+  }
+  estRepondue(q: QuestionAPasser): boolean {
+    return (this.choix[q.id] || []).length > 0;
   }
   get totalQuestions(): number {
     return this.quiz ? this.quiz.questions.length : 0;
@@ -178,7 +189,7 @@ export class ParticiperQuizComponent implements OnInit, OnDestroy {
         this.resultat = r;
         this.envoiEnCours = false;
         (r.nouveaux_badges || []).forEach(b =>
-          this.toast.success(`Badge debloque : ${b.nom}`, 'Felicitations !')
+          this.toast.success(`Badge débloqué : ${b.nom}`, 'Félicitations !')
         );
         window.scrollTo({ top: 0, behavior: 'smooth' });
       },

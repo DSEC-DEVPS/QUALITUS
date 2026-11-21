@@ -58,16 +58,19 @@ export class ErrorInterceptor implements HttpInterceptor {
       return throwError(() => error);
     }
 
-    // 403 / 404 / 500 : le message est toujours affiché à l'utilisateur.
-    // - Chargement de page (GET) : on garde la redirection existante.
-    // - Action (POST / PUT / PATCH / DELETE) : l'utilisateur reste sur sa page.
+    // 403 / 404 / 500 : le message est toujours montré à l'utilisateur.
+    // - Chargement de page (GET) : page d'erreur, qui affiche le motif renvoyé par
+    //   le serveur (pas de notification en plus : un seul message).
+    // - Action (POST / PUT / PATCH / DELETE) : l'utilisateur reste sur sa page, notification.
     if (this.errorPages.includes(error.status)) {
       console.error('ERROR', error);
-      this.toast.error(this.getMessage(error));
       if (req.method === 'GET') {
         this.router.navigateByUrl(`/${error.status}`, {
           skipLocationChange: true,
+          state: { motif: this.getMessage(error) },
         });
+      } else {
+        this.toast.error(this.getMessage(error));
       }
     } else {
       console.error('ERROR', error);

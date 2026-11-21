@@ -103,8 +103,11 @@ export class PermissionsService {
     // Permission synthétique de RÔLE : superviseur. Certains sous-menus (Quiz en
     // échecs / Quiz en retest) sont réservés aux superviseurs, quel que soit leur
     // niveau de permissions. L'admin (super-utilisateur) y a également accès.
-    this.superviseur = this.admin || ['R_SUP', 'R_SUPE'].includes((r.role || '').toUpperCase());
+    this.superviseur = this.admin || (r.role || '').toUpperCase() === 'R_SUP';
     if (this.superviseur) synth.add('est_superviseur');
+    // Permission synthétique : administrateur (R_ADMI). Sert à masquer les menus
+    // qui font doublon pour lui (ex. « Gérer les comptes », couvert par Utilisateurs).
+    if (this.admin) synth.add('est_admin');
     // Conserve les permissions "legacy" (rôles menu.json) et ajoute les fines + modules + synthétiques.
     const legacy = ['canAdd', 'canDelete', 'canEdit', 'canRead'];
     this.ngxPerms.addPermission([...legacy, ...this.set, ...this.modules, ...synth]);

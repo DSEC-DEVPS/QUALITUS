@@ -13,19 +13,20 @@ import { RapportsComponent } from './rapports/rapports.component';
 import { RetestsComponent } from './retests/retests.component';
 
 export const routes: Routes = [
-  // Flux apprenant legacy (inchange)
-  { path: 'quiz-en-echecs', component: QuizEnEchecsComponent },
-  { path: 'Quiz-en-reset', component: QuizEnResetComponent },
-  // Nouveau generateur de quiz (creation / gestion)
-  { path: 'gestion', component: ListeQuizComponent },
-  // Création : quiz.creer (accès direct à l'URL compris)
+  // Chaque écran exige la même permission que son entrée de menu (accès direct à
+  // l'URL compris) ; sans elle, l'utilisateur est renvoyé vers sa page d'arrivée.
+  // Flux Baseco (quiz de fiche)
+  { path: 'quiz-en-echecs', component: QuizEnEchecsComponent, canMatch: [canMatchPermission('quiz.baseco')] },
+  { path: 'Quiz-en-reset', component: QuizEnResetComponent, canMatch: [canMatchPermission('quiz.baseco')] },
+  // Générateur de quiz (création / gestion)
+  { path: 'gestion', component: ListeQuizComponent, canMatch: [canMatchPermission('quiz.lire')] },
   { path: 'creer', component: EditeurQuizComponent, canMatch: [canMatchPermission('quiz.creer')] },
-  { path: 'editer/:id', component: EditeurQuizComponent },
-  { path: 'detail/:id', component: DetailQuizComponent },
-  // Participation (Phase 2)
-  { path: 'participer', component: ParticiperListeComponent },
-  { path: 'participer/:id', component: ParticiperQuizComponent },
-  { path: 'mes-scores', component: MesScoresComponent },
+  { path: 'editer/:id', component: EditeurQuizComponent, canMatch: [canMatchPermission('quiz.modifier')] },
+  { path: 'detail/:id', component: DetailQuizComponent, canMatch: [canMatchPermission('quiz.lire')] },
+  // Participation
+  { path: 'participer', component: ParticiperListeComponent, canMatch: [canMatchPermission('quiz.participer')] },
+  { path: 'participer/:id', component: ParticiperQuizComponent, canMatch: [canMatchPermission('quiz.participer')] },
+  { path: 'mes-scores', component: MesScoresComponent, canMatch: [canMatchPermission('quiz.participer')] },
   // Phase 3 : nouveautes (notifications) + rapports
   // Nouveautés : quiz.participer ou quiz.lire (accès direct à l'URL compris)
   {
@@ -33,7 +34,7 @@ export const routes: Routes = [
     component: NouveautesComponent,
     canMatch: [canMatchPermission(['quiz.participer', 'quiz.lire'])],
   },
-  { path: 'rapports', component: RapportsComponent },
+  { path: 'rapports', component: RapportsComponent, canMatch: [canMatchPermission('quiz.lire')] },
   // Superviseur : autorisation des retests
-  { path: 'retests', component: RetestsComponent },
+  { path: 'retests', component: RetestsComponent, canMatch: [canMatchPermission('quiz.modifier')] },
 ];

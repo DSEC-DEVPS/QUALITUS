@@ -48,6 +48,8 @@ export interface Sondage {
   dateCreation?: string;
   dateModification?: string;
   nb_questions?: number;
+  nb_reponses?: number;
+  derniere_reponse?: string | null;
   questions?: QuestionSondage[];
 }
 
@@ -71,12 +73,41 @@ export interface QuestionRapport {
   libelle: string;
   curseur_min?: number | null;
   curseur_max?: number | null;
+  /** Passations terminées ayant répondu à cette question. */
+  nb_repondants?: number;
   resultat: any;
+}
+/** Ciblé interne n'ayant pas encore terminé le sondage. */
+export interface NonRepondant {
+  id: number;
+  nom: string;
+  prenom: string;
+  nom_utilisateur?: string;
+  email?: string | null;
+  site?: string | null;
+  fonction?: string | null;
+  date_envoi_email?: string | null;
+  date_envoi_sms?: string | null;
+}
+/** Participation de la cible (« touchés » = ciblés internes ayant terminé). */
+export interface ParticipationSondage {
+  cibles: number;
+  internes: number;
+  externes: number;
+  touches: number;
+  /** touchés / ciblés internes, en % (null sans cible interne). */
+  taux: number | null;
+  /** Réponses via le lien public, non rattachées à un compte. */
+  anonymes: number;
+  /** Réponses d'utilisateurs connectés absents de la cible. */
+  hors_cible: number;
+  non_repondants: NonRepondant[];
 }
 export interface RapportSondage {
   id: number;
   nom: string;
   nb_passations: number;
+  participation?: ParticipationSondage;
   questions: QuestionRapport[];
 }
 

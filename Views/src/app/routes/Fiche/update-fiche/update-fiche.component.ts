@@ -593,7 +593,7 @@ export class UpdateFicheComponent implements OnInit {
         if (
           !(
             role.Role_Associe === 'R_ADMI' ||
-            role.Role_Associe === 'R_SUPE' ||
+            role.Role_Associe === 'R_SUP' ||
             role.Role_Associe === 'R_GB'
           )
         ) {
@@ -609,7 +609,7 @@ export class UpdateFicheComponent implements OnInit {
         if (
           !(
             role.Role_Associe === 'R_ADMI' ||
-            role.Role_Associe === 'R_SUPE' ||
+            role.Role_Associe === 'R_SUP' ||
             role.Role_Associe === 'R_GB'
           )
         ) {
@@ -625,7 +625,7 @@ export class UpdateFicheComponent implements OnInit {
         if (
           !(
             role.Role_Associe === 'R_ADMI' ||
-            role.Role_Associe === 'R_SUPE' ||
+            role.Role_Associe === 'R_SUP' ||
             role.Role_Associe === 'R_GB'
           )
         ) {

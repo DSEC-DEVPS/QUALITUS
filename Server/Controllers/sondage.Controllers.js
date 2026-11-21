@@ -104,14 +104,37 @@ const getAllSondage = async (req, res) => {
   try {
     const role = await getRole(userId);
     const restreint = role !== "R_ADMI";
+    // Filtre de période (facultatif) : ?du=AAAA-MM-JJ&au=AAAA-MM-JJ (bornes incluses)
+    // sur la date choisie par l'utilisateur : ?champ=creation (défaut) | modification
+    // | reponse (sondages ayant reçu au moins une réponse terminée dans la période).
+    const ymd = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || "")) ? String(v) : null);
+    const du = ymd(req.query.du), au = ymd(req.query.au);
+    const champ = ["creation", "modification", "reponse"].includes(req.query.champ) ? req.query.champ : "creation";
+    const where = [], args = [];
+    if (restreint) { where.push("s.id_createur = ?"); args.push(userId); }
+    if (du || au) {
+      if (champ === "reponse") {
+        const c = ["p.id_Sondage = s.id", "p.termine = 1"];
+        if (du) { c.push("COALESCE(p.date_fin, p.date_debut) >= ?"); args.push(du); }
+        if (au) { c.push("COALESCE(p.date_fin, p.date_debut) < DATE_ADD(?, INTERVAL 1 DAY)"); args.push(au); }
+        where.push(`EXISTS (SELECT 1 FROM B_SD_PASSATION p WHERE ${c.join(" AND ")})`);
+      } else {
+        // une modification jamais faite compte comme la date de création
+        const col = champ === "modification" ? "COALESCE(s.dateModification, s.dateCreation)" : "s.dateCreation";
+        if (du) { where.push(`${col} >= ?`); args.push(du); }
+        if (au) { where.push(`${col} < DATE_ADD(?, INTERVAL 1 DAY)`); args.push(au); }
+      }
+    }
     const [rows] = await db.query(
       `SELECT s.id, s.nom, s.langue, s.statut, s.bouton_retour, s.id_createur,
               s.dateCreation, s.dateModification,
-              (SELECT COUNT(*) FROM B_SD_QUESTION q WHERE q.id_Sondage = s.id) AS nb_questions
+              (SELECT COUNT(*) FROM B_SD_QUESTION q WHERE q.id_Sondage = s.id) AS nb_questions,
+              (SELECT COUNT(*) FROM B_SD_PASSATION p WHERE p.id_Sondage = s.id AND p.termine = 1) AS nb_reponses,
+              (SELECT MAX(COALESCE(p.date_fin, p.date_debut)) FROM B_SD_PASSATION p WHERE p.id_Sondage = s.id AND p.termine = 1) AS derniere_reponse
        FROM B_SD_SONDAGE s
-       ${restreint ? "WHERE s.id_createur = ?" : ""}
+       ${where.length ? "WHERE " + where.join(" AND ") : ""}
        ORDER BY s.id DESC`,
-      restreint ? [userId] : []
+      args
     );
     return res.status(200).send(rows);
   } catch (error) {
@@ -127,7 +150,7 @@ const getOneSondage = async (req, res) => {
     const [rows] = await db.query(`SELECT * FROM B_SD_SONDAGE WHERE id = ?`, [id]);
     if (!rows.length) return res.status(404).json({ message: "Sondage introuvable" });
     if (!(await peutGerer(userId, id))) {
-      return res.status(403).json({ message: "Acces non autorise a ce sondage" });
+      return res.status(403).json({ message: "Accès non autorisé à ce sondage" });
     }
     const sondage = rows[0];
     sondage.questions = await chargerQuestionsAvecOptions(id);
@@ -159,7 +182,7 @@ const addSondage = async (req, res) => {
         now,
       ]
     );
-    return res.status(201).json({ message: "Sondage cree avec succes", id: r.insertId });
+    return res.status(201).json({ message: "Sondage créé avec succès", id: r.insertId });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Error request" });
@@ -174,13 +197,13 @@ const updateSondage = async (req, res) => {
   }
   try {
     if (!(await peutGerer(req.auth ? req.auth.userId : null, id))) {
-      return res.status(403).json({ message: "Acces non autorise a ce sondage" });
+      return res.status(403).json({ message: "Accès non autorisé à ce sondage" });
     }
     await db.query(
       `UPDATE B_SD_SONDAGE SET nom=?, langue=?, statut=?, bouton_retour=?, dateModification=? WHERE id=?`,
       [String(nom).trim(), langue || "Francais", statut || "ENCOURS", bouton_retour ? 1 : 0, new Date(), id]
     );
-    return res.status(200).json({ message: "Sondage modifie" });
+    return res.status(200).json({ message: "Sondage modifié" });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Error request" });
@@ -195,14 +218,14 @@ const changerStatut = async (req, res) => {
   }
   try {
     if (!(await peutGerer(req.auth ? req.auth.userId : null, id))) {
-      return res.status(403).json({ message: "Acces non autorise a ce sondage" });
+      return res.status(403).json({ message: "Accès non autorisé à ce sondage" });
     }
     await db.query(`UPDATE B_SD_SONDAGE SET statut=?, dateModification=? WHERE id=?`, [
       statut,
       new Date(),
       id,
     ]);
-    return res.status(200).json({ message: "Statut mis a jour" });
+    return res.status(200).json({ message: "Statut mis à jour" });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Error request" });
@@ -213,10 +236,10 @@ const deleteSondage = async (req, res) => {
   const { id } = req.params;
   try {
     if (!(await peutGerer(req.auth ? req.auth.userId : null, id))) {
-      return res.status(403).json({ message: "Acces non autorise a ce sondage" });
+      return res.status(403).json({ message: "Accès non autorisé à ce sondage" });
     }
     await db.query(`DELETE FROM B_SD_SONDAGE WHERE id=?`, [id]); // cascade questions + options
-    return res.status(200).json({ message: "Sondage supprime" });
+    return res.status(200).json({ message: "Sondage supprimé" });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Error request" });
@@ -236,7 +259,7 @@ const dupliquerSondage = async (req, res) => {
     }
     if (!(await peutGerer(userId, id))) {
       connection.release();
-      return res.status(403).json({ message: "Acces non autorise a ce sondage" });
+      return res.status(403).json({ message: "Accès non autorisé à ce sondage" });
     }
     const s = rows[0];
     await connection.beginTransaction();
@@ -289,7 +312,7 @@ const addQuestion = async (req, res) => {
   try {
     if (!(await peutGerer(req.auth ? req.auth.userId : null, id_Sondage))) {
       connection.release();
-      return res.status(403).json({ message: "Acces non autorise a ce sondage" });
+      return res.status(403).json({ message: "Accès non autorisé à ce sondage" });
     }
     await connection.beginTransaction();
     const [r] = await connection.query(
@@ -348,7 +371,7 @@ const updateQuestion = async (req, res) => {
     }
     if (!(await peutGerer(req.auth ? req.auth.userId : null, qr[0].id_Sondage))) {
       connection.release();
-      return res.status(403).json({ message: "Acces non autorise a ce sondage" });
+      return res.status(403).json({ message: "Accès non autorisé à ce sondage" });
     }
     await connection.beginTransaction();
     await connection.query(
@@ -379,7 +402,7 @@ const updateQuestion = async (req, res) => {
     }
     await enregistrerConditions(connection, id, req.body.conditions);
     await connection.commit();
-    return res.status(200).json({ message: "Question modifiee" });
+    return res.status(200).json({ message: "Question modifiée" });
   } catch (error) {
     try { await connection.rollback(); } catch (e) {}
     console.log(error);
@@ -395,10 +418,10 @@ const deleteQuestion = async (req, res) => {
     const [qr] = await db.query(`SELECT id_Sondage FROM B_SD_QUESTION WHERE id=?`, [id]);
     if (!qr.length) return res.status(404).json({ message: "Question introuvable" });
     if (!(await peutGerer(req.auth ? req.auth.userId : null, qr[0].id_Sondage))) {
-      return res.status(403).json({ message: "Acces non autorise a ce sondage" });
+      return res.status(403).json({ message: "Accès non autorisé à ce sondage" });
     }
     await db.query(`DELETE FROM B_SD_QUESTION WHERE id=?`, [id]); // cascade options
-    return res.status(200).json({ message: "Question supprimee" });
+    return res.status(200).json({ message: "Question supprimée" });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Error request" });
@@ -429,7 +452,7 @@ const getSondagePublic = async (req, res) => {
 const soumettreSondagePublic = async (req, res) => {
   const { token } = req.params;
   const { reponses } = req.body;
-  if (!Array.isArray(reponses)) return res.status(403).json({ message: "Reponses invalides" });
+  if (!Array.isArray(reponses)) return res.status(403).json({ message: "Réponses invalides" });
   const connection = await db.getConnection();
   try {
     const [s] = await connection.query("SELECT id, statut FROM B_SD_SONDAGE WHERE token=?", [token]);
@@ -479,7 +502,7 @@ const soumettreSondagePublic = async (req, res) => {
       }
     }
     await connection.commit();
-    return res.status(201).json({ message: "Merci, vos reponses ont ete enregistrees", id: pid });
+    return res.status(201).json({ message: "Merci, vos réponses ont été enregistrées", id: pid });
   } catch (error) {
     try { await connection.rollback(); } catch (e) {}
     console.log(error);
@@ -523,7 +546,7 @@ const getCibles = async (req, res) => {
   const { id } = req.params;
   try {
     if (!(await peutGerer(req.auth ? req.auth.userId : null, id))) {
-      return res.status(403).json({ message: "Acces non autorise a ce sondage" });
+      return res.status(403).json({ message: "Accès non autorisé à ce sondage" });
     }
     const [rows] = await db.query(
       "SELECT id, id_Sondage, id_UTILISATEUR, nom, prenom, email, telephone, date_envoi_email, date_envoi_sms FROM B_SD_CIBLE WHERE id_Sondage=? ORDER BY nom, prenom",
@@ -537,11 +560,11 @@ const addCibleUtilisateurs = async (req, res) => {
   const { id } = req.params;
   const { id_utilisateurs } = req.body;
   if (!Array.isArray(id_utilisateurs) || !id_utilisateurs.length) {
-    return res.status(403).json({ message: "Aucun utilisateur selectionne" });
+    return res.status(403).json({ message: "Aucun utilisateur sélectionné" });
   }
   try {
     const userId = req.auth ? req.auth.userId : null;
-    if (!(await peutGerer(userId, id))) return res.status(403).json({ message: "Acces non autorise a ce sondage" });
+    if (!(await peutGerer(userId, id))) return res.status(403).json({ message: "Accès non autorisé à ce sondage" });
     if ((await statutSondage(id)) === "ACTIF") {
       return res.status(403).json({ message: "Sondage actif : desactivez-le pour modifier la cible." });
     }
@@ -550,7 +573,7 @@ const addCibleUtilisateurs = async (req, res) => {
     );
     const deja = new Set(ex.map((x) => x.id_UTILISATEUR));
     const aAjouter = id_utilisateurs.filter((u) => !deja.has(u));
-    if (!aAjouter.length) return res.status(200).json({ message: "Deja dans la cible", nb: 0 });
+    if (!aAjouter.length) return res.status(200).json({ message: "Déjà dans la cible", nb: 0 });
     const [users] = await db.query(
       "SELECT id, nom, prenom, email, telephone FROM B_UTILISATEUR WHERE id IN (" + aAjouter.map(() => "?").join(",") + ")",
       aAjouter
@@ -571,7 +594,7 @@ const importCibles = async (req, res) => {
   if (!req.file) return res.status(403).json({ message: "Aucun fichier Excel fourni" });
   try {
     const userId = req.auth ? req.auth.userId : null;
-    if (!(await peutGerer(userId, id))) return res.status(403).json({ message: "Acces non autorise a ce sondage" });
+    if (!(await peutGerer(userId, id))) return res.status(403).json({ message: "Accès non autorisé à ce sondage" });
     if ((await statutSondage(id)) === "ACTIF") {
       return res.status(403).json({ message: "Sondage actif : desactivez-le pour modifier la cible." });
     }
@@ -594,8 +617,8 @@ const importCibles = async (req, res) => {
       );
       nb++;
     }
-    return res.status(201).json({ message: "Import reussi : " + nb + " destinataire(s)", nb });
-  } catch (error) { console.log(error); res.status(500).json({ message: "Echec de l'import Excel" }); }
+    return res.status(201).json({ message: "Import réussi : " + nb + " destinataire(s)", nb });
+  } catch (error) { console.log(error); res.status(500).json({ message: "Échec de l'import Excel" }); }
 };
 
 const deleteCible = async (req, res) => {
@@ -604,7 +627,7 @@ const deleteCible = async (req, res) => {
     const [r] = await db.query("SELECT id_Sondage FROM B_SD_CIBLE WHERE id=?", [cibleId]);
     if (!r.length) return res.status(404).json({ message: "Introuvable" });
     const userId = req.auth ? req.auth.userId : null;
-    if (!(await peutGerer(userId, r[0].id_Sondage))) return res.status(403).json({ message: "Acces non autorise" });
+    if (!(await peutGerer(userId, r[0].id_Sondage))) return res.status(403).json({ message: "Accès non autorisé" });
     if ((await statutSondage(r[0].id_Sondage)) === "ACTIF") {
       return res.status(403).json({ message: "Sondage actif : desactivez-le pour modifier la cible." });
     }
@@ -620,7 +643,7 @@ const diffuser = async (req, res) => {
   const canaux = Array.isArray(req.body && req.body.canaux) ? req.body.canaux : [];
   try {
     const userId = req.auth ? req.auth.userId : null;
-    if (!(await peutGerer(userId, id))) return res.status(403).json({ message: "Acces non autorise a ce sondage" });
+    if (!(await peutGerer(userId, id))) return res.status(403).json({ message: "Accès non autorisé à ce sondage" });
     const [srow] = await db.query("SELECT token, statut FROM B_SD_SONDAGE WHERE id=?", [id]);
     if (!srow.length) return res.status(404).json({ message: "Sondage introuvable" });
     if (srow[0].statut !== "ACTIF") {
@@ -635,7 +658,7 @@ const diffuser = async (req, res) => {
       if (canaux.includes("sms") && c.telephone) { await db.query("UPDATE B_SD_CIBLE SET date_envoi_sms=? WHERE id=?", [now, c.id]); nbSms++; }
     }
     return res.status(200).json({
-      message: "Diffusion enregistree : " + nbEmail + " email(s), " + nbSms + " SMS",
+      message: "Diffusion enregistrée : " + nbEmail + " email(s), " + nbSms + " SMS",
       nbEmail, nbSms, token: srow[0].token,
     });
   } catch (error) { console.log(error); res.status(500).json({ message: "Error request" }); }
@@ -646,7 +669,7 @@ const getRapport = async (req, res) => {
   const { id } = req.params;
   try {
     if (!(await peutGerer(req.auth ? req.auth.userId : null, id))) {
-      return res.status(403).json({ message: "Acces non autorise a ce sondage" });
+      return res.status(403).json({ message: "Accès non autorisé à ce sondage" });
     }
     const [srow] = await db.query("SELECT id, nom FROM B_SD_SONDAGE WHERE id=?", [id]);
     if (!srow.length) return res.status(404).json({ message: "Sondage introuvable" });
@@ -663,7 +686,7 @@ const getRapport = async (req, res) => {
       if (q.type === "CHOIX_UNIQUE" || q.type === "CHOIX_MULTIPLE") {
         const [opts] = await db.query(
           `SELECT o.id, o.libelle,
-                  (SELECT COUNT(*) FROM B_SD_REPONSE r WHERE r.id_Question=o.id_Question AND r.id_Option=o.id) AS nb
+                  (SELECT COUNT(*) FROM B_SD_REPONSE r JOIN B_SD_PASSATION pt ON pt.id = r.id_Passation AND pt.termine = 1 WHERE r.id_Question=o.id_Question AND r.id_Option=o.id) AS nb
            FROM B_SD_OPTION o WHERE o.id_Question=? ORDER BY o.ordre, o.id`,
           [q.id]
         );
@@ -673,7 +696,8 @@ const getRapport = async (req, res) => {
         const [opts] = await db.query(
           `SELECT o.id, o.libelle, COUNT(r.id) AS nb, AVG(r.ordre) AS ordre_moyen
            FROM B_SD_OPTION o
-           LEFT JOIN B_SD_REPONSE r ON r.id_Option=o.id AND r.id_Question=o.id_Question
+           LEFT JOIN (B_SD_REPONSE r JOIN B_SD_PASSATION pt ON pt.id = r.id_Passation AND pt.termine = 1)
+                  ON r.id_Option=o.id AND r.id_Question=o.id_Question
            WHERE o.id_Question=? GROUP BY o.id, o.libelle`,
           [q.id]
         );
@@ -683,7 +707,7 @@ const getRapport = async (req, res) => {
         q.resultat = { options: opts };
       } else if (q.type === "CURSEUR") {
         const [st] = await db.query(
-          "SELECT COUNT(*) AS nb, AVG(valeur_num) AS moyenne, MIN(valeur_num) AS mini, MAX(valeur_num) AS maxi FROM B_SD_REPONSE WHERE id_Question=?",
+          "SELECT COUNT(*) AS nb, AVG(r.valeur_num) AS moyenne, MIN(r.valeur_num) AS mini, MAX(r.valeur_num) AS maxi FROM B_SD_REPONSE r JOIN B_SD_PASSATION pt ON pt.id = r.id_Passation AND pt.termine = 1 WHERE r.id_Question=?",
           [q.id]
         );
         q.resultat = {
@@ -694,7 +718,7 @@ const getRapport = async (req, res) => {
         };
       } else if (q.type === "OUVERTE") {
         const [txts] = await db.query(
-          "SELECT valeur_texte FROM B_SD_REPONSE WHERE id_Question=? AND valeur_texte IS NOT NULL AND valeur_texte<>'' ORDER BY id DESC",
+          "SELECT r.valeur_texte FROM B_SD_REPONSE r JOIN B_SD_PASSATION pt ON pt.id = r.id_Passation AND pt.termine = 1 WHERE r.id_Question=? AND r.valeur_texte IS NOT NULL AND r.valeur_texte<>'' ORDER BY r.id DESC",
           [q.id]
         );
         q.resultat = { reponses: txts.map((t) => t.valeur_texte), nb: txts.length };
@@ -702,7 +726,62 @@ const getRapport = async (req, res) => {
         q.resultat = null; // INFO
       }
     }
-    return res.status(200).json({ id: srow[0].id, nom: srow[0].nom, nb_passations, questions });
+    // Nombre de répondants par question (passations terminées ayant au moins une réponse).
+    const [parQ] = await db.query(
+      `SELECT r.id_Question, COUNT(DISTINCT r.id_Passation) AS n
+         FROM B_SD_REPONSE r JOIN B_SD_PASSATION p ON p.id = r.id_Passation AND p.termine = 1
+        WHERE p.id_Sondage = ? GROUP BY r.id_Question`, [id]
+    );
+    const nbParQ = new Map(parQ.map((x) => [x.id_Question, Number(x.n)]));
+    for (const q of questions) q.nb_repondants = nbParQ.get(q.id) || 0;
+
+    // ---- Participation de la cible ----
+    // « Touchés » = ciblés INTERNES ayant terminé le sondage (réponse rattachée à
+    // leur compte). Les ciblés externes répondent par le lien public commun,
+    // anonyme : leurs réponses ne peuvent pas leur être rattachées.
+    const [[cb]] = await db.query(
+      `SELECT COUNT(*) AS total,
+              COUNT(DISTINCT CASE WHEN id_UTILISATEUR IS NOT NULL THEN id_UTILISATEUR END) AS internes,
+              SUM(id_UTILISATEUR IS NULL) AS externes
+         FROM B_SD_CIBLE WHERE id_Sondage = ?`, [id]
+    );
+    const [[tc]] = await db.query(
+      `SELECT COUNT(DISTINCT c.id_UTILISATEUR) AS touches
+         FROM B_SD_CIBLE c
+        WHERE c.id_Sondage = ? AND c.id_UTILISATEUR IS NOT NULL
+          AND EXISTS (SELECT 1 FROM B_SD_PASSATION p WHERE p.id_Sondage = c.id_Sondage AND p.id_UTILISATEUR = c.id_UTILISATEUR AND p.termine = 1)`, [id]
+    );
+    const [[hc]] = await db.query(
+      `SELECT SUM(p.id_UTILISATEUR IS NULL) AS anonymes,
+              SUM(p.id_UTILISATEUR IS NOT NULL AND NOT EXISTS (
+                    SELECT 1 FROM B_SD_CIBLE c WHERE c.id_Sondage = p.id_Sondage AND c.id_UTILISATEUR = p.id_UTILISATEUR)) AS hors_cible
+         FROM B_SD_PASSATION p WHERE p.id_Sondage = ? AND p.termine = 1`, [id]
+    );
+    const [nonRep] = await db.query(
+      `SELECT u.id, u.nom, u.prenom, u.nom_utilisateur, u.email, si.nom AS site, f.nom AS fonction,
+              MAX(c.date_envoi_email) AS date_envoi_email, MAX(c.date_envoi_sms) AS date_envoi_sms
+         FROM B_SD_CIBLE c
+         JOIN b_utilisateur u ON u.id = c.id_UTILISATEUR
+         LEFT JOIN b_site si ON si.id = u.id_Site
+         LEFT JOIN b_fonction f ON f.id = u.id_Fonction
+        WHERE c.id_Sondage = ?
+          AND NOT EXISTS (SELECT 1 FROM B_SD_PASSATION p WHERE p.id_Sondage = c.id_Sondage AND p.id_UTILISATEUR = c.id_UTILISATEUR AND p.termine = 1)
+        GROUP BY u.id, u.nom, u.prenom, u.nom_utilisateur, u.email, si.nom, f.nom
+        ORDER BY u.nom, u.prenom`, [id]
+    );
+    const internes = Number(cb.internes || 0);
+    const touches = Number(tc.touches || 0);
+    const participation = {
+      cibles: Number(cb.total || 0) ? internes + Number(cb.externes || 0) : 0,
+      internes,
+      externes: Number(cb.externes || 0),
+      touches,
+      taux: internes ? Math.round((touches / internes) * 1000) / 10 : null,
+      anonymes: Number(hc.anonymes || 0),
+      hors_cible: Number(hc.hors_cible || 0),
+      non_repondants: nonRep,
+    };
+    return res.status(200).json({ id: srow[0].id, nom: srow[0].nom, nb_passations, participation, questions });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Error request" });
@@ -751,16 +830,16 @@ const soumettreSondageObligatoire = async (req, res) => {
   const { id } = req.params;
   const userId = req.auth ? req.auth.userId : null;
   const { reponses } = req.body;
-  if (!userId || !Array.isArray(reponses)) return res.status(403).json({ message: "Requete invalide" });
+  if (!userId || !Array.isArray(reponses)) return res.status(403).json({ message: "Requête invalide" });
   const connection = await db.getConnection();
   try {
     const [rows] = await connection.query("SELECT statut FROM B_SD_SONDAGE WHERE id=?", [id]);
     if (!rows.length) { connection.release(); return res.status(404).json({ message: "Sondage introuvable" }); }
     if (rows[0].statut !== "ACTIF") { connection.release(); return res.status(403).json({ message: "Sondage indisponible" }); }
     const [c] = await connection.query("SELECT 1 FROM B_SD_CIBLE WHERE id_Sondage=? AND id_UTILISATEUR=? LIMIT 1", [id, userId]);
-    if (!c.length) { connection.release(); return res.status(403).json({ message: "Vous n'etes pas cible par ce sondage" }); }
+    if (!c.length) { connection.release(); return res.status(403).json({ message: "Vous n'êtes pas ciblé par ce sondage" }); }
     const [dp] = await connection.query("SELECT 1 FROM B_SD_PASSATION WHERE id_Sondage=? AND id_UTILISATEUR=? AND termine=1 LIMIT 1", [id, userId]);
-    if (dp.length) { connection.release(); return res.status(200).json({ message: "Deja repondu" }); }
+    if (dp.length) { connection.release(); return res.status(200).json({ message: "Déjà répondu" }); }
     const now = new Date();
     await connection.beginTransaction();
     const [p] = await connection.query(
@@ -769,7 +848,7 @@ const soumettreSondageObligatoire = async (req, res) => {
     );
     await insererReponses(connection, p.insertId, reponses);
     await connection.commit();
-    return res.status(201).json({ message: "Merci, vos reponses ont ete enregistrees", id: p.insertId });
+    return res.status(201).json({ message: "Merci, vos réponses ont été enregistrées", id: p.insertId });
   } catch (error) {
     try { await connection.rollback(); } catch (e) {}
     console.log(error);

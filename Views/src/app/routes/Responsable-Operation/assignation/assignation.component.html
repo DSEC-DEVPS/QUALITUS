@@ -1,56 +1,95 @@
-<mat-card>
-  <mat-card-header></mat-card-header>
-  <mat-card-content>
-    <div class="container">
-      <div>
-        <form>
-          <div class="login-agent-group">
-            <mat-label for="fname">Login Agent</mat-label>
-            <mat-chip-grid #chipGrid aria-label="Fruit selection">
-              @for (fruit of fruits(); track $index) {
-                <mat-chip-row (removed)="remove(fruit)">
-                  {{ fruit }}
-                  <button matChipRemove [attr.aria-label]="'remove ' + fruit">
-                    <mat-icon>cancel</mat-icon>
-                  </button>
-                </mat-chip-row>
-              }
-            </mat-chip-grid>
-            <input
-              name="currentFruit"
-              placeholder="New Fruit..."
-              #fruitInput
-              [(ngModel)]="currentFruit"
-              [matChipInputFor]="chipGrid"
-              [matAutocomplete]="auto"
-              [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
-              (matChipInputTokenEnd)="add($event)"
-              type="text"
-              id="fname"
-              placeholder="Login.."
-            />
-            <mat-autocomplete
-              #auto="matAutocomplete"
-              (optionSelected)="selected($event); fruitInput.value = ''"
-            >
-              @for (fruit of filteredFruits(); track fruit) {
-                <mat-option [value]="fruit">{{ fruit }}</mat-option>
-              }
-            </mat-autocomplete>
-          </div>
-
-          <div class="login-sup-group">
-            <label for="country">Login Sup</label>
-            <select id="country" name="country" [(ngModel)]="id_SUPERVISEUR" name="id_SUPERVISEUR">
-              <option *ngFor="let item of allSuperviseur" [ngValue]="item.id">
-                {{ item.nom_utilisateur }}
-              </option>
-            </select>
-          </div>
-
-          <button mat-button (click)="onSubmit()">Assigner</button>
-        </form>
-      </div>
+<div class="assign-page">
+  <div class="assign-entete">
+    <mat-icon>group_add</mat-icon>
+    <div>
+      <h2>Assignation des agents</h2>
+      <p>Rattachez un ou plusieurs agents de votre site à un superviseur. Un agent déjà rattaché change de superviseur.</p>
     </div>
-  </mat-card-content>
-</mat-card>
+  </div>
+
+  <div class="assign-grille">
+    <section class="carte">
+      <h3><span class="etape">1</span> Choisir les agents</h3>
+      <mat-form-field appearance="outline" class="pleine" subscriptSizing="dynamic">
+        <mat-label>Rechercher un agent (nom, prénom, login)</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput #saisie [(ngModel)]="recherche" [matAutocomplete]="auto" name="recherche" />
+        <mat-autocomplete #auto="matAutocomplete" (optionSelected)="ajouter($event.option.value); saisie.value = ''; recherche = ''">
+          @for (a of suggestions; track a.id) {
+            <mat-option [value]="a">
+              <div class="opt">
+                <span class="opt-nom">{{ a.prenom }} {{ a.nom }} <small>{{ a.login }}</small></span>
+                <span class="opt-sup">{{ a.superviseur ? 'Superviseur : ' + a.superviseur : 'Sans superviseur' }}</span>
+              </div>
+            </mat-option>
+          } @empty {
+            @if (recherche) { <mat-option disabled>Aucun agent ne correspond.</mat-option> }
+          }
+        </mat-autocomplete>
+      </mat-form-field>
+
+      @if (choisis.length) {
+        <div class="choisis">
+          @for (a of choisis; track a.id) {
+            <span class="puce">
+              {{ a.prenom }} {{ a.nom }}
+              <button type="button" (click)="retirer(a)" [attr.aria-label]="'Retirer ' + a.login"><mat-icon>close</mat-icon></button>
+            </span>
+          }
+          <button mat-button class="vider" (click)="choisis = []"><mat-icon>clear_all</mat-icon> Tout retirer</button>
+        </div>
+      } @else {
+        <p class="indice">Aucun agent choisi. Tapez quelques lettres pour rechercher.</p>
+      }
+    </section>
+
+    <section class="carte">
+      <h3><span class="etape">2</span> Choisir le superviseur</h3>
+      <mat-form-field appearance="outline" class="pleine" subscriptSizing="dynamic">
+        <mat-label>Superviseur</mat-label>
+        <mat-select [(ngModel)]="idSuperviseur" name="sup" (selectionChange)="majEquipe()">
+          @for (s of superviseurs; track s.id) {
+            <mat-option [value]="s.id">{{ s.prenom }} {{ s.nom }} <small class="muted">· {{ s.nom_utilisateur }} · {{ s.nb_agents }} agent(s)</small></mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      @if (superviseurChoisi) {
+        <div class="equipe">
+          <div class="eq-titre">Équipe actuelle de {{ superviseurChoisi.prenom }} {{ superviseurChoisi.nom }} ({{ equipe.length }})</div>
+          @for (a of equipe; track a.id) {
+            <div class="eq-ligne"><mat-icon>person</mat-icon> {{ a.prenom }} {{ a.nom }} <small>{{ a.login }}</small></div>
+          } @empty {
+            <div class="indice">Aucun agent rattaché pour le moment.</div>
+          }
+        </div>
+      }
+    </section>
+  </div>
+
+  <section class="carte recap" [class.pret]="choisis.length && idSuperviseur">
+    <h3><span class="etape">3</span> Vérifier et assigner</h3>
+    @if (choisis.length && superviseurChoisi) {
+      <p class="recap-phrase">
+        <b>{{ choisis.length }} agent(s)</b> seront rattachés à <b>{{ superviseurChoisi.prenom }} {{ superviseurChoisi.nom }}</b>.
+      </p>
+      @if (changements.length) {
+        <ul class="changements">
+          @for (a of changements; track a.id) {
+            <li><mat-icon>swap_horiz</mat-icon> {{ a.prenom }} {{ a.nom }} quitte <b>{{ a.superviseur }}</b></li>
+          }
+        </ul>
+      }
+      @if (dejaDansEquipe.length) {
+        <p class="indice">{{ dejaDansEquipe.length }} agent(s) font déjà partie de cette équipe (aucun changement pour eux).</p>
+      }
+    } @else {
+      <p class="indice">Choisissez au moins un agent et un superviseur.</p>
+    }
+    <div class="actions">
+      <button mat-button (click)="reinitialiser()" [disabled]="envoi">Réinitialiser</button>
+      <button mat-flat-button color="primary" (click)="assigner()" [disabled]="!choisis.length || !idSuperviseur || envoi">
+        <mat-icon>how_to_reg</mat-icon> Assigner
+      </button>
+    </div>
+  </section>
+</div>

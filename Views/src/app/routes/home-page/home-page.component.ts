@@ -183,7 +183,7 @@ export class HomePageComponent implements OnInit {
       next: user => {
         this.user = user;
         //console.log(user);
-        if (user.roles === 'R_ADMI' || user.roles === 'R_GB' || user.roles === 'R_SUPE') {
+        if (user.roles === 'R_ADMI' || user.roles === 'R_GB' || user.roles === 'R_SUP') {
           this.div_table = 'col-md-12 p-3';
         } else {
           this.div_table = 'col-md-10 p-3';
@@ -369,24 +369,10 @@ export class HomePageComponent implements OnInit {
       //console.log('N2 checked');
     }
   }
+  /** « Mon espace » : page d'arrivée calculée selon le rôle ET ce que l'utilisateur
+   *  voit réellement dans le menu (cf. PageAccueilService). */
   RouterOnWorkSpace() {
-    if (this.user.roles === 'R_TC' || this.user.roles === 'R_BO') {
-      this.router.navigateByUrl('mon-espace/MaVoixCompte/ajouter');
-    } else {
-      if (this.user.roles === 'R_GE') {
-        this.router.navigateByUrl('mon-espace/Fiche/ge-chargement');
-      } else {
-        if (this.user.roles === 'R_RO') {
-          this.router.navigateByUrl('mon-espace/RO/renitialisation-password');
-        } else {
-          if (this.user.roles === 'R_SUP') {
-            this.router.navigateByUrl('mon-espace/mes-agents/Liste');
-          } else {
-            this.router.navigateByUrl('mon-espace');
-          }
-        }
-      }
-    }
+    this.router.navigateByUrl('/mon-espace');
   }
 
   toggleFullscreen() {

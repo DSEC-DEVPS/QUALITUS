@@ -16,6 +16,8 @@ import { QuizService } from '@shared/services/quiz.service';
 import { QuizNotification, ReinitialisationDemande } from '../interfaces';
 import { iconeNotification } from '../../../theme/widgets/notification-icon';
 import { finalize } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { UserService as NotificationsService } from '../../../theme/widgets/notification.service';
 import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
@@ -37,6 +39,12 @@ export class NouveautesComponent implements OnInit {
   reinitialisations: ReinitialisationDemande[] = [];
   /** Quiz mis en évidence (lien depuis la cloche : ?reinitialisation=<id quiz>). */
   quizEnEvidence: number | null = null;
+
+  private readonly notifSrv = inject(NotificationsService);
+  /** Lue depuis la cloche pendant qu'on est sur la page : la liste se met à jour. */
+  private readonly sync = this.notifSrv.lecture$.pipe(takeUntilDestroyed()).subscribe(o => {
+    if (o === 'cloche') this.charger(false);
+  });
 
   ngOnInit(): void {
     this.charger();
@@ -90,11 +98,17 @@ export class NouveautesComponent implements OnInit {
     });
   }
 
-  charger() {
-    this.chargement = true;
+  /**
+   * Seules les notifications NON LUES sont affichées. Une notification ouverte
+   * ici est marquée lue (et retirée de la cloche) mais reste visible, grisée,
+   * jusqu'à ce qu'on quitte la page ; au prochain passage elle n'apparaît plus.
+   */
+  charger(avecIndicateur = true) {
+    if (avecIndicateur) this.chargement = true;
+    const deja = new Set(this.notifications.filter(n => n.lu).map(n => n.id));
     this.quizSrv.getMesNotifications().pipe(finalize(() => (this.chargement = false))).subscribe({
-      next: n => (this.notifications = n),
-      error: () => this.toast.error('Impossible de charger les nouveautes'),
+      next: n => (this.notifications = n.filter(x => !x.lu || deja.has(x.id))),
+      error: () => this.toast.error('Impossible de charger les nouveautés'),
     });
   }
 
@@ -109,7 +123,7 @@ export class NouveautesComponent implements OnInit {
 
   ouvrir(n: QuizNotification) {
     if (!n.lu) {
-      this.quizSrv.marquerLu(n.id).subscribe({ next: () => (n.lu = 1) });
+      this.quizSrv.marquerLu(n.id).subscribe({ next: () => { n.lu = 1; this.notifSrv.lecture$.next('page'); } });
     }
     // Réinitialisation demandée (agent) : la confirmation se fait ici même.
     if (n.titre === 'Réinitialisation demandée') {

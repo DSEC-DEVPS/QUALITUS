@@ -6,6 +6,11 @@
 // =====================================================================
 const db = require("../config/db");
 const { emit } = require("../utils/notify");
+const { permissionsEffectives } = require("../middlewares/permission");
+
+const estAdmin = async (userId) => {
+  try { return (await permissionsEffectives(userId)).role === "R_ADMI"; } catch (e) { return false; }
+};
 
 const num = (v) => (v === null || v === undefined ? 0 : Number(v));
 const EPS = 0.01; // tolérance d'arrondi (cohérent avec le domaine Évaluation)
@@ -127,7 +132,11 @@ const getResultats = async (req, res) => {
     const out = await withTx(async (conn) => {
       const ctx = await contexte(conn, id, uid);
       if (ctx.notFound) return { notFound: true };
-      if (!ctx.role) return { forbidden: true };
+      const admin = await estAdmin(uid);
+      // L'administrateur (s'il n'est ni jauge ni participant) consulte une
+      // session FIGÉE en lecture, pour pouvoir la défiger si nécessaire.
+      const lectureAdmin = !ctx.role && admin && ctx.s.statut === "CLOTUREE";
+      if (!ctx.role && !lectureAdmin) return { forbidden: true };
       // Le participant voit le résultat uniquement s'il est publié (validé) ET
       // que la visibilité est activée par le jauge (point cahier).
       if (ctx.role === "participant" && !(ctx.s.resultat_publie && ctx.s.visibilite)) return { pasEncore: true };
@@ -146,7 +155,10 @@ const getResultats = async (req, res) => {
           conclusions: ctx.s.conclusions,
         };
       }
-      return { role: "jauge", provisoire, statut: ctx.s.statut, nom: nomSession, resultat_publie: !!ctx.s.resultat_publie, visibilite: !!ctx.s.visibilite, ...r, conclusions: ctx.s.conclusions };
+      return {
+        role: "jauge", provisoire, statut: ctx.s.statut, nom: nomSession, resultat_publie: !!ctx.s.resultat_publie, visibilite: !!ctx.s.visibilite, ...r, conclusions: ctx.s.conclusions,
+        lecture_admin: lectureAdmin, peut_defiger: admin && ctx.s.statut === "CLOTUREE",
+      };
     });
     if (out.notFound) return res.status(404).json({ message: "Session introuvable." });
     if (out.forbidden) return res.status(403).json({ message: "Accès refusé." });
@@ -410,8 +422,10 @@ const figerSession = async (req, res) => {
       if (ctx.s.statut === "CLOTUREE") return { deja: true };
       // On peut figer depuis la révision OU après validation (VALIDEE).
       if (!["RESULTATS_EN_REVISION", "VALIDEE"].includes(ctx.s.statut)) return { mauvaisStatut: true };
+      // L'état d'avant est mémorisé : un administrateur pourra y revenir (défigement).
       await conn.query(
-        "UPDATE b_cal_session SET statut='CLOTUREE', resultat_publie=1, dateCloture=NOW(), dateModification=NOW() WHERE id=?", [id]
+        `UPDATE b_cal_session SET statut_avant_figement=statut, publie_avant_figement=resultat_publie,
+                statut='CLOTUREE', resultat_publie=1, dateCloture=NOW(), dateModification=NOW() WHERE id=?`, [id]
       );
       const [parts] = await conn.query("SELECT id_evaluateur FROM b_cal_participant WHERE id_session=?", [id]);
       for (const p of parts) {
@@ -432,7 +446,61 @@ const figerSession = async (req, res) => {
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors du figement." }); }
 };
 
+// POST défiger le résultat — ADMINISTRATEUR UNIQUEMENT, motif obligatoire.
+// La session revient à l'état où elle était juste avant le figement (révision
+// ou validée) ; une session figée avant la mémorisation de cet état revient
+// « en révision », non publiée. Le jauge retrouve alors toutes ses actions
+// (Reprendre, Recommencer, ajustements) et pourra figer à nouveau.
+const defigerSession = async (req, res) => {
+  const id = req.params.id;
+  const uid = req.auth.userId;
+  const motif = String((req.body || {}).motif || "").trim();
+  try {
+    if (!(await estAdmin(uid))) return res.status(403).json({ message: "Seul un administrateur peut défiger un résultat." });
+    if (motif.length < 3) return res.status(400).json({ message: "Le motif du défigement est obligatoire." });
+    if (motif.length > 500) return res.status(400).json({ message: "Motif trop long (500 caractères au plus)." });
+    const out = await withTx(async (conn) => {
+      const [[s]] = await conn.query("SELECT * FROM b_cal_session WHERE id=? FOR UPDATE", [id]);
+      if (!s) return { notFound: true };
+      if (s.statut !== "CLOTUREE") return { pasFige: true };
+      const statut = ["RESULTATS_EN_REVISION", "VALIDEE"].includes(s.statut_avant_figement)
+        ? s.statut_avant_figement : "RESULTATS_EN_REVISION";
+      const publie = s.publie_avant_figement === null || s.publie_avant_figement === undefined
+        ? (statut === "VALIDEE" ? 1 : 0) : Number(s.publie_avant_figement);
+      await conn.query(
+        `UPDATE b_cal_session SET statut=?, resultat_publie=?, statut_avant_figement=NULL, publie_avant_figement=NULL,
+                dateCloture=NULL, dateModification=NOW() WHERE id=?`, [statut, publie, id]
+      );
+      await conn.query(
+        `INSERT INTO b_cal_defigement (id_session, id_auteur, motif, statut_retabli, dateFigement, dateDefigement)
+         VALUES (?, ?, ?, ?, ?, NOW())`, [id, uid, motif, statut, s.dateCloture]
+      );
+      const [parts] = await conn.query("SELECT id_evaluateur FROM b_cal_participant WHERE id_session=?", [id]);
+      const dest = new Set(parts.map((p) => p.id_evaluateur));
+      if (s.id_jauge) dest.add(s.id_jauge);
+      dest.delete(uid);
+      for (const d of dest) {
+        await emit(conn, {
+          id_utilisateur: d,
+          titre: "Résultat de calibrage défigé",
+          message: `Le résultat de la session « ${s.nom} » n'est plus définitif : il peut de nouveau être ajusté. Motif : ${motif}`,
+          type: "CALIBRAGE", nature_objet: "CALIBRAGE", id_objet: id,
+          url: `/mon-espace/calibrage/resultats/${id}`,
+        });
+      }
+      return { ok: true, statut };
+    });
+    if (out.notFound) return res.status(404).json({ message: "Session introuvable." });
+    if (out.pasFige) return res.status(409).json({ message: "Ce résultat n'est pas figé." });
+    return res.status(200).json({
+      message: out.statut === "VALIDEE" ? "Résultat défigé : la session est revenue à l'état « validée »." : "Résultat défigé : la session est revenue en révision.",
+      statut: out.statut,
+    });
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors du défigement." }); }
+};
+
 module.exports = {
   calculer, // réutilisé par l'export Calibrages (menu Exportations)
   getResultats, getConfrontation, modifierCote, setAppreciation, setCommentaireJauge, setConclusions, validerSession, figerSession,
+  defigerSession,
 };

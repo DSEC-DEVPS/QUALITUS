@@ -8,6 +8,33 @@
         </button>
       </div>
 
+      <div class="filtres">
+        <mat-form-field appearance="outline" class="f-recherche" subscriptSizing="dynamic">
+          <mat-label>Rechercher</mat-label>
+          <input matInput [(ngModel)]="recherche" (ngModelChange)="appliquer()" placeholder="Nom du sondage..." />
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="f-statut" subscriptSizing="dynamic">
+          <mat-label>Statut</mat-label>
+          <mat-select [(ngModel)]="statut" (selectionChange)="appliquer()">
+            <mat-option value="">Tous</mat-option>
+            <mat-option value="ENCOURS">En cours</mat-option>
+            <mat-option value="ACTIF">Actif</mat-option>
+            <mat-option value="DESACTIF">Désactivé</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="f-champ" subscriptSizing="dynamic">
+          <mat-label>Filtrer sur</mat-label>
+          <mat-select [(ngModel)]="champDate" (selectionChange)="changerChamp()">
+            @for (c of champs; track c.v) { <mat-option [value]="c.v">{{ c.l }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <app-filtre-periode [valeur]="periode" (periodeChange)="changerPeriode($event)" />
+        @if (filtresActifs) {
+          <button mat-button (click)="effacerFiltres()"><mat-icon>filter_alt_off</mat-icon> Effacer les filtres</button>
+        }
+      </div>
+
       <div class="mat-elevation-z1" style="overflow-x: auto">
         @if (chargement) { <app-chargement /> }
         <table [style.display]="chargement ? 'none' : null" mat-table [dataSource]="pag.page" class="w-100">
@@ -37,6 +64,13 @@
           <ng-container matColumnDef="nb_questions">
             <th mat-header-cell *matHeaderCellDef>Questions</th>
             <td mat-cell *matCellDef="let s">{{ s.nb_questions }}</td>
+          </ng-container>
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef>{{ colDate }}</th>
+            <td mat-cell *matCellDef="let s">
+              {{ dateDe(s) ? (dateDe(s) | date: 'dd/MM/yyyy') : '—' }}
+              @if (champDate === 'reponse' && s.nb_reponses) { <span class="nb-rep">({{ s.nb_reponses }})</span> }
+            </td>
           </ng-container>
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef class="text-right">Actions</th>
@@ -70,7 +104,7 @@
           <tr mat-row *matRowDef="let row; columns: cols"></tr>
           <tr class="mat-row" *matNoDataRow>
             <td class="mat-cell text-center p-16" [attr.colspan]="cols.length">
-              Aucun sondage pour le moment.
+              {{ filtresActifs ? 'Aucun sondage ne correspond aux filtres.' : 'Aucun sondage pour le moment.' }}
             </td>
           </tr>
         </table>

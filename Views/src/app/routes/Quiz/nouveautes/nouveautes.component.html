@@ -3,7 +3,7 @@
     <mat-card-content>
       <div class="d-flex align-items-center justify-content-between flex-wrap m-b-8">
         <h5 class="m-0">
-          Nouveautes
+          Nouveautés
           @if (nbNonLues > 0) {
             <span class="pastille">{{ nbNonLues }}</span>
           }
@@ -46,7 +46,10 @@
       @if (chargement) {
         <app-chargement />
       } @else if (!notifications.length) {
-        <p class="text-muted text-center p-16">Aucune notification de quiz.</p>
+        <p class="text-muted text-center p-16">
+          <mat-icon class="icone-vide">task_alt</mat-icon><br />
+          Aucune nouveauté : vous êtes à jour. Les notifications déjà lues restent consultables dans la cloche (« Voir tout »).
+        </p>
       } @else {
         <mat-nav-list>
           @for (n of notifications; track n.id) {

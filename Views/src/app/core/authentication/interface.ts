@@ -314,6 +314,9 @@ export interface Responsable_Operation {
   superviseur_nom?: string;
   superviseur_prenom?: string;
   dateCreation: string;
+  id_Site?: number | null;
+  /** Ligne de l'utilisateur connecté (Gérer les comptes). */
+  est_moi?: boolean;
 }
 export interface Quiz_reponse {
   id: number;

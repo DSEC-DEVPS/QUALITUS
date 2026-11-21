@@ -1,43 +1,51 @@
 <div class="container-fluid p-16">
   @if (chargement && !quiz) { <app-chargement /> }
   <div class="d-flex align-items-center m-b-16">
-    <button mat-icon-button (click)="retour()" matTooltip="Retour a la liste">
+    <button mat-icon-button (click)="retour()" matTooltip="Retour à la liste">
       <mat-icon>arrow_back</mat-icon>
     </button>
-    <span class="h5 m-0">Detail du quiz</span>
+    <span class="h5 m-0">Détail du quiz</span>
     <span class="flex-spacer"></span>
     <button mat-flat-button color="primary" (click)="editer()">
-      <mat-icon>edit_note</mat-icon> Modifier les parametres
+      <mat-icon>edit_note</mat-icon> Modifier les paramètres
     </button>
   </div>
 
-  <!-- En-tete facon maquette : parametres a gauche, meta a droite -->
+  <!-- En-tête : titre à gauche, paramètres à droite -->
   <mat-card class="entete m-b-16">
     <mat-card-content>
       <div class="entete-grid">
         <div class="entete-left">
           <h3 class="titre">{{ quiz?.titre }}</h3>
-          <div class="pin">PIN: {{ quiz?.code_pin || '—' }}</div>
+          <div class="pin"><mat-icon>pin</mat-icon> Code PIN : {{ quiz?.code_pin || '—' }}</div>
           <!-- Questions : réservées au site propriétaire -->
           @if (quiz?.cote_proprietaire === 1) {
             <button mat-flat-button class="btn-add-q" (click)="ajouterQuestion()">
-              Ajouter une question
+              <mat-icon>add</mat-icon> Ajouter une question
             </button>
+            @if (questions.length && !baremeConforme) {
+              <button mat-stroked-button color="primary" class="btn-repartir" (click)="repartirPoints()">
+                <mat-icon>balance</mat-icon> Répartir équitablement
+              </button>
+            }
           }
         </div>
 
         <div class="entete-sep"></div>
 
         <div class="entete-right">
-          <div class="meta-row"><span class="k">Type:</span><span class="v type">{{ quiz?.type || 'Quiz' }}</span></div>
+          <div class="meta-row"><span class="k">Type</span><span class="v type">{{ quiz?.type || 'Quiz' }}</span></div>
           <div class="meta-row">
-            <span class="k">Date de cloture:</span>
+            <span class="k">Date de clôture</span>
             <span class="v">{{ quiz?.date_fermeture ? (quiz?.date_fermeture | date: 'dd-MM-yyyy HH:mm:ss') : '—' }}</span>
           </div>
-          <div class="meta-row"><span class="k">Duree:</span><span class="v">{{ quiz?.duree ? quiz?.duree + 'Mn' : '—' }}</span></div>
-          <div class="meta-row"><span class="k">Seuil de Reussite:</span><span class="v">{{ quiz?.note_passage }}%</span></div>
-          <div class="meta-row"><span class="k">Nombre de participants{{ coteProprietaire ? '' : ' (votre site)' }}:</span><span class="v">{{ quiz?.nb_participants ?? 0 }}</span></div>
-          <div class="meta-row"><span class="k">Total des points:</span><span class="v">{{ totalPoints }}</span></div>
+          <div class="meta-row"><span class="k">Durée</span><span class="v">{{ quiz?.duree ? quiz?.duree + ' min' : '—' }}</span></div>
+          <div class="meta-row"><span class="k">Seuil de réussite</span><span class="v">{{ quiz?.note_passage }} %</span></div>
+          <div class="meta-row"><span class="k">Nombre de participants{{ coteProprietaire ? '' : ' (votre site)' }}</span><span class="v">{{ quiz?.nb_participants ?? 0 }}</span></div>
+          <div class="meta-row"><span class="k">Barème</span><span class="v" [class.bareme-ko]="totalPoints !== 100">
+            {{ totalPoints }} / 100 points
+            @if (totalPoints !== 100) { <small>— à ajuster : le quiz n'est pas proposé aux participants</small> }
+          </span></div>
         </div>
       </div>
     </mat-card-content>
@@ -234,7 +242,7 @@
                 <td mat-cell *matCellDef="let q">{{ typeLabel(q) }}</td>
               </ng-container>
               <ng-container matColumnDef="point">
-                <th mat-header-cell *matHeaderCellDef>Point</th>
+                <th mat-header-cell *matHeaderCellDef>Points</th>
                 <td mat-cell *matCellDef="let q">{{ q.points ?? 5 }}</td>
               </ng-container>
               <ng-container matColumnDef="actions">
@@ -310,7 +318,7 @@
                     <td mat-cell *matCellDef="let p; let i = index">{{ i + 1 }}</td>
                   </ng-container>
                   <ng-container matColumnDef="nom">
-                    <th mat-header-cell *matHeaderCellDef>Prénom - Nom</th>
+                    <th mat-header-cell *matHeaderCellDef>Prénom et nom</th>
                     <td mat-cell *matCellDef="let p">{{ p.prenom }} {{ p.nom }}</td>
                   </ng-container>
                   <ng-container matColumnDef="date_debut">
@@ -318,7 +326,7 @@
                     <td mat-cell *matCellDef="let p">{{ p.date_debut ? (p.date_debut | date: 'dd-MM-yyyy HH:mm:ss') : '—' }}</td>
                   </ng-container>
                   <ng-container matColumnDef="date_fin">
-                    <th mat-header-cell *matHeaderCellDef>Date Fin</th>
+                    <th mat-header-cell *matHeaderCellDef>Date de fin</th>
                     <td mat-cell *matCellDef="let p">{{ p.date_fin ? (p.date_fin | date: 'dd-MM-yyyy HH:mm:ss') : '—' }}</td>
                   </ng-container>
                   <ng-container matColumnDef="statut">
@@ -384,11 +392,11 @@
             </mat-tab>
 
             <!-- Questions ratée -->
-            <mat-tab label="Questions ratée">
+            <mat-tab label="Questions ratées">
               <div class="ratees">
                 <div class="ratees-entete">
                   <span class="col-q">Question</span>
-                  <span class="col-n">Nombre d'agent</span>
+                  <span class="col-n">Nombre d'agents</span>
                 </div>
 
                 @for (q of questionsRatees; track q.id) {
@@ -573,7 +581,7 @@
         </mat-tab>
 
         <!-- Autorisations IP -->
-        <mat-tab label="Autorisations Ip">
+        <mat-tab label="Autorisations IP">
           <div class="p-16">
             @if (quiz?.autoriser_machines) {
               <p class="hint hint-open">
@@ -651,7 +659,7 @@
                 }
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Libelle (optionnel)</mat-label>
+                <mat-label>Libellé (optionnel)</mat-label>
                 <input matInput [(ngModel)]="nouvelleIpLibelle" placeholder="Salle A / Plateau" (keyup.enter)="ajouterIp()" />
               </mat-form-field>
               <button mat-flat-button color="primary" (click)="ajouterIp()" [disabled]="envoiIp">
@@ -670,7 +678,7 @@
                   <td mat-cell *matCellDef="let ip">{{ ip.site || 'Aucun (à supprimer)' }}</td>
                 </ng-container>
                 <ng-container matColumnDef="libelle">
-                  <th mat-header-cell *matHeaderCellDef>Libelle</th>
+                  <th mat-header-cell *matHeaderCellDef>Libellé</th>
                   <td mat-cell *matCellDef="let ip">{{ ip.libelle || '—' }}</td>
                 </ng-container>
                 <ng-container matColumnDef="agent">

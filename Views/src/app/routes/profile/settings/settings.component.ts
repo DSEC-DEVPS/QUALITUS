@@ -71,6 +71,17 @@ export class ProfileSettingsComponent implements OnInit {
         ? 'validation.invalid_email'
         : '';
   }
+  /** Critères de robustesse du nouveau mot de passe (indication, non bloquante). */
+  get crit() {
+    const v = String(this.form?.get('nouveau_mot_de_passe')?.value || '');
+    return { longueur: v.length >= 8, majuscule: /[A-Z]/.test(v), chiffre: /\d/.test(v), special: /[^A-Za-z0-9]/.test(v) };
+  }
+  get force(): { score: number; niveau: string; libelle: string } {
+    const c = this.crit;
+    const score = [c.longueur, c.majuscule, c.chiffre, c.special].filter(Boolean).length;
+    const niveaux = [['faible', 'faible'], ['faible', 'faible'], ['moyen', 'moyenne'], ['bon', 'bonne'], ['fort', 'forte']];
+    return { score, niveau: niveaux[score][0], libelle: niveaux[score][1] };
+  }
   passWordMatchValidator(control: AbstractControl) {
     return control.get('nouveau_mot_de_passe')?.value ===
       control.get('confirme_mot_de_passe')?.value
@@ -82,7 +93,8 @@ export class ProfileSettingsComponent implements OnInit {
       next: result => {
         this.toastSrv.success(result.message);
         this.form.reset();
-        setInterval(() => {
+        // Une seule déconnexion (setInterval la répétait toutes les secondes).
+        setTimeout(() => {
           this.auth.logout().subscribe(() => {
             this.router.navigateByUrl('/auth/login');
           });

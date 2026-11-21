@@ -385,8 +385,10 @@ const setVisibilite = async (req, res) => {
 // Le jauge peut relancer un participant À TOUT MOMENT — y compris quand SA
 // participation est close (compte à rebours écoulé, clôture injuste pour cause
 // de réseau, etc.). Si cette clôture avait fait basculer la session en phase de
-// résultats (révision / validée / figée), on la ré-ouvre pour que le participant
+// résultats (révision / validée), on la ré-ouvre pour que le participant
 // puisse réellement recommencer (les résultats seront recalculés ensuite).
+// Une session FIGÉE (CLOTUREE) est verrouillée : il faut d'abord qu'un
+// administrateur la défige (POST /calibrage/session/:id/defiger).
 const reinitialiserParticipant = async (req, res) => {
   const pid = req.params.pid;
   const uid = req.auth.userId;
@@ -397,6 +399,8 @@ const reinitialiserParticipant = async (req, res) => {
       const ctx = await contexte(conn, p.id_session, uid);
       if (ctx.notFound || ctx.role !== "jauge") return { forbidden: true };
       const s = ctx.s;
+      // Résultat figé : plus de « Recommencer à zéro » (seul un administrateur peut défiger).
+      if (s.statut === "CLOTUREE") return { fige: true };
       // remet à zéro les constats du participant
       await conn.query(
         `UPDATE b_cal_evaluation_erreur ee
@@ -436,6 +440,7 @@ const reinitialiserParticipant = async (req, res) => {
     });
     if (out.notFound) return res.status(404).json({ message: "Participant introuvable." });
     if (out.forbidden) return res.status(403).json({ message: "Réservé au jauge." });
+    if (out.fige) return res.status(409).json({ message: "Le résultat est figé : la participation ne peut plus être reprise ni recommencée." });
     return res.status(200).json({
       message: out.reouverte
         ? "Participation réinitialisée : la session a été ré-ouverte pour permettre la reprise."
@@ -470,6 +475,8 @@ const chargerPourReprise = async (conn, pid, uid) => {
   if (!p) return { notFound: true };
   const ctx = await contexte(conn, p.id_session, uid);
   if (ctx.notFound || ctx.role !== "jauge") return { forbidden: true };
+  // Résultat figé : plus aucune reprise (seul un administrateur peut défiger).
+  if (ctx.s.statut === "CLOTUREE") return { fige: true };
   if (!p.date_debut_participation || p.statut_participation === "NON_COMMENCEE") return { pasCommencee: true };
   return { p, s: ctx.s };
 };
@@ -489,6 +496,7 @@ const propositionReprise = async (req, res) => {
     });
     if (out.notFound) return res.status(404).json({ message: "Participant introuvable." });
     if (out.forbidden) return res.status(403).json({ message: "Réservé au jauge." });
+    if (out.fige) return res.status(409).json({ message: "Le résultat est figé : la participation ne peut plus être reprise ni recommencée." });
     if (out.pasCommencee) return res.status(409).json({ message: "Ce participant n'a pas commencé : rien à reprendre." });
     delete out.ok;
     return res.status(200).json(out);
@@ -535,6 +543,7 @@ const reprendreParticipant = async (req, res) => {
     });
     if (out.notFound) return res.status(404).json({ message: "Participant introuvable." });
     if (out.forbidden) return res.status(403).json({ message: "Réservé au jauge." });
+    if (out.fige) return res.status(409).json({ message: "Le résultat est figé : la participation ne peut plus être reprise ni recommencée." });
     if (out.pasCommencee) return res.status(409).json({ message: "Ce participant n'a pas commencé : rien à reprendre." });
     if (out.minutesInvalides !== undefined) {
       return res.status(400).json({ message: `Temps accordé invalide (de 1 à ${Math.max(1, out.minutesInvalides)} minutes).` });

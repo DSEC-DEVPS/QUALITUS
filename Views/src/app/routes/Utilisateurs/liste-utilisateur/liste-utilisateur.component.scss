@@ -37,9 +37,26 @@ table {
   color: red;
 }
 .ACTIONS {
-  width: 80px;
+  width: 130px;
+  display: flex;
+  gap: 2px;
 }
 
+.statut_icon {
+  color: #1565c0;
+  font-size: 18px;
+  cursor: pointer;
+}
+.droits_icon {
+  color: #6a1b9a;
+  font-size: 18px;
+  cursor: pointer;
+}
+.reset_icon {
+  color: #6d4c41;
+  font-size: 18px;
+  cursor: pointer;
+}
 .eye_icon {
   color: #ff8e36;
   font-size: 18px;

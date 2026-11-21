@@ -1492,3 +1492,6 @@ html {
 
 // Spinner dans les cartes statistiques pendant le chargement
 .spinner-carte { display: inline-block; vertical-align: middle; margin: 2px auto; }
+/* Badges quiz de l'agent */
+.badges-agent { padding: 8px 12px 12px; }
+.badges-agent .badges-titre { font-size: 14px; font-weight: 600; color: #444; margin-bottom: 8px; }

@@ -274,3 +274,45 @@ mat-icon, .material-icons, .mat-icon, i.material-icons {
 .cal-form mat-form-field { flex: 1 1 240px; width: auto; min-width: 220px; }
 .cal-form .plein { flex-basis: 100%; width: 100%; }
 .cal-form .petit { flex: 0 0 130px; min-width: 0; }
+
+/* Impression d'une lettre de félicitation / débriefing : seule la lettre est imprimée.
+   lettre-section.component.ts copie la lettre dans #zone-impression-lettre et pose
+   la classe impression-lettre sur <body> le temps de l'impression. */
+#zone-impression-lettre { display: none; }
+@media print {
+  @page { size: A4; margin: 14mm; }
+  html:has(body.impression-lettre), body.impression-lettre {
+    height: auto !important; overflow: visible !important; background: #fff !important;
+  }
+  body.impression-lettre { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body.impression-lettre > *:not(#zone-impression-lettre) { display: none !important; }
+  body.impression-lettre #zone-impression-lettre { display: block; }
+  #zone-impression-lettre .lettre-papier { box-shadow: none !important; max-width: none !important; margin: 0 !important; }
+}
+
+// ---------------------------------------------------------------------------
+// Fenêtres de création / modification des référentiels (site, programme,
+// fonction, catégorie, sous-catégorie, SLA) : taille adaptée au contenu,
+// titre lisible, champs pleine largeur, boutons alignés à droite.
+// ---------------------------------------------------------------------------
+.dlg-ref {
+  .mat-mdc-dialog-surface { border-radius: 14px !important; overflow: hidden; }
+  .container { max-width: none; width: 100%; padding: 0; }
+  .dlg-titre {
+    display: flex; align-items: center; gap: 10px; margin: 0; padding: 16px 22px;
+    font-size: 1.1rem; font-weight: 600; color: #2b2b2b; border-bottom: 1px solid #f0ebe5;
+    &::before { content: ''; width: 4px; height: 20px; border-radius: 2px; background: #ff8e36; }
+  }
+  .row, .register-template { margin: 0 !important; }
+  .register-template > [class*='col-'] { flex: 0 0 100%; max-width: 100%; padding: 0; }
+  .d-block > [class*='col-'], form > [class*='col-'] { width: 100%; max-width: 100%; padding: 0; margin: 0 !important; }
+  form .row { row-gap: 0; }
+  form .row > [class*='col-'] { padding: 0 6px; margin: 0 !important; }
+  .mat-mdc-card { box-shadow: none !important; background: transparent !important; border: none !important; }
+  .mat-mdc-card-content { padding: 18px 22px 6px !important; }
+  .mat-mdc-form-field { width: 100%; }
+  .m-t-8.text-center {
+    display: flex; flex-direction: row-reverse; justify-content: flex-start; align-items: center; gap: 8px;
+    margin: 6px -22px 0 !important; padding: 12px 22px 0; border-top: 1px solid #f0ebe5;
+  }
+}

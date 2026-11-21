@@ -52,12 +52,14 @@ const utilisateursAvecPermission = async (executor, code) => {
       WHERE u.status = 'ACTIF' AND (
         f.Role_Associe = 'R_ADMI'
         OR EXISTS (SELECT 1 FROM b_utilisateur_permission up JOIN b_permission p ON p.id = up.id_permission
-                    WHERE up.id_utilisateur = u.id AND p.code = ? AND up.sens = 'GRANT')
+                    WHERE up.id_utilisateur = u.id AND p.code = ? AND up.sens = 'GRANT'
+                      AND (up.date_fin IS NULL OR up.date_fin >= CURDATE()))
         OR (EXISTS (SELECT 1 FROM b_role r JOIN b_role_permission rp ON rp.id_role = r.id
                       JOIN b_permission p ON p.id = rp.id_permission
                      WHERE r.code = f.Role_Associe AND p.code = ? AND p.etat = 'ACTIF')
             AND NOT EXISTS (SELECT 1 FROM b_utilisateur_permission up JOIN b_permission p ON p.id = up.id_permission
-                             WHERE up.id_utilisateur = u.id AND p.code = ? AND up.sens = 'DENY')))`,
+                             WHERE up.id_utilisateur = u.id AND p.code = ? AND up.sens = 'DENY'
+                               AND (up.date_fin IS NULL OR up.date_fin >= CURDATE()))))`,
     [code, code, code]
   );
   return rows.map((r) => r.id);

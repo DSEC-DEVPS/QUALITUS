@@ -20,6 +20,7 @@ import { NotificationsEvalComponent } from './notifications-eval/notifications-e
 import { ReferentielsComponent } from './referentiels/referentiels.component';
 import { CoachingArbreComponent } from './coaching/coaching-arbre/coaching-arbre.component';
 import { CalendrierComponent } from './calendrier/calendrier.component';
+import { LettresModelesComponent } from './lettres-modeles/lettres-modeles.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'evaluations', pathMatch: 'full' },
@@ -36,6 +37,8 @@ export const routes: Routes = [
   { path: 'bi/arborescences', component: ArborescenceAdminComponent, canMatch: [canMatchPermission('evaluation.parametrer')] },
   { path: 'bi/validation', component: ValidationOptionsComponent, canMatch: [canMatchPermission('evaluation.valider')] },
   { path: 'coaching/arbre', component: CoachingArbreComponent, canMatch: [canMatchPermission('evaluation.parametrer')] },
+  // Modèles des lettres de félicitation / débriefing
+  { path: 'lettres/modeles', component: LettresModelesComponent, canMatch: [canMatchPermission('evaluation.parametrer')] },
   { path: 'calendrier', component: CalendrierComponent, canMatch: [canMatchPermission('evaluation.lire')] },
   { path: 'contre-evaluation', component: ContreListeComponent, canMatch: [canMatchPermission(['contre_evaluation.creer', 'contre_evaluation.voir_tous'])] },
   { path: 'mes-contre-evaluations', component: MesContreComponent, canMatch: [canMatchPermission('contre_evaluation.lire')] },

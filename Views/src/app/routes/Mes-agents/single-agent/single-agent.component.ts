@@ -59,6 +59,9 @@ import {
 
 import { UserService } from '@shared/services/user.service';
 import { toYMD } from '@shared/date-utils';
+import { QuizService } from '@shared/services/quiz.service';
+import { BadgesQuizComponent } from '../../Quiz/badges-quiz/badges-quiz.component';
+import { BadgeUtilisateur } from '../../Quiz/interfaces';
 export const MY_DATE_FORMATS = {
   parse: {
     dateInput: 'DD/MM/YYYY',
@@ -86,6 +89,7 @@ export const MY_DATE_FORMATS = {
   ],
 
   imports: [
+    BadgesQuizComponent,
     MatProgressSpinnerModule,
     MatTableModule,
     MatPaginatorModule,
@@ -114,6 +118,9 @@ export class SingleAgentComponent
   // =========================================================
 
   private readonly route = inject(ActivatedRoute);
+  private readonly quizSrv = inject(QuizService);
+  /** Badges quiz de l'agent (null = en cours de chargement). */
+  badgesQuiz: BadgeUtilisateur[] | null = null;
 
   private readonly userService = inject(UserService);
 
@@ -249,6 +256,12 @@ export class SingleAgentComponent
 
     const id =
       this.route.snapshot.params['id'];
+
+    // Badges quiz de l'agent (mêmes accès que ses statistiques)
+    this.quizSrv.getBadgesAgent(Number(id)).subscribe({
+      next: b => (this.badgesQuiz = b),
+      error: () => (this.badgesQuiz = []),
+    });
 
 
     // =======================================================

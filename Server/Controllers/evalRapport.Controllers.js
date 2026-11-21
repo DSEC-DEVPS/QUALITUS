@@ -185,12 +185,39 @@ const getAgentPoleDetail = async (req, res) => {
     );
     // Droit d'agir sur le plan d'action : la règle réelle de l'évaluation (droit « agir » :
     // évaluateur, superviseur de l'agent, evaluation.voir_tous sur sa portée, admin).
+    // Résumé par évaluation (affiché dans l'en-tête de chaque panneau) :
+    // appel, évaluateur, catégories en échec (score / seuil), plan d'action.
+    const EPS = 0.01;
+    const reussie = (c) => (c.comparateur === ">" ? Number(c.score_obtenu) > Number(c.seuil_reussite) - EPS
+      : Number(c.score_obtenu) >= Number(c.seuil_reussite) - EPS);
     agent.evaluations = await Promise.all(agent.evaluations.map(async (e) => {
       const [[ev]] = await db.query(
-        "SELECT id, id_agent, id_evaluateur, id_site, statut FROM b_evaluation WHERE id=?", [e.id]
+        `SELECT e.id, e.id_agent, e.id_evaluateur, e.id_site, e.statut, e.identifiant_appel, e.date_evaluation,
+                TRIM(CONCAT(IFNULL(u.prenom,''),' ',IFNULL(u.nom,''))) AS evaluateur
+           FROM b_evaluation e LEFT JOIN b_utilisateur u ON u.id = e.id_evaluateur WHERE e.id=?`, [e.id]
       );
       const d = ev ? await droitsEvaluation(userId, ev) : { agir: false };
-      return { ...e, peut_plan: !!d.agir };
+      const [cats] = await db.query(
+        `SELECT libelle, score_obtenu, seuil_reussite, comparateur, critique
+           FROM b_evaluation_categorie WHERE id_evaluation=? ORDER BY ordre, id`, [e.id]
+      );
+      const [[pa]] = await db.query(
+        `SELECT COUNT(*) AS nb, SUM(date_realisation IS NOT NULL) AS realisees
+           FROM b_eval_plan_action_ligne WHERE id_evaluation=?`, [e.id]
+      );
+      const nbPa = Number(pa.nb || 0), nbReal = Number(pa.realisees || 0);
+      return {
+        ...e,
+        peut_plan: !!d.agir,
+        identifiant_appel: ev ? ev.identifiant_appel : null,
+        date_evaluation: ev ? ev.date_evaluation : null,
+        evaluateur: ev ? ev.evaluateur || null : null,
+        nb_categories: cats.length,
+        categories_echec: cats.filter((c) => c.score_obtenu !== null && !reussie(c)).map((c) => ({
+          libelle: c.libelle, score: Number(c.score_obtenu), seuil: Number(c.seuil_reussite), critique: !!Number(c.critique),
+        })),
+        plan_action: { nb: nbPa, realisees: nbReal, etat: !nbPa ? "AUCUN" : nbReal >= nbPa ? "TERMINE" : "EN_COURS" },
+      };
     }));
 
     return res.status(200).json({ agent, infos_agent: ag || null, superviseur: sup || null });

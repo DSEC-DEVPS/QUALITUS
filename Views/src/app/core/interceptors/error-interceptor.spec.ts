@@ -26,9 +26,9 @@ describe('ErrorInterceptor', () => {
 
     httpMock.expectOne('/me').flush({}, { status, statusText });
 
-    expect(router.navigateByUrl).toHaveBeenCalledWith(`/${status}`, {
+    expect(router.navigateByUrl).toHaveBeenCalledWith(`/${status}`, jasmine.objectContaining({
       skipLocationChange: true,
-    });
+    }));
   }
 
   beforeEach(() => {
@@ -123,7 +123,7 @@ describe('ErrorInterceptor', () => {
     assertStatus(500, 'Internal Server Error');
   });
 
-  it('GET 403 : affiche le message du serveur ET garde la redirection', () => {
+  it('GET 403 : page d\'erreur avec le motif du serveur, sans notification en double', () => {
     spyOn(router, 'navigateByUrl');
     spyOn(toast, 'error');
 
@@ -132,8 +132,11 @@ describe('ErrorInterceptor', () => {
       .expectOne('/me')
       .flush({ message: 'Accès refusé : habilitation manquante (x.lire).' }, { status: 403, statusText: 'Forbidden' });
 
-    expect(toast.error).toHaveBeenCalledWith('Accès refusé : habilitation manquante (x.lire).');
-    expect(router.navigateByUrl).toHaveBeenCalledWith('/403', { skipLocationChange: true });
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/403', {
+      skipLocationChange: true,
+      state: { motif: 'Accès refusé : habilitation manquante (x.lire).' },
+    });
   });
 
   it('PUT 403 : affiche le message du serveur, sans redirection', () => {

@@ -244,22 +244,52 @@ const deleteLignePlanAction = async (req, res) => {
 // =====================================================================
 // LETTRES (F.39sexies) — modèle paramétrable + rendu
 // =====================================================================
+// Modèle d'une lettre : texte d'introduction et formule de clôture, avec les
+// variables {{prenom}} {{nom}} {{date_evaluation}} {{contexte}} {{appel}}
+// {{evaluateur}} (44_lettres_modeles_parametrables.sql).
+const TYPES_LETTRE = ["FELICITATION", "DEBRIEFING"];
+const LONGUEUR_MAX_MODELE = 4000;
+
 const getLettreModele = async (req, res) => {
-  const type = req.params.type;
+  const type = String(req.params.type || "").toUpperCase();
+  if (!TYPES_LETTRE.includes(type)) return res.status(400).json({ message: "Type de lettre invalide." });
   try {
-    const [[m]] = await db.query(`SELECT * FROM b_eval_lettre_modele WHERE type=?`, [type]);
+    const [[m]] = await db.query(
+      `SELECT type, introduction, cloture, dateModification FROM b_eval_lettre_modele WHERE type=?`, [type]
+    );
     if (!m) return res.status(404).json({ message: "Modèle introuvable." });
     return res.status(200).json(m);
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
 
 const updateLettreModele = async (req, res) => {
-  const type = req.params.type;
+  const type = String(req.params.type || "").toUpperCase();
+  if (!TYPES_LETTRE.includes(type)) return res.status(400).json({ message: "Type de lettre invalide." });
+  const introduction = String((req.body && req.body.introduction) || "").trim();
+  const cloture = String((req.body && req.body.cloture) || "").trim();
+  if (!introduction || !cloture) {
+    return res.status(400).json({ message: "Le texte d'introduction et la formule de clôture sont obligatoires." });
+  }
+  if (introduction.length > LONGUEUR_MAX_MODELE || cloture.length > LONGUEUR_MAX_MODELE) {
+    return res.status(400).json({ message: `Texte trop long (${LONGUEUR_MAX_MODELE} caractères au plus).` });
+  }
   try {
-    const [r] = await db.query(`UPDATE b_eval_lettre_modele SET texte=?, dateModification=NOW() WHERE type=?`, [req.body.texte || "", type]);
+    const [r] = await db.query(
+      `UPDATE b_eval_lettre_modele SET introduction=?, cloture=?, dateModification=NOW() WHERE type=?`,
+      [introduction, cloture, type]
+    );
     if (r.affectedRows === 0) return res.status(404).json({ message: "Modèle introuvable." });
-    return res.status(200).json({ message: "Modèle mis à jour." });
+    return res.status(200).json({ message: "Modèle de lettre enregistré." });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
+};
+
+/** Remplace les variables du modèle par les valeurs de l'évaluation. */
+const remplirModele = (texte, v) =>
+  String(texte || "").replace(/\{\{\s*(\w+)\s*\}\}/g, (m, cle) => (Object.prototype.hasOwnProperty.call(v, cle) ? v[cle] : m));
+const dateFr = (d) => {
+  if (!d) return "";
+  const x = new Date(d);
+  return isNaN(x.getTime()) ? "" : x.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
 };
 
 // Rendu de la lettre d'une évaluation (données structurées pour l'affichage)
@@ -267,9 +297,12 @@ const getLettreEvaluation = async (req, res) => {
   const idEval = req.params.id;
   try {
     const [[e]] = await db.query(
-      `SELECT ev.*, ag.nom AS agent_nom, ag.prenom AS agent_prenom, ctx.libelle AS contexte
+      `SELECT ev.*, ag.nom AS agent_nom, ag.prenom AS agent_prenom, ctx.libelle AS contexte,
+              evr.nom AS evaluateur_nom, evr.prenom AS evaluateur_prenom, fe.nom AS evaluateur_fonction
        FROM b_evaluation ev
        LEFT JOIN b_utilisateur ag ON ev.id_agent=ag.id
+       LEFT JOIN b_utilisateur evr ON ev.id_evaluateur=evr.id
+       LEFT JOIN b_fonction fe ON evr.id_Fonction=fe.id
        LEFT JOIN b_eval_ref_contexte ctx ON ev.id_contexte=ctx.id
        WHERE ev.id=?`, [idEval]
     );
@@ -277,7 +310,12 @@ const getLettreEvaluation = async (req, res) => {
     if (e.statut !== "TERMINE") return res.status(409).json({ message: "La lettre n'est disponible qu'après clôture." });
 
     const type = e.conclusion === "SUCCES" ? "FELICITATION" : "DEBRIEFING";
-    const [[modele]] = await db.query(`SELECT texte FROM b_eval_lettre_modele WHERE type=?`, [type]);
+    const [[modele]] = await db.query(`SELECT texte, introduction, cloture FROM b_eval_lettre_modele WHERE type=?`, [type]);
+    const evaluateur = [e.evaluateur_prenom, e.evaluateur_nom].filter(Boolean).join(" ");
+    const variables = {
+      prenom: e.agent_prenom || "", nom: e.agent_nom || "", date_evaluation: dateFr(e.date_evaluation),
+      contexte: e.contexte || "", appel: e.identifiant_appel || "", evaluateur,
+    };
 
     const [cats] = await db.query(
       `SELECT id, libelle, seuil_reussite, comparateur, score_obtenu, nb_erreurs_decochees FROM b_evaluation_categorie WHERE id_evaluation=? ORDER BY ordre, id`, [idEval]
@@ -304,7 +342,10 @@ const getLettreEvaluation = async (req, res) => {
     return res.status(200).json({
       type,
       modele: modele ? modele.texte : "",
+      introduction: remplirModele(modele && modele.introduction, variables),
+      cloture: remplirModele(modele && modele.cloture, variables),
       agent: { nom: e.agent_nom, prenom: e.agent_prenom },
+      evaluateur: { nom: e.evaluateur_nom, prenom: e.evaluateur_prenom, fonction: e.evaluateur_fonction },
       date_evaluation: e.date_evaluation,
       contexte: e.contexte,
       identifiant_appel: e.identifiant_appel,

@@ -10,10 +10,37 @@
   .colonnes { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; }
   @media (max-width: 900px) { .colonnes { grid-template-columns: 1fr; } }
 
-  .barre-cat { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .cat-chip { padding: 6px 10px; border: 1px solid #cfd8dc; border-radius: 8px; background: #fff; cursor: pointer; font-size: 0.85rem; }
-  .cat-chip.active { border-color: #1976d2; box-shadow: 0 0 0 2px rgba(25,118,210,0.15); }
-  .cat-chip.ko { border-left: 4px solid #e53935; }
+  .barre-cat { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .cat-chip {
+    display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 170px; text-align: left;
+    padding: 10px 12px; border: 1px solid #e0e0e0; border-left: 4px solid #e0e0e0; border-radius: 8px;
+    background: #fff; cursor: pointer; font-size: 0.85rem;
+  }
+  .cat-chip .cat-nom { font-weight: 600; color: #333; }
+  .cat-chip.ok { border-left-color: #2e7d32; }
+  .cat-chip.ko { border-left-color: #ff7900; }
+  .cat-chip { position: relative; }
+  .cat-chip.active {
+    background: rgba(255, 121, 0, 0.07); border: 2px solid #ff7900; border-left-width: 4px;
+    box-shadow: 0 4px 14px rgba(255, 121, 0, 0.25);
+  }
+  .cat-chip.active .cat-nom { color: #d35f00; }
+  .cat-chip .ind-sel {
+    position: absolute; left: 50%; bottom: -17px; transform: translateX(-50%);
+    color: #ff7900; font-size: 30px; width: 30px; height: 30px; pointer-events: none;
+  }
+  .panneau-items { border: 1px solid #f0e0d0; border-top: 3px solid #ff7900; border-radius: 8px; padding: 10px; background: #fffdfb; }
+  .panneau-titre { display: flex; align-items: baseline; gap: 6px; margin: 0 0 8px; font-size: 0.9rem; color: #666; }
+  .panneau-titre strong { color: #d35f00; font-size: 0.95rem; }
+  .pastille {
+    display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 14px;
+    font-size: 0.8rem; font-weight: 600; background: rgba(198, 40, 40, 0.1); color: #c62828;
+    mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    em { font-weight: 400; font-style: normal; opacity: 0.75; }
+    &.ok { background: rgba(46, 125, 50, 0.12); color: #2e7d32; }
+    &.statut { background: #eceff1; color: #455a64; margin-left: 8px; }
+    &.statut.termine { background: rgba(46, 125, 50, 0.1); color: #2e7d32; }
+  }
 
   .comp { width: 100%; border-collapse: collapse; }
   .comp th, .comp td { text-align: left; padding: 6px; border-bottom: 1px solid #eee; vertical-align: top; }

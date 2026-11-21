@@ -25,6 +25,13 @@
           <mat-hint>De 1 à 100</mat-hint>
         }
       </mat-form-field>
+      @if (totalApres !== null) {
+        <div class="bareme-apres" [class.ok]="totalApres === 100" [class.sur]="totalApres > 100">
+          Barème du quiz après enregistrement : <b>{{ totalApres }} / 100 points</b>
+          @if (totalApres < 100) { — il restera {{ 100 - totalApres }} point(s) à répartir }
+          @if (totalApres > 100) { — {{ totalApres - 100 }} point(s) de trop }
+        </div>
+      }
 
       <label class="d-block m-b-8">
         <strong>Réponses</strong>

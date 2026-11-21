@@ -10,7 +10,7 @@
       </h2>
     </div>
     <div class="cal-actions">
-      <mat-slide-toggle *ngIf="estJauge" [checked]="visibilite" (change)="basculerVisibilite()"
+      <mat-slide-toggle *ngIf="estJauge && !lectureAdmin" [checked]="visibilite" (change)="basculerVisibilite()"
                         matTooltip="Ouvre/ferme l'accès des participants à leurs résultats">
         Visibilité participants {{ visibilite ? '(ouverte)' : '(fermée)' }}
       </mat-slide-toggle>
@@ -20,8 +20,33 @@
       <button mat-stroked-button *ngIf="modifiable" (click)="figer()">
         <mat-icon>lock</mat-icon> Figer le résultat
       </button>
+      <button mat-stroked-button color="warn" class="btn-defiger" *ngIf="peutDefiger && !defigement" (click)="ouvrirDefigement()"
+              matTooltip="Réservé à l'administrateur : rend le résultat de nouveau ajustable">
+        <mat-icon>lock_open</mat-icon> Défiger le résultat
+      </button>
     </div>
   </mat-card-header><mat-card-content>
+
+  <div class="defigement" *ngIf="defigement">
+    <div class="df-titre"><mat-icon>lock_open</mat-icon> Défiger le résultat</div>
+    <p>
+      La session reviendra à l'état où elle était avant le figement (révision ou validée). Le jauge pourra de nouveau
+      ajuster le résultat, reprendre ou relancer des participants, puis figer à nouveau. Les participants et le jauge sont notifiés.
+    </p>
+    <label class="df-label" for="df-motif">Motif (obligatoire)</label>
+    <textarea id="df-motif" class="df-motif" rows="2" maxlength="500" [(ngModel)]="defigement.motif"
+              placeholder="Ex. : erreur de référence constatée après figement"></textarea>
+    <div class="df-actions">
+      <button mat-button (click)="defigement = null" [disabled]="defigement.envoi">Annuler</button>
+      <button mat-flat-button color="warn" (click)="defiger()" [disabled]="defigement.envoi || defigement.motif.trim().length < 3">
+        <mat-icon>lock_open</mat-icon> Défiger
+      </button>
+    </div>
+  </div>
+
+  <div class="provisoire fige-info" *ngIf="fige && lectureAdmin">
+    <mat-icon>visibility</mat-icon> Consultation administrateur : vous n'êtes ni jauge ni participant de cette session.
+  </div>
 
   <div class="provisoire" *ngIf="provisoire">
     <mat-icon>info</mat-icon>
@@ -49,7 +74,7 @@
           <tr>
             <td class="col-eval">
               <button class="lien" (click)="ouvrirConfrontation(p, null)">{{ p.prenom }} {{ p.nom }}</button>
-              <span class="actions-participant" *ngIf="estJauge">
+              <span class="actions-participant" *ngIf="estJauge && !fige">
                 <button mat-icon-button color="primary" class="btn-reprendre" matTooltip="Reprendre (réponses conservées)"
                         *ngIf="p.statut_participation === 'EN_COURS' || p.statut_participation === 'CLOSE'"
                         (click)="ouvrirReprise(p, $event)"><mat-icon>play_circle</mat-icon></button>
@@ -62,7 +87,7 @@
                 {{ cellule(p.id_evaluateur, t.id) === 'SUCCES' ? '✓' : '✗' }}
               </button>
             </td>
-            <td class="col-concl"><span class="cal-badge" [attr.data-c]="global[p.id_evaluateur]">{{ global[p.id_evaluateur] }}</span></td>
+            <td class="col-concl"><span class="cal-badge" [attr.data-c]="global[p.id_evaluateur]">{{ libConclusion(global[p.id_evaluateur]) }}</span></td>
           </tr>
           <!-- Reprise après coupure : réponses conservées, temps accordé par le jauge -->
           <tr class="ligne-reprise" *ngIf="reprise?.pid === p.id ? reprise : null as r">
@@ -98,7 +123,7 @@
   <!-- Vue participant : sa conclusion -->
   <mat-card *ngIf="!estJauge && participants.length">
     <h3>Ma conclusion</h3>
-    <p>Conclusion globale : <span class="cal-badge" [attr.data-c]="global[participants[0].id_evaluateur]">{{ global[participants[0].id_evaluateur] }}</span></p>
+    <p>Conclusion globale : <span class="cal-badge" [attr.data-c]="global[participants[0].id_evaluateur]">{{ libConclusion(global[participants[0].id_evaluateur]) }}</span></p>
   </mat-card>
 
   <!-- Confrontation -->
@@ -107,33 +132,43 @@
       <h3>{{ nom }} — {{ selNom }}</h3>
       <button mat-button *ngIf="estJauge" (click)="fermerConfrontation()"><mat-icon>close</mat-icon> Fermer</button>
     </div>
-    <p class="legende"><span class="dot ref"></span> Référence (jauge) &nbsp; <span class="dot part"></span> Participant &nbsp; <mat-icon class="ico-div">report_problem</mat-icon> divergence</p>
+    <p class="legende">
+      <span class="dot ref"></span> Référence (jauge)
+      <span class="dot part"></span> Participant
+      <span class="tag-div">Divergence</span> constats différents — dépliés d'office
+    </p>
 
     <mat-accordion multi>
       <mat-expansion-panel *ngFor="let t of txAffichees()" [expanded]="focusTx === t.transaction.id || txAffichees().length === 1">
         <mat-expansion-panel-header>
           <mat-panel-title>T{{ t.transaction.ordre_passage }} — {{ t.transaction.identifiant_appel }}</mat-panel-title>
           <mat-panel-description>
-            <span class="cal-badge" [attr.data-c]="t.conclusion">{{ t.conclusion }}</span>
+            <span class="cal-badge" [attr.data-c]="t.conclusion">{{ libConclusion(t.conclusion) }}</span>
           </mat-panel-description>
         </mat-expansion-panel-header>
 
         <div *ngFor="let cat of t.categories" class="cat-bloc">
-          <div class="cat-tete">{{ cat.libelle }}
-            <span class="cat-score" [class.ko]="!cat.satisfaite">conformité {{ cat.score_conformite | number:'1.0-1' }} / seuil {{ cat.comparateur }} {{ cat.seuil }}</span>
+          <div class="cat-tete">
+            <span class="cat-libelle">{{ cat.libelle }}</span>
+            <app-score-seuil class="cat-score" [score]="cat.score_conformite" [seuil]="cat.seuil" [comparateur]="cat.comparateur" [reussite]="cat.satisfaite" />
           </div>
+          <div class="err-entetes"><span class="col-ref">Réf.</span><span class="col-part">Part.</span><span>Item</span></div>
           <div class="err" *ngFor="let e of cat.erreurs" [class.divergente]="!e.conforme">
             <div class="err-ligne">
               <mat-checkbox class="chk ref" [checked]="e.reference.coche === 1" [disabled]="!modifiable" (change)="toggleCote(t, e, 'REFERENCE')"
-                            matTooltip="Constat de la référence (jauge)"></mat-checkbox>
+                            matTooltip="Constat de la référence (jauge) : coché = conforme"></mat-checkbox>
               <mat-checkbox class="chk part" [checked]="e.participant?.coche === 1" [disabled]="!modifiable" (change)="toggleCote(t, e, 'PARTICIPANT')"
-                            matTooltip="Constat du participant"></mat-checkbox>
-              <span class="item">{{ e.item }}</span>
-              <mat-icon *ngIf="!e.conforme" class="ico-div" matTooltip="Divergence">report_problem</mat-icon>
+                            matTooltip="Constat du participant : coché = conforme"></mat-checkbox>
+              <span class="item" (click)="basculerDetail(t, e)">{{ e.item }}</span>
+              <span class="tag-div" *ngIf="!e.conforme">Divergence</span>
               <span class="trace" *ngIf="e.participant?.modifie_par || e.reference.modifie_par" matTooltip="Constat corrigé pendant la révision"><mat-icon>history</mat-icon></span>
+              <mat-icon class="ico-comm" *ngIf="!detailOuvert(t, e) && aDesCommentaires(e)" matTooltip="Commentaires disponibles">chat_bubble_outline</mat-icon>
+              <button mat-icon-button class="btn-detail" (click)="basculerDetail(t, e)" [matTooltip]="detailOuvert(t, e) ? 'Masquer les commentaires' : 'Voir les commentaires'">
+                <mat-icon>{{ detailOuvert(t, e) ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
             </div>
-            <div class="err-detail">
-              <div class="ref-txt" *ngIf="e.referentiel"><strong>Référentiel :</strong> {{ e.referentiel }}</div>
+            <div class="err-detail" *ngIf="detailOuvert(t, e)">
+              <div class="ref-txt" *ngIf="e.referentiel"><mat-icon>menu_book</mat-icon> {{ e.referentiel }}</div>
 
               <!-- Commentaire du jauge (son propre constat) : éditable en révision, sinon lecture -->
               <mat-form-field appearance="outline" class="appr" *ngIf="modifiable">

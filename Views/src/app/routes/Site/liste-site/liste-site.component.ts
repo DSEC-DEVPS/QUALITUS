@@ -129,10 +129,10 @@ export class ListeSiteComponent implements OnInit {
   openDialog_update(id: number): void {
     this.dialog.open(UpdateSiteComponent, {
       data: { id: id },
-      height: 'calc(100% - 30px)',
-      width: 'calc(100% - 30px)',
-      maxWidth: '100%',
-      maxHeight: '100%',
+      // Fenêtre dimensionnée au contenu (au lieu du plein écran).
+      width: '520px',
+      maxWidth: '95vw',
+      panelClass: 'dlg-ref',
     });
   }
 
@@ -141,10 +141,10 @@ export class ListeSiteComponent implements OnInit {
   }
   openDialog(): void {
     this.dialog.open(AjouterSiteComponent, {
-      height: 'calc(100% - 30px)',
-      width: 'calc(100% - 30px)',
-      maxWidth: '100%',
-      maxHeight: '100%',
+      // Fenêtre dimensionnée au contenu (au lieu du plein écran).
+      width: '520px',
+      maxWidth: '95vw',
+      panelClass: 'dlg-ref',
     });
   }
 

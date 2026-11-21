@@ -5,7 +5,7 @@
     <button mat-icon-button (click)="retour()"><mat-icon>arrow_back</mat-icon></button>
     <span class="cal-ic"><mat-icon>tune</mat-icon></span>
     <div class="cal-tt">
-      <h2>{{ session.nom }} <span class="cal-badge" [attr.data-st]="session.statut">{{ session.statut }}</span></h2>
+      <h2>{{ session.nom }} <span class="cal-badge" [attr.data-st]="session.statut">{{ libelleStatut(session.statut) }}</span></h2>
     </div>
     <div class="cal-actions">
 
@@ -59,8 +59,13 @@
         </div>
 
         <div class="cats">
-          <button *ngFor="let c of categories; let i = index" class="cat-chip" [class.actif]="i === catActive" (click)="catActive = i">
-            {{ c.libelle }}
+          <button *ngFor="let c of categories; let i = index" class="cat-chip" [class.actif]="i === catActive"
+                  [attr.aria-pressed]="i === catActive" (click)="catActive = i">
+            <span class="cat-nom">{{ c.libelle }}</span>
+            <span class="cat-info">{{ (c.erreurs || []).length }} item{{ (c.erreurs || []).length > 1 ? 's' : '' }}
+              <ng-container *ngIf="nbEcarts(c) as n"> · <b>{{ n }} écart{{ n > 1 ? 's' : '' }}</b></ng-container>
+            </span>
+            <mat-icon class="ind-sel" *ngIf="i === catActive">arrow_drop_down</mat-icon>
           </button>
         </div>
 
@@ -70,13 +75,13 @@
               <mat-checkbox [checked]="e.coche === 1" [disabled]="lectureSeule" (change)="toggle(e)"
                             matTooltip="Coché = conforme ; décoché = écart constaté"></mat-checkbox>
               <span class="item" (click)="erreurDepliee = erreurDepliee === e.id ? null : e.id">{{ e.item }}</span>
-              <mat-icon *ngIf="!e.coche" class="ico-ecart" matTooltip="Écart constaté">report_problem</mat-icon>
+              <span class="etat-item" [class.ecart]="!e.coche">{{ e.coche ? 'Conforme' : 'Écart' }}</span>
               <button mat-icon-button (click)="erreurDepliee = erreurDepliee === e.id ? null : e.id">
                 <mat-icon>{{ erreurDepliee === e.id ? 'expand_less' : 'expand_more' }}</mat-icon>
               </button>
             </div>
             <div class="detail" *ngIf="erreurDepliee === e.id">
-              <div class="ref" *ngIf="e.referentiel"><strong>Référentiel :</strong> {{ e.referentiel }}</div>
+              <div class="ref" *ngIf="e.referentiel"><mat-icon>menu_book</mat-icon> {{ e.referentiel }}</div>
               <mat-form-field appearance="outline" class="comm">
                 <mat-label>Commentaire</mat-label>
                 <textarea matInput rows="2" [(ngModel)]="e.commentaire" [disabled]="lectureSeule"
@@ -144,7 +149,7 @@
                 <span *ngIf="p.nb_recommencements"> · {{ p.nb_recommencements }} recommencement{{ p.nb_recommencements > 1 ? 's' : '' }}</span>
               </span>
             </div>
-            <span class="actions-participant">
+            <span class="actions-participant" *ngIf="session.statut !== 'CLOTUREE'">
               <button mat-icon-button color="primary" matTooltip="Reprendre (réponses conservées)"
                       *ngIf="p.statut_participation === 'EN_COURS' || p.statut_participation === 'CLOSE'"
                       (click)="ouvrirReprise(p)"><mat-icon>play_circle</mat-icon></button>

@@ -1,63 +1,131 @@
 <div class="lettre-section">
   @if (chargement) { <app-chargement /> } @else if (lettre) {
-    <div class="entete">
-      <h3>{{ lettre.type === 'FELICITATION' ? 'Lettre de félicitation' : 'Lettre de débriefing' }}</h3>
-      <button mat-stroked-button (click)="imprimer()"><mat-icon>print</mat-icon> Imprimer</button>
+    <div class="barre-actions">
+      <button mat-stroked-button (click)="imprimer()"><mat-icon>print</mat-icon> Imprimer la lettre</button>
     </div>
 
-    <div class="corps">
-      <p>Bonjour <strong>{{ lettre.agent.prenom }} {{ lettre.agent.nom }}</strong>,</p>
-      <p>
-        Évaluation du {{ lettre.date_evaluation ? (lettre.date_evaluation | date: 'dd/MM/yyyy') : '' }}
-        @if (lettre.contexte) { — contexte : {{ lettre.contexte }} }
-        @if (lettre.identifiant_appel) { — appel : {{ lettre.identifiant_appel }} }
-      </p>
-
-      <h4>Scores par catégorie</h4>
-      <ul>
-        @for (s of lettre.scores; track s.categorie) {
-          <li>{{ s.categorie }} : <strong>{{ s.score | number: '1.0-2' }}</strong> / seuil {{ s.seuil | number: '1.0-2' }}
-            @if (s.reussite) { <span class="ok">✓</span> } @else { <span class="ko">✗ seuil non atteint</span> }
-          </li>
+    <!-- La lettre (seule partie imprimée) -->
+    <article class="lettre-papier" [class.felicitation]="felicitation">
+      <header class="lettre-entete">
+        <span class="marque"><mat-icon>{{ felicitation ? 'emoji_events' : 'forum' }}</mat-icon></span>
+        <div class="titres">
+          <div class="type">{{ felicitation ? 'Lettre de félicitation' : 'Lettre de débriefing' }}</div>
+          <div class="objet">
+            Objet : évaluation
+            @if (lettre.identifiant_appel) { de l'appel {{ lettre.identifiant_appel }} }
+            @if (lettre.contexte) { — {{ lettre.contexte }} }
+          </div>
+        </div>
+        @if (lettre.date_evaluation) {
+          <div class="date">Évaluation du<br /><strong>{{ lettre.date_evaluation | date: 'dd/MM/yyyy' }}</strong></div>
         }
-      </ul>
+      </header>
 
-      @if (lettre.constats.length) {
-        <h4>{{ lettre.type === 'FELICITATION' ? 'Points de vigilance' : 'Écarts constatés' }}</h4>
-        <ul>
-          @for (c of lettre.constats; track $index) {
-            <li><strong>{{ c.item }}</strong> ({{ c.categorie }})
-              @if (c.commentaire) { — {{ c.commentaire }} }
-              @if (c.referentiel) { <div class="ref">Réf. : {{ c.referentiel }}</div> }
-            </li>
-          }
-        </ul>
-      }
+      <div class="lettre-corps">
+        <!-- Introduction (modèle paramétrable) -->
+        <section class="texte">
+          @for (p of paragraphes(lettre.introduction); track $index) { <p>{{ p }}</p> }
+        </section>
 
-      @if (lettre.synthese) { <h4>Synthèse</h4><p>{{ lettre.synthese }}</p> }
+        <!-- Résultats -->
+        <section>
+          <div class="titre-section">
+            <h4>Vos résultats</h4>
+            <span class="pastille-globale" [class.ok]="felicitation">{{ felicitation ? 'Évaluation réussie' : 'À retravailler' }}</span>
+          </div>
+          <div class="scores">
+            @for (s of lettre.scores; track s.categorie) {
+              <div class="score">
+                <div class="score-tete">
+                  <span class="categorie">{{ s.categorie }}</span>
+                  <span class="valeur"><strong>{{ s.score | number: '1.0-1' }}</strong> % <span class="seuil">· seuil {{ s.seuil | number: '1.0-1' }} %</span></span>
+                  <span class="etat" [class.ok]="s.reussite">{{ s.reussite ? 'Atteint' : 'À renforcer' }}</span>
+                </div>
+                <div class="barre" [attr.aria-label]="s.categorie + ' : ' + s.score + ' %'">
+                  <div class="remplissage" [class.ok]="s.reussite" [style.width.%]="borne(s.score)"></div>
+                  <div class="repere" [style.left.%]="borne(s.seuil)" [attr.title]="'Seuil ' + s.seuil + ' %'"></div>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
 
-      @if (lettre.type === 'DEBRIEFING') {
-        <h4>Cause racine (coaching)</h4>
-        @if (lettre.cause_racine.length) {
-          <ol>@for (c of lettre.cause_racine; track c.niveau) { <li>{{ c.libelle }}</li> }</ol>
-        } @else { <p class="attente">Coaching pas encore renseigné.</p> }
-      }
+        <!-- Écarts / points de vigilance -->
+        @if (lettre.constats.length) {
+          <section>
+            <h4>{{ felicitation ? 'Pistes pour aller plus loin' : 'Points à travailler' }}</h4>
+            <div class="constats">
+              @for (c of lettre.constats; track $index) {
+                <div class="constat">
+                  <div class="constat-tete"><strong>{{ c.item }}</strong><span class="cat">{{ c.categorie }}</span></div>
+                  @if (c.commentaire) { <p class="commentaire">{{ c.commentaire }}</p> }
+                  @if (c.referentiel) { <div class="ref"><mat-icon>menu_book</mat-icon> {{ c.referentiel }}</div> }
+                </div>
+              }
+            </div>
+          </section>
+        }
 
-      <h4>Approbation Agent</h4>
+        <!-- Synthèse de l'évaluateur -->
+        @if (lettre.synthese) {
+          <section>
+            <h4>Le mot de votre évaluateur</h4>
+            <blockquote class="synthese">
+              {{ lettre.synthese }}
+              @if (nomEvaluateur) { <footer>— {{ nomEvaluateur }}</footer> }
+            </blockquote>
+          </section>
+        }
+
+        <!-- Cause racine (débriefing) -->
+        @if (!felicitation) {
+          <section>
+            <h4>Origine identifiée</h4>
+            @if (lettre.cause_racine.length) {
+              <div class="cause">
+                @for (c of lettre.cause_racine; track c.niveau; let dernier = $last) {
+                  <span class="etape" [class.finale]="dernier">{{ c.libelle }}</span>
+                  @if (!dernier) { <mat-icon class="fleche">chevron_right</mat-icon> }
+                }
+              </div>
+            } @else {
+              <p class="discret">L'analyse avec votre superviseur viendra compléter cette lettre.</p>
+            }
+          </section>
+        }
+
+        <!-- Clôture (modèle paramétrable) + signature -->
+        <section class="texte cloture">
+          @for (p of paragraphes(lettre.cloture); track $index) { <p>{{ p }}</p> }
+        </section>
+        <div class="signature">
+          <span>Cordialement,</span>
+          @if (nomEvaluateur) { <strong>{{ nomEvaluateur }}</strong> }
+          @if (lettre.evaluateur?.fonction) { <span class="fonction">{{ lettre.evaluateur?.fonction }}</span> }
+        </div>
+      </div>
+    </article>
+
+    <!-- Approbation de l'agent (hors lettre, non imprimée) -->
+    <section class="approbation">
+      <h4><mat-icon>how_to_reg</mat-icon> Approbation de l'agent</h4>
       @if (avisModifiable) {
-        <mat-form-field appearance="outline" class="avis-champ">
-          <mat-label>Approbation de l'agent</mat-label>
-          <mat-select [(ngModel)]="avis" name="approbationAgent">
-            <mat-option value="Oui">Oui</mat-option>
-          </mat-select>
-        </mat-form-field>
-        <button mat-raised-button color="primary" [disabled]="enregistrement || !avis" (click)="enregistrerAvis()">
-          <mat-icon>save</mat-icon> Valider mon approbation
-        </button>
+        <p class="discret">En validant, vous confirmez avoir pris connaissance de cette lettre.</p>
+        <div class="approbation-ligne">
+          <mat-form-field appearance="outline" class="avis-champ" subscriptSizing="dynamic">
+            <mat-label>Approbation</mat-label>
+            <mat-select [(ngModel)]="avis" name="approbationAgent">
+              <mat-option value="Oui">Oui, j'ai pris connaissance de la lettre</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <button mat-raised-button color="primary" [disabled]="enregistrement || !avis" (click)="enregistrerAvis()">
+            <mat-icon>check</mat-icon> Valider mon approbation
+          </button>
+        </div>
       } @else {
-        @if (lettre.avis_agent) { <p><em>Approbation : {{ lettre.avis_agent }}</em></p> }
-        @else { <p class="attente">Aucune approbation saisie par l'agent.</p> }
+        @if (lettre.avis_agent) { <p class="approuve"><mat-icon>check_circle</mat-icon> Lettre approuvée par l'agent ({{ lettre.avis_agent }}).</p> }
+        @else { <p class="discret">L'agent n'a pas encore approuvé cette lettre.</p> }
       }
-    </div>
+    </section>
   }
 </div>

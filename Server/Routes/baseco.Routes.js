@@ -6,7 +6,6 @@ const router = express.Router();
 const {
   getAllUtilisateur,
   addUtilisateur,
-  updateUtilisateur,
   deleteUtilisateur,
   getOneUtilisateur,
   getMe,
@@ -78,8 +77,6 @@ const {
   restore_password,
   archive_fiche,
   getAllAgentByRo,
-  getProgrammesPourRo,
-  updateProgrammeAgentParRo,
   getAllArchive,
   response_Quiz,
   reponse_utilite,
@@ -115,6 +112,7 @@ const {
   getDetailReporting,
   getAllFiche_Archive,
   statistic_TC_FOR_SUP,
+  getBadgesAgent,
   updateMotifMaVoixCompte,
   updateSite,
   getDeatilsSite,
@@ -142,7 +140,6 @@ router.get("/utilisateur/:id", auth, permission("UTILISATEUR","LIRE"), getOneUti
 // utilisateur.lire, ou compte.gerer (« Détails » de Gérer les comptes, limité aux comptes du site)
 router.get("/utilisateur/details/:id", auth, permission(["utilisateur.lire","compte.gerer"]), getDetailsUtilisateur);
 router.post("/utilisateur/addUser", auth, permission("UTILISATEUR","CREER"), addUtilisateur);
-router.put("/utilisateur/update/:id", auth, permission("UTILISATEUR","MODIFIER"), updateUtilisateur);
 router.delete("/utilisateur/delete/:id", auth, permission("UTILISATEUR","SUPPRIMER"), deleteUtilisateur);
 router.put("/update_utilisateur/:id", auth, permission("UTILISATEUR","MODIFIER"), update_utilisateur);
 router.put("/utilisateur/:id/eval-grille", auth, permission("UTILISATEUR","MODIFIER"), setEvalGrilleUtilisateur);
@@ -300,11 +297,9 @@ router.put("/archive_fiche/:id", auth, permission("FICHE","ARCHIVER"), archive_f
 /**Routes pour les Archive */
 router.get("/agents_by_RO/all", auth, permission("COMPTE","GERER"), getAllAgentByRo);
 // Modification du programme d'un agent par le RO (contrôle du rôle R_RO dans le contrôleur)
-router.get("/agents_by_RO/programmes", auth, permission("COMPTE","GERER"), getProgrammesPourRo);
-router.put("/agents_by_RO/:id/programme", auth, permission("COMPTE","GERER"), updateProgrammeAgentParRo);
 router.get("/agents_by_RO_assignable/all", auth, permission("ASSIGNATION","GERER"), getAllAgentByRo_Assignable);
 router.get("/superviseur_by_ro", auth, permission("ASSIGNATION","GERER"), getAllSuperviseurByRo);
-router.put("/renitialize/:id", auth, permission("COMPTE","GERER"), restore_password);
+router.put("/renitialize/:id", auth, permission(["compte.gerer","utilisateur.modifier"]), restore_password);
 router.put("/change_password", auth, change_password);
 router.put("/assigne_agent", auth, permission("ASSIGNATION","GERER"), assignation_agent);
 /**fin de routes archives */
@@ -318,6 +313,8 @@ router.put("/quiz_retest", auth, Quiz_Retest);
 router.get("/fiche_non_lu_sondage_encours", auth, statistic);
 router.post("/fiche_lu_Quiz_sondage", auth, statistic_TC);
 router.post("/fiche_lu_Quiz_sondage_for_sup", auth, statistic_TC_FOR_SUP);
+// Badges quiz d'un agent (page détail agent) — mêmes accès que ses statistiques
+router.get("/agent/:id/badges-quiz", auth, getBadgesAgent);
 /** fin de Routes pour le sondange */
 /** Routes pour ma_voix_compte */
 router.post("/export_ma_voix_compte", auth, export_ma_voix_compte);

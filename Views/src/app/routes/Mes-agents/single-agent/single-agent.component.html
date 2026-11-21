@@ -48,6 +48,11 @@
       </div>
     </div>
   </div>
+  <!-- Badges quiz de l'agent -->
+  <div class="badges-agent">
+    <div class="badges-titre">Badges quiz</div>
+    @if (badgesQuiz === null) { <mat-spinner [diameter]="22" /> } @else { <app-badges-quiz [badges]="badgesQuiz" [compact]="true" /> }
+  </div>
 </div>
 <div class="container pt-3">
   <div class="row">

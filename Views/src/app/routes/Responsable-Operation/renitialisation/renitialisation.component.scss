@@ -124,20 +124,6 @@ p {
   background-color: #e8f0fe !important;
 }
 
-/* Icône de modification du programme (Gérer les comptes) */
-.programme-cell {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.edit-programme {
-  font-size: 16px;
-  width: 16px;
-  height: 16px;
-  color: #ff8e36;
-  cursor: pointer;
-}
-
 .voir-details {
   color: #1976d2;
   cursor: pointer;
@@ -147,3 +133,8 @@ p {
 .table-comptes th.mat-mdc-header-cell {
   white-space: nowrap;
 }
+/* Gérer les comptes : filtre site, badge « Moi », modification (Jauge) */
+.filtres-comptes { display: flex; gap: 8px; align-items: center; }
+.filtre-site { border: 1px solid #ddd; border-radius: 4px; padding: 4px 8px; background: #fff; }
+.badge-moi { margin-left: 6px; padding: 1px 8px; border-radius: 10px; background: #ff8e36; color: #fff; font-size: 11px; font-weight: 600; }
+.modifier-compte { color: #ff8e36; cursor: pointer; }

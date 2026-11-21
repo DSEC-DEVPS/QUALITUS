@@ -1,0 +1,113 @@
+<div class="cal-page speciaux">
+  <mat-card class="cal-panel">
+    <mat-card-header class="cal-band">
+      <span class="cal-band-title"><mat-icon>admin_panel_settings</mat-icon> Utilisateurs spéciaux</span>
+    </mat-card-header>
+    <mat-card-content>
+      <p class="cal-desc">Personnes dont les droits diffèrent de leur rôle : permissions accordées en plus ou retirées.</p>
+
+      <!-- Compteurs -->
+      <div class="compteurs">
+        <div class="cpt"><span class="v">{{ compteurs.utilisateurs }}</span><span class="l">utilisateur{{ compteurs.utilisateurs > 1 ? 's' : '' }} spécia{{ compteurs.utilisateurs > 1 ? 'ux' : 'l' }}</span></div>
+        <div class="cpt plus"><span class="v">+{{ compteurs.plus }}</span><span class="l">droit{{ compteurs.plus > 1 ? 's' : '' }} en plus</span></div>
+        <div class="cpt moins"><span class="v">−{{ compteurs.moins }}</span><span class="l">droit{{ compteurs.moins > 1 ? 's' : '' }} en moins</span></div>
+        <div class="cpt expiree" *ngIf="compteurs.expirees"><span class="v">{{ compteurs.expirees }}</span><span class="l">dérogation{{ compteurs.expirees > 1 ? 's' : '' }} expirée{{ compteurs.expirees > 1 ? 's' : '' }}</span></div>
+      </div>
+
+      <!-- Filtres -->
+      <div class="filtres">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="f-q">
+          <mat-label>Recherche (nom, prénom, identifiant)</mat-label>
+          <input matInput [(ngModel)]="q" (ngModelChange)="rechercheChange()" />
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Site</mat-label>
+          <mat-select [(ngModel)]="site" (selectionChange)="recharger(0)">
+            <mat-option [value]="null">Tous les sites</mat-option>
+            <mat-option *ngFor="let s of sites" [value]="s.id">{{ s.nom }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Rôle</mat-label>
+          <mat-select [(ngModel)]="role" (selectionChange)="recharger(0)">
+            <mat-option [value]="null">Tous les rôles</mat-option>
+            <mat-option *ngFor="let r of roles" [value]="r.code">{{ r.libelle }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Type</mat-label>
+          <mat-select [(ngModel)]="type" (selectionChange)="recharger(0)">
+            <mat-option [value]="null">Tous</mat-option>
+            <mat-option value="plus">Droits en plus</mat-option>
+            <mat-option value="moins">Droits en moins</mat-option>
+            <mat-option value="expirees">Dérogations expirées</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Module</mat-label>
+          <mat-select [(ngModel)]="module" (selectionChange)="moduleChange()">
+            <mat-option [value]="null">Tous les modules</mat-option>
+            <mat-option *ngFor="let m of modulesListe" [value]="m.code">{{ m.libelle }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="f-perm">
+          <mat-label>Permission précise</mat-label>
+          <mat-select [(ngModel)]="permission" (selectionChange)="recharger(0)">
+            <mat-option [value]="null">Toutes</mat-option>
+            <mat-option *ngFor="let p of permissionsFiltre" [value]="p.code">{{ libelleModule(p.module) }} · {{ libellePermission(p) }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <div class="actions-liste">
+        <button mat-button *ngIf="filtresActifs" (click)="reinitialiser()"><mat-icon>filter_alt_off</mat-icon> Effacer les filtres</button>
+        <span class="espace"></span>
+        <button mat-button (click)="toutDeplier()" [disabled]="!items.length"><mat-icon>unfold_more</mat-icon> Tout déplier</button>
+        <button mat-button (click)="toutReplier()" [disabled]="!items.length"><mat-icon>unfold_less</mat-icon> Tout replier</button>
+        <button mat-stroked-button class="btn-export" (click)="exporter()" [disabled]="!total"><mat-icon>download</mat-icon> Exporter (Excel)</button>
+      </div>
+
+      <app-chargement *ngIf="chargement && !items.length" />
+
+      <div class="vide" *ngIf="!chargement && !items.length">
+        {{ filtresActifs ? 'Aucun utilisateur ne correspond à ces filtres.' : 'Aucun utilisateur spécial : tout le monde a exactement les droits de son rôle.' }}
+      </div>
+
+      <div class="liste" [class.rafraichit]="chargement && items.length">
+        <div class="carte-user" *ngFor="let u of items; trackBy: trackUser" [class.ouvert]="ouverts.has(u.id)">
+          <div class="cu-tete" (click)="basculer(u)">
+            <mat-icon class="chevron">{{ ouverts.has(u.id) ? 'expand_more' : 'chevron_right' }}</mat-icon>
+            <div class="cu-ident">
+              <span class="nom">{{ u.prenom }} {{ u.nom }}</span>
+              <span class="meta">{{ u.nom_utilisateur }} · {{ u.fonction || u.role || '—' }}{{ u.site ? ' · ' + u.site : '' }}</span>
+            </div>
+            <span class="pastille plus" *ngIf="u.nb_grant">+{{ u.nb_grant }} en plus</span>
+            <span class="pastille moins" *ngIf="u.nb_deny">−{{ u.nb_deny }} en moins</span>
+            <span class="pastille expiree" *ngIf="u.nb_expirees">{{ u.nb_expirees }} expirée{{ u.nb_expirees > 1 ? 's' : '' }}</span>
+            <span class="espace"></span>
+            <button mat-icon-button (click)="$event.stopPropagation(); ouvrir(u)" matTooltip="Ouvrir sa fiche de droits"><mat-icon>tune</mat-icon></button>
+            <button mat-icon-button class="btn-reset" (click)="$event.stopPropagation(); remettreAuRole(u)" matTooltip="Tout remettre au rôle"><mat-icon>restart_alt</mat-icon></button>
+          </div>
+          <div class="cu-detail" *ngIf="ouverts.has(u.id)">
+            <div class="der" *ngFor="let d of u.derogations; trackBy: trackDer"
+                 [class.plus]="d.sens === 'GRANT' && !d.expiree" [class.moins]="d.sens === 'DENY' && !d.expiree" [class.expiree]="d.expiree">
+              <span class="signe">{{ d.expiree ? '⏱' : d.sens === 'GRANT' ? '+' : '−' }}</span>
+              <div class="d-info">
+                <span class="d-lib">{{ libelleModule(d.module) }} · {{ libellePermission(d) }} <small>{{ d.code }}</small></span>
+                <span class="d-meta">
+                  {{ d.sens === 'GRANT' ? 'Autorisé' : 'Refusé' }}{{ d.auteur ? ' par ' + d.auteur : '' }}{{ d.date_maj ? ' le ' + formatDate(d.date_maj) : '' }}
+                  <ng-container *ngIf="d.date_fin"> · {{ d.expiree ? 'expirée depuis le' : 'jusqu\'au' }} {{ formatDate(d.date_fin) }}</ng-container>
+                  <ng-container *ngIf="d.motif"> · « {{ d.motif }} »</ng-container>
+                </span>
+              </div>
+              <button mat-icon-button (click)="retirer(u, d)" matTooltip="Retirer cette dérogation"><mat-icon>close</mat-icon></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <mat-paginator *ngIf="total > 0" [length]="total" [pageSize]="taille" [pageIndex]="page"
+                     [pageSizeOptions]="[10, 25, 50]" (page)="onPage($event)"></mat-paginator>
+    </mat-card-content>
+  </mat-card>
+</div>

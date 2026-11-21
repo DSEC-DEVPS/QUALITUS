@@ -15,5 +15,7 @@ router.put("/calibrage/session/:id/commentaire-jauge", auth, permission("CALIBRA
 router.put("/calibrage/session/:id/conclusions", auth, permission("CALIBRAGE", "ORGANISER"), c.setConclusions);
 router.post("/calibrage/session/:id/valider", auth, permission("CALIBRAGE", "ORGANISER"), c.validerSession);
 router.post("/calibrage/session/:id/figer", auth, permission("CALIBRAGE", "ORGANISER"), c.figerSession);
+// Défigement : réservé à l'administrateur (contrôle dans le contrôleur), motif obligatoire.
+router.post("/calibrage/session/:id/defiger", auth, c.defigerSession);
 
 module.exports = router;

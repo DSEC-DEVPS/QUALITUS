@@ -51,6 +51,8 @@ import { TentativeDetailDialogComponent } from './tentative-detail-dialog.compon
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { Pagination } from '@shared/utils/pagination';
 import { finalize } from 'rxjs';
+import { ConfirmationService } from '@shared/services/confirmation.service';
+import { BAREME_TOTAL, confirmerRepartition, proposerRepartition, totalPoints } from '../bareme';
 import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 /**
@@ -514,7 +516,21 @@ export class DetailQuizComponent implements OnInit {
   }
 
   get totalPoints(): number {
-    return this.questions.reduce((total, q) => total + Number(q.points ?? 5), 0);
+    return totalPoints(this.questions);
+  }
+  get baremeConforme(): boolean { return this.totalPoints === BAREME_TOTAL; }
+
+  // ---------- Barème : 100 points répartis entre les questions ----------
+  private readonly confirmation = inject(ConfirmationService);
+  private proposerApresChargement = false;
+  async repartirPoints(demander = true): Promise<void> {
+    if (!this.quizId || !this.questions.length) return;
+    if (quizDejaPasse(this.quiz)) {
+      if (!(await confirmerImpact(this.quiz, 'POINTS', () => this.exporterAvantModification()))) return;
+    } else if (demander && !(await confirmerRepartition(this.confirmation, this.questions.length))) {
+      return;
+    }
+    this.quizSrv.repartirPoints(this.quizId).subscribe({ next: res => this.ok(res.message), error: err => this.koMessage(err) });
   }
 
   charger() {
@@ -523,6 +539,10 @@ export class DetailQuizComponent implements OnInit {
       next: q => {
         this.quiz = q;
         this.questions = q.questions || [];
+        if (this.proposerApresChargement) {
+          this.proposerApresChargement = false;
+          setTimeout(async () => { if (await proposerRepartition(this.confirmation, this.questions)) this.repartirPoints(false); });
+        }
         // Utilisateur autorisé (site invité) : Diffusion limitée à son site
         // (liste « Site » réduite à son site, pré-sélectionné et non modifiable).
         if (!this.coteProprietaire && q.mon_site_id != null) {
@@ -640,7 +660,7 @@ export class DetailQuizComponent implements OnInit {
       this.toast.warning(MSG_QUIZ_FERME);
       return;
     }
-    const data: QuestionDialogData = { mode: 'add' };
+    const data: QuestionDialogData = { mode: 'add', pointsAutres: totalPoints(this.questions) };
     this.dialog
       .open(QuestionDialogComponent, { width: 'calc(100% - 30px)', maxWidth: '640px', data })
       .afterClosed()
@@ -650,12 +670,12 @@ export class DetailQuizComponent implements OnInit {
         }
         this.quizSrv
           .addQuestion({ id_Quiz: this.quizId, ...r })
-          .subscribe({ next: res => this.ok(res.message), error: err => this.koMessage(err) });
+          .subscribe({ next: res => { this.proposerApresChargement = true; this.ok(res.message); }, error: err => this.koMessage(err) });
       });
   }
 
   modifierQuestion(q: Question) {
-    const data: QuestionDialogData = { mode: 'edit', question: q };
+    const data: QuestionDialogData = { mode: 'edit', question: q, pointsAutres: totalPoints(this.questions, q) };
     this.dialog
       .open(QuestionDialogComponent, { width: 'calc(100% - 30px)', maxWidth: '640px', data })
       .afterClosed()
@@ -762,7 +782,7 @@ export class DetailQuizComponent implements OnInit {
       if (resp.success) {
         this.quizSrv.deleteIp(ip.id).subscribe({
           next: () => {
-            this.toast.success('Adresse IP supprimee');
+            this.toast.success('Adresse IP supprimée');
             this.chargerIps();
           },
           error: () => this.ko(),

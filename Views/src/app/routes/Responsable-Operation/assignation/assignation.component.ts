@@ -1,154 +1,87 @@
-import { LiveAnnouncer } from '@angular/cdk/a11y';
-import { COMMA, ENTER } from '@angular/cdk/keycodes';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  model,
-  OnInit,
-  signal,
-} from '@angular/core';
-import {
-  FormBuilder,
-  FormGroup,
-  FormsModule,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
-import {
-  MatAutocompleteModule,
-  MatAutocompleteSelectedEvent,
-} from '@angular/material/autocomplete';
-import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
+import { Component, OnInit, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
-import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
-import { UserService } from '@shared/services/user.service';
 import { ToastrService } from 'ngx-toastr';
-import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { AgentAssignable, UserService } from '@shared/services/user.service';
+import { ConfirmationService } from '@shared/services/confirmation.service';
+
+interface SuperviseurAssign { id: number; nom_utilisateur: string; nom: string; prenom: string; nb_agents: number; }
 
 /**
- * @title Chips Autocomplete
+ * Assignation des agents de son site à un superviseur : recherche d'agents
+ * existants (sans doublon), choix du superviseur avec son équipe actuelle,
+ * récapitulatif des changements avant validation.
  */
 @Component({
   selector: 'app-assignation',
   standalone: true,
   templateUrl: './assignation.component.html',
   styleUrl: './assignation.component.scss',
-  imports: [
-    MatFormFieldModule,
-    ReactiveFormsModule,
-    MatChipsModule,
-    MatIconModule,
-    MatAutocompleteModule,
-    FormsModule,
-    MatCardModule,
-    MatButtonModule,
-    CommonModule,
-    MatCardModule,
-  ],
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [FormsModule, MatAutocompleteModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule, MatButtonModule],
 })
 export class AssignationComponent implements OnInit {
-  readonly separatorKeysCodes: number[] = [ENTER, COMMA];
   private readonly userService = inject(UserService);
-  private readonly fb = inject(FormBuilder);
-  private readonly taostSrv = inject(ToastrService);
-  private readonly router = inject(Router);
-  readonly currentFruit = model('');
-  id_SUPERVISEUR!: number;
-  fruits = signal<string[]>(['Lemon']);
-  allSuperviseur!: any[];
-  // readonly allFruits: string[] = ['Apple', 'Lemon', 'Lime', 'Orange', 'Strawberry'];
-  data_form!: FormGroup;
-  allFruits: string[] = [];
-  filteredFruits!: any;
-  readonly announcer = inject(LiveAnnouncer);
-  ngOnInit(): void {
-    this.data_form = this.fb.group({
-      id_SUPERVISEUR: [null, [Validators.required]],
-    });
-    this.userService.getAllAgentByRo_Assignable().subscribe({
-      next: resultat => {
-        this.fruits = signal<string[]>([resultat[0]]);
-        this.allFruits = resultat;
-        this.filteredFruits = computed(() => {
-          const currentFruit = this.currentFruit();
-          return currentFruit
-            ? this.allFruits.filter(fruit => fruit.includes(currentFruit))
-            : this.allFruits.slice();
-        });
-      },
-      error: error => {
-        console.log(error);
-      },
-    });
-    this.userService.getAllSuperviseurByRo().subscribe({
-      next: resultat => {
-        this.allSuperviseur = resultat;
-      },
-      error: error => {
-        console.log(error);
-      },
-    });
+  private readonly toast = inject(ToastrService);
+  private readonly confirmation = inject(ConfirmationService);
+
+  agents: AgentAssignable[] = [];
+  superviseurs: SuperviseurAssign[] = [];
+  choisis: AgentAssignable[] = [];
+  idSuperviseur: number | null = null;
+  recherche: any = '';
+  equipe: AgentAssignable[] = [];
+  envoi = false;
+
+  ngOnInit(): void { this.charger(); }
+
+  charger(): void {
+    this.userService.getAgentsAssignables().subscribe({ next: a => { this.agents = a || []; this.majEquipe(); }, error: () => {} });
+    this.userService.getAllSuperviseurByRo().subscribe({ next: s => (this.superviseurs = s || []), error: () => {} });
   }
 
-  add(event: MatChipInputEvent): void {
-    const value = (event.value || '').trim();
-
-    // Add our fruit
-    if (value) {
-      this.fruits.update(fruits => [...fruits, value]);
-    }
-
-    // Clear the input value
-    this.currentFruit.set('');
+  /** Suggestions : agents non encore choisis correspondant à la saisie. */
+  get suggestions(): AgentAssignable[] {
+    const q = typeof this.recherche === 'string' ? this.recherche.trim().toLowerCase() : '';
+    const pris = new Set(this.choisis.map(a => a.id));
+    return this.agents
+      .filter(a => !pris.has(a.id))
+      .filter(a => !q || `${a.prenom} ${a.nom} ${a.nom} ${a.prenom} ${a.login}`.toLowerCase().includes(q))
+      .slice(0, 50);
   }
-  remove(fruit: string): void {
-    this.fruits.update(fruits => {
-      const index = fruits.indexOf(fruit);
-      if (index < 0) {
-        return fruits;
-      }
+  ajouter(a: AgentAssignable): void {
+    if (a && !this.choisis.some(x => x.id === a.id)) this.choisis = [...this.choisis, a];
+  }
+  retirer(a: AgentAssignable): void { this.choisis = this.choisis.filter(x => x.id !== a.id); }
 
-      fruits.splice(index, 1);
-      this.announcer.announce(`Removed ${fruit}`);
-      return [...fruits];
+  get superviseurChoisi(): SuperviseurAssign | undefined { return this.superviseurs.find(s => s.id === this.idSuperviseur); }
+  majEquipe(): void { this.equipe = this.agents.filter(a => this.idSuperviseur && a.id_superviseur === this.idSuperviseur); }
+  /** Agents choisis qui quittent un autre superviseur. */
+  get changements(): AgentAssignable[] {
+    return this.choisis.filter(a => a.id_superviseur && a.id_superviseur !== this.idSuperviseur);
+  }
+  get dejaDansEquipe(): AgentAssignable[] { return this.choisis.filter(a => a.id_superviseur === this.idSuperviseur); }
+
+  async assigner(): Promise<void> {
+    const sup = this.superviseurChoisi;
+    if (!this.choisis.length || !sup) return;
+    const chg = this.changements.length;
+    if (!(await this.confirmation.confirmer({
+      titre: 'Confirmer l’assignation',
+      message: `${this.choisis.length} agent(s) seront rattachés à ${sup.prenom} ${sup.nom}`
+        + (chg ? ` (dont ${chg} qui changent de superviseur).` : '.'),
+      type: 'attention',
+      oui: 'Assigner',
+    }))) return;
+    this.envoi = true;
+    this.userService.assigne_agent({ id_SUPERVISEUR: sup.id, liste_agents: this.choisis.map(a => a.login) }).subscribe({
+      next: r => { this.toast.success(r.message); this.envoi = false; this.choisis = []; this.charger(); },
+      error: () => { this.envoi = false; },
     });
   }
-  selected(event: MatAutocompleteSelectedEvent): void {
-    this.fruits.update(fruits => [...fruits, event.option.viewValue]);
-    this.currentFruit.set('');
-    event.option.deselect();
-  }
-  onSubmit() {
-    if (this.id_SUPERVISEUR === null) {
-      this.taostSrv.error('Merci de selectionner un superviseur!!');
-    } else {
-      this.userService
-        .assigne_agent({
-          id_SUPERVISEUR: this.id_SUPERVISEUR,
-          liste_agents: this.fruits(),
-        })
-        .subscribe({
-          next: resultat => {
-            this.taostSrv.success(resultat.message);
-            this.router.navigateByUrl('mon-espace/RO/assignation-agents');
-          },
-          error: error => {
-            console.log(error);
-          },
-        });
-    }
-  }
-  isSubmitDisabled(): boolean {
-    const hasAgents = this.fruits().length > 0;
-    const hasSupervisor = this.id_SUPERVISEUR && this.id_SUPERVISEUR !== null;
-    const isFormValid = this.data_form?.valid || false;
-
-    return !(hasAgents && hasSupervisor && isFormValid);
-  }
+  reinitialiser(): void { this.choisis = []; this.idSuperviseur = null; this.recherche = ''; this.equipe = []; }
 }

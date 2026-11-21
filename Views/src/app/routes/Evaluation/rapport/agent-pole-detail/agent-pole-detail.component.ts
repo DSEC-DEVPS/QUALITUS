@@ -72,14 +72,46 @@ import { ChargementComponent } from '@shared/components/chargement/chargement.co
             <mat-accordion multi>
               @for (e of data.agent.evaluations; track e.id) {
                 <mat-expansion-panel>
-                  <mat-expansion-panel-header>
+                  <mat-expansion-panel-header class="ep-tete">
                     <mat-panel-title>
-                      Évaluation #{{ e.id }} — {{ e.date_appel ? (e.date_appel | date: 'dd/MM/yyyy') : '' }}
+                      <div class="ep-titre">
+                        <span class="ep-date">{{ e.date_appel ? (e.date_appel | date: 'dd/MM/yyyy') : '—' }}</span>
+                        <span class="ep-sous">Évaluation #{{ e.id }}@if (e.identifiant_appel) { · appel {{ e.identifiant_appel }} }@if (e.evaluateur) { · par {{ e.evaluateur }} }</span>
+                      </div>
                     </mat-panel-title>
-                    <mat-panel-description>
-                      @if (e.critiques_decochees >= 3) { <span class="tag">{{ e.critiques_decochees }} erreurs critiques</span> }
+                    <mat-panel-description class="ep-desc">
+                      @if (e.nb_categories) {
+                        <span class="ep-cat" [class.ko]="(e.categories_echec?.length || 0) > 0">
+                          {{ e.categories_echec?.length || 0 }} / {{ e.nb_categories }} catégorie(s) en échec
+                        </span>
+                      }
+                      @if (e.critiques_decochees > 0) {
+                        <span class="tag" [class.fort]="e.critiques_decochees >= 3">{{ e.critiques_decochees }} erreur(s) critique(s)</span>
+                      }
+                      @if (e.plan_action) {
+                        <span class="ep-pa" [attr.data-etat]="e.plan_action.etat">
+                          <mat-icon>{{ e.plan_action.etat === 'TERMINE' ? 'task_alt' : e.plan_action.etat === 'EN_COURS' ? 'pending_actions' : 'playlist_add' }}</mat-icon>
+                          @switch (e.plan_action.etat) {
+                            @case ('AUCUN') { Aucun plan d'action }
+                            @case ('TERMINE') { Plan d'action terminé }
+                            @default { Plan d'action : {{ e.plan_action.realisees }} / {{ e.plan_action.nb }} }
+                          }
+                        </span>
+                      }
                     </mat-panel-description>
                   </mat-expansion-panel-header>
+
+                  @if (e.categories_echec?.length) {
+                    <div class="ep-echecs">
+                      @for (c of e.categories_echec; track c.libelle) {
+                        <div class="ep-echec">
+                          <span class="ep-lib">{{ c.libelle }}@if (c.critique) { <span class="crit-mini">critique</span> }</span>
+                          <span class="ep-barre"><span [style.width.%]="c.score > 100 ? 100 : c.score"></span><i [style.left.%]="c.seuil"></i></span>
+                          <span class="ep-score">{{ c.score | number: '1.0-1' }} % <small>/ seuil {{ c.seuil }} %</small></span>
+                        </div>
+                      }
+                    </div>
+                  }
 
                   <div class="eval-actions">
                     <button mat-stroked-button color="primary" (click)="ouvrirEval(e.id)">
@@ -107,7 +139,27 @@ import { ChargementComponent } from '@shared/components/chargement/chargement.co
     .titre-evals { margin: 8px 0; }
     .eval-actions { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
     .eval-actions .lecture { color: #888; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
-    .tag { background: #ffe0b2; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+    .tag { background: #ffe0b2; padding: 2px 8px; border-radius: 10px; font-size: 12px; white-space: nowrap; }
+    .tag.fort { background: #ffcdd2; color: #b71c1c; font-weight: 600; }
+    ::ng-deep .ep-tete.mat-expansion-panel-header { height: auto !important; min-height: 58px; padding-top: 8px; padding-bottom: 8px; }
+    .ep-titre { display: flex; flex-direction: column; line-height: 1.25; }
+    .ep-date { font-weight: 600; color: #2b2b2b; }
+    .ep-sous { font-size: 12px; color: #777; }
+    .ep-desc { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
+    .ep-cat { font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #e8f5e9; color: #2e7d32; white-space: nowrap; }
+    .ep-cat.ko { background: #fdecea; color: #c62828; }
+    .ep-pa { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #777; white-space: nowrap;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; } }
+    .ep-pa[data-etat='TERMINE'] { color: #2e7d32; }
+    .ep-pa[data-etat='EN_COURS'] { color: #e65100; }
+    .ep-echecs { border: 1px solid #f5d6d3; background: #fffafa; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+    .ep-echec { display: grid; grid-template-columns: minmax(160px, 1fr) 2fr 150px; align-items: center; gap: 12px; padding: 4px 0; font-size: 13px; }
+    .ep-lib { font-weight: 500; }
+    .crit-mini { margin-left: 6px; font-size: 10.5px; color: #b71c1c; background: #ffcdd2; padding: 0 6px; border-radius: 8px; }
+    .ep-barre { position: relative; height: 8px; background: #eee; border-radius: 4px;
+      span { position: absolute; left: 0; top: 0; bottom: 0; background: #e53935; border-radius: 4px; }
+      i { position: absolute; top: -3px; bottom: -3px; width: 2px; background: #2b2b2b; } }
+    .ep-score { text-align: right; font-weight: 600; color: #c62828; small { font-weight: 400; color: #888; } }
   `,
 })
 export class AgentPoleDetailComponent implements OnInit {

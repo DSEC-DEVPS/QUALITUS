@@ -1,23 +1,22 @@
 <div class="container-fluid p-16">
   <!-- Badges / recompenses -->
-  <mat-card class="m-b-16">
-    <mat-card-content>
-      <h5 class="m-b-16">Mes badges</h5>
-      <div class="badges">
-        @for (b of badges; track b.code) {
-          <div class="badge" [class.gagne]="b.obtenu === 1" [matTooltip]="b.description">
-            <mat-icon>{{ b.icone }}</mat-icon>
-            <div class="badge-nom">{{ b.nom }}</div>
-            @if (b.obtenu !== 1) {
-              <div class="verrou"><mat-icon>lock</mat-icon></div>
-            }
-          </div>
-        } @empty {
-          <span class="text-muted">Aucun badge configure.</span>
-        }
-      </div>
-    </mat-card-content>
-  </mat-card>
+  <!-- Badges : panneau dépliable (replié par défaut) pour ne pas masquer les scores -->
+  <mat-accordion class="m-b-16 d-block">
+    <mat-expansion-panel class="panneau-badges" [expanded]="badgesOuverts" (opened)="memoriserBadges(true)" (closed)="memoriserBadges(false)">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          Mes badges
+          <span class="resume-badges">{{ badgesObtenus.length }} / {{ badges.length }} obtenus</span>
+        </mat-panel-title>
+        <mat-panel-description class="icones-badges">
+          @for (b of badgesObtenus; track b.code) {
+            <mat-icon [matTooltip]="b.nom">{{ b.icone }}</mat-icon>
+          }
+        </mat-panel-description>
+      </mat-expansion-panel-header>
+      <app-badges-quiz [badges]="badges" />
+    </mat-expansion-panel>
+  </mat-accordion>
 
   <mat-card>
     <mat-card-content>

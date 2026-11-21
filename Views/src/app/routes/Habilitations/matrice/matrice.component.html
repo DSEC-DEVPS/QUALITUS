@@ -4,8 +4,7 @@
   <mat-card class="entete">
     <div class="titre">
       <div>
-        
-        <p class="sous">Rôle × permission (module / action). Socle commun — S5.</p>
+        <p class="sous">Permissions accordées à chaque rôle. Chaque clic est enregistré immédiatement.</p>
       </div>
       <div class="mode">
         <span class="lbl">Contrôle serveur :</span>
@@ -21,51 +20,135 @@
     </div>
     <div class="aide" [class.warn]="mode === 'ACTIF'">
       <mat-icon>{{ mode === 'ACTIF' ? 'gpp_good' : 'info' }}</mat-icon>
-      <span *ngIf="mode === 'OBSERVATION'">Mode <b>Observation</b> : aucun accès n'est refusé ; les accès qui seraient bloqués sont journalisés ci-dessous.</span>
+      <span *ngIf="mode === 'OBSERVATION'">Mode <b>Observation</b> : aucun accès n'est refusé ; les accès qui seraient bloqués sont journalisés.</span>
       <span *ngIf="mode === 'ACTIF'">Mode <b>Actif</b> : les permissions sont <b>appliquées</b>. Un accès sans droit est refusé (403).</span>
     </div>
   </mat-card>
 
   <mat-tab-group>
-    <!-- Onglet matrice -->
     <mat-tab label="Matrice">
       <app-chargement *ngIf="chargement" />
-      <div class="table-wrap" *ngIf="matrice && !chargement">
-        <table class="grille">
-          <thead>
-            <tr>
-              <th class="col-perm">Permission</th>
-              <th *ngFor="let r of matrice.roles" class="col-role" [matTooltip]="r.libelle">{{ r.code }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <ng-container *ngFor="let g of modules">
-              <tr class="ligne-module">
-                <td class="col-perm mod">{{ g.module }}</td>
-                <td *ngFor="let r of matrice.roles" class="col-role mod">
-                  <button *ngIf="r.code !== 'R_ADMI'" mat-icon-button matTooltip="Tout cocher pour ce rôle"
-                          (click)="toutCocherModule(g.module, r.id, r.code, true)">
-                    <mat-icon>done_all</mat-icon>
-                  </button>
-                </td>
+      <ng-container *ngIf="matrice && !chargement">
+        <!-- Barre d'outils -->
+        <div class="outils">
+          <mat-button-toggle-group [(ngModel)]="vue" class="vue" hideSingleSelectionIndicator>
+            <mat-button-toggle value="matrice"><mat-icon>grid_on</mat-icon> Tous les rôles</mat-button-toggle>
+            <mat-button-toggle value="role"><mat-icon>person</mat-icon> Par rôle</mat-button-toggle>
+          </mat-button-toggle-group>
+
+          <mat-form-field appearance="outline" class="champ recherche" subscriptSizing="dynamic">
+            <mat-label>Rechercher une permission</mat-label>
+            <input matInput [(ngModel)]="recherche" placeholder="quiz, supprimer, tableau…" />
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field *ngIf="vue === 'matrice'" appearance="outline" class="champ roles-aff" subscriptSizing="dynamic">
+            <mat-label>Rôles affichés</mat-label>
+            <mat-select multiple [(ngModel)]="rolesAffiches">
+              <mat-option *ngFor="let r of matrice.roles; trackBy: trackRole" [value]="r.id">{{ r.libelle }} ({{ r.code }})</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field *ngIf="vue === 'role'" appearance="outline" class="champ roles-aff" subscriptSizing="dynamic">
+            <mat-label>Rôle</mat-label>
+            <mat-select [(ngModel)]="roleVue">
+              <mat-option *ngFor="let r of matrice.roles; trackBy: trackRole" [value]="r.id">{{ r.libelle }} ({{ r.code }})</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-slide-toggle *ngIf="vue === 'matrice'" [(ngModel)]="seulementDifferences"
+                            matTooltip="N'afficher que les permissions accordées à certains rôles affichés et pas aux autres">
+            Seulement les différences
+          </mat-slide-toggle>
+
+          <span class="espace"></span>
+          <button mat-button (click)="toutDeplier()"><mat-icon>unfold_more</mat-icon> Tout déplier</button>
+          <button mat-button (click)="toutReplier()"><mat-icon>unfold_less</mat-icon> Tout replier</button>
+        </div>
+
+        <!-- ============ VUE TOUS LES RÔLES ============ -->
+        <div class="table-wrap" *ngIf="vue === 'matrice'" (mouseleave)="survoler(null, null)">
+          <table class="grille">
+            <thead>
+              <tr>
+                <th class="col-perm coin">Permission</th>
+                <th *ngFor="let r of roles; trackBy: trackRole" class="col-role" [class.croix]="survolRole === r.id">
+                  <div class="role-nom">{{ r.libelle }}</div>
+                  <div class="role-code">{{ r.code }}</div>
+                </th>
               </tr>
-              <tr *ngFor="let p of g.permissions">
-                <td class="col-perm">
-                  <span class="act">{{ p.action }}</span>
+            </thead>
+            <tbody>
+              <ng-container *ngFor="let g of modulesVisibles; trackBy: trackModule">
+                <tr class="ligne-module">
+                  <td class="col-perm mod" (click)="basculerModule(g)">
+                    <mat-icon class="chevron">{{ estReplie(g) ? 'chevron_right' : 'expand_more' }}</mat-icon>
+                    <span class="mod-nom">{{ g.libelle }}</span>
+                    <span class="mod-nb">{{ g.permissions.length }}</span>
+                  </td>
+                  <td *ngFor="let r of roles; trackBy: trackRole" class="col-role mod" [class.croix]="survolRole === r.id">
+                    <div class="mod-case">
+                      <mat-checkbox [checked]="etatModule(r, g) === 'tout'" [indeterminate]="etatModule(r, g) === 'partiel'"
+                                    [disabled]="estAdmin(r)" (change)="basculerModuleRole(r, g)" (click)="$event.stopPropagation()"
+                                    [matTooltip]="estAdmin(r) ? 'Administrateur : toutes les permissions' : (etatModule(r, g) === 'tout' ? 'Tout retirer' : 'Tout accorder') + ' — ' + g.libelle + ' pour ' + r.libelle">
+                      </mat-checkbox>
+                      <span class="compte" [class.plein]="etatModule(r, g) === 'tout'" [class.vide]="etatModule(r, g) === 'rien'">
+                        {{ nbCoches(r, g) }}/{{ g.permissions.length }}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                <ng-container *ngIf="!estReplie(g)">
+                  <tr *ngFor="let p of visibles(g); trackBy: trackPerm" [class.croix]="survolPerm === p.id">
+                    <td class="col-perm" (mouseenter)="survoler(p.id, null)">
+                      <span class="lib">{{ libellePermission(p) }}</span>
+                      <span class="code">{{ p.code }}</span>
+                    </td>
+                    <td *ngFor="let r of roles; trackBy: trackRole" class="col-role case"
+                        [class.croix]="survolRole === r.id" [class.cible]="survolRole === r.id && survolPerm === p.id"
+                        [class.ok]="etatCase(r.id, p.id) === 'ok'" [class.erreur]="etatCase(r.id, p.id) === 'erreur'"
+                        (mouseenter)="survoler(p.id, r.id)" [matTooltip]="bulle(r, p)" matTooltipShowDelay="350">
+                      <mat-checkbox [checked]="coche(r, p)" [disabled]="estAdmin(r) || etatCase(r.id, p.id) === 'enregistrement'"
+                                    (change)="basculer(r, p)"></mat-checkbox>
+                    </td>
+                  </tr>
+                </ng-container>
+              </ng-container>
+              <tr *ngIf="!modulesVisibles.length"><td [attr.colspan]="roles.length + 1" class="vide">Aucune permission ne correspond.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ============ VUE PAR RÔLE ============ -->
+        <div class="par-role" *ngIf="vue === 'role' && roleSelectionne as r">
+          <div class="admin-note" *ngIf="estAdmin(r)">
+            <mat-icon>gpp_good</mat-icon> L'administrateur dispose de toutes les permissions ; rien n'est modifiable ici.
+          </div>
+          <div class="bloc-module" *ngFor="let g of modulesVisibles; trackBy: trackModule">
+            <div class="bm-tete" (click)="basculerModule(g)">
+              <mat-icon class="chevron">{{ estReplie(g) ? 'chevron_right' : 'expand_more' }}</mat-icon>
+              <span class="mod-nom">{{ g.libelle }}</span>
+              <span class="compte" [class.plein]="etatModule(r, g) === 'tout'" [class.vide]="etatModule(r, g) === 'rien'">{{ nbCoches(r, g) }}/{{ g.permissions.length }}</span>
+              <span class="espace"></span>
+              <button mat-stroked-button *ngIf="!estAdmin(r)" (click)="$event.stopPropagation(); basculerModuleRole(r, g)">
+                {{ etatModule(r, g) === 'tout' ? 'Tout retirer' : 'Tout accorder' }}
+              </button>
+            </div>
+            <ng-container *ngIf="!estReplie(g)">
+              <div class="bm-ligne" *ngFor="let p of visibles(g); trackBy: trackPerm"
+                   [class.ok]="etatCase(r.id, p.id) === 'ok'" [class.erreur]="etatCase(r.id, p.id) === 'erreur'">
+                <div class="info">
+                  <span class="lib">{{ libellePermission(p) }}</span>
                   <span class="code">{{ p.code }}</span>
-                </td>
-                <td *ngFor="let r of matrice.roles" class="col-role">
-                  <mat-checkbox
-                    [checked]="r.code === 'R_ADMI' ? true : estActif(r.id, p.id)"
-                    [disabled]="r.code === 'R_ADMI'"
-                    (change)="basculer(r.id, p.id, r.code)">
-                  </mat-checkbox>
-                </td>
-              </tr>
+                </div>
+                <mat-slide-toggle [checked]="coche(r, p)" [disabled]="estAdmin(r) || etatCase(r.id, p.id) === 'enregistrement'"
+                                  (change)="basculer(r, p)">{{ coche(r, p) ? 'Accordée' : 'Non accordée' }}</mat-slide-toggle>
+              </div>
             </ng-container>
-          </tbody>
-        </table>
-      </div>
+          </div>
+          <div class="vide" *ngIf="!modulesVisibles.length">Aucune permission ne correspond.</div>
+        </div>
+      </ng-container>
     </mat-tab>
 
     <!-- Onglet observation -->

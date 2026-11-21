@@ -132,6 +132,10 @@ export class QuizService {
   getQuestionsSource(quizId: number, sourceId: number): Observable<QuestionSource[]> {
     return this.http.get<QuestionSource[]>(`${this.base}/${quizId}/sources-questions/${sourceId}`);
   }
+  /** Répartit équitablement les 100 points du barème entre les questions. */
+  repartirPoints(id: number): Observable<message & { total_points: number }> {
+    return this.http.post<message & { total_points: number }>(`${this.base}/${id}/repartir-points`, {});
+  }
   reprendreQuestions(
     quizId: number,
     body: { id_source: number; ids_questions: number[] }
@@ -200,6 +204,10 @@ export class QuizService {
   /* ----- Phase 3 : badges ----- */
   getMesBadges(): Observable<BadgeUtilisateur[]> {
     return this.http.get<BadgeUtilisateur[]>(`${this.base}/badges/mes`);
+  }
+  /** Badges d'un agent (page détail agent : mêmes accès que ses statistiques). */
+  getBadgesAgent(idAgent: number): Observable<BadgeUtilisateur[]> {
+    return this.http.get<BadgeUtilisateur[]>(`/api/v1/agent/${idAgent}/badges-quiz`);
   }
 
   /* ----- Phase 3 : rapports de difficulte ----- */

@@ -19,6 +19,14 @@
           <input matInput (keyup)="applyFilter($event)" placeholder="Titre du quiz..." />
           <mat-icon matSuffix>search</mat-icon>
         </mat-form-field>
+        <mat-form-field appearance="outline" style="flex: 0 0 160px" subscriptSizing="dynamic" class="f-statut">
+          <mat-label>Statut</mat-label>
+          <mat-select [value]="statut" (selectionChange)="changerStatutFiltre($event.value)">
+            <mat-option value="">Tous</mat-option>
+            <mat-option value="ACTIF">Actif</mat-option>
+            <mat-option value="INACTIF">Inactif</mat-option>
+          </mat-select>
+        </mat-form-field>
         <app-filtre-periode [valeur]="periode" (periodeChange)="changerPeriode($event)"
                             matTooltip="Date de création du quiz" />
       </div>
@@ -82,6 +90,11 @@
               <span class="badge-statut" [class.inactif]="q.statut === 'INACTIF'">
                 {{ q.statut === 'INACTIF' ? 'Inactif' : 'Actif' }}
               </span>
+              @if (q.total_points !== undefined && q.total_points !== null && +q.total_points !== 100) {
+                <span class="badge-bareme" [matTooltip]="'Barème à ' + q.total_points + ' / 100 points : quiz non proposé aux participants tant qu’il n’est pas ajusté'">
+                  Barème {{ q.total_points }}/100
+                </span>
+              }
             </td>
           </ng-container>
 
@@ -121,7 +134,7 @@
 
           <tr class="mat-row" *matNoDataRow>
             <td class="mat-cell text-center p-16" [attr.colspan]="displayedColumns.length">
-              {{ periode.du || periode.au || recherche ? 'Aucun quiz ne correspond aux filtres.' : 'Aucun quiz pour le moment.' }}
+              {{ periode.du || periode.au || recherche || statut ? 'Aucun quiz ne correspond aux filtres.' : 'Aucun quiz pour le moment.' }}
             </td>
           </tr>
         </table>

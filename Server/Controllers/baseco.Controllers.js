@@ -1,5 +1,6 @@
 // GET ALL UTILISATEUR
 const db = require("../config/db");
+const { habilitationSite, compteGerable, estFonctionAdmin } = require("../utils/perimetreComptes");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const path = require("path");
@@ -186,7 +187,7 @@ const addUtilisateur = async (req, res, next) => {
   ) {
     return res
       .status(403)
-      .json({ message: "Veuillez bien renseigner les parametres." });
+      .json({ message: "Veuillez bien renseigner les paramètres." });
   }
   try {
     const Query = `INSERT INTO B_UTILISATEUR (nom,prenom,nom_utilisateur,genre,email,telephone,ville,adresse,password,id_Fonction,id_Site,id_Programme,id_EvalGrille,status,dateCreation) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
@@ -237,7 +238,7 @@ const getOneUtilisateur = async (req, res, next) => {
   if (!id) {
     return res
       .status(403)
-      .json({ message: "Veuillez bien renseigner les parametres." });
+      .json({ message: "Veuillez bien renseigner les paramètres." });
   }
   try {
     const Query = `SELECT * from B_UTILISATEUR WHERE id=?`;
@@ -252,7 +253,7 @@ const getDetailsUtilisateur = async (req, res, next) => {
   if (!id) {
     return res
       .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
+      .json({ message: "Merci de bien renseigner les paramètres" });
   }
   try {
     // Sans utilisateur.lire, seul compte.gerer donne accès : comptes de son site uniquement.
@@ -300,64 +301,6 @@ const getDetailsUtilisateur = async (req, res, next) => {
   } catch (error) {
     console.log(error);
     throw error;
-  }
-};
-const updateUtilisateur = async (req, res, next) => {
-  const {
-    id,
-    prenom,
-    nom,
-    userName,
-    email,
-    tel,
-    id_Role,
-    id_Fonction,
-    id_Site,
-    id_Programme,
-    id_EvalGrille,
-    statut,
-  } = req.body;
-  if (
-    !id ||
-    !prenom ||
-    !nom ||
-    !userName ||
-    !email ||
-    !tel ||
-    !id_Role ||
-    !id_Fonction ||
-    !id_Site ||
-    !id_Programme ||
-    // id_EvalGrille (grille d'évaluation) : non obligatoire
-    !statut
-  ) {
-    return res
-      .status(403)
-      .json({ message: "Veuillez bien renseigner les parametres." });
-  }
-  try {
-    const Query = `UPDATE B_UTILISATEUR SET (prenom=?,nom=?,userName=?,email=?,tel=?,id_Role=?,id_Fonction=?,
-      id_Site=?,id_Programme=?,id_EvalGrille=?,statut=?,dateModification=?) where id=?`;
-    const dateCreationModif = new Date();
-    const resultat = await db.query(Query, [
-      prenom,
-      nom,
-      userName,
-      email,
-      tel,
-      id_Role,
-      id_Fonction,
-      id_Site,
-      id_Programme,
-      id_EvalGrille,
-      statut,
-      dateCreationModif,
-    ]);
-    return res
-      .status(201)
-      .json({ message: "Les modifications ont été effectuée avec succes" });
-  } catch (error) {
-    res.status(500).json({ message: "Error request" });
   }
 };
 const deleteUtilisateur = async (req, res, next) => {
@@ -425,7 +368,7 @@ const addSla = async (req, res, next) => {
   if (!source || !type || !delai || !priorite) {
     return res
       .status(500)
-      .json({ message: "Veuillez bien renseigner les parametres." });
+      .json({ message: "Veuillez bien renseigner les paramètres." });
   }
   try {
     const Query = `INSERT INTO B_SLA (source,type,delai,priorite,Etat,dateCreationSla)  VALUES(?,?,?,?,?,?)`;
@@ -440,7 +383,7 @@ const addSla = async (req, res, next) => {
       dateCreation,
     ]);
     return res.status(201).json({
-      message: " Vous venez d'ajouter un nouveau SLA avec succes .",
+      message: " Vous venez d'ajouter un nouveau SLA avec succès .",
     });
   } catch (error) {
     console.log(error);
@@ -473,7 +416,7 @@ const updateSla = async (req, res, next) => {
   if (!source || !type || !delai || !priorite || !id)
     return res
       .status(403)
-      .json({ message: "Veuillez bien renseigner les parametres . " });
+      .json({ message: "Veuillez bien renseigner les paramètres . " });
   try {
     const Query = `UPDATE B_SLA SET source=?,type=?,delai=?,priorite=?,dateModification=? WHERE id=?`;
     const dateModification = new Date();
@@ -487,7 +430,7 @@ const updateSla = async (req, res, next) => {
     ]);
     return res
       .status(201)
-      .json({ message: " vous venez de modifier ce SLA avec succes." });
+      .json({ message: " vous venez de modifier ce SLA avec succès." });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Error request." });
@@ -499,14 +442,14 @@ const deleteSla = async (req, res, next) => {
   if (!id) {
     return res
       .status(403)
-      .json({ message: "Veuillez bien renseigner les parametres . " });
+      .json({ message: "Veuillez bien renseigner les paramètres . " });
   }
   try {
     const Query = `DELETE  from B_SLA WHERE id=?`;
     const resultat = await db.query(Query, [id]);
     return res
       .status(201)
-      .json({ message: " vous venez de supprimer ce SLA avec succes." });
+      .json({ message: " vous venez de supprimer ce SLA avec succès." });
   } catch (error) {
     res.status(500).json({ message: "Error request." });
   }
@@ -519,7 +462,7 @@ const addSousCategorie = async (req, res, next) => {
   if (!nom || !id_Categorie) {
     return res
       .status(403)
-      .json({ message: "Veuillez bien renseigner les parametres." });
+      .json({ message: "Veuillez bien renseigner les paramètres." });
   }
   try {
     const Query = `INSERT INTO B_SOUS_CATEGORIE (nom,Etat,id_Categorie,dateCreationSousCategorie) VALUES (?,?,?,?)`;
@@ -590,7 +533,7 @@ const addCategorie = async (req, res, next) => {
   if (!nom) {
     return res
       .status(403)
-      .json({ message: "Veuillez bien renseigner les parametres." });
+      .json({ message: "Veuillez bien renseigner les paramètres." });
   }
   try {
     const Query = `INSERT INTO B_CATEGORIE (nom,Etat,dateCreationCategorie) VALUES (?,?,?)`;
@@ -667,7 +610,7 @@ const updateCategorie = async (req, res, next) => {
   if (!id || !nom) {
     return res
       .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
+      .json({ message: "Merci de bien renseigner les paramètres" });
   }
   try {
     const Query = `UPDATE B_CATEGORIE SET nom=? ,dateModification=? WHERE id=?`;
@@ -689,7 +632,7 @@ const addHistorique = async (req, res, next) => {
   if (!id_Utilisateur || !id_Fiche) {
     return res
       .status(403)
-      .json({ message: "Veuillez bien renseigner les parametres" });
+      .json({ message: "Veuillez bien renseigner les paramètres" });
   }
   try {
     const Query = `INSERT INTO B_HISTORIQUE (dateConsultation,id_UTILISATEUR,id_FICHE) VALUES(?,?,?)`;
@@ -761,7 +704,7 @@ const addSite = async (req, res, next) => {
   if (!nom || !description) {
     return res
       .status(403)
-      .json({ message: "Veuillez bien renseigner les parametres." });
+      .json({ message: "Veuillez bien renseigner les paramètres." });
   }
   try {
     const Query = `INSERT INTO B_SITE (nom,Etat,description,dateCreation) VALUES(?,?,?,?)`;
@@ -774,7 +717,7 @@ const addSite = async (req, res, next) => {
       dateCreation,
     ]);
     return res.status(201).json({
-      message: " vous avez d'ajouter un nouveau site avec succes.",
+      message: " Vous venez d'ajouter un nouveau site avec succès.",
     });
   } catch (error) {
     console.log(error);
@@ -796,7 +739,7 @@ const getDeatilsSite = async (req, res, next) => {
   if (!id) {
     return res
       .status(403)
-      .json({ message: "Veuillez bien renseigner les parametres." });
+      .json({ message: "Veuillez bien renseigner les paramètres." });
   }
   try {
     const resultat = {};
@@ -842,7 +785,7 @@ const deleteSite = async (req, res, next) => {
     const Query = `DELETE from B_SITE WHERE id=?`;
     const resultat = await db.query(Query, [id]);
     return res.status(201).json({
-      message: " vous venez de supprimer cette site avec succes.",
+      message: " Vous venez de supprimer ce site avec succès.",
     });
   } catch (error) {
     console.log(error);
@@ -870,7 +813,7 @@ const addFonction = async (req, res, next) => {
       dateCreation,
     ]);
     return res.status(201).json({
-      message: " vous venez d'ajouter une nouvelle Fonction avec succes.",
+      message: " vous venez d'ajouter une nouvelle Fonction avec succès.",
     });
   } catch (error) {
     console.log(error);
@@ -923,7 +866,7 @@ const deleteFonction = async (req, res, next) => {
     const Query = `DELETE from B_FONCTION WHERE id=?`;
     const resultat = await db.query(Query, [id]);
     return res.status(201).json({
-      message: " vous venez de supprimer cette Fonction avec succes.",
+      message: " vous venez de supprimer cette Fonction avec succès.",
     });
   } catch (error) {
     console.log(error);
@@ -953,7 +896,7 @@ const addNotification = async (req, res, next) => {
   if (!titre || !message || !type || !id_Utilisateur || !id_Fiche || !url) {
     return res
       .status(403)
-      .json({ message: "Veuillez bien renseigner les parametres." });
+      .json({ message: "Veuillez bien renseigner les paramètres." });
   }
   try {
     const Query = `INSERT INTO B_NOTIFICATION (titre,message,type,dateReception,id_Utilisateur,id_Fiche,url) VALUES(?,?,?,?,?,?,?)`;
@@ -968,7 +911,7 @@ const addNotification = async (req, res, next) => {
       url,
     ]);
     return res.status(201).json({
-      message: " vous venez d'ajouter une nouvelle fiche avec succes.",
+      message: " vous venez d'ajouter une nouvelle fiche avec succès.",
     });
   } catch (error) {
     //console.log();
@@ -1385,7 +1328,7 @@ const getAllCommentaireByIdFiche = async (req, res, next) => {
   if (!id) {
     return res
       .status(403)
-      .json({ message: "Veuillez bien renseigner les parametres" });
+      .json({ message: "Veuillez bien renseigner les paramètres" });
   }
   try {
     const Query = `Select A.ID,A.message,A.dateCommentaire,B.nom,B.userName from 
@@ -1401,7 +1344,7 @@ const getAllCommentaireByIdUtilisateur = async (req, res, next) => {
   if (!id) {
     return res
       .status(403)
-      .json({ message: "Veuillez bien renseigner les parametres" });
+      .json({ message: "Veuillez bien renseigner les paramètres" });
   }
   try {
     const Query = `Select A.ID,A.message,A.dateCommentaire,B.nom,B.userName from 
@@ -1420,7 +1363,7 @@ const addMotifMaVoixCompte = async (req, res, next) => {
   if (!nom) {
     return res
       .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
+      .json({ message: "Merci de bien renseigner les paramètres" });
   }
   try {
     const Query = `INSERT INTO B_MOTIF_MA_VOIX_COMPTE (nomMotif,dateCreation) VALUES(?,?)`;
@@ -1461,7 +1404,7 @@ const updateMotifMaVoixCompte = async (req, res, next) => {
     if (!nomMotif) {
       return res
         .status(403)
-        .json({ message: "Merci de bien renseigner les parametres" });
+        .json({ message: "Merci de bien renseigner les paramètres" });
     }
     const Query = `UPDATE B_MOTIF_MA_VOIX_COMPTE SET nomMotif=? WHERE id=?`;
     await db.query(Query, [nomMotif, id]);
@@ -1489,7 +1432,7 @@ const addMaVoixCompte = async (req, res, next) => {
   if (!motif_ma_voix_compte || !message) {
     return res
       .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
+      .json({ message: "Merci de bien renseigner les paramètres" });
   }
   try {
     const Query = `INSERT INTO B_MA_VOIX_COMPTE (id_UTILISATEUR,motif_ma_voix_compte,message,dateCreation) VALUES(?,?,?,?)`;
@@ -1659,7 +1602,7 @@ const getAllDashboard = async (req, res, next) => {
         value: 0,
       },
       color: "bg-violet-50",
-      permissions: ["R_ADMI", "R_SUPE", "R_GB"],
+      permissions: ["R_ADMI", "R_SUP", "R_GB"],
     };
     const model_taux_lecture = {
       title: "Taux de lecture ",
@@ -1896,7 +1839,7 @@ const getAllDashboard_admin = async (req, res, next) => {
         value: 0,
       },
       color: "bg-cyan-50",
-      permissions: ["R_ADMI", "R_SUPE", "R_GB"],
+      permissions: ["R_ADMI", "R_SUP", "R_GB"],
     };
     const model_taux_maitrise_retest = {
       title: "Taux de maitrise RETEST",
@@ -1905,7 +1848,7 @@ const getAllDashboard_admin = async (req, res, next) => {
         value: 0,
       },
       color: "bg-orange-50",
-      permissions: ["R_ADMI", "R_SUPE", "R_GB"],
+      permissions: ["R_ADMI", "R_SUP", "R_GB"],
     };
     const model_taux_lecture_J = {
       title: "Taux de lecture J",
@@ -1914,7 +1857,7 @@ const getAllDashboard_admin = async (req, res, next) => {
         value: 0,
       },
       color: "bg-yellow-50",
-      permissions: ["R_ADMI", "R_SUPE", "R_GB"],
+      permissions: ["R_ADMI", "R_SUP", "R_GB"],
     };
     const model_taux_lecture_J_2 = {
       title: "Taux de lecture J+2",
@@ -1923,7 +1866,7 @@ const getAllDashboard_admin = async (req, res, next) => {
         value: 0,
       },
       color: "bg-violet-50",
-      permissions: ["R_ADMI", "R_SUPE", "R_GB"],
+      permissions: ["R_ADMI", "R_SUP", "R_GB"],
     };
     const model_taux_lecture = {
       title: "Taux de lecture ",
@@ -1932,7 +1875,7 @@ const getAllDashboard_admin = async (req, res, next) => {
         value: 0,
       },
       color: "bg-red-50",
-      permissions: ["R_ADMI", "R_SUPE", "R_GB"],
+      permissions: ["R_ADMI", "R_SUP", "R_GB"],
     };
     /** fin de models  */
     let retour_table = [];
@@ -2146,7 +2089,7 @@ const addQUestionnaire = async (req, res, next) => {
   if (!libelleQuestion || !libelleReponse || !id_Fiche) {
     return res
       .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
+      .json({ message: "Merci de bien renseigner les paramètres" });
   }
   try {
     const Query = `INSERT INTO B_QUESTIONNAIRE (libelleQuestion,libelleReponse,dateCreation,id_Fiche) VALUES(?,?,?,?)`;
@@ -2181,7 +2124,7 @@ const addReponseQuestionnaire = async (req, res, next) => {
   if (!libelleReponse || !id_Question || !id_Utilisateur || id_Fiche) {
     return res
       .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
+      .json({ message: "Merci de bien renseigner les paramètres" });
   }
   try {
     const Query = `INSERT INTO B_REPONSE_QUESTIONNAIRE (libelleReponse,dateReponse,id_Question,id_Utilisateur,id_Fiche) VALUES(?,?,?,?,?)`;
@@ -2217,7 +2160,7 @@ const addProgramme = async (req, res, next) => {
   if (!nom) {
     return res
       .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
+      .json({ message: "Merci de bien renseigner les paramètres" });
   }
   try {
     const Query =
@@ -2251,7 +2194,7 @@ const getDetailsProgramme = async (req, res, next) => {
   if (!id) {
     return res
       .status(403)
-      .json({ message: "Veuillez bien renseigner les parametres." });
+      .json({ message: "Veuillez bien renseigner les paramètres." });
   }
   try {
     const resultat = {};
@@ -2272,7 +2215,7 @@ const getOneProgramme = async (req, res, next) => {
   if (!id) {
     return res
       .status(403)
-      .json({ message: "Veuillez bien renseigner les parametres." });
+      .json({ message: "Veuillez bien renseigner les paramètres." });
   }
   try {
     const Query = `SELECT id, nom,description from B_PROGRAMME where id=?`;
@@ -2290,7 +2233,7 @@ const updateProgramme = async (req, res, next) => {
   if (!nom || !description) {
     return res
       .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
+      .json({ message: "Merci de bien renseigner les paramètres" });
   }
   try {
     const Query = `UPDATE B_PROGRAMME SET nom=?, description=?, dateModification=? where id=?`;
@@ -2325,7 +2268,7 @@ const { nom } = req.body;
   if (!nom) {
     return res
       .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
+      .json({ message: "Merci de bien renseigner les paramètres" });
   }
   try {
     const Query = `INSERT INTO b_eval_grille (nom,etat,dateCreation) VALUES (?,?,?)`;
@@ -2334,7 +2277,7 @@ const { nom } = req.body;
     const resultat = await db.query(Query, [nom, ETAT, dateCreation]);
     return res
       .status(201)
-      .json({ message: "Vous avez ajouter une nouvelle grille avec succes." });
+      .json({ message: "Vous avez ajouté une nouvelle grille avec succès." });
   } catch (error) {
     res.status(500).json({ message: "Error request" });
   }
@@ -2365,7 +2308,7 @@ const updateGrille = async (req, res, next) => {
   if (!id || !nom) {
     return res
       .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
+      .json({ message: "Merci de bien renseigner les paramètres" });
   }
   try {
     const Query = `UPDATE b_eval_grille SET nom=?,dateModification=? WHERE id=? `;
@@ -2381,14 +2324,14 @@ const deleteGrille = async (req, res, next) => {
   if (!id) {
     return res
       .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
+      .json({ message: "Merci de bien renseigner les paramètres" });
   }
   try {
     const Query = `UPDATE b_eval_grille SET etat='INACTIF', dateModification=? WHERE id=? `;
     const resultat = await db.query(Query, [new Date(), id]);
     return res
       .status(201)
-      .json({ message: "Vous avez supprimer cette grille avec succes" });
+      .json({ message: "Vous avez supprimé cette grille avec succès" });
   } catch (error) {
     res.status(500).json({ message: "Error resquest" });
   }
@@ -2912,7 +2855,7 @@ const getAllFicheByIDFiche = async (req, res, next) => {
   if (!id) {
     return res
       .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
+      .json({ message: "Merci de bien renseigner les paramètres" });
   }
 
   try {
@@ -3223,7 +3166,7 @@ const updateFiche = async (req, res, next) => {
 //   if (!id) {
 //     return res
 //       .status(201)
-//       .json({ message: "Merci de bien renseigner les parametres." });
+//       .json({ message: "Merci de bien renseigner les paramètres." });
 //   }
 //   try {
 //     const Query1 = `select * from B_FICHE where id=? and id_Gestionnaire=?`;
@@ -3271,7 +3214,7 @@ const deleteFiche = async (req, res, next) => {
   if (!id) {
     return res
       .status(400)
-      .json({ message: "Merci de bien renseigner les parametres." });
+      .json({ message: "Merci de bien renseigner les paramètres." });
   }
 
   const ROLES_AUTORISES = ["R_ADMI", "R_GB"]; // Administrateur et Gestionnaire Baseco
@@ -3491,7 +3434,7 @@ const restore_archive = async (req, res, next) => {
     await db.query(`UPDATE B_FICHE SET ETAT=? where id=?`, [ETAT_update, id]);
     return res
       .status(201)
-      .json({ message: "Vous avez restorer cette fiche avec succes." });
+      .json({ message: "Vous avez restauré cette fiche avec succès." });
   } catch (error) {
     console.error("restore_archive error:", error && (error.sqlMessage || error.message));
     return res
@@ -3521,7 +3464,7 @@ const affecte_agent_to_superviseur = async (req, res, next) => {
   if (!id_AGENT || !id_SUPERVISEUR) {
     return res
       .status(403)
-      .json({ message: "Merci de bien renseigner tous les parametres" });
+      .json({ message: "Merci de bien renseigner tous les paramètres" });
   }
   try {
     const Query =
@@ -3545,7 +3488,7 @@ const getAllAgentBySuperviseur = async (req, res, next) => {
   if (!id) {
     return res
       .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
+      .json({ message: "Merci de bien renseigner les paramètres" });
   }
   try {
     const Query = ` 
@@ -3567,145 +3510,41 @@ const getAllAgentBySuperviseur = async (req, res, next) => {
 };
 /** fin de controllers  */
 /*** les controllers de Responsable operation */
+// Liste « Gérer les comptes » : comptes du site (ou de tous les sites pour le
+// site à vision globale / un administrateur), son propre compte compris,
+// administrateurs exclus. `est_moi` repère la ligne de l'utilisateur connecté.
 const getAllAgentByRo = async (req, res, next) => {
   const userId = req.auth.userId;
   try {
-    const Query1 = `SELECT id_Site FROM B_UTILISATEUR where id=? `;
-    const Query2 = `SELECT UT1.id,UT1.nom_utilisateur,UT1.nom,UT1.prenom,FCT.nom as fonction,UT1.id_Programme,pr.nom as programme,st.nom as site,UT1.status,UT3.nom_utilisateur as superviseur,UT3.nom as superviseur_nom,UT3.prenom as superviseur_prenom,UT1.dateCreation FROM B_UTILISATEUR UT1 INNER JOIN B_UTILISATEUR UT2 on UT1.id=UT2.id
-    LEFT JOIN B_FONCTION FCT on UT1.id_Fonction=FCT.id 
-    LEFT JOIN B_PROGRAMME pr on UT1.id_Programme=pr.id
-    LEFT JOIN B_SITE st on UT1.id_Site=st.id
-    LEFT  JOIN B_R_SUPERVISEUR_AGENT SA on UT1.id=SA.id_AGENT
-    LEFT JOIN B_UTILISATEUR UT3 on SA.id_SUPERVISEUR=UT3.id
-    where UT1.id_Site=? and UT1.id!=? and FCT.nom!="administrateur" and FCT.nom!="Gestionnaire Baseco" ORDER BY UT1.dateCreation DESC`;
-    const [result1] = await db.query(Query1, [userId]);
-    const id_site = result1[0].id_Site;
-    const [result] = await db.query(Query2, [id_site, userId]);
+    const moi = await habilitationSite(userId, "compte.gerer");
+    if (!moi) {
+      return res.status(403).json({ message: "Accès refusé : habilitation manquante (compte.gerer)." });
+    }
+    const filtreSite = moi.visionGlobale ? "" : " AND UT1.id_Site = ?";
+    const [result] = await db.query(
+      `SELECT UT1.id, UT1.nom_utilisateur, UT1.nom, UT1.prenom, FCT.nom AS fonction, UT1.id_Programme,
+              pr.nom AS programme, UT1.id_Site, st.nom AS site, UT1.status,
+              UT3.nom_utilisateur AS superviseur, UT3.nom AS superviseur_nom, UT3.prenom AS superviseur_prenom,
+              UT1.dateCreation, (UT1.id = ?) AS est_moi
+         FROM B_UTILISATEUR UT1
+         LEFT JOIN B_FONCTION FCT ON UT1.id_Fonction = FCT.id
+         LEFT JOIN B_PROGRAMME pr ON UT1.id_Programme = pr.id
+         LEFT JOIN B_SITE st ON UT1.id_Site = st.id
+         LEFT JOIN B_R_SUPERVISEUR_AGENT SA ON UT1.id = SA.id_AGENT
+         LEFT JOIN B_UTILISATEUR UT3 ON SA.id_SUPERVISEUR = UT3.id
+        WHERE (UT1.id = ? OR (IFNULL(LOWER(FCT.nom), '') <> 'administrateur' AND IFNULL(FCT.Role_Associe, '') <> 'R_ADMI'${filtreSite}))
+        ORDER BY (UT1.id = ?) DESC, UT1.dateCreation DESC`,
+      moi.visionGlobale ? [userId, userId, userId] : [userId, userId, moi.id_Site, userId]
+    );
+    result.forEach((r) => (r.est_moi = !!Number(r.est_moi)));
     return res.status(200).send(result);
   } catch (error) {
     console.log(error);
-    throw error;
+    return res.status(500).json({ message: "Erreur lors du chargement des comptes." });
   }
 };
-/**
- * Responsable opérationnel (R_RO) connecté : rôle + site. null si l'utilisateur n'est pas R_RO.
- */
-const responsableOperationnel = async (userId) => habilitationSite(userId, "compte.gerer");
-
-/**
- * Utilisateur connecté s'il détient la permission `code` (ou est R_ADMI), avec son
- * site ; null sinon. Les menus « Gérer les comptes » et « Assignation » ne sont plus
- * réservés au profil R_RO : la permission suffit, sur le site de l'utilisateur.
- * Contrôlé ici aussi car le middleware laisse tout passer en mode OBSERVATION.
- */
-const habilitationSite = async (userId, code) => {
-  const { permissionsEffectives } = require("../middlewares/permission");
-  const { role, set } = await permissionsEffectives(userId);
-  if (role !== "R_ADMI" && !set.has(code)) return null;
-  const [[me]] = await db.query(`SELECT id, id_Site FROM B_UTILISATEUR WHERE id = ?`, [userId]);
-  return me ? { ...me, role } : null;
-};
-
-/** Utilisateur gérable depuis « Gérer les comptes » : même site, ni soi-même, ni admin, ni gestionnaire Baseco. */
-const compteGerable = async (gestionnaire, id) => {
-  const [[u]] = await db.query(
-    `SELECT UT.id, UT.id_Site, FCT.nom AS fonction
-       FROM B_UTILISATEUR UT LEFT JOIN B_FONCTION FCT ON UT.id_Fonction = FCT.id
-      WHERE UT.id = ?`,
-    [id]
-  );
-  if (!u) return { erreur: 404 };
-  const fonction = (u.fonction || "").toLowerCase();
-  if (
-    u.id_Site !== gestionnaire.id_Site ||
-    u.id === gestionnaire.id ||
-    fonction === "administrateur" ||
-    fonction === "gestionnaire baseco"
-  ) {
-    return { erreur: 403 };
-  }
-  return { utilisateur: u };
-};
-
-/** Programmes actifs proposés au RO pour la modification du programme d'un agent. */
-const getProgrammesPourRo = async (req, res, next) => {
-  try {
-    const ro = await responsableOperationnel(req.auth.userId);
-    if (!ro) {
-      return res.status(403).json({ message: "Accès refusé : habilitation manquante (compte.gerer)." });
-    }
-    const [programmes] = await db.query(
-      `SELECT id, nom FROM B_PROGRAMME WHERE Etat = 'ACTIF' ORDER BY nom`
-    );
-    return res.status(200).send(programmes);
-  } catch (error) {
-    console.error("getProgrammesPourRo error:", error && (error.sqlMessage || error.message));
-    return res.status(500).json({ message: "Erreur lors du chargement des programmes, veuillez réessayer." });
-  }
-};
-
-/**
- * Modification du programme d'un utilisateur par le RO (menu « Gérer les comptes »).
- * Seul le programme (et la date de modification) est mis à jour. L'utilisateur ciblé
- * doit faire partie de la liste du RO : même site, ni lui-même, ni administrateur,
- * ni gestionnaire Baseco (mêmes règles que getAllAgentByRo).
- */
-const updateProgrammeAgentParRo = async (req, res, next) => {
-  const { id } = req.params;
-  const { id_Programme } = req.body || {};
-  if (!/^\d+$/.test(String(id || "")) || !/^\d+$/.test(String(id_Programme ?? ""))) {
-    return res.status(400).json({ message: "Utilisateur ou programme invalide." });
-  }
-  try {
-    const ro = await responsableOperationnel(req.auth.userId);
-    if (!ro) {
-      return res.status(403).json({ message: "Accès refusé : habilitation manquante (compte.gerer)." });
-    }
-    const [[agent]] = await db.query(
-      `SELECT UT.id, UT.nom_utilisateur, UT.id_Site, UT.id_Programme, FCT.nom AS fonction,
-              PR.nom AS programme
-         FROM B_UTILISATEUR UT
-         LEFT JOIN B_FONCTION FCT ON UT.id_Fonction = FCT.id
-         LEFT JOIN B_PROGRAMME PR ON UT.id_Programme = PR.id
-        WHERE UT.id = ?`,
-      [id]
-    );
-    if (!agent) {
-      return res.status(404).json({ message: "Utilisateur introuvable." });
-    }
-    const fonction = (agent.fonction || "").toLowerCase();
-    if (
-      agent.id_Site !== ro.id_Site ||
-      agent.id === ro.id ||
-      fonction === "administrateur" ||
-      fonction === "gestionnaire baseco"
-    ) {
-      return res.status(403).json({ message: "Vous ne pouvez pas modifier le programme de cet utilisateur." });
-    }
-    const [[programme]] = await db.query(`SELECT id, nom, Etat FROM B_PROGRAMME WHERE id = ?`, [id_Programme]);
-    if (!programme) {
-      return res.status(404).json({ message: "Programme introuvable." });
-    }
-    if (programme.Etat !== "ACTIF") {
-      return res.status(409).json({ message: "Ce programme n'est pas actif." });
-    }
-    if (Number(agent.id_Programme) === Number(programme.id)) {
-      return res.status(409).json({ message: `${agent.nom_utilisateur} est déjà sur le programme ${programme.nom}.` });
-    }
-    await db.query(
-      `UPDATE B_UTILISATEUR SET id_Programme = ?, dateModification = NOW() WHERE id = ?`,
-      [programme.id, agent.id]
-    );
-    return res.status(200).json({
-      message: `Programme de ${agent.nom_utilisateur} mis à jour : ${agent.programme || "aucun"} → ${programme.nom}.`,
-      id_Programme: programme.id,
-      programme: programme.nom,
-    });
-  } catch (error) {
-    console.error("updateProgrammeAgentParRo error:", error && (error.sqlMessage || error.message));
-    return res.status(500).json({ message: "Erreur lors de la modification du programme, veuillez réessayer." });
-  }
-};
+// habilitationSite / compteGerable : voir utils/perimetreComptes.js (périmètre
+// « Gérer les comptes » avec la règle du site à vision globale).
 
 const getAllAgentByRo_Assignable = async (req, res, next) => {
   const userId = req.auth.userId;
@@ -3721,12 +3560,29 @@ const getAllAgentByRo_Assignable = async (req, res, next) => {
     where UT1.id_Site=? and UT1.id!=? and FCT.nom!="Superviseur" and FCT.nom!="Gestionnaire Baseco" and FCT.nom!="administrateur"`;
     const [result1] = await db.query(Query1, [userId]);
     const id_site = result1[0].id_Site;
+    // ?details=1 : agents avec nom, fonction et superviseur actuel (écran Assignation).
+    if (String(req.query.details || "") === "1") {
+      const [rows] = await db.query(
+        `SELECT UT1.id, UT1.nom_utilisateur AS login, UT1.nom, UT1.prenom, FCT.nom AS fonction,
+                MAX(UT3.id) AS id_superviseur,
+                MAX(TRIM(CONCAT(IFNULL(UT3.prenom,''),' ',IFNULL(UT3.nom,'')))) AS superviseur
+           FROM B_UTILISATEUR UT1
+           LEFT JOIN B_FONCTION FCT ON UT1.id_Fonction = FCT.id
+           LEFT JOIN B_R_SUPERVISEUR_AGENT SA ON UT1.id = SA.id_AGENT
+           LEFT JOIN B_UTILISATEUR UT3 ON SA.id_SUPERVISEUR = UT3.id
+          WHERE UT1.id_Site = ? AND UT1.id != ?
+            AND FCT.nom != "Superviseur" AND FCT.nom != "Gestionnaire Baseco" AND FCT.nom != "administrateur"
+          GROUP BY UT1.id, UT1.nom_utilisateur, UT1.nom, UT1.prenom, FCT.nom
+          ORDER BY UT1.nom, UT1.prenom`, [id_site, userId]
+      );
+      return res.status(200).send(rows);
+    }
     const [result] = await db.query(Query2, [id_site, userId]);
     for (let index = 0; index < result.length; index++) {
       retour[index] = result[index].nom_utilisateur;
     }
 
-    return res.status(200).send(retour);
+    return res.status(200).send([...new Set(retour)]);
   } catch (error) {
     console.log(error);
     throw error;
@@ -3735,9 +3591,13 @@ const getAllAgentByRo_Assignable = async (req, res, next) => {
 const getAllSuperviseurByRo = async (req, res, next) => {
   const userId = req.auth.userId;
   try {
-    const Qery_superviseur = `SELECT UT2.id,UT2.nom_utilisateur from B_UTILISATEUR UT1 INNER JOIN B_UTILISATEUR UT2 on UT1.id_Site=UT2.id_Site 
+    // Nom, prénom et nombre d'agents rattachés (écran Assignation).
+    const Qery_superviseur = `SELECT UT2.id, UT2.nom_utilisateur, UT2.nom, UT2.prenom,
+           (SELECT COUNT(*) FROM B_R_SUPERVISEUR_AGENT SA WHERE SA.id_SUPERVISEUR = UT2.id) AS nb_agents
+      from B_UTILISATEUR UT1 INNER JOIN B_UTILISATEUR UT2 on UT1.id_Site=UT2.id_Site
     LEFT JOIN B_FONCTION FCT on UT2.id_Fonction=FCT.id
-    where UT1.id=? and UT2.id!=? and FCT.nom="Superviseur"`;
+    where UT1.id=? and UT2.id!=? and FCT.nom="Superviseur"
+    ORDER BY UT2.nom, UT2.prenom`;
     const [resultat] = await db.query(Qery_superviseur, [userId, userId]);
     return res.status(200).send(resultat);
   } catch (error) {
@@ -3751,11 +3611,26 @@ const restore_password = async (req, res, next) => {
     return res.status(403).json({ message: "Merci de bien renseigner" });
   }
   try {
-    const gestionnaire = await habilitationSite(req.auth.userId, "compte.gerer");
-    if (!gestionnaire) {
-      return res.status(403).json({ message: "Accès refusé : habilitation manquante (compte.gerer)." });
+    // Deux chemins : « Utilisateurs » (utilisateur.modifier, tous les comptes ;
+    // un compte administrateur seulement par un administrateur) ou « Gérer les
+    // comptes » (compte.gerer, périmètre de site).
+    let cible;
+    const admin = await habilitationSite(req.auth.userId, "utilisateur.modifier");
+    if (admin) {
+      const [[u]] = await db.query(
+        `SELECT UT.id, FCT.nom AS fonction, FCT.Role_Associe AS role
+           FROM B_UTILISATEUR UT LEFT JOIN B_FONCTION FCT ON UT.id_Fonction = FCT.id WHERE UT.id = ?`, [Number(id)]
+      );
+      if (!u) cible = { erreur: 404 };
+      else if (u.id !== admin.id && admin.role !== "R_ADMI" && estFonctionAdmin(u.fonction, u.role)) cible = { erreur: 403 };
+      else cible = { utilisateur: u };
+    } else {
+      const gestionnaire = await habilitationSite(req.auth.userId, "compte.gerer");
+      if (!gestionnaire) {
+        return res.status(403).json({ message: "Accès refusé : habilitation manquante (compte.gerer ou utilisateur.modifier)." });
+      }
+      cible = await compteGerable(gestionnaire, Number(id));
     }
-    const cible = await compteGerable(gestionnaire, Number(id));
     if (cible.erreur === 404) {
       return res.status(404).json({ message: "Utilisateur introuvable." });
     }
@@ -3884,7 +3759,7 @@ const response_Quiz = async (req, res, next) => {
   if (!id || !userId) {
     return res
       .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
+      .json({ message: "Merci de bien renseigner les paramètres" });
   }
   try {
     let ETAT = "";
@@ -4158,7 +4033,7 @@ const statistic_TC = async (req, res, next) => {
   const jour = jourValide(req.body.date);
   const userId = req.auth.userId;
   if (!jour) {
-    return res.status(430).json({ message: "Merci de bien renseigner les parametres." });
+    return res.status(430).json({ message: "Merci de bien renseigner les paramètres." });
   }
   try {
     const [fiches, sondages, quiz] = await Promise.all([
@@ -4185,13 +4060,28 @@ const peutVoirStatsAgent = async (demandeur, agent) => {
   );
   if (sup) return true;
   if (set.has("compte.gerer")) {
-    const [[memeSite]] = await db.query(
-      `SELECT 1 AS ok FROM B_UTILISATEUR a JOIN B_UTILISATEUR d ON d.id = ?
-        WHERE a.id = ? AND a.id_Site IS NOT NULL AND a.id_Site = d.id_Site LIMIT 1`, [demandeur, agent]
-    );
-    if (memeSite) return true;
+    // compte d'un utilisateur dans son périmètre « Gérer les comptes » (site, ou tous
+    // les sites pour le site à vision globale)
+    const gestionnaire = await habilitationSite(demandeur, "compte.gerer");
+    if (gestionnaire && !(await compteGerable(gestionnaire, Number(agent))).erreur) return true;
   }
   return false;
+};
+
+// Badges quiz d'un agent (page détail agent) : mêmes accès que ses statistiques.
+const getBadgesAgent = async (req, res) => {
+  const agent = Number(req.params.id);
+  if (!agent) return res.status(400).json({ message: "Agent invalide." });
+  try {
+    if (!(await peutVoirStatsAgent(req.auth.userId, agent))) {
+      return res.status(403).json({ message: "Accès refusé aux badges de cet agent." });
+    }
+    const { badgesUtilisateur } = require("../utils/badgesQuiz");
+    return res.status(200).json(await badgesUtilisateur(db, agent));
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: "Erreur lors du chargement des badges." });
+  }
 };
 
 const statistic_TC_FOR_SUP = async (req, res, next) => {
@@ -4199,7 +4089,7 @@ const statistic_TC_FOR_SUP = async (req, res, next) => {
   const jour = jourValide(data.date);
   const userId = Number(data.userId);
   if (!jour || !userId) {
-    return res.status(430).json({ message: "Merci de bien renseigner les parametres." });
+    return res.status(430).json({ message: "Merci de bien renseigner les paramètres." });
   }
   try {
     if (!(await peutVoirStatsAgent(req.auth.userId, userId))) {
@@ -4446,7 +4336,6 @@ module.exports = {
   getAllUtilisateur,
   addUtilisateur,
   getOneUtilisateur,
-  updateUtilisateur,
   deleteUtilisateur,
   update_utilisateur,
   setEvalGrilleUtilisateur,
@@ -4527,8 +4416,6 @@ module.exports = {
   getAllFicheByIdCategorieAndIdSousCategorie,
   archive_fiche,
   getAllAgentByRo,
-  getProgrammesPourRo,
-  updateProgrammeAgentParRo,
   getStatistique_par_site,
   getAllArchive,
   getOneSite,
@@ -4562,6 +4449,7 @@ module.exports = {
   getOneProgramme,
   getAllFiche_Archive,
   statistic_TC_FOR_SUP,
+  getBadgesAgent,
   redOneNotifcation,
   createNotification,
 };

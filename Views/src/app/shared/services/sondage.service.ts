@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
-import { message } from '@core';
+import { message, TokenService } from '@core';
 import {
   Sondage,
   QuestionSondage,
@@ -13,16 +13,21 @@ import {
   RapportSondage,
 } from '../../routes/Sondage/interfaces';
 import { HttpParams } from '@angular/common/http';
+import { Periode, paramsPeriode } from '@shared/periode';
 
 /** Service du module Sondage (sondages du personnel). Prefixe /api/v1/sondage. */
 @Injectable({ providedIn: 'root' })
 export class SondageService {
   private readonly http = inject(HttpClient);
+  private readonly tokens = inject(TokenService);
   private readonly base = '/api/v1/sondage';
 
   /* ----- Sondage ----- */
-  getAll(): Observable<Sondage[]> {
-    return this.http.get<Sondage[]>(`${this.base}/all`);
+  /** Liste des sondages, éventuellement filtrée sur une période et la date choisie. */
+  getAll(periode?: Periode | null, champ: 'creation' | 'modification' | 'reponse' = 'creation'): Observable<Sondage[]> {
+    const params: Record<string, string> = { ...paramsPeriode(periode) };
+    if (params['du'] || params['au']) params['champ'] = champ;
+    return this.http.get<Sondage[]>(`${this.base}/all`, { params });
   }
   getOne(id: number): Observable<Sondage> {
     return this.http.get<Sondage>(`${this.base}/${id}`);
@@ -117,6 +122,8 @@ export class SondageService {
 
   /* ----- Sondages OBLIGATOIRES (cible interne connectée, bloquant) ----- */
   private obligatoiresCache: number[] | null = null;
+  /** Jeton de la session pour laquelle le cache a été calculé (changement d'utilisateur => recalcul). */
+  private obligatoiresCleSession = '';
 
   getObligatoiresMes(): Observable<{ id: number; nom: string }[]> {
     return this.http.get<{ id: number; nom: string }[]>(`${this.base}/obligatoires/mes`);
@@ -135,6 +142,11 @@ export class SondageService {
 
   /** Premier sondage obligatoire non fait (avec cache pour le garde de route). */
   premierObligatoire(): Observable<number | null> {
+    const cle = this.tokens.getBearerToken() || '';
+    if (cle !== this.obligatoiresCleSession) {
+      this.obligatoiresCache = null;
+      this.obligatoiresCleSession = cle;
+    }
     if (this.obligatoiresCache !== null) {
       return of(this.obligatoiresCache.length ? this.obligatoiresCache[0] : null);
     }

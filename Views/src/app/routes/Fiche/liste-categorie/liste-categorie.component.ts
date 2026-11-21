@@ -76,27 +76,27 @@ export class ListeCategorieComponent implements OnInit {
 
   openDialog(): void {
     this.dialog.open(AjouterCategorieComponent, {
-      height: 'calc(100% - 30px)',
-      width: 'calc(100% - 30px)',
-      maxWidth: '100%',
-      maxHeight: '100%',
+      // Fenêtre dimensionnée au contenu (au lieu du plein écran).
+      width: '520px',
+      maxWidth: '95vw',
+      panelClass: 'dlg-ref',
     });
   }
   openDialog_update(id: number): void {
     this.dialog.open(UpdateCategorieComponent, {
       data: { id: id },
-      height: 'calc(100% - 30px)',
-      width: 'calc(100% - 30px)',
-      maxWidth: '100%',
-      maxHeight: '100%',
+      // Fenêtre dimensionnée au contenu (au lieu du plein écran).
+      width: '520px',
+      maxWidth: '95vw',
+      panelClass: 'dlg-ref',
     });
   }
   openDialogSousCategorie(): void {
     this.dialog.open(AjouterSousCategorieComponent, {
-      height: 'calc(100% - 30px)',
-      width: 'calc(100% - 30px)',
-      maxWidth: '100%',
-      maxHeight: '100%',
+      // Fenêtre dimensionnée au contenu (au lieu du plein écran).
+      width: '520px',
+      maxWidth: '95vw',
+      panelClass: 'dlg-ref',
     });
   }
   applyFilter(event: Event) {

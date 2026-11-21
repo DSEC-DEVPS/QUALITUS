@@ -1,11 +1,10 @@
 <div class="droits-page">
-  <mat-card class="cal-panel"><mat-card-header class="cal-band"><span class="cal-band-title"><mat-icon>manage_accounts</mat-icon> Droits complémentaires par utilisateur</span></mat-card-header><mat-card-content>
+  <mat-card class="cal-panel"><mat-card-header class="cal-band"><span class="cal-band-title"><mat-icon>manage_accounts</mat-icon> Droits par utilisateur</span></mat-card-header><mat-card-content>
 
   <mat-card class="entete">
-    
-    <p class="sous">Autoriser ou refuser une permission au-delà du rôle. « Hériter » = comportement du rôle. Socle commun — S5.</p>
+    <p class="sous">Autoriser ou refuser une permission à une personne, au-delà de son rôle. « Hériter » = comportement du rôle.</p>
 
-    <mat-form-field appearance="outline" class="search">
+    <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
       <mat-label>Rechercher un utilisateur</mat-label>
       <input matInput [ngModel]="terme" (ngModelChange)="chercher($event)" placeholder="Nom, prénom, identifiant…" />
       <mat-icon matSuffix>search</mat-icon>
@@ -14,50 +13,137 @@
     <div class="resultats" *ngIf="resultats.length">
       <button class="res" *ngFor="let u of resultats" (click)="choisir(u)">
         <span class="nom">{{ u.prenom }} {{ u.nom }}</span>
-        <span class="meta">{{ u.role || '—' }} · {{ u.fonction || '' }}</span>
+        <span class="meta">{{ u.fonction || u.role || '—' }}{{ u.site ? ' · ' + u.site : '' }}{{ u.nom_utilisateur ? ' · ' + u.nom_utilisateur : '' }}</span>
       </button>
     </div>
   </mat-card>
 
   <app-chargement *ngIf="chargement" />
-  <mat-card *ngIf="selection && !chargement" class="detail">
-    <div class="user-tete">
-      <div>
-        <strong>{{ selection.prenom }} {{ selection.nom }}</strong>
-        <span class="role">Rôle : {{ selection.role || '—' }}</span>
+
+  <ng-container *ngIf="selection && resume && !chargement">
+    <!-- Résumé -->
+    <mat-card class="resume">
+      <div class="r-ident">
+        <mat-icon class="avatar">account_circle</mat-icon>
+        <div>
+          <div class="r-nom">{{ selection.prenom }} {{ selection.nom }} <span class="login" *ngIf="selection.nom_utilisateur">{{ selection.nom_utilisateur }}</span></div>
+          <div class="r-meta">
+            <span><mat-icon>badge</mat-icon> {{ selection.role_libelle || selection.fonction || '—' }} <small>({{ selection.role || '—' }})</small></span>
+            <span *ngIf="selection.site"><mat-icon>location_on</mat-icon> {{ selection.site }}</span>
+            <span *ngIf="selection.status && selection.status !== 'ACTIF'" class="inactif"><mat-icon>block</mat-icon> {{ selection.status }}</span>
+          </div>
+        </div>
       </div>
-      <div class="legende">
-        <span><mat-icon class="ok">check_circle</mat-icon> effectif</span>
-        <span><mat-icon class="ko">cancel</mat-icon> refusé</span>
+      <div class="r-chiffres">
+        <span class="pastille plus" matTooltip="Droits accordés en plus du rôle (actifs)">+{{ resume.plus }} en plus</span>
+        <span class="pastille moins" matTooltip="Droits du rôle retirés (actifs)">−{{ resume.moins }} en moins</span>
+        <span class="pastille expiree" *ngIf="resume.expirees" matTooltip="Dérogations dont la date de fin est dépassée : sans effet">{{ resume.expirees }} expirée{{ resume.expirees > 1 ? 's' : '' }}</span>
+        <span class="pastille neutre" matTooltip="Permissions que la personne peut effectivement utiliser">{{ resume.effectifs }}/{{ resume.total }} droits effectifs</span>
       </div>
-    </div>
+      <div class="r-bas">
+        <span class="derniere" *ngIf="resume.derniere; else aucune">
+          <mat-icon>history</mat-icon> Dernière dérogation : {{ resume.derniere.date | date:'dd/MM/yyyy à HH:mm' }}{{ resume.derniere.auteur ? ' par ' + resume.derniere.auteur : '' }}
+        </span>
+        <ng-template #aucune><span class="derniere"><mat-icon>check</mat-icon> Aucune dérogation : la personne a exactement les droits de son rôle.</span></ng-template>
+        <button mat-stroked-button class="btn-reset" *ngIf="!admin && (resume.plus + resume.moins + resume.expirees) > 0" (click)="toutRemettreAuRole()">
+          <mat-icon>restart_alt</mat-icon> Tout remettre au rôle
+        </button>
+      </div>
+    </mat-card>
 
     <div class="admin-note" *ngIf="admin">
       <mat-icon>gpp_good</mat-icon> Cet utilisateur est administrateur (R_ADMI) : toutes les permissions sont accordées, les dérogations sont sans effet.
     </div>
 
-    <div class="table-wrap" *ngIf="!admin">
-      <ng-container *ngFor="let g of modules">
-        <div class="module-titre">{{ g.module }}</div>
-        <div class="ligne" *ngFor="let it of g.items">
-          <div class="info">
-            <span class="lib">{{ it.libelle }}</span>
-            <span class="code">{{ it.code }}</span>
-          </div>
-          <div class="par-role" [class.oui]="it.parRole">
-            {{ it.parRole ? 'accordé par le rôle' : 'non accordé par le rôle' }}
-          </div>
-          <mat-button-toggle-group [value]="etat(it)" (change)="changer(it, $event.value)" class="toggle">
-            <mat-button-toggle value="DENY" matTooltip="Refuser">Refuser</mat-button-toggle>
-            <mat-button-toggle value="NONE" matTooltip="Hériter du rôle">Hériter</mat-button-toggle>
-            <mat-button-toggle value="GRANT" matTooltip="Autoriser">Autoriser</mat-button-toggle>
-          </mat-button-toggle-group>
-          <mat-icon class="eff" [class.ok]="it.effectif" [class.ko]="!it.effectif">
-            {{ it.effectif ? 'check_circle' : 'cancel' }}
-          </mat-icon>
+    <ng-container *ngIf="!admin">
+      <!-- Paramètres des prochaines dérogations -->
+      <div class="parametres">
+        <mat-icon class="p-ico">edit_note</mat-icon>
+        <span class="p-txt">Pour les prochaines dérogations :</span>
+        <mat-form-field appearance="outline" class="p-motif" subscriptSizing="dynamic">
+          <mat-label>Motif (facultatif)</mat-label>
+          <input matInput [(ngModel)]="motif" maxlength="255" placeholder="ex. remplacement pendant les congés" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="p-date" subscriptSizing="dynamic">
+          <mat-label>Jusqu'au (facultatif)</mat-label>
+          <input matInput type="date" [(ngModel)]="dateFin" [min]="aujourdhui" />
+        </mat-form-field>
+        <button mat-icon-button *ngIf="motif || dateFin" (click)="motif = ''; dateFin = ''" matTooltip="Effacer"><mat-icon>close</mat-icon></button>
+      </div>
+
+      <!-- Filtres -->
+      <div class="outils">
+        <mat-button-toggle-group [(ngModel)]="filtre" hideSingleSelectionIndicator class="filtre">
+          <mat-button-toggle value="tout">Toutes les permissions</mat-button-toggle>
+          <mat-button-toggle value="derogations">Uniquement les dérogations</mat-button-toggle>
+          <mat-button-toggle value="effectifs">Droits effectifs</mat-button-toggle>
+        </mat-button-toggle-group>
+        <mat-form-field appearance="outline" class="champ" subscriptSizing="dynamic">
+          <mat-label>Rechercher une permission</mat-label>
+          <input matInput [(ngModel)]="rechercheDroit" />
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+        <span class="espace"></span>
+        <button mat-button (click)="toutDeplier()"><mat-icon>unfold_more</mat-icon> Tout déplier</button>
+        <button mat-button (click)="toutReplier()"><mat-icon>unfold_less</mat-icon> Tout replier</button>
+      </div>
+
+      <div class="legende">
+        <span class="titre-leg">Couleurs des lignes :</span>
+        <span class="pastille herite">Suit le rôle</span>
+        <span class="pastille plus">Autorisé en plus du rôle</span>
+        <span class="pastille moins">Refusé malgré le rôle</span>
+        <span class="pastille expiree">Dérogation expirée (sans effet)</span>
+      </div>
+
+      <div class="vide" *ngIf="!modulesVisibles.length">
+        {{ filtre === 'derogations' ? 'Aucune dérogation pour cet utilisateur.' : 'Aucune permission ne correspond.' }}
+      </div>
+
+      <div class="bloc-module" *ngFor="let g of modulesVisibles; trackBy: trackModule">
+        <div class="bm-tete" (click)="basculerModule(g)">
+          <mat-icon class="chevron">{{ estReplie(g) ? 'chevron_right' : 'expand_more' }}</mat-icon>
+          <span class="mod-nom">{{ g.libelle }}</span>
+          <span class="compte">{{ nbEffectifs(g) }}/{{ g.items.length }} effectifs</span>
+          <span class="nb-der" *ngIf="nbDerogations(g)">{{ nbDerogations(g) }} dérogation{{ nbDerogations(g) > 1 ? 's' : '' }}</span>
+          <span class="espace"></span>
+          <button mat-stroked-button [matMenuTriggerFor]="menuModule" (click)="$event.stopPropagation()">
+            Tout le module <mat-icon iconPositionEnd>arrow_drop_down</mat-icon>
+          </button>
+          <mat-menu #menuModule="matMenu">
+            <button mat-menu-item (click)="appliquerModule(g, 'GRANT')"><mat-icon class="ok">add_circle</mat-icon> Tout autoriser</button>
+            <button mat-menu-item (click)="appliquerModule(g, 'DENY')"><mat-icon class="ko">remove_circle</mat-icon> Tout refuser</button>
+            <button mat-menu-item (click)="appliquerModule(g, 'NONE')"><mat-icon>restart_alt</mat-icon> Tout remettre au rôle</button>
+          </mat-menu>
         </div>
-      </ng-container>
-    </div>
-  </mat-card>
+
+        <ng-container *ngIf="!estReplie(g)">
+          <div class="ligne" *ngFor="let it of visibles(g); trackBy: trackItem" [ngClass]="classeLigne(it)">
+            <div class="info">
+              <span class="lib">{{ libellePermission(it) }}</span>
+              <span class="code">{{ it.code }}</span>
+              <span class="detail" *ngIf="it.sens">
+                {{ it.sens === 'GRANT' ? 'Autorisé' : 'Refusé' }}
+                {{ it.auteur ? 'par ' + it.auteur : '' }}{{ it.date_maj ? ' le ' + (it.date_maj | date:'dd/MM/yyyy') : '' }}
+                <ng-container *ngIf="it.date_fin"> · {{ it.expiree ? 'expirée depuis le' : 'jusqu\'au' }} {{ formatDate(it.date_fin) }}</ng-container>
+                <ng-container *ngIf="it.motif"> · « {{ it.motif }} »</ng-container>
+              </span>
+            </div>
+            <div class="par-role" [class.oui]="it.parRole">
+              {{ it.parRole ? 'accordé par le rôle' : 'non accordé par le rôle' }}<span class="redondant" *ngIf="!it.expiree && ((it.sens === 'GRANT' && it.parRole) || (it.sens === 'DENY' && !it.parRole))"> · même effet que le rôle actuel</span>
+            </div>
+            <mat-button-toggle-group [value]="etat(it)" (change)="changer(it, $event.value)" class="toggle" hideSingleSelectionIndicator>
+              <mat-button-toggle value="DENY" matTooltip="Refuser à cette personne">Refuser</mat-button-toggle>
+              <mat-button-toggle value="NONE" matTooltip="Suivre le rôle">Hériter</mat-button-toggle>
+              <mat-button-toggle value="GRANT" matTooltip="Autoriser à cette personne">Autoriser</mat-button-toggle>
+            </mat-button-toggle-group>
+            <mat-icon class="eff" [class.ok]="it.effectif" [class.ko]="!it.effectif" [matTooltip]="it.effectif ? 'Droit effectif' : 'Pas de droit effectif'">
+              {{ it.effectif ? 'check_circle' : 'cancel' }}
+            </mat-icon>
+          </div>
+        </ng-container>
+      </div>
+    </ng-container>
+  </ng-container>
 </mat-card-content></mat-card>
 </div>

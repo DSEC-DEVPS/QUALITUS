@@ -51,6 +51,8 @@ app.use("/api/v1", require("./Routes/calibrage.Routes")); // module calibrage
 app.use("/api/v1", require("./Routes/calibrageExec.Routes")); // calibrage - deroulement
 app.use("/api/v1", require("./Routes/calibrageResultats.Routes")); // calibrage - resultats
 app.use("/api/v1", require("./Routes/sondage.Routes"));
+app.use("/api/v1", require("./Routes/comptes.Routes")); // Gérer les comptes — permission Jauge
+app.use("/api/v1", require("./Routes/tableauDeBord.Routes")); // Tableau de bord par périmètre
 /*app.get("/{*test}", (req, res) => {
   res.sendFile(path.join(__dirname + "/Frontend/index.html"));
 });*/

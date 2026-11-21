@@ -1,13 +1,63 @@
 .passation-wrap {
-  max-width: 720px;
+  max-width: 760px;
   margin: 24px auto;
-  padding: 0 16px;
+  padding: 0 16px 32px;
+  --orange: #f57c00;
+  --orange-fonce: #c2560c;
+  --orange-pale: #fff1e5;
+}
+.passation-wrap.public {
+  margin-top: 0;
 }
 .w-100 { width: 100%; }
 .text-center { text-align: center; }
 
+/* En-tête de la page publique */
+.entete-public {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 4px 14px;
+  margin-bottom: 12px;
+  border-bottom: 3px solid var(--orange);
+}
+.entete-public .logo {
+  height: 36px;
+  width: auto;
+}
+.entete-public .marque {
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  font-size: 1.15rem;
+  color: #222;
+}
+.entete-public .sous-titre {
+  color: #777;
+  font-size: 0.95rem;
+  padding-left: 10px;
+  border-left: 1px solid #ddd;
+}
+
+.bandeau-oblig {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #f0c9a3;
+  color: #5a3a1a;
+  font-size: 0.92rem;
+}
+.bandeau-oblig mat-icon {
+  color: var(--orange);
+  flex: 0 0 auto;
+}
+
 .etat-card {
   margin-top: 40px;
+  border-radius: 12px;
 }
 .etat-icon {
   font-size: 56px;
@@ -18,26 +68,49 @@
 .etat-icon.ko { color: #c62828; }
 .etat-icon.warn { color: #f5a623; }
 
+/* Cartes opaques (le style global rend les cartes semi-transparentes) */
+.sondage-card.mat-mdc-card,
+.etat-card.mat-mdc-card {
+  background-color: #fff !important;
+}
+.sondage-card {
+  border-radius: 12px;
+  border-top: 4px solid var(--orange);
+}
 .sondage-card .titre {
-  font-weight: 600;
-  margin: 0 0 12px;
+  font-weight: 700;
+  margin: 4px 0 14px;
+  color: #222;
 }
 .progress-zone {
+  margin-bottom: 6px;
+}
+.progress-entete {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 6px;
 }
 .progress-zone mat-progress-bar {
-  flex: 1;
-  height: 10px;
-  border-radius: 6px;
+  border-radius: 4px;
+  --mdc-linear-progress-active-indicator-color: var(--orange);
+  --mdc-linear-progress-track-color: #fde3cc;
+  --mdc-linear-progress-track-height: 8px;
+  --mdc-linear-progress-active-indicator-height: 8px;
 }
 .progress-label {
-  font-weight: 600;
-  color: #3f51b5;
-  min-width: 40px;
-  text-align: right;
+  font-weight: 700;
+  color: var(--orange-fonce);
+}
+.legende-oblig {
+  font-size: 0.8rem;
+  color: #888;
+  margin: 8px 0 16px;
+}
+.req {
+  color: #c62828;
+  margin-left: 3px;
 }
 
 .info-bloc {
@@ -46,43 +119,124 @@
   gap: 10px;
   padding: 12px 14px;
   margin-bottom: 16px;
-  background: rgba(33, 150, 243, 0.08);
-  border-left: 4px solid #2196f3;
-  border-radius: 6px;
-  color: #0d47a1;
+  background: var(--orange-pale);
+  border-left: 4px solid var(--orange);
+  border-radius: 8px;
+  color: #5a3a1a;
+}
+.info-bloc mat-icon {
+  color: var(--orange);
+  flex: 0 0 auto;
 }
 
 .question {
-  padding: 14px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  margin-bottom: 6px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  border: 1px solid #e6e2dc;
+  border-left: 4px solid #e6e2dc;
+  border-radius: 10px;
+  background: #fff;
+  transition: border-color 0.15s ease;
+}
+.question.repondue {
+  border-left-color: #1b8a3a;
 }
 .q-libelle {
   font-weight: 600;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  color: #2b2b2b;
 }
-.q-libelle .req {
-  color: #c62828;
-  margin-left: 3px;
+.q-aide {
+  font-size: 0.8rem;
+  color: #8a8a8a;
+  font-style: italic;
+  margin: -6px 0 2px;
 }
 .choix-col {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
+
+/* Options en tuiles : tout le libellé est cliquable */
+.option {
+  display: flex;
+  align-items: center;
+  border: 1px solid #e0dcd6;
+  border-radius: 8px;
+  padding: 0 8px;
+  background: #fafafa;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.option:hover {
+  background: #fff7f0;
+  border-color: #f0b07a;
+}
+.option.choisie {
+  background: var(--orange-pale);
+  border-color: var(--orange);
+  box-shadow: inset 0 0 0 1px var(--orange);
+}
+.option mat-radio-button,
+.option mat-checkbox {
+  width: 100%;
+}
+/* Couleur orange de l'application (prioritaire sur le thème) */
+.option ::ng-deep .mat-mdc-radio-button,
+.option ::ng-deep .mat-mdc-checkbox {
+  --mdc-radio-selected-icon-color: var(--orange);
+  --mdc-radio-selected-focus-icon-color: var(--orange);
+  --mdc-radio-selected-hover-icon-color: var(--orange);
+  --mdc-radio-selected-pressed-icon-color: var(--orange);
+  --mat-radio-checked-ripple-color: var(--orange);
+  --mdc-checkbox-selected-icon-color: var(--orange);
+  --mdc-checkbox-selected-focus-icon-color: var(--orange);
+  --mdc-checkbox-selected-hover-icon-color: var(--orange);
+  --mdc-checkbox-selected-pressed-icon-color: var(--orange);
+}
+.option ::ng-deep .mdc-form-field {
+  width: 100%;
+}
+.option ::ng-deep .mdc-form-field > label {
+  flex: 1 1 auto;
+  cursor: pointer;
+  padding: 10px 8px 10px 0;
+}
+
 .curseur {
   display: flex;
   align-items: center;
   gap: 12px;
+  --mdc-slider-handle-color: var(--orange);
+  --mdc-slider-focus-handle-color: var(--orange);
+  --mdc-slider-hover-handle-color: var(--orange);
+  --mdc-slider-active-track-color: var(--orange);
+  --mdc-slider-inactive-track-color: #fde3cc;
+  --mdc-slider-label-container-color: var(--orange-fonce);
+  --mat-slider-ripple-color: var(--orange);
+  --mat-slider-hover-state-layer-color: rgba(245, 124, 0, 0.08);
+  --mat-slider-focus-state-layer-color: rgba(245, 124, 0, 0.16);
+}
+.curseur mat-slider {
+  flex: 1 1 auto;
 }
 .curseur .borne {
   color: #777;
 }
 .curseur .valeur {
   font-weight: 700;
-  color: #3f51b5;
-  min-width: 24px;
+  color: var(--orange-fonce);
+  background: var(--orange-pale);
+  border-radius: 14px;
+  padding: 2px 12px;
+  min-width: 40px;
   text-align: center;
+}
+.curseur .valeur.vide {
+  font-weight: 500;
+  font-size: 0.8rem;
+  color: #888;
+  background: #f2f2f2;
 }
 .classement .hint {
   font-size: 0.85rem;
@@ -93,24 +247,34 @@
   align-items: center;
   gap: 10px;
   padding: 6px 8px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 6px;
+  border: 1px solid #e0dcd6;
+  border-radius: 8px;
   margin-bottom: 6px;
-  background: #fff;
+  background: #fafafa;
 }
 .rang-ligne .rang {
   font-weight: 700;
-  color: #3f51b5;
-  width: 22px;
-  text-align: center;
+  color: var(--orange-fonce);
+  background: var(--orange-pale);
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .rang-ligne .spacer {
   flex: 1;
 }
 
+.nav button[mat-stroked-button] {
+  color: var(--orange-fonce);
+}
 .nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
 }

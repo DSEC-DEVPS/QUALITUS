@@ -13,4 +13,6 @@
   .drill li mat-icon { margin-left: auto; }
   .drill .tag { padding: 1px 8px; font-size: 0.72rem; background: #ffcdd2; border-radius: 10px; }
   .ligne-detail td { padding: 0; }
+  .ligne { cursor: pointer; transition: background .12s; }
+  .ligne:hover { background: #fff6ee; }
 }

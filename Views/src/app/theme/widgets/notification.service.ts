@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 import { ApercuMenage, CriteresMenage, Notification, PageNotifications } from './notification.interface';
 
 @Injectable({
@@ -10,6 +10,13 @@ export class UserService {
   private apiUrl = '/api/v1'; // Remplacez par votre URL API
 
   constructor(private http: HttpClient) {}
+
+  /**
+   * Lecture d'une notification hors de la cloche (ex. Quiz › Nouveautés) ou
+   * depuis la cloche : les deux vues se mettent à jour aussitôt.
+   * 'cloche' = lue depuis la cloche ; 'page' = lue depuis une page.
+   */
+  readonly lecture$ = new Subject<'cloche' | 'page'>();
 
   /**
    * Récupère toutes les notifications de l'utilisateur connecté

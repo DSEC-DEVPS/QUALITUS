@@ -43,6 +43,8 @@ import {
   ReprendreQuestionsResult,
 } from '../question-dialog/reprendre-questions-dialog.component';
 import { finalize } from 'rxjs';
+import { ConfirmationService } from '@shared/services/confirmation.service';
+import { BAREME_TOTAL, confirmerRepartition, proposerRepartition, totalPoints } from '../bareme';
 import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
@@ -117,6 +119,10 @@ export class EditeurQuizComponent implements OnInit {
       next: q => {
         this.quiz = q;
         this.questions = q.questions || [];
+        if (this.proposerApresChargement) {
+          this.proposerApresChargement = false;
+          setTimeout(async () => { if (await proposerRepartition(this.confirmation, this.questions)) this.repartirPoints(false); });
+        }
         this.form.patchValue({
           titre: q.titre,
           type: q.type,
@@ -169,14 +175,14 @@ export class EditeurQuizComponent implements OnInit {
     }
     if (this.quizId) {
       this.quizSrv.update(this.quizId, this.payload()).subscribe({
-        next: () => this.toast.success('Quiz enregistre'),
+        next: () => this.toast.success('Quiz enregistré'),
         // Le message précis du serveur est affiché par l'intercepteur global.
         error: () => {},
       });
     } else {
       this.quizSrv.add(this.payload()).subscribe({
         next: r => {
-          this.toast.success('Quiz cree - ajoutez maintenant des questions');
+          this.toast.success('Quiz créé - ajoutez maintenant des questions');
           this.quizId = r.id;
           // Passe en mode edition pour permettre l'ajout de questions
           this.router.navigate(['/mon-espace/quiz/editer', r.id]);
@@ -218,6 +224,24 @@ export class EditeurQuizComponent implements OnInit {
     this.toast.success(msg);
     this.charger();
   }
+
+  // ---------- Barème : 100 points répartis entre les questions ----------
+  private readonly confirmation = inject(ConfirmationService);
+  /** Après un ajout (ou une reprise) de questions : proposer de répartir. */
+  private proposerApresChargement = false;
+  get totalPoints(): number { return totalPoints(this.questions); }
+  get baremeConforme(): boolean { return this.totalPoints === BAREME_TOTAL; }
+  private pointsAutres(sauf?: Question): number { return totalPoints(this.questions, sauf); }
+  /** Répartition équitable (le reste de la division va aux premières questions). */
+  async repartirPoints(demander = true): Promise<void> {
+    if (!this.quizId || !this.questions.length) return;
+    if (quizDejaPasse(this.quiz)) {
+      if (!(await confirmerImpact(this.quiz, 'POINTS', () => this.exporterAvantModification()))) return;
+    } else if (demander && !(await confirmerRepartition(this.confirmation, this.questions.length))) {
+      return;
+    }
+    this.quizSrv.repartirPoints(this.quizId).subscribe({ next: res => this.ok(res.message), error: err => this.koMessage(err) });
+  }
   private ko() {
     this.toast.error("Une erreur s'est produite");
   }
@@ -231,7 +255,7 @@ export class EditeurQuizComponent implements OnInit {
       this.toast.warning(MSG_QUIZ_FERME);
       return;
     }
-    const data: QuestionDialogData = { mode: 'add' };
+    const data: QuestionDialogData = { mode: 'add', pointsAutres: this.pointsAutres() };
     this.dialog
       .open(QuestionDialogComponent, { width: 'calc(100% - 30px)', maxWidth: '640px', data })
       .afterClosed()
@@ -241,12 +265,12 @@ export class EditeurQuizComponent implements OnInit {
         }
         this.quizSrv
           .addQuestion({ id_Quiz: this.quizId!, ...r })
-          .subscribe({ next: res => this.ok(res.message), error: err => this.koMessage(err) });
+          .subscribe({ next: res => { this.proposerApresChargement = true; this.ok(res.message); }, error: err => this.koMessage(err) });
       });
   }
 
   modifierQuestion(q: Question) {
-    const data: QuestionDialogData = { mode: 'edit', question: q };
+    const data: QuestionDialogData = { mode: 'edit', question: q, pointsAutres: this.pointsAutres(q) };
     this.dialog
       .open(QuestionDialogComponent, { width: 'calc(100% - 30px)', maxWidth: '640px', data })
       .afterClosed()
@@ -321,7 +345,7 @@ export class EditeurQuizComponent implements OnInit {
         }
         this.quizSrv
           .reprendreQuestions(this.quizId!, r)
-          .subscribe({ next: res => this.ok(res.message), error: err => this.koMessage(err) });
+          .subscribe({ next: res => { this.proposerApresChargement = true; this.ok(res.message); }, error: err => this.koMessage(err) });
       });
   }
 

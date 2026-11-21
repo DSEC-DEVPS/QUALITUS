@@ -21,11 +21,9 @@ import { Responsable_Operation } from '@core';
 import { ToastrService } from 'ngx-toastr';
 import { Router } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import {
-  ModifierProgrammeDialogComponent,
-  ModifierProgrammeResultat,
-} from './modifier-programme-dialog.component';
 import { ChargementComponent } from '@shared/components/chargement/chargement.component';
+import { PermissionsService } from '@core/authorization/permissions.service';
+import { ModifierCompteDialogComponent } from './modifier-compte-dialog.component';
 
 /** Constants used to fill up our data base. */
 
@@ -66,6 +64,11 @@ export class RenitialisationComponent implements OnInit, OnDestroy, AfterViewIni
     'details',
     'actions',
   ];
+  private readonly perms = inject(PermissionsService);
+  /** Sites présents dans la liste (plusieurs : site à vision globale ou administrateur). */
+  sites: string[] = [];
+  siteFiltre = '';
+  private texteFiltre = '';
   private readonly userService = inject(UserService);
   private readonly taostSrv = inject(ToastrService);
   private readonly dialog = inject(MatDialog);
@@ -82,13 +85,20 @@ export class RenitialisationComponent implements OnInit, OnDestroy, AfterViewIni
     this.userService.getAllAgentByRo().pipe(finalize(() => (this.chargement = false))).subscribe({
       next: result => {
         this.downloadData = result;
+        this.sites = [...new Set(result.map(r => r.site).filter((s): s is string => !!s))].sort((a, b) => a.localeCompare(b));
+        // Permission Jauge : colonne « Modifier »
+        if (this.perms.can('compte.jauge') && !this.displayedColumns.includes('modifier')) {
+          this.displayedColumns = [...this.displayedColumns.slice(0, -1), 'modifier', 'actions'];
+        }
         this.dataSource = new MatTableDataSource(result);
         // Recherche sur : Login, Nom, Prénom, Fonction, Programme, Site, ETAT et
         // login du Superviseur (le nom / prénom du superviseur ne sont PAS cherchés :
         // la colonne Superviseur est informative).
         // Mot par mot : une ligne est retenue si elle contient TOUS les mots saisis,
         // dans n'importe quel ordre (« Moussa Diallo » = « Diallo Moussa »).
-        this.dataSource.filterPredicate = (data: Responsable_Operation, filter: string) => {
+        this.dataSource.filterPredicate = (data: Responsable_Operation) => {
+          if (this.siteFiltre && data.site !== this.siteFiltre) return false;
+          const filter = this.texteFiltre;
           const texte = [
             data.nom_utilisateur, data.nom, data.prenom, data.fonction, data.programme,
             data.site, data.status, data.superviseur,
@@ -102,6 +112,7 @@ export class RenitialisationComponent implements OnInit, OnDestroy, AfterViewIni
         };
         this.dataSource.paginator = this.paginator;
         this.dataSource.sort = this.sort;
+        if (this.siteFiltre || this.texteFiltre) this.relancerFiltre();
       },
       error: error => {
         console.log(error);
@@ -115,15 +126,23 @@ export class RenitialisationComponent implements OnInit, OnDestroy, AfterViewIni
   }
 
   applyFilter(event: Event) {
-    const filterValue = (event.target as HTMLInputElement).value;
-    this.dataSource.filter = filterValue.trim().toLowerCase();
-
+    this.texteFiltre = (event.target as HTMLInputElement).value.trim().toLowerCase();
+    this.relancerFiltre();
+  }
+  filtrerSite(site: string) {
+    this.siteFiltre = site || '';
+    this.relancerFiltre();
+  }
+  /** Recherche texte + site : la valeur de `filter` sert seulement à déclencher le filtrage. */
+  private relancerFiltre() {
+    this.dataSource.filter = `${this.siteFiltre}|${this.texteFiltre}` || ' ';
     if (this.dataSource.paginator) {
       this.dataSource.paginator.firstPage();
     }
   }
   download() {
-    const data = this.downloadData;
+    // colonnes techniques retirées de l'export
+    const data = (this.downloadData || []).map(({ est_moi, id_Site, ...ligne }) => ligne);
 
     const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(data);
     const wb: XLSX.WorkBook = XLSX.utils.book_new();
@@ -131,21 +150,15 @@ export class RenitialisationComponent implements OnInit, OnDestroy, AfterViewIni
     XLSX.writeFile(wb, this.filename);
   }
 
-  /** Ouvre la fenêtre de modification du programme ; met la ligne à jour sans recharger. */
-  modifierProgramme(row: Responsable_Operation) {
+  /** Permission Jauge : modification complète ; recharge la liste après enregistrement. */
+  modifierCompte(row: Responsable_Operation) {
     this.dialog
-      .open<ModifierProgrammeDialogComponent, Responsable_Operation, ModifierProgrammeResultat>(
-        ModifierProgrammeDialogComponent,
-        { data: row, width: '440px' }
-      )
+      .open(ModifierCompteDialogComponent, { data: { id: row.id, nom_utilisateur: row.nom_utilisateur }, width: '760px', maxWidth: '95vw' })
       .afterClosed()
-      .subscribe(resultat => {
-        if (!resultat) return;
-        row.id_Programme = resultat.id_Programme;
-        row.programme = resultat.programme;
-        // Réaffecte les données pour que la recherche / le tri prennent en compte le changement
-        this.dataSource.data = [...this.dataSource.data];
-        this.taostSrv.success(resultat.message);
+      .subscribe(ok => {
+        if (!ok) return;
+        this.taostSrv.success(`Le compte ${row.nom_utilisateur} a été mis à jour.`);
+        this.ngOnInit();
       });
   }
 

@@ -5,7 +5,7 @@ import { toYMD } from '@shared/date-utils';
 
 export interface CalSessionListe {
   id: number; nom: string; date_calibrage: string; statut: string; visibilite: number;
-  id_jauge: number; nombre_transactions: number; site: string; grille: string;
+  id_jauge: number; nombre_transactions: number; site: string; grille: string; jauge?: string;
   nb_participants: number; nb_termines: number; nb_transactions_chargees: number;
 }
 export interface CalSession {
@@ -111,4 +111,6 @@ export class CalibrageService {
   setConclusions(id: number, conclusions: string) { return this.http.put(`${this.base}/session/${id}/conclusions`, { conclusions }); }
   valider(id: number) { return this.http.post(`${this.base}/session/${id}/valider`, {}); }
   figer(id: number) { return this.http.post(`${this.base}/session/${id}/figer`, {}); }
+  /** Défigement — administrateur uniquement, motif obligatoire. */
+  defiger(id: number, motif: string) { return this.http.post(`${this.base}/session/${id}/defiger`, { motif }); }
 }

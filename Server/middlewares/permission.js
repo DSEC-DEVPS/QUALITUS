@@ -51,7 +51,8 @@ const permissionsEffectives = async (userId) => {
   const [comp] = await db.query(
     `SELECT p.code, up.sens FROM b_utilisateur_permission up
        JOIN b_permission p ON p.id=up.id_permission
-      WHERE up.id_utilisateur=?`, [userId]
+      WHERE up.id_utilisateur=?
+        AND (up.date_fin IS NULL OR up.date_fin >= CURDATE())`, [userId] // dérogation expirée : ignorée
   );
   comp.forEach((x) => (x.sens === "DENY" ? set.delete(x.code) : set.add(x.code)));
   return { role, set };

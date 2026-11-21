@@ -1,44 +1,70 @@
 <div class="executer">
-  <mat-card class="cal-panel"><mat-card-header class="cal-band"><span class="cal-band-title"><mat-icon>assignment_turned_in</mat-icon> Exécution de l'évaluation</span></mat-card-header><mat-card-content>
-
-  <button mat-button (click)="retour()"><mat-icon>arrow_back</mat-icon> Retour</button>
-  @if (detail?.evaluation?.id_evaluation_parente) {
-    <button mat-stroked-button color="primary" (click)="ouvrirParente()">
-      <mat-icon>arrow_upward</mat-icon> Voir l'évaluation parente
-    </button>
-  }
+  <mat-card class="cal-panel"><mat-card-header class="cal-band"><span class="cal-band-title"><mat-icon>assignment_turned_in</mat-icon> {{ terminee ? 'Évaluation' : 'Exécution de l\'évaluation' }}</span></mat-card-header><mat-card-content>
 
   @if (chargement && !detail) { <app-chargement /> }
 
   @if (detail) {
+    <!-- En-tête de synthèse : qui, quel appel, statut, conclusion -->
+    <div class="entete-eval">
+      <button mat-icon-button (click)="retour()" matTooltip="Retour"><mat-icon>arrow_back</mat-icon></button>
+      <span class="avatar"><mat-icon>{{ detail.evaluation.type_ressource === 'HUMAINE' ? 'person' : 'smart_toy' }}</mat-icon></span>
+      <div class="qui">
+        <div class="nom">
+          @if (detail.evaluation.type_ressource === 'HUMAINE') { {{ detail.evaluation.agent_prenom }} {{ detail.evaluation.agent_nom }} }
+          @else { {{ detail.evaluation.nature_ressource || 'Ressource automatisée' }} }
+        </div>
+        <div class="sous">
+          @if (detail.evaluation.identifiant_appel) { Appel {{ detail.evaluation.identifiant_appel }} }
+          @if (detail.evaluation.date_appel) { · {{ detail.evaluation.date_appel | date: 'dd/MM/yyyy' }} }
+          @if (detail.evaluation.contexte) { · {{ detail.evaluation.contexte }} }
+          @if (detail.evaluation.grille) { · Grille {{ detail.evaluation.grille }} }
+        </div>
+      </div>
+      <span class="pastille statut" [attr.data-st]="detail.evaluation.statut">{{ libelleStatut(detail.evaluation.statut) }}</span>
+      <span class="pastille conclusion" [class.ok]="conclusionAffichee === 'SUCCES'"
+            [matTooltip]="terminee ? '' : 'Conclusion provisoire : elle évolue avec la grille jusqu\'à la clôture.'">
+        <mat-icon>{{ conclusionAffichee === 'SUCCES' ? 'check_circle' : 'error' }}</mat-icon>
+        {{ conclusionAffichee === 'SUCCES' ? 'Réussite' : 'Échec' }}
+        @if (!terminee) { <em>provisoire</em> }
+      </span>
+      @if (detail.evaluation.id_evaluation_parente) {
+        <button mat-stroked-button color="primary" (click)="ouvrirParente()">
+          <mat-icon>arrow_upward</mat-icon> Évaluation parente
+        </button>
+      }
+    </div>
+
     <div class="colonnes">
       <!-- COLONNE GAUCHE : la grille -->
       <div class="col-gauche">
         <mat-card>
           <mat-card-content>
-            <!-- conclusion live + statut -->
-            <div class="bandeau" [class.echec]="detail.conclusion_live === 'ECHEC'" [class.succes]="detail.conclusion_live === 'SUCCES'">
-              <mat-icon>{{ detail.conclusion_live === 'SUCCES' ? 'check_circle' : 'error' }}</mat-icon>
-              Conclusion {{ terminee ? '(figée)' : '(en cours)' }} :
-              <strong>{{ detail.conclusion_live === 'SUCCES' ? 'Succès' : 'Échec' }}</strong>
-              @if (terminee) { <span class="badge-termine">Terminée</span> }
-            </div>
-
-            <!-- barre horizontale des catégories -->
+            <h3 class="titre-grille">Grille d'évaluation</h3>
+            <!-- onglets des catégories : nom, score et barre (repère = seuil) -->
             <div class="barre-categories">
               @for (c of detail.categories; track c.id) {
-                <button class="cat-chip" [class.active]="categorieActive?.id === c.id"
-                        [class.cat-echec]="!c.reussite" (click)="selectCategorie(c)">
+                <button class="cat-chip" [class.active]="categorieActive?.id === c.id" [attr.aria-pressed]="categorieActive?.id === c.id"
+                        [class.cat-echec]="!c.reussite" [class.cat-ok]="c.reussite" (click)="selectCategorie(c)">
+                  @if (categorieActive?.id === c.id) { <mat-icon class="ind-sel">arrow_drop_down</mat-icon> }
                   <span class="cat-nom">{{ c.libelle }}
-                    @if (c.critique) { <mat-icon class="ico-crit" matTooltip="Critique">priority_high</mat-icon> }
+                    @if (c.critique) { <span class="tag-critique" matTooltip="Catégorie critique : un échec entraîne l'échec de l'évaluation">Critique</span> }
                   </span>
-                  <span class="cat-score">{{ c.score_obtenu | number: '1.0-2' }} / {{ c.seuil_reussite | number: '1.0-2' }}</span>
+                  <app-score-seuil [score]="c.score_obtenu" [seuil]="c.seuil_reussite" [comparateur]="c.comparateur"
+                                   [reussite]="c.reussite" [compact]="true" />
                 </button>
               }
             </div>
 
             <!-- erreurs de la catégorie sélectionnée -->
             @if (categorieActive) {
+              <div class="panneau-items">
+              <div class="panneau-titre">
+                <strong>{{ categorieActive.libelle }}</strong>
+                <span>· {{ categorieActive.erreurs.length }} item{{ categorieActive.erreurs.length > 1 ? 's' : '' }}</span>
+                <span class="nb-ecarts" [class.zero]="!nbEcarts(categorieActive)">
+                  · {{ nbEcarts(categorieActive) ? nbEcarts(categorieActive) + ' écart' + (nbEcarts(categorieActive) > 1 ? 's' : '') : 'aucun écart' }}
+                </span>
+              </div>
               <div class="erreurs">
                 @for (e of categorieActive.erreurs; track e.id) {
                   <div class="erreur" [class.decochee]="!e.coche">
@@ -47,7 +73,7 @@
                                     matTooltip="Coché = conforme ; décoché = écart constaté"></mat-checkbox>
                       <span class="item" (click)="toggleDepli(e)">{{ e.item }}</span>
                       <span class="spacer"></span>
-                      @if (!e.coche) { <mat-icon class="ico-ecart" matTooltip="Écart constaté">report_problem</mat-icon> }
+                      <span class="etat-item" [class.ecart]="!e.coche">{{ e.coche ? 'Conforme' : 'Écart' }}</span>
                       <button mat-icon-button (click)="toggleDepli(e)">
                         <mat-icon>{{ erreurDepliee === e.id ? 'expand_less' : 'expand_more' }}</mat-icon>
                       </button>
@@ -55,7 +81,7 @@
                     @if (erreurDepliee === e.id) {
                       <div class="erreur-detail">
                         @if (e.sous_item) { <p class="sous-item"><em>{{ e.sous_item }}</em></p> }
-                        @if (e.referentiel) { <p class="referentiel"><strong>Référentiel :</strong> {{ e.referentiel }}</p> }
+                        @if (e.referentiel) { <div class="referentiel"><mat-icon>menu_book</mat-icon> {{ e.referentiel }}</div> }
                         <mat-form-field appearance="outline" class="plein">
                           <mat-label>Commentaire de l'évaluateur</mat-label>
                           <textarea matInput rows="2" [(ngModel)]="e.commentaire" [disabled]="figee"
@@ -65,6 +91,7 @@
                     }
                   </div>
                 }
+              </div>
               </div>
             }
           </mat-card-content>
@@ -106,7 +133,7 @@
               <dt>Identifiant d'appel</dt><dd>{{ detail.evaluation.identifiant_appel || '—' }}</dd>
               <dt>Numéro appelant</dt><dd>{{ detail.evaluation.numero_appel || '—' }}</dd>
               <dt>Date d'appel</dt><dd>{{ detail.evaluation.date_appel ? (detail.evaluation.date_appel | date: 'dd/MM/yyyy') : '—' }}</dd>
-              <dt>Statut</dt><dd>{{ detail.evaluation.statut }}</dd>
+              <dt>Statut</dt><dd>{{ libelleStatut(detail.evaluation.statut) }}</dd>
               @if (terminee) {
                 <dt>Statut après évaluation</dt><dd>{{ libelleStatutApres(detail.evaluation.statut_apres_evaluation) }}</dd>
               }
@@ -117,22 +144,20 @@
         <mat-card>
           <mat-card-content>
             <h3>Résultats par catégorie</h3>
-            <table class="resultats">
-              <tr>
-                <th>Catégorie</th><th>Seuil</th><th>Décochées</th><th></th>
-              </tr>
+            <div class="resultats">
               @for (c of detail.categories; track c.id) {
-                <tr>
-                  <td>{{ c.libelle }}</td>
-                  <td class="num">{{ c.score_obtenu | number: '1.0-2' }} {{ c.comparateur }} {{ c.seuil_reussite | number: '1.0-2' }}</td>
-                  <td class="num">{{ c.nb_erreurs_decochees }}</td>
-                  <td>
-                    @if (c.reussite) { <mat-icon class="ok">check_circle</mat-icon> }
-                    @else { <mat-icon class="ko">cancel</mat-icon> }
-                  </td>
-                </tr>
+                <div class="resultat">
+                  <div class="resultat-tete">
+                    <span class="libelle">{{ c.libelle }}</span>
+                    @if (c.critique) { <span class="tag-critique">Critique</span> }
+                    <span class="ecarts" [class.zero]="!c.nb_erreurs_decochees">
+                      {{ c.nb_erreurs_decochees ? c.nb_erreurs_decochees + ' écart' + (c.nb_erreurs_decochees > 1 ? 's' : '') : 'Aucun écart' }}
+                    </span>
+                  </div>
+                  <app-score-seuil [score]="c.score_obtenu" [seuil]="c.seuil_reussite" [comparateur]="c.comparateur" [reussite]="c.reussite" />
+                </div>
               }
-            </table>
+            </div>
           </mat-card-content>
         </mat-card>
 
@@ -158,9 +183,17 @@
               </button>
             } @else {
               <div class="conclusion-finale" [class.echec]="detail.evaluation.conclusion === 'ECHEC'">
-                Conclusion : <strong>{{ detail.evaluation.conclusion === 'SUCCES' ? 'Succès' : 'Échec' }}</strong>
+                <mat-icon>{{ detail.evaluation.conclusion === 'SUCCES' ? 'check_circle' : 'error' }}</mat-icon>
+                Évaluation terminée : <strong>{{ detail.evaluation.conclusion === 'SUCCES' ? 'Réussite' : 'Échec' }}</strong>
               </div>
-              <p class="hint-avis"><mat-icon>info</mat-icon> L'approbation de l'agent se saisit dans la lettre ci-dessous.</p>
+              <p class="hint-avis"><mat-icon>info</mat-icon> L'approbation de l'agent se saisit dans la lettre.</p>
+              @if (terminee) {
+                @let felicitation = detail.evaluation.conclusion === 'SUCCES';
+                <button mat-stroked-button class="btn-lettre" [class.felicitation]="felicitation" (click)="ouvrirLettre()">
+                  <mat-icon>{{ felicitation ? 'emoji_events' : 'forum' }}</mat-icon>
+                  {{ felicitation ? 'Lettre de félicitation' : 'Lettre de débriefing' }}
+                </button>
+              }
             }
           </mat-card-content>
         </mat-card>
@@ -181,23 +214,13 @@
       </mat-card>
     }
 
-    <!-- SECTION ACTIONS (F.39septies) — disponible après clôture -->
-    @if (terminee) {
+    <!-- SECTION ACTIONS (F.39septies) — après clôture en échec (la lettre s'ouvre depuis
+         le bouton de la carte « Résolution & clôture ») -->
+    @if (terminee && detail.evaluation.conclusion === 'ECHEC') {
       <mat-card class="actions-section">
         <mat-card-content>
           <h2 class="titre-actions">Actions</h2>
           <mat-accordion multi>
-            <mat-expansion-panel expanded>
-              <mat-expansion-panel-header>
-                <mat-panel-title>
-                  <mat-icon>mail</mat-icon>&nbsp;
-                  {{ detail.evaluation.conclusion === 'SUCCES' ? 'Lettre de félicitation' : 'Lettre de débriefing' }}
-                </mat-panel-title>
-              </mat-expansion-panel-header>
-              <app-lettre-section [idEvaluation]="id" [avisModifiable]="detail.viewer.is_agent"
-                                  (avisEnregistre)="onAvisEnregistre($event)" />
-            </mat-expansion-panel>
-
             @if (detail.evaluation.conclusion === 'ECHEC') {
               <mat-expansion-panel>
                 <mat-expansion-panel-header>

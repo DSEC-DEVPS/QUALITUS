@@ -1,10 +1,123 @@
+// Lettre de félicitation / débriefing : présentation « courrier »
+$orange: #ff7900;
+$vert: #2e7d32;
+$rouge: #c62828;
+
 .lettre-section {
-  .entete { display: flex; align-items: center; justify-content: space-between; }
-  h3 { margin: 0; }
-  h4 { margin: 12px 0 4px; }
-  .corps { line-height: 1.5; }
-  .ok { color: #2e7d32; }
-  .ko { color: #c62828; }
-  .ref { font-size: 0.85rem; color: rgba(0, 0, 0, 0.6); }
-  .attente { color: #e65100; }
+  .barre-actions { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+  .discret { color: rgba(0, 0, 0, 0.55); font-style: italic; margin: 4px 0; }
+}
+
+.lettre-papier {
+  max-width: 820px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  color: #2b2b2b;
+
+  --accent: #{$orange};
+  &.felicitation { --accent: #{$vert}; }
+
+  .lettre-entete {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 28px;
+    border-top: 6px solid var(--accent);
+    border-bottom: 1px solid #eee;
+    background: linear-gradient(90deg, rgba(255, 121, 0, 0.06), transparent);
+    .marque {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 46px; height: 46px; border-radius: 50%; background: var(--accent); flex: none;
+      mat-icon { color: #fff; }
+    }
+    .titres { flex: 1; }
+    .type { font-size: 1.35rem; font-weight: 600; color: var(--accent); }
+    .objet { font-size: 0.9rem; color: #666; margin-top: 2px; }
+    .date { text-align: right; font-size: 0.8rem; color: #777; line-height: 1.4; strong { color: #333; font-size: 0.95rem; } }
+  }
+  &.felicitation .lettre-entete { background: linear-gradient(90deg, rgba(46, 125, 50, 0.07), transparent); }
+
+  .lettre-corps { padding: 20px 28px 26px; line-height: 1.6; }
+  section { margin-bottom: 18px; }
+  h4 { font-size: 1rem; font-weight: 600; margin: 0 0 10px; color: #333; }
+  .texte p { margin: 0 0 10px; }
+
+  .titre-section { display: flex; align-items: center; justify-content: space-between; h4 { margin: 0 0 10px; } }
+  .pastille-globale {
+    font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 12px;
+    background: rgba($rouge, 0.1); color: $rouge;
+    &.ok { background: rgba($vert, 0.12); color: $vert; }
+  }
+
+  .scores { display: flex; flex-direction: column; gap: 12px; }
+  .score-tete { display: flex; align-items: baseline; gap: 10px; font-size: 0.9rem; margin-bottom: 4px; }
+  .categorie { flex: 1; font-weight: 500; }
+  .seuil { color: #888; font-size: 0.8rem; }
+  .etat {
+    font-size: 0.72rem; font-weight: 600; padding: 1px 8px; border-radius: 10px; min-width: 76px; text-align: center;
+    background: rgba($orange, 0.14); color: #b45300;
+    &.ok { background: rgba($vert, 0.12); color: $vert; }
+  }
+  .barre { position: relative; height: 8px; border-radius: 4px; background: #eee; }
+  .remplissage { height: 100%; border-radius: 4px; background: $orange; &.ok { background: $vert; } }
+  .repere { position: absolute; top: -3px; width: 2px; height: 14px; background: #555; border-radius: 1px; }
+
+  .constats { display: flex; flex-direction: column; gap: 8px; }
+  .constat {
+    border: 1px solid #eee; border-left: 3px solid var(--accent); border-radius: 6px; padding: 8px 12px;
+    .constat-tete { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+    .cat { font-size: 0.75rem; color: #888; }
+    .commentaire { margin: 4px 0 0; font-size: 0.9rem; }
+    .ref {
+      display: flex; align-items: center; gap: 4px; margin-top: 6px; padding: 4px 8px; border-radius: 4px;
+      background: #f6f6f6; color: #666; font-size: 0.8rem;
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    }
+  }
+
+  .synthese {
+    margin: 0; padding: 12px 16px; border-left: 4px solid var(--accent); background: #fafafa; border-radius: 0 6px 6px 0;
+    font-style: italic;
+    footer { margin-top: 6px; font-style: normal; font-size: 0.85rem; color: #666; }
+  }
+
+  .cause { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+  .etape { padding: 3px 10px; border-radius: 12px; background: #f1f1f1; font-size: 0.85rem; &.finale { background: rgba($orange, 0.15); font-weight: 600; } }
+  .fleche { color: #aaa; font-size: 18px; width: 18px; height: 18px; }
+
+  .cloture { margin-top: 22px; }
+  .signature { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; .fonction { color: #777; font-size: 0.85rem; } }
+}
+
+.approbation {
+  max-width: 820px;
+  margin: 16px auto 0;
+  padding: 14px 18px;
+  border: 1px dashed #ccc;
+  border-radius: 8px;
+  h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; font-size: 0.95rem; mat-icon { color: #ff7900; } }
+  .approbation-ligne { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+  .avis-champ { min-width: 320px; }
+  .approuve { display: flex; align-items: center; gap: 6px; color: #2e7d32; margin: 4px 0; mat-icon { font-size: 20px; width: 20px; height: 20px; } }
+}
+
+// Impression : ne pas couper un bloc entre deux pages
+/* Petit écran (téléphone) : en-tête empilé, scores sur deux lignes */
+@media (max-width: 600px) {
+  .lettre-papier {
+    .lettre-entete { flex-wrap: wrap; gap: 10px; padding: 14px 16px; }
+    .lettre-entete .titres { min-width: 0; flex: 1 1 calc(100% - 62px); }
+    .lettre-entete .type { font-size: 1.15rem; }
+    .lettre-entete .date { flex: 1 1 100%; text-align: left; }
+    .lettre-corps { padding: 16px; }
+    .score-tete { flex-wrap: wrap; row-gap: 2px; }
+    .categorie { flex: 1 1 100%; }
+  }
+}
+@media print {
+  .lettre-papier .score, .lettre-papier .constat, .lettre-papier .synthese, .lettre-papier .cause, .lettre-papier .signature, .lettre-papier .lettre-entete { break-inside: avoid; }
+  .lettre-papier h4 { break-after: avoid; }
 }

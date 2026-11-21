@@ -18,6 +18,7 @@ router.get("/habilitations/observations", auth, exigerHabilitationGestion, h.get
 
 // Administration
 router.put("/habilitations/role/:idRole/permission/:idPermission", auth, exigerHabilitationGestion, h.toggleRolePermission);
+router.put("/habilitations/role/:idRole/module/:module", auth, exigerHabilitationGestion, h.setModuleRole);
 router.put("/habilitations/mode", auth, exigerHabilitationGestion, h.setMode);
 
 // Permissions effectives de l'utilisateur courant (alimentation du client)
@@ -27,6 +28,9 @@ router.get("/habilitations/utilisateurs", auth, exigerHabilitationGestion, h.rec
 router.get("/habilitations/utilisateurs-speciaux", auth, exigerHabilitationGestion, h.getUtilisateursSpeciaux);
 router.get("/habilitations/utilisateur/:id/droits", auth, exigerHabilitationGestion, h.getDroitsUtilisateur);
 router.put("/habilitations/utilisateur/:id/permission/:idPermission", auth, exigerHabilitationGestion, h.setDroitUtilisateur);
+router.put("/habilitations/utilisateur/:id/module/:module", auth, exigerHabilitationGestion, h.setModuleUtilisateur);
+router.delete("/habilitations/utilisateur/:id/derogations", auth, exigerHabilitationGestion, h.resetDroitsUtilisateur);
+router.get("/habilitations/sites", auth, exigerHabilitationGestion, h.getSitesHabilitation);
 
 router.get("/me/permissions", auth, h.getMesPermissions);
 

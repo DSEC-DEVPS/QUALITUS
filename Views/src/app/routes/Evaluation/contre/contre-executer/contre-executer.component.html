@@ -8,10 +8,12 @@
           <span>Contre-évaluation de <strong>{{ detail.contre.evaluateur_nom }} {{ detail.contre.evaluateur_prenom }}</strong>
             — agent {{ detail.contre.agent_nom }} {{ detail.contre.agent_prenom }} — grille {{ detail.contre.grille }}</span>
           <span class="spacer"></span>
-          <mat-chip [class.echec]="detail.conclusion_live === 'ECHEC'" [class.succes]="detail.conclusion_live === 'SUCCES'">
-            {{ detail.conclusion_live === 'SUCCES' ? 'Succès' : 'Échec' }}{{ terminee ? '' : ' (en cours)' }}
-          </mat-chip>
-          @if (terminee) { <span class="badge">Terminée</span> }
+          <span class="pastille" [class.ok]="detail.conclusion_live === 'SUCCES'">
+            <mat-icon>{{ detail.conclusion_live === 'SUCCES' ? 'check_circle' : 'error' }}</mat-icon>
+            {{ detail.conclusion_live === 'SUCCES' ? 'Réussite' : 'Échec' }}
+            @if (!terminee) { <em>provisoire</em> }
+          </span>
+          <span class="pastille statut" [class.termine]="terminee">{{ terminee ? 'Terminée' : 'En cours' }}</span>
         </div>
       </mat-card-content>
     </mat-card>
@@ -22,13 +24,22 @@
           <mat-card-content>
             <div class="barre-cat">
               @for (c of detail.categories; track c.id) {
-                <button class="cat-chip" [class.active]="categorieActive?.id === c.id" [class.ko]="!c.reussite" (click)="select(c)">
-                  {{ c.libelle }} — {{ c.score_obtenu | number: '1.0-2' }}/{{ c.seuil_reussite | number: '1.0-2' }}
+                <button class="cat-chip" [class.active]="categorieActive?.id === c.id" [attr.aria-pressed]="categorieActive?.id === c.id"
+                        [class.ko]="!c.reussite" [class.ok]="c.reussite" (click)="select(c)">
+                  @if (categorieActive?.id === c.id) { <mat-icon class="ind-sel">arrow_drop_down</mat-icon> }
+                  <span class="cat-nom">{{ c.libelle }}</span>
+                  <app-score-seuil [score]="c.score_obtenu" [seuil]="c.seuil_reussite" [comparateur]="c.comparateur"
+                                   [reussite]="c.reussite" [compact]="true" />
                 </button>
               }
             </div>
 
             @if (categorieActive) {
+              <div class="panneau-items">
+              <div class="panneau-titre">
+                <strong>{{ categorieActive.libelle }}</strong>
+                <span>· {{ categorieActive.erreurs.length }} item{{ categorieActive.erreurs.length > 1 ? 's' : '' }}</span>
+              </div>
               <table class="comp">
                 <tr><th>Item</th><th>Initiale</th><th>Contre</th><th></th></tr>
                 @for (e of categorieActive.erreurs; track e.id) {
@@ -62,6 +73,7 @@
                   </tr>
                 }
               </table>
+              </div>
             }
           </mat-card-content>
         </mat-card>

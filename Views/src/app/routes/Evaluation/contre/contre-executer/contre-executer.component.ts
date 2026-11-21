@@ -21,12 +21,14 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { ConfirmationService } from '@shared/services/confirmation.service';
 import { finalize } from 'rxjs';
 import { ChargementComponent } from '@shared/components/chargement/chargement.component';
+import { ScoreSeuilComponent } from '../../execution/score-seuil/score-seuil.component';
 @Component({
   selector: 'app-contre-executer',
   standalone: true,
   imports: [ChargementComponent, MatDatepickerModule,
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatCheckboxModule,
     MatFormFieldModule, MatInputModule, MatRadioModule, MatChipsModule, MatExpansionModule, MatTooltipModule,
+    ScoreSeuilComponent,
   ],
   templateUrl: './contre-executer.component.html',
   styleUrl: './contre-executer.component.scss',

@@ -4,6 +4,13 @@ import { Observable } from 'rxjs';
 
 export interface AgentPoleEval {
   id: number; id_evaluateur?: number; date_appel: string; critiques_decochees: number; peut_plan?: boolean;
+  /** Détail seulement : résumé affiché dans l'en-tête de chaque évaluation. */
+  identifiant_appel?: string | null;
+  date_evaluation?: string | null;
+  evaluateur?: string | null;
+  nb_categories?: number;
+  categories_echec?: { libelle: string; score: number; seuil: number; critique: boolean }[];
+  plan_action?: { nb: number; realisees: number; etat: 'AUCUN' | 'EN_COURS' | 'TERMINE' };
 }
 export interface AgentPole {
   id: number;

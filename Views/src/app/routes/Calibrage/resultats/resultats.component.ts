@@ -16,13 +16,14 @@ import { CalibrageService } from '../calibrage.service';
 import { ConfirmationService } from '@shared/services/confirmation.service';
 import { finalize } from 'rxjs';
 import { ChargementComponent } from '@shared/components/chargement/chargement.component';
+import { ScoreSeuilComponent } from '../../Evaluation/execution/score-seuil/score-seuil.component';
 
 @Component({
   selector: 'app-cal-resultats',
   standalone: true,
   imports: [ChargementComponent,
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatCheckboxModule, MatTooltipModule, MatExpansionModule, MatFormFieldModule, MatInputModule, MatSlideToggleModule,
+    MatCheckboxModule, MatTooltipModule, MatExpansionModule, MatFormFieldModule, MatInputModule, MatSlideToggleModule, ScoreSeuilComponent,
   ],
   templateUrl: './resultats.component.html',
   styleUrl: './resultats.component.scss',
@@ -59,6 +60,11 @@ export class ResultatsComponent implements OnInit {
   // en révision comme après validation (VALIDEE).
   get modifiable(): boolean { return this.estJauge && this.statut !== 'CLOTUREE'; }
   get fige(): boolean { return this.statut === 'CLOTUREE'; }
+  /** Administrateur consultant une session figée dont il n'est ni jauge ni participant. */
+  lectureAdmin = false;
+  /** Défigement possible (administrateur, session figée). */
+  peutDefiger = false;
+  defigement: { motif: string; envoi: boolean } | null = null;
   get statutLibelle(): string {
     return ({
       BROUILLON: 'Brouillon', OUVERTE: 'Ouverte',
@@ -77,6 +83,7 @@ export class ResultatsComponent implements OnInit {
     this.service.getResultats(this.id).pipe(finalize(() => (this.chargement = false))).subscribe({
       next: d => {
         this.role = d.role; this.provisoire = d.provisoire; this.statut = d.statut;
+        this.lectureAdmin = !!d.lecture_admin; this.peutDefiger = !!d.peut_defiger;
         this.nom = d.nom || ''; this.resultatPublie = !!d.resultat_publie; this.visibilite = !!d.visibilite;
         this.transactions = d.transactions; this.participants = d.participants;
         this.grid = d.grid; this.global = d.global; this.conclusions = d.conclusions || '';
@@ -100,6 +107,23 @@ export class ResultatsComponent implements OnInit {
 
   txAffichees(): any[] {
     return this.focusTx ? this.confrontation.filter(t => t.transaction.id === this.focusTx) : this.confrontation;
+  }
+
+  /** Libellé lisible d'une conclusion (au lieu de SUCCES / ECHEC). */
+  libConclusion(c: string | null | undefined): string {
+    return c === 'SUCCES' ? 'Réussite' : c === 'ECHEC' ? 'Échec' : (c || '—');
+  }
+
+  // Détail (commentaires) d'un item : déplié d'office si divergence, à la demande sinon
+  private detailsBascules = new Map<string, boolean>();
+  private cleDetail(t: any, e: any): string { return `${this.selPid}-${t.transaction.id}-${e.id_erreur_origine}`; }
+  detailOuvert(t: any, e: any): boolean {
+    const v = this.detailsBascules.get(this.cleDetail(t, e));
+    return v === undefined ? !e.conforme : v;
+  }
+  basculerDetail(t: any, e: any): void { this.detailsBascules.set(this.cleDetail(t, e), !this.detailOuvert(t, e)); }
+  aDesCommentaires(e: any): boolean {
+    return !!(e.reference?.commentaire || e.participant?.commentaire || e.participant?.appreciation_jauge);
   }
 
   // Interrupteur de visibilité (même service que l'écran de session)
@@ -163,14 +187,31 @@ export class ResultatsComponent implements OnInit {
     });
   }
   async figer(): Promise<void> {
-    if (!(await this.confirmation.confirmer({ titre: 'Figer le résultat', message: 'Figer le résultat ? Cette action est définitive : plus aucune modification ne sera possible.', type: 'danger' }))) return;
+    if (!(await this.confirmation.confirmer({ titre: 'Figer le résultat', message: 'Figer le résultat ? Plus aucune modification ne sera possible (ni ajustement, ni reprise, ni relance d’un participant). Seul un administrateur pourra le défiger.', type: 'danger' }))) return;
     this.service.figer(this.id).subscribe({
       next: (r: any) => { this.toastr.success(r?.message || 'Résultat figé.'); this.charger(); },
       error: e => this.toastr.error(e?.error?.message || 'Figement impossible.'),
     });
   }
-  // Relancer un participant même depuis l'écran des résultats (session validée
-  // ou figée) : sa participation est remise à zéro et la session ré-ouverte pour
+  // Défigement (administrateur) : motif obligatoire, retour à l'état d'avant le figement.
+  ouvrirDefigement(): void { this.defigement = { motif: '', envoi: false }; }
+  defiger(): void {
+    const d = this.defigement;
+    if (!d || d.motif.trim().length < 3) return;
+    d.envoi = true;
+    this.service.defiger(this.id, d.motif.trim()).subscribe({
+      next: (r: any) => {
+        this.toastr.success(r?.message || 'Résultat défigé.');
+        this.defigement = null;
+        // Un administrateur non jauge ne peut plus consulter une session non figée.
+        if (this.lectureAdmin) { this.retour(); return; }
+        this.charger();
+      },
+      error: e => { d.envoi = false; this.toastr.error(e?.error?.message || 'Défigement impossible.'); },
+    });
+  }
+  // Relancer un participant même depuis l'écran des résultats (session validée,
+  // non figée) : sa participation est remise à zéro et la session ré-ouverte pour
   // qu'il puisse recommencer (ex. coupure réseau ayant clos sa session).
   // --- Reprise après coupure (réponses conservées) — mêmes actions que l'écran de session ---
   reprise: { pid: number; chargement: boolean; minutes: number; proposees: number; duree: number; derniere: string | null } | null = null;

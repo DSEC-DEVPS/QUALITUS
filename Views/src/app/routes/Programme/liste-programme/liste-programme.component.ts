@@ -88,10 +88,10 @@ export class ListeProgrammeComponent implements OnInit, AfterViewInit {
   }
   openDialog(): void {
     this.dialog.open(AjouterProgrammeComponent, {
-      height: 'calc(100% - 30px)',
-      width: 'calc(100% - 30px)',
-      maxWidth: '100%',
-      maxHeight: '100%',
+      // Fenêtre dimensionnée au contenu (au lieu du plein écran).
+      width: '520px',
+      maxWidth: '95vw',
+      panelClass: 'dlg-ref',
     });
   }
 
@@ -148,10 +148,10 @@ export class ListeProgrammeComponent implements OnInit, AfterViewInit {
   openDialog_update(id: number): void {
     this.dialog.open(UpdateProgrammeComponent, {
       data: { id: id },
-      height: 'calc(100% - 30px)',
-      width: 'calc(100% - 30px)',
-      maxWidth: '100%',
-      maxHeight: '100%',
+      // Fenêtre dimensionnée au contenu (au lieu du plein écran).
+      width: '520px',
+      maxWidth: '95vw',
+      panelClass: 'dlg-ref',
     });
   }
 

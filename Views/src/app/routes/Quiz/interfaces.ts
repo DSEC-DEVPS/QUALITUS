@@ -60,6 +60,8 @@ export interface Quiz {
   dateCreation?: string;
   dateModification?: string;
   nb_questions?: number;
+  /** Total des points des questions (barème conforme = 100). */
+  total_points?: number;
   nb_participants?: number;
   questions?: Question[];
 }
@@ -262,6 +264,17 @@ export interface BadgeUtilisateur extends Badge {
   id: number;
   obtenu: number;
   dateObtention?: string | null;
+  /** DECOUVERTE | PROGRESSION | QUALITE | MENSUEL */
+  categorie?: string;
+  condition_type?: string;
+  condition_valeur?: number;
+  /** Nombre de fois obtenu (badges mensuels) ; 1 pour un badge cumulatif obtenu. */
+  nb_obtentions?: number;
+  /** Mois d'obtention 'AAAA-MM' (badges mensuels). */
+  periodes?: string[];
+  /** Part des participants aux quiz qui détiennent ce badge (%). */
+  rarete?: number;
+  detenteurs?: number;
 }
 
 export interface RapportQuiz {

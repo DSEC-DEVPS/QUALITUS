@@ -47,6 +47,12 @@ export interface BrouillonControle {
   fiches: FicheBrouillonControle[];
 }
 
+/** Agent assignable à un superviseur (écran Assignation). */
+export interface AgentAssignable {
+  id: number; login: string; nom: string; prenom: string; fonction: string | null;
+  id_superviseur: number | null; superviseur: string | null;
+}
+
 @Injectable({
   providedIn: `root`,
 })
@@ -396,22 +402,26 @@ export class UserService {
   getAllAgentByRo(): Observable<Responsable_Operation[]> {
     return this.http.get<Responsable_Operation[]>(`/api/v1/agents_by_RO/all`);
   }
-  /** Programmes actifs proposés au RO (Gérer les comptes). */
-  getProgrammesPourRo(): Observable<{ id: number; nom: string }[]> {
-    return this.http.get<{ id: number; nom: string }[]>(`/api/v1/agents_by_RO/programmes`);
+  /** Gérer les comptes — permission Jauge : fiche complète d'un compte. */
+  getCompteEdition(id: number): Observable<any> {
+    return this.http.get<any>(`/api/v1/comptes/${id}/edition`);
   }
-  /** Modification du programme d'un utilisateur par le RO. */
-  updateProgrammeAgentParRo(
-    id: number,
-    id_Programme: number
-  ): Observable<{ message: string; id_Programme: number; programme: string }> {
-    return this.http.put<{ message: string; id_Programme: number; programme: string }>(
-      `/api/v1/agents_by_RO/${id}/programme`,
-      { id_Programme }
-    );
+  /** Listes du formulaire (fonctions, sites, programmes, grilles, superviseurs du site). */
+  getReferentielsCompte(idSite?: number | null, exclure?: number): Observable<any> {
+    const params: any = {};
+    if (idSite) params.id_site = idSite;
+    if (exclure) params.exclure = exclure;
+    return this.http.get<any>(`/api/v1/comptes/referentiels`, { params });
+  }
+  modifierCompte(id: number, compte: any): Observable<message> {
+    return this.http.put<message>(`/api/v1/comptes/${id}`, compte);
   }
   getAllAgentByRo_Assignable(): Observable<any[]> {
     return this.http.get<any[]>(`/api/v1/agents_by_RO_assignable/all`);
+  }
+  /** Agents assignables avec nom, fonction et superviseur actuel (écran Assignation). */
+  getAgentsAssignables(): Observable<AgentAssignable[]> {
+    return this.http.get<AgentAssignable[]>(`/api/v1/agents_by_RO_assignable/all`, { params: { details: '1' } });
   }
   assigne_agent(form_data: {
     id_SUPERVISEUR: number;

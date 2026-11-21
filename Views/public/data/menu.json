@@ -2,13 +2,12 @@
   "menu": [
     {
       "route": "mon-espace/dashboard",
-      "name": "Dashboard",
+      "name": "Tableau de bord",
       "type": "link",
       "icon": "dashboard",
       "permissions": {
         "only": [
-          "R_ADMI",
-          "R_GB"
+          "tableau_de_bord.voir"
         ]
       }
     },
@@ -55,6 +54,9 @@
       "permissions": {
         "only": [
           "compte.gerer"
+        ],
+        "except": [
+          "est_admin"
         ]
       }
     },
@@ -228,17 +230,6 @@
               "sondage.gestion"
             ]
           }
-        },
-        {
-          "route": "creer",
-          "name": "Nouveau sondage",
-          "type": "link",
-          "icon": "add_circle",
-          "permissions": {
-            "only": [
-              "sondage.gestion"
-            ]
-          }
         }
       ],
       "permissions": {
@@ -272,17 +263,6 @@
         ]
       },
       "children": [
-        {
-          "route": "creer",
-          "name": "Nouveau quiz",
-          "type": "link",
-          "icon": "add_circle",
-          "permissions": {
-            "only": [
-              "quiz.creer"
-            ]
-          }
-        },
         {
           "route": "gestion",
           "name": "Liste des quiz",
@@ -366,7 +346,7 @@
       "children": [
         {
           "route": "quiz-en-echecs",
-          "name": "Quiz en echecs",
+          "name": "Quiz en échecs",
           "type": "link",
           "icon": "trending_down",
           "permissions": {
@@ -436,7 +416,7 @@
         },
         {
           "route": "mes-coaching",
-          "name": "Mes coaching",
+          "name": "Mes coachings",
           "type": "link",
           "icon": "school",
           "module": "evaluation",
@@ -532,14 +512,14 @@
           }
         },
         {
-          "route": "notifications",
-          "name": "Notifications",
+          "route": "lettres/modeles",
+          "name": "Modèles de lettres",
           "type": "link",
-          "icon": "notifications_active",
-          "module": "notification",
+          "icon": "mail",
+          "module": "evaluation",
           "permissions": {
             "only": [
-              "evaluation.lire"
+              "evaluation.parametrer"
             ]
           }
         },

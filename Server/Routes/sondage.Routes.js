@@ -45,10 +45,12 @@ router.post("/sondage/:id/cible/import", auth, permission("SONDAGE","CREER"), up
 router.post("/sondage/:id/diffuser", auth, permission("SONDAGE","CREER"), diffuser);
 router.get("/sondage/:id/rapport", auth, permission("SONDAGE","LIRE"), getRapport);
 
-/** Sondages OBLIGATOIRES (cible interne connectee) - avant /sondage/:id */
-router.get("/sondage/obligatoires/mes", auth, permission("SONDAGE","LIRE"), getObligatoiresMes);
-router.get("/sondage/obligatoire/:id", auth, permission("SONDAGE","LIRE"), getSondageObligatoire);
-router.post("/sondage/obligatoire/:id/soumettre", auth, permission("SONDAGE","CREER"), soumettreSondageObligatoire);
+/** Sondages OBLIGATOIRES (cible interne connectee) - avant /sondage/:id
+ *  Repondre a un sondage n'est pas une action de gestion : seule l'authentification
+ *  est exigee ; le controleur verifie que l'utilisateur fait partie de la cible. */
+router.get("/sondage/obligatoires/mes", auth, getObligatoiresMes);
+router.get("/sondage/obligatoire/:id", auth, getSondageObligatoire);
+router.post("/sondage/obligatoire/:id/soumettre", auth, soumettreSondageObligatoire);
 
 /** Sondage (module Phase 1) */
 router.get("/sondage/all", auth, permission("SONDAGE","LIRE"), getAllSondage);

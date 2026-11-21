@@ -98,7 +98,9 @@ const createSession = async (req, res) => {
 const getSessions = async (req, res) => {
   const uid = req.auth.userId;
   const { id_site, date_debut, date_fin, statut } = req.query;
-  const where = ["(s.id_jauge = ? OR p.id_evaluateur = ?)"];
+  // L'administrateur voit en plus les sessions FIGÉES (pour pouvoir les défiger).
+  const admin = await porteeCalibrage(uid).then((p) => p.admin).catch(() => false);
+  const where = [admin ? "(s.id_jauge = ? OR p.id_evaluateur = ? OR s.statut = 'CLOTUREE')" : "(s.id_jauge = ? OR p.id_evaluateur = ?)"];
   const args = [uid, uid];
   if (id_site) { where.push("s.id_site = ?"); args.push(id_site); }
   if (date_debut) { where.push("s.date_calibrage >= ?"); args.push(date_debut); }
@@ -107,7 +109,7 @@ const getSessions = async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT s.id, s.nom, s.date_calibrage, s.statut, s.visibilite, s.id_jauge, s.nombre_transactions,
-              si.nom AS site, gr.nom AS grille,
+              si.nom AS site, gr.nom AS grille, TRIM(CONCAT(IFNULL(uj.prenom,''),' ',IFNULL(uj.nom,''))) AS jauge,
               (SELECT COUNT(*) FROM b_cal_participant cp WHERE cp.id_session=s.id) AS nb_participants,
               (SELECT COUNT(*) FROM b_cal_participant cp WHERE cp.id_session=s.id AND cp.statut_participation='CLOSE') AS nb_termines,
               (SELECT COUNT(*) FROM b_cal_transaction ct WHERE ct.id_session=s.id) AS nb_transactions_chargees
@@ -115,6 +117,7 @@ const getSessions = async (req, res) => {
          LEFT JOIN b_cal_participant p ON p.id_session=s.id AND p.id_evaluateur=?
          LEFT JOIN b_site si ON s.id_site=si.id
          LEFT JOIN b_eval_grille gr ON s.id_grille=gr.id
+         LEFT JOIN b_utilisateur uj ON s.id_jauge=uj.id
         WHERE ${where.join(" AND ")}
         GROUP BY s.id
         ORDER BY s.date_calibrage DESC, s.id DESC`,

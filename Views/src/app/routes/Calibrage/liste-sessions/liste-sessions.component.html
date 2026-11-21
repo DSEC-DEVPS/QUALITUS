@@ -13,6 +13,14 @@
       <p class="cal-desc">Harmonisation des évaluateurs : chaque participant examine les mêmes transactions, confrontées à la référence du jauge.</p>
 
       <div class="cal-filtres-row">
+        <mat-form-field appearance="outline" class="recherche"><mat-label>Rechercher</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [(ngModel)]="recherche" (ngModelChange)="filtrer()" name="rech"
+                 placeholder="Nom, grille, site, statut, jauge" autocomplete="off" />
+          @if (recherche) {
+            <button mat-icon-button matSuffix matTooltip="Effacer" (click)="recherche = ''; filtrer()"><mat-icon>close</mat-icon></button>
+          }
+        </mat-form-field>
         <mat-form-field appearance="outline" *ngIf="peutOrganiser"><mat-label>Site</mat-label>
           <mat-select [(ngModel)]="filtres.id_site" name="site">
             <mat-option [value]="null">Tous</mat-option>
@@ -34,7 +42,7 @@
           </mat-select>
         </mat-form-field>
         <span class="sp">
-          <button mat-flat-button color="primary" (click)="charger()"><mat-icon>search</mat-icon> Rechercher</button>
+          <button mat-flat-button color="primary" (click)="charger()"><mat-icon>filter_alt</mat-icon> Appliquer</button>
           <button mat-button (click)="reinitialiser()">Réinitialiser</button>
         </span>
       </div>
@@ -82,9 +90,13 @@
       }
 
       <div class="cal-empty" *ngIf="!chargement && !sessions.length">
-        <mat-icon>tune</mat-icon>
-        <span>Aucune session de calibrage</span>
-        <span class="cal-empty-sub" *appCan="'calibrage.organiser'">Cliquez sur « Nouvelle session » pour en créer une.</span>
+        <mat-icon>{{ toutes.length ? 'search_off' : 'tune' }}</mat-icon>
+        @if (toutes.length) {
+          <span>Aucune session ne correspond à « {{ recherche }} »</span>
+        } @else {
+          <span>Aucune session de calibrage</span>
+          <span class="cal-empty-sub" *appCan="'calibrage.organiser'">Cliquez sur « Nouvelle session » pour en créer une.</span>
+        }
       </div>
     </mat-card-content>
   </mat-card>

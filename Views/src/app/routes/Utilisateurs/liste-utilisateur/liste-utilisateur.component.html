@@ -96,10 +96,34 @@
               <mat-icon
                 class="edit_icon"
                 *appCan="'utilisateur.modifier'"
-                matTooltip="editer"
+                matTooltip="Modifier le compte"
+                matTooltipPosition="above"
+                (click)="modifierCompte(element)"
+                >manage_accounts</mat-icon
+              >
+              <mat-icon
+                class="droits_icon"
+                *appCan="'habilitation.gerer'"
+                matTooltip="Droits de l'utilisateur (dérogations)"
+                matTooltipPosition="above"
+                (click)="ouvrirDroits(element)"
+                >admin_panel_settings</mat-icon
+              >
+              <mat-icon
+                class="statut_icon"
+                *appCan="'utilisateur.modifier'"
+                matTooltip="Activer / désactiver"
                 matTooltipPosition="above"
                 (click)="openDialog_update('50ms', '4ms', element.id)"
-                >edit</mat-icon
+                >toggle_on</mat-icon
+              >
+              <mat-icon
+                class="reset_icon"
+                *appCan="'utilisateur.modifier'"
+                matTooltip="Réinitialiser le mot de passe"
+                matTooltipPosition="above"
+                (click)="reinitialiserMotDePasse(element)"
+                >replay</mat-icon
               >
               <mat-icon
                 (click)="deleteSomething(element.id)"

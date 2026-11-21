@@ -48,64 +48,15 @@ export class StartupService {
   }
 
   private setPermissions(user: User) {
-    console.log(user);
-    // In a real app, you should get permissions and roles from the user information. , 'canDelete', 'canEdit', 'canRead'
+    // Permissions « legacy » et rôle de l'utilisateur pour ngx-permissions (menu.json :
+    // permissions.only / except). Le rôle est repris tel quel (R_ADMI, R_GB, R_SUP,
+    // R_TC, R_BO…) : plus de rôle de repli « R_TC » pour les profils non listés.
     const permissions = ['canAdd', 'canDelete', 'canEdit', 'canRead'];
-    // permissionsOfRole: Record<string, string[]> ={ADMIN:[""]};
     this.permissonsService.loadPermissions(permissions);
     this.rolesService.flushRoles();
-    if (user.roles === 'R_GB') {
-      this.rolesService.addRoles({ R_GB: permissions });
-    } else {
-      if (user.roles === 'R_SUP') {
-        this.rolesService.addRoles({ R_SUP: permissions });
-      } else {
-        if (user.roles === 'R_RO') {
-          this.rolesService.addRoles({ R_RO: permissions });
-        } else {
-          if (user.roles === 'R_RO') {
-            this.rolesService.addRoles({ R_ROO: permissions });
-          } else {
-            if (user.roles === 'R_TC') {
-              this.rolesService.addRoles({ R_TC: permissions });
-            } else {
-              if (user.roles === 'R_ADMI') {
-                this.rolesService.addRoles({ R_ADMI: permissions });
-              } else {
-                if (user.roles === 'R_AQ') {
-                  this.rolesService.addRoles({ R_AQ: permissions });
-                } else {
-                  if (user.roles === 'R_AF') {
-                    this.rolesService.addRoles({ R_AF: permissions });
-                  } else {
-                    if (user.roles === 'R_GE') {
-                      this.rolesService.addRoles({ R_GE: permissions });
-                    } else {
-                      if (user.role === 'R_RO') {
-                        this.rolesService.addRoles({ R_RO: permissions });
-                      } else {
-                        if (user.role === 'R_GE') {
-                          this.rolesService.addRoles({ R_GE: permissions });
-                        } else {
-                          if (user.role === 'R_TC') {
-                            this.rolesService.addRoles({ R_TC: permissions });
-                          } else {
-                            if (user.role === 'R_BO') {
-                              this.rolesService.addRoles({ R_TC: permissions });
-                            } else {
-                              this.rolesService.addRoles({ R_TC: permissions });
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+    const role = String((user as any)?.roles || (user as any)?.role || '').trim();
+    if (role) {
+      this.rolesService.addRoles({ [role]: permissions });
     }
   }
 }

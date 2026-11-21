@@ -1,4 +1,5 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -43,6 +44,7 @@ export class PassationSondageComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly srv = inject(SondageService);
   private readonly toast = inject(ToastrService);
+  private readonly destroyRef = inject(DestroyRef);
 
   mode: 'public' | 'obligatoire' = 'public';
   token = '';
@@ -58,8 +60,21 @@ export class PassationSondageComponent implements OnInit {
   termine = false;
 
   ngOnInit(): void {
-    const token = this.route.snapshot.paramMap.get('token');
-    const idOblig = this.route.snapshot.paramMap.get('id');
+    // Abonnement aux paramètres : en sondage obligatoire, le composant est réutilisé
+    // quand on enchaîne sur le sondage suivant (/sondage-obligatoire/:id).
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(p => this.charger(p.get('token'), p.get('id')));
+  }
+
+  private charger(token: string | null, idOblig: string | null): void {
+    // Remise à zéro (changement de sondage sans recréer le composant)
+    this.chargement = true;
+    this.etat = '';
+    this.sondage = undefined;
+    this.nomIndispo = '';
+    this.reponses = {};
+    this.pageIndex = 0;
+    this.envoi = false;
+    this.termine = false;
     if (token) {
       this.mode = 'public';
       this.token = token;
@@ -78,12 +93,12 @@ export class PassationSondageComponent implements OnInit {
           // Si rien à faire (déjà fait / non ciblé / indisponible), on rend la main.
           if (r.etat !== 'OK') {
             this.srv.rafraichirObligatoires();
-            this.router.navigate(['/mon-espace/dashboard']);
+            this.router.navigate(['/mon-espace']);
             return;
           }
           this.appliquer(r.etat, r.sondage);
         },
-        error: () => this.router.navigate(['/mon-espace/dashboard']),
+        error: () => this.router.navigate(['/mon-espace']),
       });
     } else {
       this.chargement = false;
@@ -106,8 +121,9 @@ export class PassationSondageComponent implements OnInit {
   /** Fin d'un sondage obligatoire : le garde enchaîne le suivant ou laisse entrer. */
   continuerApresObligatoire() {
     this.srv.rafraichirObligatoires();
-    // On repasse par le dashboard : le garde redirige vers un éventuel sondage restant.
-    this.router.navigate(['/mon-espace/dashboard']);
+    // On repasse par « Mon espace » : le garde redirige vers un éventuel sondage restant,
+    // sinon vers la page d'arrivée de l'utilisateur.
+    this.router.navigate(['/mon-espace']);
   }
 
   private get questions(): QuestionSondage[] {
@@ -196,9 +212,30 @@ export class PassationSondageComponent implements OnInit {
     }
     return true;
   }
+  /** Pages effectivement affichables (conditions remplies). */
+  private get indicesVisibles(): number[] {
+    return this.pages.map((p, i) => (this.questionsPage(p).length ? i : -1)).filter(i => i >= 0);
+  }
+  get nbPagesVisibles(): number {
+    return Math.max(1, this.indicesVisibles.length);
+  }
+  get numeroPage(): number {
+    const pos = this.indicesVisibles.indexOf(this.pageIndex);
+    return pos >= 0 ? pos + 1 : 1;
+  }
+  get nbQuestionsPage(): number {
+    return this.questionsAffichees.filter(q => q.type !== 'INFO').length;
+  }
+  /** Progression : part des questions (hors INFO) de la page courante déjà répondues,
+   *  rapportée à l'ensemble des pages ; 0 % à l'ouverture, 100 % une fois tout rempli. */
   get progression(): number {
-    const total = this.pages.length || 1;
-    return Math.min(100, Math.round(((this.pageIndex + 1) / total) * 100));
+    const total = this.nbPagesVisibles;
+    const qs = this.questionsAffichees.filter(q => q.type !== 'INFO' && q.type !== 'CLASSEMENT');
+    const partPage = qs.length ? qs.filter(q => this.estRepondu(q)).length / qs.length : 0;
+    return Math.min(100, Math.round(((this.numeroPage - 1 + partPage) / total) * 100));
+  }
+  estReponduAffiche(q: QuestionSondage): boolean {
+    return q.type !== 'CLASSEMENT' && this.estRepondu(q);
   }
 
   /* ----- Reponses ----- */

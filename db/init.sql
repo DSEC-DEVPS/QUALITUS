@@ -18,6 +18,8 @@
 -- reste SEPARE (sauvegarde de l'ancien module supprime, a ne PAS rejouer).
 -- =====================================================================
 
+-- Encodage explicite : sans cette ligne, un client configuré en latin1 abîme les accents.
+SET NAMES utf8mb4;
 CREATE DATABASE IF NOT EXISTS QUALITUS ;
 USE QUALITUS;
 
@@ -275,7 +277,8 @@ CREATE TABLE IF NOT EXISTS B_HISTORIQUE (
   id_FICHE INT,
   FOREIGN KEY(id_UTILISATEUR) REFERENCES B_UTILISATEUR(id),
   FOREIGN KEY(id_FICHE) REFERENCES B_FICHE(id),
-  INDEX ix_historique_utilisateur_date (id_UTILISATEUR, dateConsultation)
+  INDEX ix_historique_utilisateur_date (id_UTILISATEUR, dateConsultation),
+  INDEX ix_historique_fiche_utilisateur (id_FICHE, id_UTILISATEUR, dateConsultation)
 );
 
 CREATE TABLE IF NOT EXISTS B_COMMENTAIRE (
@@ -534,7 +537,10 @@ CREATE TABLE IF NOT EXISTS B_QZ_TENTATIVE (
   date_tentative DATETIME,
   date_debut DATETIME NULL,
   date_fin DATETIME NULL,
-  FOREIGN KEY (id_Quiz) REFERENCES B_QZ_QUIZ(id) ON DELETE CASCADE
+  INDEX ix_qz_tentative_utilisateur (id_UTILISATEUR, num_essai, date_tentative),
+  FOREIGN KEY (id_Quiz) REFERENCES B_QZ_QUIZ(id) ON DELETE CASCADE,
+  INDEX ix_qz_tentative_date_fin (date_fin),
+  INDEX ix_qz_tentative_quiz_utilisateur (id_Quiz, id_UTILISATEUR, num_essai)
 ) ENGINE=InnoDB;
 
 -- Source: 06_quiz_phase2.sql
@@ -568,7 +574,8 @@ CREATE TABLE IF NOT EXISTS B_QZ_BADGE (
   nom VARCHAR(100) NOT NULL,
   description VARCHAR(255),
   icone VARCHAR(50),
-  condition_type VARCHAR(30) NOT NULL,   -- QUIZ_REUSSIS | SCORE_PARFAIT
+  categorie VARCHAR(20) NOT NULL DEFAULT 'DECOUVERTE', -- DECOUVERTE | PROGRESSION | QUALITE | MENSUEL (43)
+  condition_type VARCHAR(30) NOT NULL,   -- QUIZ_REUSSIS | SCORE_PARFAIT | PARFAITS | PREMIER_COUP | SERIE | MOIS_SANS_FAUTE
   condition_valeur INT DEFAULT 1,
   UNIQUE (code)
 ) ENGINE=InnoDB;
@@ -578,8 +585,9 @@ CREATE TABLE IF NOT EXISTS B_QZ_BADGE_UTILISATEUR (
   id INT AUTO_INCREMENT PRIMARY KEY,
   id_Badge INT NOT NULL,
   id_UTILISATEUR INT NOT NULL,
+  periode VARCHAR(7) NOT NULL DEFAULT '',  -- '' = cumulatif ; 'AAAA-MM' = badge mensuel (43)
   dateObtention DATETIME,
-  UNIQUE (id_Badge, id_UTILISATEUR),
+  UNIQUE INDEX ux_badge_utilisateur_periode (id_Badge, id_UTILISATEUR, periode),
   FOREIGN KEY (id_Badge) REFERENCES B_QZ_BADGE(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -910,7 +918,8 @@ CREATE TABLE IF NOT EXISTS B_SD_PASSATION (
   date_fin       DATETIME NULL,
   termine        TINYINT(1) NOT NULL DEFAULT 0,
   CONSTRAINT fk_sd_pass_sondage FOREIGN KEY (id_Sondage)
-    REFERENCES B_SD_SONDAGE(id) ON DELETE CASCADE
+    REFERENCES B_SD_SONDAGE(id) ON DELETE CASCADE,
+  INDEX ix_sd_passation_sondage_utilisateur (id_Sondage, id_UTILISATEUR, termine)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Source: 21_sondage_passation.sql
@@ -939,7 +948,8 @@ CREATE TABLE IF NOT EXISTS B_SD_CIBLE (
   date_envoi_sms   DATETIME NULL,
   dateCreation     DATETIME NULL,
   CONSTRAINT fk_sd_cible_sondage FOREIGN KEY (id_Sondage)
-    REFERENCES B_SD_SONDAGE(id) ON DELETE CASCADE
+    REFERENCES B_SD_SONDAGE(id) ON DELETE CASCADE,
+  INDEX ix_sd_cible_sondage_utilisateur (id_Sondage, id_UTILISATEUR)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =====================================================================
@@ -955,11 +965,22 @@ INSERT IGNORE INTO B_CATEGORIE_RESSOURCE (nom, est_robot, Etat, dateCreation) VA
   ('Chatbot',    1, 'ACTIF', NOW());
 */
 -- Source: 07_quiz_phase3.sql
-INSERT IGNORE INTO B_QZ_BADGE (code, nom, description, icone, condition_type, condition_valeur) VALUES
-  ('PREMIER_REUSSI', 'Premier pas',      'Reussir votre premier quiz',       'military_tech', 'QUIZ_REUSSIS', 1),
-  ('TROIS_REUSSIS',  'Sur la lancee',    'Reussir 3 quiz',                   'workspace_premium', 'QUIZ_REUSSIS', 3),
-  ('CINQ_REUSSIS',   'Expert',           'Reussir 5 quiz',                   'emoji_events', 'QUIZ_REUSSIS', 5),
-  ('SCORE_PARFAIT',  'Sans faute',       'Obtenir 100% a un quiz',           'grade', 'SCORE_PARFAIT', 100);
+INSERT IGNORE INTO B_QZ_BADGE (code, nom, description, icone, categorie, condition_type, condition_valeur) VALUES
+  ('PREMIER_REUSSI', 'Premier pas',      'Reussir votre premier quiz',       'military_tech', 'DECOUVERTE', 'QUIZ_REUSSIS', 1),
+  ('TROIS_REUSSIS',  'Sur la lancee',    'Reussir 3 quiz',                   'workspace_premium', 'DECOUVERTE', 'QUIZ_REUSSIS', 3),
+  ('CINQ_REUSSIS',   'Habitué',          'Réussir 5 quiz',                   'emoji_events', 'DECOUVERTE', 'QUIZ_REUSSIS', 5),
+  ('SCORE_PARFAIT',  'Sans faute',       'Obtenir 100% a un quiz',           'grade', 'DECOUVERTE', 'SCORE_PARFAIT', 100);
+-- Badges de progression, qualité et mensuel (43_quiz_badges_progression.sql)
+INSERT IGNORE INTO B_QZ_BADGE (code, nom, description, icone, categorie, condition_type, condition_valeur) VALUES
+  ('DIX_REUSSIS',     'Confirmé',           'Réussir 10 quiz',                                          'trending_up',   'PROGRESSION', 'QUIZ_REUSSIS', 10),
+  ('VINGT5_REUSSIS',  'Expert',             'Réussir 25 quiz',                                          'emoji_events',  'PROGRESSION', 'QUIZ_REUSSIS', 25),
+  ('CINQUANTE_REUSSIS','Maître',            'Réussir 50 quiz',                                          'military_tech', 'PROGRESSION', 'QUIZ_REUSSIS', 50),
+  ('CENT_REUSSIS',    'Légende',            'Réussir 100 quiz',                                         'diamond',       'PROGRESSION', 'QUIZ_REUSSIS', 100),
+  ('PREMIER_COUP_5',  'Du premier coup',    'Réussir 5 quiz dès le premier essai',                      'bolt',          'QUALITE',     'PREMIER_COUP', 5),
+  ('PREMIER_COUP_20', 'Sûr de soi',         'Réussir 20 quiz dès le premier essai',                     'verified',      'QUALITE',     'PREMIER_COUP', 20),
+  ('SERIE_5',         'En série',           'Réussir 5 quiz d''affilée dès le premier essai',           'local_fire_department', 'QUALITE', 'SERIE', 5),
+  ('PARFAITS_5',      'Perfectionniste',    'Obtenir 100 % à 5 quiz différents',                        'auto_awesome',  'QUALITE',     'PARFAITS', 5),
+  ('MOIS_SANS_FAUTE', 'Sans faute du mois', 'Passer au moins 2 quiz dans le mois, tous réussis dès le premier essai', 'calendar_month', 'MENSUEL', 'MOIS_SANS_FAUTE', 2);
 
 -- Source: 08_evaluation.sql
 /*
@@ -1092,7 +1113,8 @@ CREATE TABLE IF NOT EXISTS b_evaluation (
   FOREIGN KEY (id_grille_origine) REFERENCES b_eval_grille(id),
   FOREIGN KEY (id_contexte) REFERENCES b_eval_ref_contexte(id),
   FOREIGN KEY (id_type_evaluation) REFERENCES b_eval_ref_type_evaluation(id),
-  FOREIGN KEY (id_evaluation_parente) REFERENCES b_evaluation(id)
+  FOREIGN KEY (id_evaluation_parente) REFERENCES b_evaluation(id),
+  INDEX ix_evaluation_date_site (date_evaluation, id_site)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS b_evaluation_categorie (
@@ -1184,6 +1206,8 @@ CREATE TABLE IF NOT EXISTS b_eval_plan_action_contributeur (
 -- 7. LETTRES + APPROBATION (F.39sexies)
 CREATE TABLE IF NOT EXISTS b_eval_lettre_modele (
   id INT AUTO_INCREMENT PRIMARY KEY, type VARCHAR(20) NOT NULL, texte TEXT,
+  introduction TEXT NULL,  -- début de la lettre (44_lettres_modeles_parametrables.sql)
+  cloture TEXT NULL,       -- formule de fin, avant la signature
   dateModification DATETIME DEFAULT NULL, UNIQUE(type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -1253,9 +1277,13 @@ INSERT INTO b_eval_ref_statut_pa (libelle, etat, dateCreation) VALUES
 INSERT INTO b_eval_param_systeme (cle, valeur, description, dateModification) VALUES
   ('nb_supplementaires_attendues', '2', 'Nombre d''évaluations supplémentaires attendues après un échec (F.39quater)', NOW());
 
-INSERT INTO b_eval_lettre_modele (type, texte, dateModification) VALUES
-  ('FELICITATION', 'Bonjour {{prenom}} {{nom}},\n\nNous vous félicitons pour votre évaluation du {{date_evaluation}} (contexte : {{contexte}}).\n\n{{scores}}\n\n{{synthese}}', NOW()),
-  ('DEBRIEFING', 'Bonjour {{prenom}} {{nom}},\n\nSuite à votre évaluation du {{date_evaluation}} (contexte : {{contexte}}), voici les éléments de débriefing.\n\n{{scores}}\n\n{{constats}}\n\n{{synthese}}', NOW());
+INSERT INTO b_eval_lettre_modele (type, texte, introduction, cloture, dateModification) VALUES
+  ('FELICITATION', '',
+   'Bonjour {{prenom}},\n\nNous avons le plaisir de vous adresser nos félicitations pour votre appel évalué le {{date_evaluation}}. Votre évaluation montre une bonne maîtrise des attendus : vous trouverez ci-dessous le détail de vos résultats, ainsi que quelques pistes pour aller encore plus loin.',
+   'Merci pour votre engagement au quotidien. Continuez ainsi !', NOW()),
+  ('DEBRIEFING', '',
+   'Bonjour {{prenom}},\n\nSuite à l''évaluation de votre appel du {{date_evaluation}}, voici un retour détaillé sur vos résultats. Les points relevés ci-dessous servent de base à notre échange : l''objectif est de vous accompagner pour progresser.',
+   'Votre superviseur prendra un temps avec vous pour revenir sur ces points. N''hésitez pas à lui faire part de vos questions.', NOW());
 
 
 -- =====================================================================
@@ -1317,8 +1345,11 @@ CREATE TABLE IF NOT EXISTS b_utilisateur_permission (
   id_utilisateur INT NOT NULL,               -- b_utilisateur.id (pas de FK MyISAM)
   id_permission  INT NOT NULL,
   sens           VARCHAR(10) NOT NULL DEFAULT 'GRANT', -- GRANT | DENY (droit complémentaire)
+  motif          VARCHAR(255) NULL,          -- raison de la dérogation (48_derogations_temporaires.sql)
+  date_fin       DATE NULL,                  -- dernier jour d'application ; NULL = sans échéance
   attribue_par   INT NULL,
   dateCreation   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  dateModification DATETIME NULL,
   UNIQUE KEY uq_user_perm (id_utilisateur, id_permission),
   KEY k_up_user (id_utilisateur),
   CONSTRAINT fk_up_perm FOREIGN KEY (id_permission) REFERENCES b_permission(id) ON DELETE CASCADE
@@ -1412,6 +1443,7 @@ INSERT INTO b_permission (module,action,code,libelle) VALUES
   ('NOTIFICATION','LIRE','notification.lire','Consulter — notification'),
   ('NOTIFICATION','SUPPRIMER','notification.supprimer','Supprimer — notification (ménage)'),
   ('COMPTE','GERER','compte.gerer','Gérer — comptes du site (mot de passe, programme, détail)'),
+  ('COMPTE','JAUGE','compte.jauge','Jauge — modifier entièrement les comptes de son périmètre (Gérer les comptes)'),
   ('ASSIGNATION','GERER','assignation.gerer','Gérer — assignation agents / superviseurs du site'),
   ('MA_VOIX','AJOUTER','ma_voix.ajouter','Ajouter — Ma Voix'),
   ('MA_VOIX','MOTIF','ma_voix.motif','Gérer — motifs Ma Voix'),
@@ -1444,8 +1476,8 @@ INSERT INTO b_role (code,libelle,description) VALUES
   ('R_BO','Back Office','Rôle repris de la fonction « Back Office » (identique à R_TC)'),
   ('R_AF','Agent Formateur','Rôle repris de la fonction « Agent Formateur »'),
   ('R_GE','Gestionnaire Exactitude','Rôle repris de la fonction « Gestionnaire Exactitude »'),
-  ('R_RO','Responsable OpÃ©rationnel','Rôle repris de la fonction « Responsable OpÃ©rationnel »'),
-  ('R_AQ','Agent QualitÃ©','Rôle repris de la fonction « Agent QualitÃ© »');
+  ('R_RO','Responsable Opérationnel','Rôle repris de la fonction « Responsable Opérationnel »'),
+  ('R_AQ','Agent Qualité','Rôle repris de la fonction « Agent Qualité »');
 
 -- Seed : matrice role x permission (attribution complete — reprise fidele)
 INSERT INTO b_role_permission (id_role,id_permission)
@@ -1475,9 +1507,11 @@ CREATE TABLE IF NOT EXISTS b_cal_session (
   type_ressource_cible VARCHAR(15) DEFAULT 'HUMAINE',
   nombre_transactions INT DEFAULT 0,
   duree_minutes INT DEFAULT 0,                 -- durée de participation (individuelle)
-  statut VARCHAR(25) DEFAULT 'BROUILLON',      -- BROUILLON | OUVERTE | RESULTATS_EN_REVISION | CLOTUREE
+  statut VARCHAR(25) DEFAULT 'BROUILLON',      -- BROUILLON | OUVERTE | RESULTATS_EN_REVISION | VALIDEE | CLOTUREE
+  statut_avant_figement VARCHAR(25) NULL,      -- état rétabli si un administrateur défige
   visibilite TINYINT(1) DEFAULT 0,             -- interrupteur d'accès des participants
   resultat_publie TINYINT(1) DEFAULT 0,        -- résultat validé/publié (visible si visibilite=1) sans figer
+  publie_avant_figement TINYINT(1) NULL,       -- resultat_publie rétabli si défigement
   id_jauge INT DEFAULT NULL,                   -- organisateur = référence
   conclusions TEXT,                            -- conclusions de session (F.47 G)
   dateCreation DATETIME DEFAULT NULL,
@@ -1594,6 +1628,17 @@ CREATE TABLE IF NOT EXISTS b_cal_reinitialisation (
   KEY k_cal_reinit_session (id_session)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS b_cal_defigement (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  id_session INT NOT NULL,
+  id_auteur INT DEFAULT NULL,
+  motif VARCHAR(500) NOT NULL,
+  statut_retabli VARCHAR(25) NOT NULL,
+  dateFigement DATETIME DEFAULT NULL,
+  dateDefigement DATETIME NOT NULL,
+  KEY k_cal_defig_session (id_session)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 
 -- =====================================================================
 -- MODULE CALIBRAGE — SEED permission (lire: tous rôles ; organiser: R_ADMI)
@@ -1641,3 +1686,33 @@ INSERT IGNORE INTO b_role_permission (id_role, id_permission)
   SELECT DISTINCT rp.id_role, px.id FROM b_role_permission rp
     JOIN b_permission p ON p.id = rp.id_permission AND p.code = 'evaluation.modifier'
     JOIN b_permission px ON px.code = 'evaluation.parametrer';
+-- Gérer les comptes — permission Jauge (42_permission_compte_jauge.sql) : R_ADMI
+INSERT IGNORE INTO b_role_permission (id_role, id_permission)
+  SELECT r.id, p.id FROM b_role r CROSS JOIN b_permission p WHERE p.code = 'compte.jauge' AND r.code = 'R_ADMI';
+-- Tableau de bord (45_tableau_de_bord.sql, 47_tableau_de_bord_sections.sql) : permissions créées
+-- APRÈS la matrice initiale « tous rôles », pour être attribuées aux seuls profils concernés.
+INSERT IGNORE INTO b_permission (module, action, code, libelle) VALUES
+  ('TABLEAU_DE_BORD','VOIR','tableau_de_bord.voir','Consulter — tableau de bord (indicateurs de son périmètre)'),
+  ('TABLEAU_DE_BORD','BASECO','tableau_de_bord.baseco','Tableau de bord — section Baseco (chargements)'),
+  ('TABLEAU_DE_BORD','EVALUATIONS','tableau_de_bord.evaluations','Tableau de bord — section Évaluations'),
+  ('TABLEAU_DE_BORD','QUIZ','tableau_de_bord.quiz','Tableau de bord — section Quiz'),
+  ('TABLEAU_DE_BORD','SONDAGES','tableau_de_bord.sondages','Tableau de bord — section Sondages'),
+  ('TABLEAU_DE_BORD','CALIBRAGE','tableau_de_bord.calibrage','Tableau de bord — section Calibrage');
+INSERT IGNORE INTO b_role_permission (id_role, id_permission)
+  SELECT r.id, p.id FROM b_role r CROSS JOIN b_permission p
+   WHERE p.code = 'tableau_de_bord.voir' AND r.code IN ('R_ADMI', 'R_GB', 'R_SUP', 'R_RO', 'R_AQ');
+-- Sections du tableau de bord (47_tableau_de_bord_sections.sql) : selon les droits de module du rôle
+INSERT IGNORE INTO b_role_permission (id_role, id_permission)
+  SELECT DISTINCT rv.id_role, ps.id
+    FROM b_role_permission rv JOIN b_permission pv ON pv.id = rv.id_permission AND pv.code = 'tableau_de_bord.voir'
+    JOIN b_role_permission rp ON rp.id_role = rv.id_role
+    JOIN b_permission pm ON pm.id = rp.id_permission
+    JOIN b_permission ps ON ps.code = CASE
+         WHEN pm.code IN ('fiche.creer','fiche.gerer','chargement.verifier','reporting.lire') THEN 'tableau_de_bord.baseco'
+         WHEN pm.code = 'evaluation.voir_tous' THEN 'tableau_de_bord.evaluations'
+         WHEN pm.code = 'quiz.lire' THEN 'tableau_de_bord.quiz'
+         WHEN pm.code = 'sondage.lire' THEN 'tableau_de_bord.sondages'
+         WHEN pm.code = 'calibrage.lire' THEN 'tableau_de_bord.calibrage' END;
+INSERT IGNORE INTO b_role_permission (id_role, id_permission)
+  SELECT r.id, p.id FROM b_role r CROSS JOIN b_permission p
+   WHERE (r.code = 'R_SUP' AND p.code = 'tableau_de_bord.evaluations') OR (r.code = 'R_ADMI' AND p.code LIKE 'tableau\_de\_bord.%');

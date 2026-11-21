@@ -5,7 +5,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
-import { Router, RouterLink, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { AuthService, User } from '@core';
 import { TranslateModule } from '@ngx-translate/core';
@@ -18,6 +18,7 @@ import { PageHeaderComponent } from '@shared';
   standalone: true,
   imports: [
     RouterLink,
+    RouterLinkActive,
     RouterOutlet,
     MatButtonModule,
     MatCardModule,
@@ -38,7 +39,14 @@ export class ProfileLayoutComponent implements OnInit {
   user!: User;
 
   ngOnInit(): void {
-    this.auth.user().subscribe(user => (this.user = user));
+    this.auth.user().subscribe(user => {
+      this.user = user;
+      this.imageUrl = user?.genre === 'homme' ? 'img/profileHomme.png' : 'img/profileFemme.png';
+    });
+  }
+  get nomComplet(): string {
+    const n = [this.user?.prenom, this.user?.nom].filter(Boolean).join(' ');
+    return n || this.user?.name || '';
   }
 
   logout() {

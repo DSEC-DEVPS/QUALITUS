@@ -40,7 +40,7 @@
           <span> Recherche Avancée </span>
         </button>
       </li>
-      @if (user.roles === 'R_ADMI' || user.roles === 'R_GB' || user.roles === 'R_SUPE') {
+      @if (user.roles === 'R_ADMI' || user.roles === 'R_GB' || user.roles === 'R_SUP') {
         <li>
           <button type="button" class="btn btn-sm button pb-1" (click)="isShow('SearchArchive')">
             <mat-icon class="pt-2">search</mat-icon>
@@ -370,7 +370,7 @@
       </mat-table>
     </div>
     <!--Fin tableau-->
-    @if (user.roles === 'R_ADMI' || user.roles === 'R_GB' || user.roles === 'R_SUPE') {
+    @if (user.roles === 'R_ADMI' || user.roles === 'R_GB' || user.roles === 'R_SUP') {
     } @else {
       <nav class="col-md-2">
         <!-- fin entete debut corps-->

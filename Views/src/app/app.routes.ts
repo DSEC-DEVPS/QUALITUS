@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { canMatchPermission } from './core/authorization/permission.guard';
+import { dashboardGuard, versPageAccueilGuard } from './core/authorization/page-accueil.service';
 import { authGuard } from '@core';
 import { sondageObligatoireGuard } from './routes/Sondage/sondage-obligatoire.guard';
 import { AdminLayoutComponent } from '@theme/admin-layout/admin-layout.component';
@@ -20,14 +21,17 @@ export const routes: Routes = [
     canActivateChild: [authGuard, sondageObligatoireGuard],
   },
 
+  // Ancienne adresse du sondage obligatoire (liens existants) -> page plein écran.
+  { path: 'mon-espace/sondage/obligatoire/:id', redirectTo: 'sondage-obligatoire/:id' },
   {
     path: 'mon-espace',
     component: AdminLayoutComponent,
     canActivate: [authGuard],
     canActivateChild: [authGuard, sondageObligatoireGuard],
     children: [
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-      { path: 'dashboard', component: DashboardComponent },
+      // Page d'arrivée calculée selon ce que l'utilisateur voit dans le menu
+      { path: '', pathMatch: 'full', canActivate: [versPageAccueilGuard], children: [] },
+      { path: 'dashboard', component: DashboardComponent, canActivate: [dashboardGuard] },
       {
         path: 'notifications',
         canMatch: [canMatchPermission('notification.lire')],
@@ -113,6 +117,16 @@ export const routes: Routes = [
     ],
   },
   { path: 'lecture-fiche/:id', component: LectureFicheComponent },
+  // Sondage obligatoire : plein écran (sans menu ni barre), seul écran accessible
+  // tant que l'utilisateur ciblé ne l'a pas soumis (cf. sondageObligatoireGuard).
+  {
+    path: 'sondage-obligatoire/:id',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./routes/Sondage/passation/passation-sondage.component').then(
+        m => m.PassationSondageComponent
+      ),
+  },
   {
     path: 'sondage-public/:token',
     loadComponent: () =>
@@ -128,5 +142,15 @@ export const routes: Routes = [
       { path: 'change-password', component: ChangedPasswordComponent },
     ],
   },
-  { path: '**', redirectTo: 'mon-espace/dashboard' },
+  // Pages d'erreur (403 / 404 / 500) affichées par l'intercepteur, dans la mise en page de l'application
+  ...[403, 404, 500].map(code => ({
+    path: String(code),
+    component: AdminLayoutComponent,
+    canActivate: [authGuard, sondageObligatoireGuard],
+    children: [
+      { path: '', loadComponent: () => import('./routes/sessions/erreur/erreur-page.component').then(m => m.ErreurPageComponent), data: { code } },
+    ],
+  })),
+  // Adresse inconnue : page d'arrivée de l'utilisateur (connexion s'il ne l'est pas)
+  { path: '**', canActivate: [sondageObligatoireGuard, versPageAccueilGuard], children: [] },
 ];

@@ -1,6 +1,12 @@
 <div class="container-fluid p-16">
   <!-- Bandeau -->
-  <div class="banner">QUIZ DISPONIBLES</div>
+  <div class="banner">
+    <mat-icon>quiz</mat-icon>
+    <div>
+      <div class="banner-titre">Quiz disponibles</div>
+      <div class="banner-sous">Les quiz qui vous ont été diffusés, ainsi que ceux accessibles avec un code PIN.</div>
+    </div>
+  </div>
 
   <!-- Filtres (dates) + acces par code PIN -->
   <div class="barre-filtres">
@@ -82,8 +88,8 @@
           <div class="quiz-meta">
             <mat-chip-set>
               <mat-chip>{{ q.acces === 'PUBLIC' ? 'Public' : 'Privé' }}</mat-chip>
-              <mat-chip>{{ q.nb_questions }} question(s)</mat-chip>
-              <mat-chip>Seuil {{ q.note_passage }}%</mat-chip>
+              <mat-chip>{{ q.nb_questions }} question{{ q.nb_questions > 1 ? 's' : '' }}</mat-chip>
+              <mat-chip>Seuil {{ q.note_passage }} %</mat-chip>
               @if (avecChrono(q)) {
                 <mat-chip class="chrono-chip" [class.urgent]="tempsRestant(q) <= 60">
                   <mat-icon matChipAvatar>timer</mat-icon>
@@ -112,8 +118,8 @@
           <div class="quiz-titre">{{ q.titre }}</div>
           <div class="quiz-meta">
             <mat-chip-set>
-              <mat-chip>{{ q.nb_questions }} question(s)</mat-chip>
-              <mat-chip>Seuil {{ q.note_passage }}%</mat-chip>
+              <mat-chip>{{ q.nb_questions }} question{{ q.nb_questions > 1 ? 's' : '' }}</mat-chip>
+              <mat-chip>Seuil {{ q.note_passage }} %</mat-chip>
               @if (q.duree) { <mat-chip>{{ q.duree }} min</mat-chip> }
               @if (enCours(q)) {
                 <mat-chip class="chrono-chip" [class.urgent]="tempsRestant(q) <= 60">

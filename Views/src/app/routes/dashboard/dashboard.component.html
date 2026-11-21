@@ -1,91 +1,275 @@
-<mat-card>
-  <mat-card-content>
-    <div class="container">
-      <div class="row pt-3">
-        <!-- Statistics -->
-        @if (isLoading) {
-          @for (i of [1, 2, 3, 4]; track i) {
-            <div class="col-sm-6 col-md-3">
-              <mat-card class="loading-card">
-                <div class="card-loader-container">
-                  <div class="card-loader"></div>
-                </div>
-              </mat-card>
-            </div>
-          }
-        } @else {
-          @for (stat of stats; track stat) {
-            <ng-template [ngxPermissionsOnly]="stat.permissions">
-              <div class="col-sm-6 col-md-3">
-                <mat-card [class]="['text-white', stat.color, 'fade-in']">
-                  <mat-card-header>
-                    <mat-card-subtitle class="text-white">{{ stat.title }}</mat-card-subtitle>
-                  </mat-card-header>
-                  <mat-card-content>
-                    <h2 class="m-t-0 m-b-8">{{ stat.amount }}</h2>
-                    <mtx-progress
-                      [value]="stat.progress.value"
-                      height="2px"
-                      foreground="rgba(255,255,255,1)"
-                      background="rgba(0,0,0,.4)"
-                    />
-                  </mat-card-content>
-                </mat-card>
-              </div>
-            </ng-template>
-          }
-        }
-      </div>
-      <div class="row">
-        <!--Charts -->
-        @if (user.roles === 'R_GB' || user.roles === 'R_ADMI' || user.roles === 'R_SUPE') {
-          <mat-tab-group>
-            <!-- Onglet Utilité -->
-            <mat-tab>
-              <ng-template mat-tab-label> Taux de lecture </ng-template>
-              <table mat-table [dataSource]="dataSource" class="mat-elevation-z8 demo-table">
-                <!-- Position Column -->
-                <ng-container matColumnDef="site">
-                  <th mat-header-cell *matHeaderCellDef>Site</th>
-                  <td mat-cell *matCellDef="let element">{{ element.site }}</td>
-                </ng-container>
-
-                <!-- Name Column -->
-                <ng-container matColumnDef="Taux_a_J">
-                  <th mat-header-cell *matHeaderCellDef>Taux à J</th>
-                  <td mat-cell *matCellDef="let element">{{ element.Taux_a_J }}</td>
-                </ng-container>
-
-                <!-- Weight Column -->
-                <ng-container matColumnDef="Taux_a_J_plus_2">
-                  <th mat-header-cell *matHeaderCellDef>Taux à J+2</th>
-                  <td mat-cell *matCellDef="let element">{{ element.Taux_a_J_plus_2 }}</td>
-                </ng-container>
-
-                <!-- Symbol Column -->
-                <ng-container matColumnDef="Taux_Mensuel">
-                  <th mat-header-cell *matHeaderCellDef>Taux Mensuel</th>
-                  <td mat-cell *matCellDef="let element">{{ element.Taux_Mensuel }}</td>
-                </ng-container>
-
-                <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-                <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-              </table>
-            </mat-tab>
-
-            <!-- Onglet Commentaires -->
-            <mat-tab>
-              <ng-template mat-tab-label> Utilité </ng-template>
-            </mat-tab>
-            <mat-tab>
-              <ng-template mat-tab-label> Quiz </ng-template>
-            </mat-tab>
-            <mat-tab>
-              <ng-template mat-tab-label> Instances </ng-template>
-            </mat-tab>
-          </mat-tab-group>
-        }
-      </div>
+<div class="tdb">
+  <!-- En-tête : titre, périmètre, période -->
+  <div class="tdb-entete">
+    <div>
+      <h1>Tableau de bord</h1>
+      @if (donnees?.perimetre) {
+        <div class="sous-titre">
+          <mat-icon>{{ donnees!.perimetre!.type === 'global' ? 'public' : donnees!.perimetre!.type === 'equipe' ? 'groups' : 'location_on' }}</mat-icon>
+          {{ donnees!.perimetre!.libelle }} · {{ libellePeriode }}
+        </div>
+      }
     </div>
-  </mat-card-content>
-</mat-card>
+    @if (donnees?.calcule_le) {
+      <div class="calcul">
+        @if (chargement) { <span class="en-cours">Calcul en cours…</span> } @else { <span>{{ libelleCalcul }}</span> }
+        <button mat-stroked-button (click)="actualiser()" [disabled]="chargement" matTooltip="Recalculer avec les données les plus récentes">
+          <mat-icon>refresh</mat-icon> Actualiser
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- Filtres -->
+  <div class="tdb-filtres">
+    <mat-button-toggle-group [value]="preset" (change)="appliquerPreset($event.value)" hideSingleSelectionIndicator>
+      <mat-button-toggle value="mois">Ce mois</mat-button-toggle>
+      <mat-button-toggle value="mois_precedent">Mois dernier</mat-button-toggle>
+      <mat-button-toggle value="trimestre">3 derniers mois</mat-button-toggle>
+      <mat-button-toggle value="annee">Cette année</mat-button-toggle>
+      <mat-button-toggle value="perso">Personnalisée</mat-button-toggle>
+    </mat-button-toggle-group>
+    @if (preset === 'perso') {
+      <mat-form-field appearance="outline" class="champ-date" subscriptSizing="dynamic">
+        <mat-label>Du</mat-label>
+        <input matInput type="date" [(ngModel)]="du" (change)="datesModifiees()" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="champ-date" subscriptSizing="dynamic">
+        <mat-label>Au</mat-label>
+        <input matInput type="date" [(ngModel)]="au" (change)="datesModifiees()" />
+      </mat-form-field>
+    }
+    <span class="espace"></span>
+    @if ((donnees?.options_perimetre?.length || 0) > 1) {
+      <mat-form-field appearance="outline" class="champ-perimetre" subscriptSizing="dynamic">
+        <mat-label>Périmètre</mat-label>
+        <mat-select [(ngModel)]="perimetre" (selectionChange)="charger()">
+          @for (o of donnees!.options_perimetre; track o.code) {
+            <mat-option [value]="o.code">{{ o.libelle }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    }
+    @if (donnees?.auteur_fiches) {
+      <mat-slide-toggle [(ngModel)]="mesFiches" (change)="charger()">Uniquement mes chargements</mat-slide-toggle>
+    }
+  </div>
+
+  @if (chargement && !donnees) {
+    <app-chargement />
+  } @else if (erreur) {
+    <div class="vide"><mat-icon>error_outline</mat-icon> Le tableau de bord n'a pas pu être chargé. Réessayez dans un instant.</div>
+  } @else if (donnees) {
+    <div class="contenu" [class.rafraichit]="chargement">
+      @if (aucunBloc) {
+        <div class="vide"><mat-icon>info</mat-icon> Aucun indicateur n'est disponible pour votre profil sur ce périmètre.</div>
+      }
+
+      <!-- BASECO -->
+      @if (donnees.blocs.baseco; as b) {
+        <section class="bloc">
+          <h2><mat-icon>menu_book</mat-icon> Baseco — chargements
+            <span class="compte">{{ n(b.fiches_publiees) }} chargement{{ b.fiches_publiees > 1 ? 's' : '' }} mis à disposition{{ donnees.mes_fiches ? ' (les vôtres)' : '' }}</span>
+          </h2>
+          <div class="tuiles">
+            <div class="tuile">
+              <div class="t-tete">Lecture <mat-icon class="aide" matTooltip="Part des destinataires (site et fonction ciblés par le chargement) qui l'ont ouvert au moins une fois.">help_outline</mat-icon></div>
+              <div class="t-valeur">{{ taux(b.lecture) }}</div>
+              <div class="t-barre"><div [style.width.%]="largeur(b.lecture)"></div></div>
+              <div class="t-detail">{{ n(b.lecture.num) }} lecture{{ b.lecture.num > 1 ? 's' : '' }} sur {{ n(b.lecture.den) }} destinataire{{ b.lecture.den > 1 ? 's' : '' }}</div>
+            </div>
+            <div class="tuile">
+              <div class="t-tete">Lecture le jour J <mat-icon class="aide" matTooltip="Destinataires ayant ouvert le chargement le jour même de sa mise à disposition.">help_outline</mat-icon></div>
+              <div class="t-valeur">{{ taux(b.lecture_j) }}</div>
+              <div class="t-barre"><div [style.width.%]="largeur(b.lecture_j)"></div></div>
+              <div class="t-detail">{{ n(b.lecture_j.num) }} sur {{ n(b.lecture_j.den) }}</div>
+            </div>
+            <div class="tuile">
+              <div class="t-tete">Lecture sous 2 jours <mat-icon class="aide" matTooltip="Destinataires ayant ouvert le chargement au plus tard 2 jours après sa mise à disposition (J+2 inclus).">help_outline</mat-icon></div>
+              <div class="t-valeur">{{ taux(b.lecture_j2) }}</div>
+              <div class="t-barre"><div [style.width.%]="largeur(b.lecture_j2)"></div></div>
+              <div class="t-detail">{{ n(b.lecture_j2.num) }} sur {{ n(b.lecture_j2.den) }}</div>
+            </div>
+            <div class="tuile">
+              <div class="t-tete">Utilité <mat-icon class="aide" matTooltip="Part des avis des lecteurs jugeant le chargement utile.">help_outline</mat-icon></div>
+              <div class="t-valeur">{{ taux(b.utilite) }}</div>
+              <div class="t-barre"><div [style.width.%]="largeur(b.utilite)"></div></div>
+              <div class="t-detail">{{ b.utilite.den ? n(b.utilite.num) + ' avis favorable' + (b.utilite.num > 1 ? 's' : '') + ' sur ' + n(b.utilite.den) : 'Aucun avis sur la période' }}</div>
+            </div>
+            <div class="tuile">
+              <div class="t-tete">Exactitude <mat-icon class="aide" matTooltip="Part des avis des lecteurs jugeant le contenu exact.">help_outline</mat-icon></div>
+              <div class="t-valeur">{{ taux(b.exactitude) }}</div>
+              <div class="t-barre"><div [style.width.%]="largeur(b.exactitude)"></div></div>
+              <div class="t-detail">{{ b.exactitude.den ? n(b.exactitude.num) + ' sur ' + n(b.exactitude.den) + ' avis' : 'Aucun avis sur la période' }}</div>
+            </div>
+            @if (b.ponctualite) {
+              <div class="tuile">
+                <div class="t-tete">Ponctualité (on time) <mat-icon class="aide" matTooltip="Chargements publiés dans le délai prévu par leur SLA, parmi ceux dont le délai a été mesuré.">help_outline</mat-icon></div>
+                <div class="t-valeur">{{ taux(b.ponctualite) }}</div>
+                <div class="t-barre"><div [style.width.%]="largeur(b.ponctualite)"></div></div>
+                <div class="t-detail">{{ b.ponctualite.den ? n(b.ponctualite.num) + ' dans les délais sur ' + n(b.ponctualite.den) : 'Aucun délai mesuré' }}</div>
+              </div>
+            }
+            <div class="tuile">
+              <div class="t-tete">Quiz de fiche réussi du 1er coup <mat-icon class="aide" matTooltip="Quiz associés aux chargements, réussis dès le premier essai.">help_outline</mat-icon></div>
+              <div class="t-valeur">{{ taux(b.maitrise_premier_essai) }}</div>
+              <div class="t-barre"><div [style.width.%]="largeur(b.maitrise_premier_essai)"></div></div>
+              <div class="t-detail">{{ b.maitrise_premier_essai.den ? n(b.maitrise_premier_essai.num) + ' sur ' + n(b.maitrise_premier_essai.den) + ' quiz passé' + (b.maitrise_premier_essai.den > 1 ? 's' : '') : 'Aucun quiz passé' }}</div>
+            </div>
+            <div class="tuile">
+              <div class="t-tete">Réussite après retest <mat-icon class="aide" matTooltip="Parmi les lecteurs ayant dû repasser le quiz de fiche, part de ceux qui l'ont finalement réussi.">help_outline</mat-icon></div>
+              <div class="t-valeur">{{ taux(b.reussite_apres_retest) }}</div>
+              <div class="t-barre"><div [style.width.%]="largeur(b.reussite_apres_retest)"></div></div>
+              <div class="t-detail">{{ b.reussite_apres_retest.den ? n(b.reussite_apres_retest.num) + ' sur ' + n(b.reussite_apres_retest.den) + ' retest' + (b.reussite_apres_retest.den > 1 ? 's' : '') : 'Aucun retest' }}</div>
+            </div>
+          </div>
+        </section>
+      }
+
+      <!-- ÉVALUATIONS -->
+      @if (donnees.blocs.evaluations; as e) {
+        <section class="bloc">
+          <h2><mat-icon>assignment_turned_in</mat-icon> Évaluations</h2>
+          <div class="tuiles">
+            <div class="tuile">
+              <div class="t-tete">Évaluations terminées</div>
+              <div class="t-valeur">{{ n(e.terminees) }}</div>
+              <div class="t-detail">{{ n(e.en_cours) }} en cours sur la période</div>
+            </div>
+            <div class="tuile">
+              <div class="t-tete">Taux de réussite <mat-icon class="aide" matTooltip="Évaluations terminées dont la conclusion est « Réussite ».">help_outline</mat-icon></div>
+              <div class="t-valeur">{{ taux(e.reussite) }}</div>
+              <div class="t-barre"><div [style.width.%]="largeur(e.reussite)"></div></div>
+              <div class="t-detail">{{ e.reussite.den ? n(e.reussite.num) + ' réussite' + (e.reussite.num > 1 ? 's' : '') + ' sur ' + n(e.reussite.den) : 'Aucune évaluation terminée' }}</div>
+            </div>
+            <div class="tuile" [class.alerte]="e.approbation_en_attente.num > 0">
+              <div class="t-tete">En attente d'approbation <mat-icon class="aide" matTooltip="Évaluations terminées dont l'agent n'a pas encore validé la lettre.">help_outline</mat-icon></div>
+              <div class="t-valeur">{{ n(e.approbation_en_attente.num) }}</div>
+              <div class="t-detail">{{ e.approbation_en_attente.den ? 'sur ' + n(e.approbation_en_attente.den) + ' terminée' + (e.approbation_en_attente.den > 1 ? 's' : '') : 'Aucune évaluation terminée' }}</div>
+            </div>
+            <div class="tuile" [class.alerte]="e.coaching_a_faire > 0">
+              <div class="t-tete">Coachings à réaliser <mat-icon class="aide" matTooltip="Évaluations en échec dont le coaching n'est pas encore terminé.">help_outline</mat-icon></div>
+              <div class="t-valeur">{{ n(e.coaching_a_faire) }}</div>
+              <div class="t-detail">évaluation{{ e.coaching_a_faire > 1 ? 's' : '' }} en échec à coacher</div>
+            </div>
+          </div>
+        </section>
+      }
+
+      <!-- QUIZ -->
+      @if (donnees.blocs.quiz; as q) {
+        <section class="bloc">
+          <h2><mat-icon>quiz</mat-icon> Quiz</h2>
+          <div class="tuiles">
+            <div class="tuile">
+              <div class="t-tete">Quiz ouverts</div>
+              <div class="t-valeur">{{ n(q.quiz_ouverts) }}</div>
+              <div class="t-detail">diffusés sur ce périmètre</div>
+            </div>
+            <div class="tuile">
+              <div class="t-tete">Taux de réussite <mat-icon class="aide" matTooltip="Passages réussis parmi tous les passages terminés sur la période (retests compris).">help_outline</mat-icon></div>
+              <div class="t-valeur">{{ taux(q.reussite) }}</div>
+              <div class="t-barre"><div [style.width.%]="largeur(q.reussite)"></div></div>
+              <div class="t-detail">{{ n(q.tentatives) }} passage{{ q.tentatives > 1 ? 's' : '' }} · {{ n(q.participants) }} participant{{ q.participants > 1 ? 's' : '' }}</div>
+            </div>
+            <div class="tuile">
+              <div class="t-tete">Réussite au 1er essai</div>
+              <div class="t-valeur">{{ taux(q.reussite_premier_essai) }}</div>
+              <div class="t-barre"><div [style.width.%]="largeur(q.reussite_premier_essai)"></div></div>
+              <div class="t-detail">{{ q.reussite_premier_essai.den ? n(q.reussite_premier_essai.num) + ' sur ' + n(q.reussite_premier_essai.den) + ' premiers passages' : 'Aucun passage' }}</div>
+            </div>
+            <div class="tuile" [class.alerte]="q.echecs_sans_retest > 0">
+              <div class="t-tete">Échecs sans retest <mat-icon class="aide" matTooltip="Agents dont le dernier passage d'un quiz encore ouvert est un échec et à qui aucun retest n'a été accordé.">help_outline</mat-icon></div>
+              <div class="t-valeur">{{ n(q.echecs_sans_retest) }}</div>
+              <div class="t-detail">retest{{ q.echecs_sans_retest > 1 ? 's' : '' }} à décider</div>
+            </div>
+          </div>
+        </section>
+      }
+
+      <!-- SONDAGES -->
+      @if (donnees.blocs.sondages; as s) {
+        <section class="bloc">
+          <h2><mat-icon>poll</mat-icon> Sondages</h2>
+          <div class="tuiles">
+            <div class="tuile">
+              <div class="t-tete">Sondages actifs</div>
+              <div class="t-valeur">{{ n(s.sondages_actifs) }}</div>
+              <div class="t-detail">ciblant ce périmètre</div>
+            </div>
+            <div class="tuile">
+              <div class="t-tete">Taux de réponse <mat-icon class="aide" matTooltip="Destinataires des sondages actifs ayant terminé leur réponse.">help_outline</mat-icon></div>
+              <div class="t-valeur">{{ taux(s.reponse_cibles) }}</div>
+              <div class="t-barre"><div [style.width.%]="largeur(s.reponse_cibles)"></div></div>
+              <div class="t-detail">{{ s.reponse_cibles.den ? n(s.reponse_cibles.num) + ' sur ' + n(s.reponse_cibles.den) + ' destinataires' : 'Aucun destinataire' }}</div>
+            </div>
+            <div class="tuile">
+              <div class="t-tete">Réponses reçues</div>
+              <div class="t-valeur">{{ n(s.reponses_periode) }}</div>
+              <div class="t-detail">sur la période</div>
+            </div>
+          </div>
+        </section>
+      }
+
+      <!-- CALIBRAGE -->
+      @if (donnees.blocs.calibrage; as c) {
+        <section class="bloc">
+          <h2><mat-icon>tune</mat-icon> Calibrage
+            @if (c.perimetre_site) { <span class="compte">sessions de votre site</span> }
+          </h2>
+          <div class="tuiles">
+            <div class="tuile">
+              <div class="t-tete">Sessions en cours</div>
+              <div class="t-valeur">{{ n(c.en_cours) }}</div>
+              <div class="t-detail">{{ n(c.en_preparation) }} en préparation</div>
+            </div>
+            <div class="tuile">
+              <div class="t-tete">Sessions clôturées</div>
+              <div class="t-valeur">{{ n(c.cloturees) }}</div>
+              <div class="t-detail">sur la période</div>
+            </div>
+            <div class="tuile">
+              <div class="t-tete">Participation <mat-icon class="aide" matTooltip="Participants ayant terminé leur évaluation, sur les sessions en cours et celles clôturées dans la période.">help_outline</mat-icon></div>
+              <div class="t-valeur">{{ taux(c.participation) }}</div>
+              <div class="t-barre"><div [style.width.%]="largeur(c.participation)"></div></div>
+              <div class="t-detail">{{ c.participation.den ? n(c.participation.num) + ' sur ' + n(c.participation.den) + ' participants' : 'Aucun participant' }}</div>
+            </div>
+          </div>
+        </section>
+      }
+
+      <!-- RÉPARTITION PAR SITE (vision globale) -->
+      @if (donnees.par_site?.length) {
+        <section class="bloc">
+          <h2><mat-icon>public</mat-icon> Par site</h2>
+          <div class="table-wrap">
+            <table class="table-sites">
+              <thead>
+                <tr>
+                  <th>Site</th>
+                  @if (donnees.blocs.baseco) { <th>Lecture Baseco</th> }
+                  @if (donnees.blocs.evaluations) { <th>Évaluations terminées</th><th>Réussite évaluations</th> }
+                  @if (donnees.blocs.quiz) { <th>Réussite quiz</th> }
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of donnees.par_site; track l.id) {
+                  <tr>
+                    <td class="nom">{{ l.nom }}</td>
+                    @if (donnees.blocs.baseco) { <td>{{ taux(l.lecture) }} <small>{{ l.lecture?.den ? '(' + n(l.lecture!.num) + '/' + n(l.lecture!.den) + ')' : '' }}</small></td> }
+                    @if (donnees.blocs.evaluations) {
+                      <td>{{ l.evaluations ?? 0 }}</td>
+                      <td>{{ taux(l.reussite_evaluations) }}</td>
+                    }
+                    @if (donnees.blocs.quiz) { <td>{{ taux(l.reussite_quiz) }} <small>{{ l.reussite_quiz?.den ? '(' + n(l.reussite_quiz!.den) + ' passages)' : '' }}</small></td> }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
+    </div>
+  }
+</div>

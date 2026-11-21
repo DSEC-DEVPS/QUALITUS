@@ -20,6 +20,7 @@ import { CalibrageService, CalSessionListe, FiltresSession } from '../calibrage.
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { Pagination } from '@shared/utils/pagination';
 import { ChargementComponent } from '@shared/components/chargement/chargement.component';
+import { correspondRecherche } from '@shared/utils/recherche';
 
 @Component({
   selector: 'app-cal-liste-sessions',
@@ -47,6 +48,10 @@ export class ListeSessionsComponent implements OnInit {
   readonly pag = new Pagination<CalSessionListe>();
   get sessions(): CalSessionListe[] { return this.pag.donnees; }
   set sessions(v: CalSessionListe[]) { this.pag.definir(v); }
+  // Liste renvoyée par le serveur (filtres Site / dates / Statut) ; la recherche
+  // texte filtre ensuite localement, sans nouvel appel.
+  toutes: CalSessionListe[] = [];
+  recherche = '';
   sites: any[] = [];
   chargement = false;
   colonnes = ['nom', 'date', 'site', 'grille', 'statut', 'participants', 'actions'];
@@ -67,12 +72,17 @@ export class ListeSessionsComponent implements OnInit {
   charger(): void {
     this.chargement = true;
     this.service.getSessions(this.filtres).subscribe({
-      next: s => { this.sessions = s; this.chargement = false; },
+      next: s => { this.toutes = s || []; this.filtrer(); this.chargement = false; },
       error: () => { this.toastr.error('Impossible de charger les sessions.'); this.chargement = false; },
     });
   }
 
-  reinitialiser(): void { this.filtres = {}; this.charger(); }
+  filtrer(): void {
+    this.sessions = this.toutes.filter(s =>
+      correspondRecherche(this.recherche, [s.nom, s.grille, s.site, this.libelleStatut(s.statut), s.jauge]));
+  }
+
+  reinitialiser(): void { this.filtres = {}; this.recherche = ''; this.charger(); }
 
   libelleStatut(v: string): string { return this.statuts.find(s => s.v === v)?.l || v; }
 

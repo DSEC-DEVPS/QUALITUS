@@ -125,6 +125,12 @@ export class SessionComponent implements OnInit, OnDestroy {
     });
   }
   get erreursActives(): any[] { return this.categories[this.catActive]?.erreurs || []; }
+  /** Nombre d'écarts (items décochés) d'une catégorie. */
+  nbEcarts(c: any): number { return (c?.erreurs || []).filter((e: any) => !e.coche).length; }
+  /** Libellé lisible du statut de la session (au lieu du code). */
+  libelleStatut(s: string): string {
+    return ({ BROUILLON: 'Brouillon', OUVERTE: 'Ouverte', RESULTATS_EN_REVISION: 'Résultats en révision', VALIDEE: 'Validée', CLOTUREE: 'Figée' } as any)[s] || s;
+  }
 
   // Jauge : à chaque bascule transactions/évaluateurs, recharger l'état courant
   // (avancement des évaluateurs, états des transactions) sans rafraîchir la page.

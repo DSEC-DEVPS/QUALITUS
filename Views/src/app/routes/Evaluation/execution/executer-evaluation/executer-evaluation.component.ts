@@ -21,9 +21,11 @@ import { BiSectionComponent } from '../bi-section/bi-section.component';
 import { CoachingSectionComponent } from '../coaching-section/coaching-section.component';
 import { PlanActionSectionComponent } from '../plan-action-section/plan-action-section.component';
 import { SupplementairesSectionComponent } from '../supplementaires-section/supplementaires-section.component';
-import { LettreSectionComponent } from '../lettre-section/lettre-section.component';
+import { MatDialog } from '@angular/material/dialog';
+import { LettreDialogComponent, LettreDialogData } from '../lettre-dialog/lettre-dialog.component';
 import { ConfirmationService } from '@shared/services/confirmation.service';
 import { ChargementComponent } from '@shared/components/chargement/chargement.component';
+import { ScoreSeuilComponent } from '../score-seuil/score-seuil.component';
 
 @Component({
   selector: 'app-executer-evaluation',
@@ -35,7 +37,7 @@ import { ChargementComponent } from '@shared/components/chargement/chargement.co
     CoachingSectionComponent,
     PlanActionSectionComponent,
     SupplementairesSectionComponent,
-    LettreSectionComponent,
+    ScoreSeuilComponent,
   ],
   templateUrl: './executer-evaluation.component.html',
   styleUrl: './executer-evaluation.component.scss',
@@ -47,6 +49,7 @@ export class ExecuterEvaluationComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly toastr = inject(ToastrService);
+  private readonly dialog = inject(MatDialog);
 
   id!: number;
   detail?: EvaluationDetail;
@@ -153,6 +156,34 @@ export class ExecuterEvaluationComponent implements OnInit {
     if (this.detail) this.detail.evaluation.statut_apres_evaluation = statutApres;
   }
 
+  /** Ouvre la lettre de félicitation / de débriefing dans une boîte de dialogue. */
+  ouvrirLettre(): void {
+    if (!this.detail) return;
+    const data: LettreDialogData = {
+      idEvaluation: this.id,
+      felicitation: this.detail.evaluation.conclusion === 'SUCCES',
+      avisModifiable: !!this.detail.viewer.is_agent,
+      onAvis: s => this.onAvisEnregistre(s),
+    };
+    this.dialog.open(LettreDialogComponent, { data, width: '960px', maxWidth: '96vw', autoFocus: false });
+  }
+
+  /** Nombre d'items en écart (décochés) d'une catégorie. */
+  nbEcarts(c: { erreurs: { coche: number }[] }): number { return c.erreurs.filter(e => !e.coche).length; }
+
+  /** Conclusion à afficher : figée après clôture, sinon calculée en direct. */
+  get conclusionAffichee(): string | null {
+    return this.terminee ? this.detail?.evaluation.conclusion ?? null : this.detail?.conclusion_live ?? null;
+  }
+  libelleStatut(v: string | null | undefined): string {
+    switch (v) {
+      case 'TERMINE': return 'Terminée';
+      case 'NON_TERMINE': case 'EN_COURS': return 'En cours';
+      case 'EN_ATTENTE_VALIDATION_OPTION': return 'En attente de validation';
+      case 'BROUILLON': return 'Brouillon';
+      default: return v || '—';
+    }
+  }
   libelleStatutApres(v: string | null): string {
     switch (v) {
       case 'FELICITER': return 'Féliciter';

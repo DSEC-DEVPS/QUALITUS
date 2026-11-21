@@ -1,20 +1,23 @@
-::ng-deep .mat-mdc-form-field {
-  //--mdc-outlined-text-field-outline-width: 1.5px !important;
-  // --mdc-outlined-text-field-focus-outline-width: 1.5px !important;
-  --mdc-filled-text-field-label-text-size: 13px;
-  --mdc-filled-text-field-input-text-size: 8px;
-  --mdc-filled-text-field-focus-active-indicator-color: #ff8e36;
-  --mdc-filled-text-field-focus-active-indicator-size: 10px;
-  --mdc-filled-text-field-hover-active-indicator-color: #ff8e36;
-  --mdc-filled-text-field-focus-label-text-color: #ff8e36;
-  --mdc-filled-text-field-outline-color: #ff8e36;
-  --mdc-filled-text-field-focus-outline-color: #ff8e36;
-  //--mdc-outlined-text-field-container-shape: 15px !important;
+.bloc {
+  background: #fff; border: 1px solid #ece7e1; border-radius: 12px; padding: 16px 20px; max-width: 560px;
+  h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 1rem; font-weight: 600; color: #2b2b2b;
+    mat-icon { color: #ff8e36; } }
+  .intro { font-size: 13px; color: #888; margin: 0 0 14px; }
 }
-::ng-deep .mat-mdc-tab.mdc-tab.mdc-tab.mdc-tab--active {
-  background-color: #ff8e36;
-  font-weight: 900;
+.formulaire { display: flex; flex-direction: column; mat-form-field { width: 100%; } }
+.force { display: flex; align-items: center; gap: 10px; margin: -10px 0 6px; font-size: 12px; color: #777;
+  .force-barre { flex: 0 0 160px; height: 6px; border-radius: 3px; background: #eee; overflow: hidden;
+    span { display: block; height: 100%; background: #e53935; transition: width .2s; } }
+  &[data-niveau='moyen'] .force-barre span { background: #fb8c00; }
+  &[data-niveau='bon'] .force-barre span { background: #fdd835; }
+  &[data-niveau='fort'] .force-barre span { background: #43a047; }
 }
-mat-icon {
-  color: #ff8e36;
+.criteres { list-style: none; padding: 0; margin: 0 0 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 12.5px; color: #999;
+  li { display: flex; align-items: center; gap: 4px; mat-icon { font-size: 16px; width: 16px; height: 16px; } }
+  li.ok { color: #2e7d32; }
 }
+.mismatch, .match { display: flex; align-items: center; gap: 4px; margin: -10px 0 10px; font-size: 12.5px;
+  mat-icon { font-size: 16px; width: 16px; height: 16px; } }
+.mismatch { color: #c62828; }
+.match { color: #2e7d32; }
+.actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }

@@ -43,6 +43,8 @@ import {
   MatDialogTitle,
 } from '@angular/material/dialog';
 import { ChargementComponent } from '@shared/components/chargement/chargement.component';
+import { ConfirmationService } from '@shared/services/confirmation.service';
+import { ModifierCompteDialogComponent } from '../../Responsable-Operation/renitialisation/modifier-compte-dialog.component';
 @Component({
   selector: 'app-table-overview-example',
   standalone: true,
@@ -88,6 +90,12 @@ export class ListeUtilisateurComponent implements OnInit {
   readonly dialog = inject(MatDialog);
   private readonly userService = inject(UserService);
   private readonly taostSrv = inject(ToastrService);
+  private readonly confirmation = inject(ConfirmationService);
+
+  /** Ouvre « Habilitations › Droits par utilisateur » sur cette personne. */
+  ouvrirDroits(element: { id: number }): void {
+    this.router.navigate(['/mon-espace/habilitations/droits-utilisateur'], { queryParams: { id: element.id } });
+  }
   ngOnInit(): void {
     this.chargement = true;
     this.userService.getAllUtilisateur().pipe(finalize(() => (this.chargement = false))).subscribe(user => {
@@ -126,6 +134,31 @@ export class ListeUtilisateurComponent implements OnInit {
       width: '250px',
       enterAnimationDuration,
       exitAnimationDuration,
+    });
+  }
+
+  /** Modification complète du compte (même fenêtre que « Gérer les comptes » / Jauge). */
+  modifierCompte(element: any): void {
+    this.dialog
+      .open(ModifierCompteDialogComponent, { data: { id: element.id, nom_utilisateur: element.nom_utilisateur }, width: '760px', maxWidth: '95vw' })
+      .afterClosed()
+      .subscribe(ok => {
+        if (!ok) return;
+        this.taostSrv.success(`Le compte ${element.nom_utilisateur} a été mis à jour.`);
+        this.ngOnInit();
+      });
+  }
+
+  /** Remet le mot de passe par défaut du compte (après confirmation). */
+  async reinitialiserMotDePasse(element: any): Promise<void> {
+    if (!(await this.confirmation.confirmer({
+      titre: 'Réinitialiser le mot de passe',
+      message: `Remettre le mot de passe par défaut de ${element.nom_utilisateur} ?`,
+      type: 'attention',
+    }))) return;
+    this.userService.restore_password(element.id).subscribe({
+      next: r => this.taostSrv.success(r.message),
+      error: () => {},
     });
   }
 

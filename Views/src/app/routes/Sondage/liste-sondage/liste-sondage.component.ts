@@ -22,10 +22,22 @@ import { MatPaginatorModule } from '@angular/material/paginator';
 import { Pagination } from '@shared/utils/pagination';
 import { finalize } from 'rxjs';
 import { ChargementComponent } from '@shared/components/chargement/chargement.component';
+import { DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { Periode } from '@shared/periode';
+import { FiltrePeriodeComponent } from '../../Quiz/filtre-periode/filtre-periode.component';
+
+/** Date sur laquelle porte le filtre de période. */
+export type ChampDate = 'creation' | 'modification' | 'reponse';
+
 @Component({
   selector: 'app-liste-sondage',
   standalone: true,
-  imports: [ChargementComponent, MatPaginatorModule, CanDirective,
+  imports: [ChargementComponent, MatPaginatorModule, CanDirective, DatePipe, FormsModule,
+    MatFormFieldModule, MatInputModule, MatSelectModule, FiltrePeriodeComponent,
     MatCardModule,
     MatTableModule,
     MatButtonModule,
@@ -44,9 +56,23 @@ export class ListeSondageComponent implements OnInit {
   private readonly toast = inject(ToastrService);
 
   readonly pag = new Pagination<Sondage>();
+  /** Sondages renvoyés par le serveur (période et date choisie déjà appliquées). */
+  private tous: Sondage[] = [];
   get sondages(): Sondage[] { return this.pag.donnees; }
-  set sondages(v: Sondage[]) { this.pag.definir(v); }
-  cols = ['id', 'nom', 'langue', 'statut', 'nb_questions', 'actions'];
+  cols = ['id', 'nom', 'langue', 'statut', 'nb_questions', 'date', 'actions'];
+
+  // --- Filtres : recherche et statut (sur la liste chargée), période côté serveur
+  recherche = '';
+  statut: '' | 'ENCOURS' | 'ACTIF' | 'DESACTIF' = '';
+  champDate: ChampDate = 'creation';
+  periode: Periode = { du: null, au: null };
+  readonly champs: { v: ChampDate; l: string; col: string }[] = [
+    { v: 'creation', l: 'Date de création', col: 'Créé le' },
+    { v: 'modification', l: 'Dernière modification', col: 'Modifié le' },
+    { v: 'reponse', l: 'Date de réponse', col: 'Dernière réponse' },
+  ];
+  get colDate(): string { return this.champs.find(c => c.v === this.champDate)?.col || 'Date'; }
+  get filtresActifs(): boolean { return !!(this.recherche.trim() || this.statut || this.periode.du || this.periode.au); }
 
   ngOnInit(): void {
     this.charger();
@@ -54,10 +80,33 @@ export class ListeSondageComponent implements OnInit {
 
   charger() {
     this.chargement = true;
-    this.srv.getAll().pipe(finalize(() => (this.chargement = false))).subscribe({
-      next: d => (this.sondages = d),
+    this.srv.getAll(this.periode, this.champDate).pipe(finalize(() => (this.chargement = false))).subscribe({
+      next: d => { this.tous = d || []; this.appliquer(true); },
       error: () => this.toast.error('Impossible de charger les sondages'),
     });
+  }
+
+  /** Recherche (nom) et statut, appliqués sur la liste chargée. */
+  appliquer(garderPage = false): void {
+    const q = this.recherche.trim().toLowerCase();
+    this.pag.definir(this.tous.filter(s =>
+      (!q || (s.nom || '').toLowerCase().includes(q) || String(s.id) === q) &&
+      (!this.statut || (this.statut === 'ENCOURS' ? s.statut !== 'ACTIF' && s.statut !== 'DESACTIF' : s.statut === this.statut))
+    ), garderPage);
+  }
+  changerPeriode(p: Periode): void { this.periode = p; this.charger(); }
+  changerChamp(): void { if (this.periode.du || this.periode.au) this.charger(); }
+  effacerFiltres(): void {
+    this.recherche = ''; this.statut = '';
+    const avecPeriode = !!(this.periode.du || this.periode.au);
+    this.periode = { du: null, au: null };
+    if (avecPeriode) this.charger(); else this.appliquer();
+  }
+  /** Date affichée : celle sur laquelle porte le filtre. */
+  dateDe(s: Sondage): string | null | undefined {
+    if (this.champDate === 'reponse') return s.derniere_reponse;
+    if (this.champDate === 'modification') return s.dateModification || s.dateCreation;
+    return s.dateCreation;
   }
 
   nouveau() {

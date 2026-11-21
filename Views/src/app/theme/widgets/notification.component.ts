@@ -471,6 +471,10 @@ export class NotificationComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadNotifications();
+    // Lue depuis une page (Quiz › Nouveautés…) : badge et liste mis à jour aussitôt.
+    this.userService.lecture$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(origine => { if (origine === 'page') this.loadNotifications(); });
     interval(NotificationComponent.INTERVALLE_BADGE_MS)
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.rafraichirCompte());
@@ -535,6 +539,7 @@ export class NotificationComponent implements OnInit, OnDestroy {
       this.userService.markNotificationAsRead(notification.id, notification.source || 'CORE')
         .pipe(takeUntil(this.destroy$))
         .subscribe({
+          next: () => this.userService.lecture$.next('cloche'),
           error: error => {
             console.error('Erreur lors du marquage de la notification:', error);
             notification.isRead = false;

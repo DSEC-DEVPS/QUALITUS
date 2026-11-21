@@ -10,6 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatSelectModule } from '@angular/material/select';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { ToastrService } from 'ngx-toastr';
 import {
@@ -34,6 +35,7 @@ import { ChargementComponent } from '@shared/components/chargement/chargement.co
     FiltrePeriodeComponent,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     MatTableModule,
     MatSortModule,
     MatPaginatorModule,
@@ -61,9 +63,27 @@ export class ListeQuizComponent implements OnInit {
   periode: Periode = { du: null, au: null };
   /** Recherche texte en vigueur (reprise dans l'export). */
   recherche = '';
+  /** Filtre de statut : '' = tous. */
+  statut: '' | 'ACTIF' | 'INACTIF' = '';
 
   ngOnInit(): void {
+    // Filtre combiné : recherche texte (sur toutes les colonnes) + statut.
+    this.dataSource.filterPredicate = (q: Quiz, f: string) => {
+      const { t, s } = JSON.parse(f || '{}');
+      if (s && (q.statut === 'INACTIF' ? 'INACTIF' : 'ACTIF') !== s) return false;
+      if (!t) return true;
+      return Object.values(q as any).map(v => (v === null || v === undefined ? '' : String(v))).join('◬').toLowerCase().includes(t);
+    };
     this.charger();
+  }
+
+  private filtrer(): void {
+    this.dataSource.filter = JSON.stringify({ t: this.recherche.toLowerCase(), s: this.statut });
+    if (this.dataSource.paginator) this.dataSource.paginator.firstPage();
+  }
+  changerStatutFiltre(v: '' | 'ACTIF' | 'INACTIF'): void {
+    this.statut = v;
+    this.filtrer();
   }
 
   charger() {
@@ -81,10 +101,7 @@ export class ListeQuizComponent implements OnInit {
   applyFilter(event: Event) {
     const filterValue = (event.target as HTMLInputElement).value;
     this.recherche = filterValue.trim();
-    this.dataSource.filter = filterValue.trim().toLowerCase();
-    if (this.dataSource.paginator) {
-      this.dataSource.paginator.firstPage();
-    }
+    this.filtrer();
   }
 
   changerPeriode(p: Periode) {
@@ -184,6 +201,7 @@ export class ListeQuizComponent implements OnInit {
         entete: [
           `Période (date de création) : ${libellePeriode(this.periode)}`,
           `Recherche : ${this.recherche || '—'}`,
+          `Statut : ${this.statut === 'ACTIF' ? 'Actif' : this.statut === 'INACTIF' ? 'Inactif' : 'Tous'}`,
           `${lignes.length} quiz`,
         ],
         lignes,

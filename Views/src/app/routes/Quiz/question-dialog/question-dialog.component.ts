@@ -18,6 +18,8 @@ import { OptionQ, Question } from '../interfaces';
 export interface QuestionDialogData {
   mode: 'add' | 'edit';
   question?: Question;
+  /** Points des AUTRES questions du quiz (barème total = 100). */
+  pointsAutres?: number;
 }
 
 export interface QuestionDialogResult {
@@ -54,7 +56,9 @@ interface OptionEdit {
     `.opt-input { flex: 1; }`,
     `.opt-fixe { font-weight: 500; }`,
     `.m-b-8 { margin-bottom: 8px; } .m-t-8 { margin-top: 8px; } .m-t-16 { margin-top: 16px; }`,
-    `.champ-points { width: 200px; margin-bottom: 16px; } .hint-erreur { color: #c62828; }`,
+    `.champ-points { width: 200px; margin-bottom: 16px; } .hint-erreur { color: #c62828; }
+     .bareme-apres { font-size: 13px; color: #e65100; background: #fff4e5; border-radius: 6px; padding: 6px 10px; margin: -6px 0 14px; }
+     .bareme-apres.ok { color: #1b5e20; background: #e8f5e9; } .bareme-apres.sur { color: #b71c1c; background: #fdecea; }`,
   ],
 })
 export class QuestionDialogComponent implements OnInit {
@@ -81,9 +85,20 @@ export class QuestionDialogComponent implements OnInit {
       this.options = opts.map(o => ({ libelle: o.libelle, correct: !!o.est_correcte }));
       this.bonneIndex = Math.max(0, this.options.findIndex(o => o.correct));
     }
+    // Nouvelle question : on propose les points qui restent à répartir.
+    if (!q && this.data.pointsAutres !== undefined) {
+      const reste = 100 - this.data.pointsAutres;
+      if (reste >= 1) this.points = Math.min(100, reste);
+    }
     if (!this.options.length) {
       this.appliquerType();
     }
+  }
+
+  /** Total du barème si la question est enregistrée avec les points saisis. */
+  get totalApres(): number | null {
+    if (this.data.pointsAutres === undefined || !this.pointsValides) return null;
+    return this.data.pointsAutres + Number(this.points);
   }
 
   get estUnique(): boolean {

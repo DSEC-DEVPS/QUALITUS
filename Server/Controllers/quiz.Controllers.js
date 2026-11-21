@@ -4,6 +4,7 @@
 // Coexiste avec le quiz legacy (B_QUIZ / B_REPONSE_QUIZ).
 // =====================================================================
 const db = require("../config/db");
+const { synchroniserBadges, badgesUtilisateur } = require("../utils/badgesQuiz");
 const { permissionsEffectives } = require("../middlewares/permission");
 
 // Role de l'utilisateur (pour scoper la visibilite des quiz).
@@ -149,12 +150,31 @@ const filtrePeriode = (query, col) => {
 const STATUTS_QUIZ = ["ACTIF", "INACTIF"];
 const ETATS_QUIZ = ["OUVERT", "CLOTURER"];
 
+// BARÈME : les points des questions d'un quiz totalisent exactement 100.
+// Un quiz non conforme ne peut être ni activé, ni ouvert, ni diffusé, et
+// n'est pas proposé aux participants tant que son barème n'est pas ajusté.
+const BAREME_TOTAL = 100;
+const SQL_TOTAL_POINTS = (alias) =>
+  `(SELECT CAST(COALESCE(SUM(qb.points), 0) AS SIGNED) FROM B_QZ_QUESTION qb WHERE qb.id_Quiz = ${alias}.id)`;
+const SQL_BAREME_CONFORME = `${SQL_TOTAL_POINTS("q")} = ${BAREME_TOTAL}`;
+const totalPointsQuiz = async (cx, idQuiz) => {
+  const [[r]] = await cx.query("SELECT COALESCE(SUM(points), 0) AS t FROM B_QZ_QUESTION WHERE id_Quiz = ?", [idQuiz]);
+  return Number(r.t);
+};
+const msgBareme = (total) =>
+  `Le barème du quiz doit totaliser exactement ${BAREME_TOTAL} points (actuellement ${total}). ` +
+  `Ajustez les points des questions ou utilisez « Répartir équitablement ».`;
+
 // Le quiz peut-il être passé ? Renvoie null si oui, sinon le message à afficher.
-// Conditions : statut ACTIF, état OUVERT, date de fermeture non dépassée.
+// Conditions : statut ACTIF, état OUVERT, date de fermeture non dépassée,
+// barème conforme (si total_points est fourni).
 const indisponibiliteQuiz = (q) => {
   if (!q) return "Quiz introuvable.";
   if ((q.statut || "ACTIF") !== "ACTIF") return "Ce quiz n'est pas disponible.";
   if ((q.Etat || "OUVERT") !== "OUVERT") return "Ce quiz est clôturé.";
+  if (q.total_points !== undefined && Number(q.total_points) !== BAREME_TOTAL) {
+    return "Ce quiz n'est pas encore disponible : son barème est en cours d'ajustement.";
+  }
   if (q.date_fermeture && new Date(q.date_fermeture) <= new Date()) {
     const d = new Date(q.date_fermeture);
     const p = (n) => String(n).padStart(2, "0");
@@ -282,6 +302,7 @@ const getAllQuiz = async (req, res, next) => {
              (SELECT GROUP_CONCAT(f2.titre SEPARATOR ', ') FROM B_QZ_QUIZ_FICHE qf
                 JOIN B_FICHE f2 ON f2.id = qf.id_Fiche WHERE qf.id_Quiz = q.id) AS fiches_titres,
              (SELECT COUNT(*) FROM B_QZ_QUESTION qq WHERE qq.id_Quiz = q.id) AS nb_questions,
+             ${SQL_TOTAL_POINTS("q")} AS total_points,
              EXISTS(SELECT 1 FROM B_UTILISATEUR cr WHERE cr.id = q.id_createur AND cr.id_Site = ?) AS est_site_proprietaire,
              EXISTS(SELECT 1 FROM B_QZ_AUTORISE a WHERE a.id_Quiz = q.id AND a.id_UTILISATEUR = ?) AS est_autorise
       FROM B_QZ_QUIZ q
@@ -325,7 +346,7 @@ const getOneQuiz = async (req, res, next) => {
       `SELECT q.id, q.titre, q.code_pin, q.type, q.duree, q.date_fermeture, q.description, q.id_Fiche,
               q.note_passage, q.acces, q.alterner_questions, q.autoriser_machines,
               q.retest_auto, q.nb_retest_max, q.Etat, q.statut, q.id_createur, q.dateCreation, q.dateModification,
-              FCH.titre AS fiche_titre
+              FCH.titre AS fiche_titre, ${SQL_TOTAL_POINTS("q")} AS total_points
        FROM B_QZ_QUIZ q
        LEFT JOIN B_FICHE FCH ON FCH.id = q.id_Fiche
        WHERE q.id = ?`,
@@ -426,7 +447,7 @@ const addQuiz = async (req, res, next) => {
   if (!titre) {
     return res
       .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
+      .json({ message: "Merci de bien renseigner les paramètres" });
   }
   // Liste des fiches associees (n..n) ; compat : id_Fiche simple
   const listeFiches = Array.isArray(fiches) ? fiches : id_Fiche ? [id_Fiche] : [];
@@ -466,7 +487,7 @@ const addQuiz = async (req, res, next) => {
       );
     }
     await connection.commit();
-    return res.status(201).json({ message: "Quiz cree avec succes", id: r.insertId, code_pin: codePin });
+    return res.status(201).json({ message: "Quiz créé avec succès", id: r.insertId, code_pin: codePin });
   } catch (error) {
     try { await connection.rollback(); } catch (e) {}
     console.log(error);
@@ -493,7 +514,7 @@ const updateQuiz = async (req, res, next) => {
     return res.status(400).json({ message: "État invalide (OUVERT ou CLOTURER)." });
   }
   if (!(await peutGererQuiz(userId, id))) {
-    return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+    return res.status(403).json({ message: "Accès non autorisé à ce quiz" });
   }
   // Côté propriétaire : tous les paramètres. Utilisateur autorisé (site invité) :
   // uniquement la durée, la date de fermeture et l'état ; le reste est ignoré.
@@ -531,10 +552,20 @@ const updateQuiz = async (req, res, next) => {
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
-    const [ex] = await connection.query(`SELECT id FROM B_QZ_QUIZ WHERE id=?`, [id]);
+    const [ex] = await connection.query(`SELECT id, statut, Etat FROM B_QZ_QUIZ WHERE id=?`, [id]);
     if (!ex.length) {
       await connection.rollback();
       return res.status(404).json({ message: "Quiz introuvable." });
+    }
+    // Activer ou rouvrir un quiz exige un barème conforme (100 points).
+    const active = "statut" in body && body.statut === "ACTIF" && ex[0].statut !== "ACTIF";
+    const rouvre = "Etat" in body && body.Etat === "OUVERT" && ex[0].Etat !== "OUVERT";
+    if (active || rouvre) {
+      const total = await totalPointsQuiz(connection, id);
+      if (total !== BAREME_TOTAL) {
+        await connection.rollback();
+        return res.status(409).json({ message: msgBareme(total), total_points: total });
+      }
     }
     sets.push("dateModification=?");
     vals.push(new Date());
@@ -552,7 +583,7 @@ const updateQuiz = async (req, res, next) => {
     // « Sites concernés » retiré : B_QZ_QUIZ_SITE n'est plus ni lue ni modifiée
     // (conservée pour l'historique).
     await connection.commit();
-    return res.status(201).json({ message: "Quiz modifie" });
+    return res.status(201).json({ message: "Quiz modifié" });
   } catch (error) {
     try { await connection.rollback(); } catch (e) {}
     console.log(error);
@@ -576,6 +607,10 @@ const changerStatutQuiz = async (req, res) => {
     if (!(await estCoteProprietaire(userId, id))) {
       return res.status(403).json({ message: "Seul le site propriétaire peut activer ou désactiver ce quiz." });
     }
+    if (statut === "ACTIF") {
+      const total = await totalPointsQuiz(db, id);
+      if (total !== BAREME_TOTAL) return res.status(409).json({ message: msgBareme(total), total_points: total });
+    }
     await db.query(`UPDATE B_QZ_QUIZ SET statut=?, dateModification=? WHERE id=?`, [statut, new Date(), id]);
     return res.status(200).json({
       message: statut === "ACTIF" ? `Quiz « ${q.titre} » activé.` : `Quiz « ${q.titre} » désactivé.`,
@@ -592,7 +627,7 @@ const deleteQuiz = async (req, res, next) => {
   if (!id) {
     return res
       .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
+      .json({ message: "Merci de bien renseigner les paramètres" });
   }
   if (!(await peutSupprimer(req.auth ? req.auth.userId : null, id))) {
     return res.status(403).json({ message: "La suppression d'un quiz est réservée à son créateur." });
@@ -600,7 +635,7 @@ const deleteQuiz = async (req, res, next) => {
   try {
     // FK ON DELETE CASCADE : questions + options supprimees automatiquement
     await db.query(`DELETE FROM B_QZ_QUIZ WHERE id=?`, [id]);
-    return res.status(201).json({ message: "Quiz supprime avec succes" });
+    return res.status(201).json({ message: "Quiz supprimé avec succès" });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Error request" });
@@ -650,35 +685,11 @@ const notifierQuiz = (cx, idQuiz, idUser, titre, message) =>
   );
 
 // Réévalue les badges d'un agent à partir de ses tentatives restantes : retire
-// ceux dont la condition n'est plus remplie, attribue ceux désormais mérités.
+// ceux dont la condition n'est plus remplie, attribue ceux désormais mérités
+// (calcul : utils/badgesQuiz.js). Retourne les NOMS ajoutés / retirés.
 const reevaluerBadges = async (cx, userId) => {
-  const [[st]] = await cx.query(
-    `SELECT
-       (SELECT COUNT(DISTINCT id_Quiz) FROM B_QZ_TENTATIVE WHERE id_UTILISATEUR=? AND reussi=1) AS quiz_reussis,
-       (SELECT COUNT(*) FROM B_QZ_TENTATIVE WHERE id_UTILISATEUR=? AND score=100) AS nb_parfaits`,
-    [userId, userId]
-  );
-  const [badges] = await cx.query("SELECT * FROM B_QZ_BADGE");
-  const [obt] = await cx.query("SELECT id_Badge FROM B_QZ_BADGE_UTILISATEUR WHERE id_UTILISATEUR=?", [userId]);
-  const obtenus = new Set(obt.map((b) => b.id_Badge));
-  const ajoutes = [];
-  const retires = [];
-  for (const b of badges) {
-    let merite = false;
-    if (b.condition_type === "QUIZ_REUSSIS") merite = Number(st.quiz_reussis) >= b.condition_valeur;
-    else if (b.condition_type === "SCORE_PARFAIT") merite = Number(st.nb_parfaits) >= 1;
-    if (merite && !obtenus.has(b.id)) {
-      await cx.query(
-        "INSERT IGNORE INTO B_QZ_BADGE_UTILISATEUR (id_Badge, id_UTILISATEUR, dateObtention) VALUES (?,?,?)",
-        [b.id, userId, new Date()]
-      );
-      ajoutes.push(b.nom);
-    } else if (!merite && obtenus.has(b.id)) {
-      await cx.query("DELETE FROM B_QZ_BADGE_UTILISATEUR WHERE id_Badge=? AND id_UTILISATEUR=?", [b.id, userId]);
-      retires.push(b.nom);
-    }
-  }
-  return { ajoutes, retires };
+  const { ajoutes, retires } = await synchroniserBadges(cx, userId);
+  return { ajoutes: ajoutes.map((b) => b.nom), retires: retires.map((b) => b.nom) };
 };
 const texteBadges = ({ ajoutes, retires }) =>
   (retires.length ? ` Badge retiré : ${retires.join(", ")}.` : "") +
@@ -816,6 +827,47 @@ const addQuestion = async (req, res, next) => {
   }
 };
 
+// POST /quiz/:id/repartir-points : répartit équitablement les 100 points entre
+// les questions (le reste de la division va aux premières questions, dans l'ordre
+// d'affichage : 34 + 33 + 33). Quiz déjà passé -> recalcul des tentatives.
+const repartirPoints = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.auth ? req.auth.userId : null;
+  if (!/^\d+$/.test(String(id || ""))) return res.status(400).json({ message: "Quiz invalide." });
+  if (!(await estCoteProprietaire(userId, id))) return res.status(403).json({ message: MSG_QUESTIONS_PROPRIETAIRE });
+  const connection = await db.getConnection();
+  try {
+    const [questions] = await connection.query("SELECT id, points FROM B_QZ_QUESTION WHERE id_Quiz = ? ORDER BY ordre, id", [id]);
+    if (!questions.length) return res.status(400).json({ message: "Ajoutez des questions avant de répartir les points." });
+    if (questions.length > BAREME_TOTAL) {
+      return res.status(400).json({ message: `Impossible de répartir ${BAREME_TOTAL} points entre ${questions.length} questions (1 point minimum par question).` });
+    }
+    const base = Math.floor(BAREME_TOTAL / questions.length);
+    const reste = BAREME_TOTAL - base * questions.length;
+    const nouveaux = questions.map((q, i) => ({ id: q.id, points: base + (i < reste ? 1 : 0), avant: Number(q.points) }));
+    const modifies = nouveaux.filter((q) => q.points !== q.avant);
+    await connection.beginTransaction();
+    for (const q of modifies) await connection.query("UPDATE B_QZ_QUESTION SET points = ? WHERE id = ?", [q.points, q.id]);
+    let impact = null;
+    if (modifies.length && (await statsTentatives(connection, id)).nb_tentatives > 0) {
+      impact = { type: "RECALCUL", ...(await recalculerTentatives(connection, id)) };
+    }
+    await connection.commit();
+    return res.status(200).json({
+      message: msgImpact(`Points répartis : ${reste ? `${base + 1} ou ${base}` : base} point(s) par question`, impact),
+      points: nouveaux.map(({ id: qid, points }) => ({ id: qid, points })),
+      total_points: BAREME_TOTAL,
+      impact,
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.log(error);
+    return res.status(500).json({ message: "Erreur lors de la répartition des points." });
+  } finally {
+    connection.release();
+  }
+};
+
 // Réponses identiques : même type, mêmes libellés et bonnes réponses, dans le même ordre.
 const memesReponses = (typeAvant, optsAvant, typeApres, optsApres) => {
   if ((typeAvant || "VRAI_FAUX") !== (typeApres || "VRAI_FAUX")) return false;
@@ -893,7 +945,7 @@ const deleteQuestion = async (req, res, next) => {
   if (!id) {
     return res
       .status(403)
-      .json({ message: "Merci de bien renseigner les parametres" });
+      .json({ message: "Merci de bien renseigner les paramètres" });
   }
   if (!(await peutGererQuestion(req.auth ? req.auth.userId : null, id))) {
     return res.status(403).json({ message: MSG_QUESTIONS_PROPRIETAIRE });
@@ -957,7 +1009,7 @@ const getQuizzesDisponibles = async (req, res, next) => {
               (SELECT COUNT(*) FROM B_QZ_RETEST r WHERE r.id_Quiz = q.id AND r.id_UTILISATEUR = ? AND r.consomme = 0) AS retest_autorise
        FROM B_QZ_QUIZ q
        LEFT JOIN B_FICHE FCH ON FCH.id = q.id_Fiche
-       WHERE ${SQL_QUIZ_DISPONIBLE}
+       WHERE ${SQL_QUIZ_DISPONIBLE} AND ${SQL_BAREME_CONFORME}
          AND (SELECT COUNT(*) FROM B_QZ_QUESTION qq WHERE qq.id_Quiz = q.id) > 0
          AND EXISTS (SELECT 1 FROM B_QZ_PARTICIPANT p WHERE p.id_Quiz = q.id AND p.id_UTILISATEUR = ?)
        ORDER BY q.id DESC`,
@@ -977,7 +1029,7 @@ const getQuizForTaking = async (req, res, next) => {
   try {
     const [quizRows] = await db.query(
       `SELECT id, titre, description, note_passage, retest_auto, nb_retest_max, duree, acces, code_pin,
-              statut, Etat, date_fermeture
+              statut, Etat, date_fermeture, ${SQL_TOTAL_POINTS("B_QZ_QUIZ")} AS total_points
        FROM B_QZ_QUIZ WHERE id = ?`,
       [id]
     );
@@ -1018,7 +1070,7 @@ const getQuizForTaking = async (req, res, next) => {
       return res.status(403).json({
         code: "IP_EN_ATTENTE",
         message:
-          "Acces refuse : votre adresse IP n'est pas autorisee. Une demande a ete transmise pour autorisation.",
+          "Accès refusé : votre adresse IP n'est pas autorisée. Une demande a été transmise pour autorisation.",
       });
     }
     const quiz = quizRows[0];
@@ -1098,7 +1150,7 @@ const soumettreQuiz = async (req, res, next) => {
   const userId = req.auth ? req.auth.userId : null;
   const { reponses } = req.body; // [{ id_Question, id_Option }]
   if (!id || !userId || !Array.isArray(reponses)) {
-    return res.status(403).json({ message: "Merci de bien renseigner les parametres" });
+    return res.status(403).json({ message: "Merci de bien renseigner les paramètres" });
   }
   // Participants désignés uniquement, quel que soit le profil.
   if (!(await estParticipant(userId, id))) {
@@ -1128,7 +1180,7 @@ const soumettreQuiz = async (req, res, next) => {
     return res.status(403).json({
       code: "IP_EN_ATTENTE",
       message:
-        "Acces refuse : votre adresse IP n'est pas autorisee. Une demande a ete transmise pour autorisation.",
+        "Accès refusé : votre adresse IP n'est pas autorisée. Une demande a été transmise pour autorisation.",
     });
   }
   // Quiz modifié (réinitialisé) pendant le passage : la copie porte sur l'ancienne version.
@@ -1243,7 +1295,7 @@ const soumettreQuiz = async (req, res, next) => {
         connection.release();
         return res.status(403).json({
           message:
-            "Retest non autorise. Votre superviseur doit autoriser une nouvelle tentative.",
+            "Retest non autorisé. Votre superviseur doit autoriser une nouvelle tentative.",
         });
       }
       retestAutoId = autos[0].id;
@@ -1383,59 +1435,18 @@ const marquerNotifLu = async (req, res, next) => {
 /* PHASE 3 - BADGES / RECOMPENSES                                      */
 /* ------------------------------------------------------------------ */
 
-// Evalue et attribue les badges merites par l'utilisateur.
+// Evalue et attribue les badges merites par l'utilisateur (utils/badgesQuiz.js).
 // Retourne les badges NOUVELLEMENT obtenus (pour feedback immediat).
 const attribuerBadges = async (connection, userId) => {
-  const [statsRows] = await connection.query(
-    `SELECT
-       (SELECT COUNT(DISTINCT id_Quiz) FROM B_QZ_TENTATIVE WHERE id_UTILISATEUR=? AND reussi=1) AS quiz_reussis,
-       (SELECT COUNT(*) FROM B_QZ_TENTATIVE WHERE id_UTILISATEUR=? AND score=100) AS nb_parfaits`,
-    [userId, userId]
-  );
-  const stats = statsRows[0] || {};
-  const quizReussis = stats.quiz_reussis || 0;
-  const nbParfaits = stats.nb_parfaits || 0;
-
-  const [badges] = await connection.query(`SELECT * FROM B_QZ_BADGE`);
-  const [dejaObtenus] = await connection.query(
-    `SELECT id_Badge FROM B_QZ_BADGE_UTILISATEUR WHERE id_UTILISATEUR=?`,
-    [userId]
-  );
-  const obtenus = new Set(dejaObtenus.map(b => b.id_Badge));
-
-  const nouveaux = [];
-  const now = new Date();
-  for (const b of badges) {
-    if (obtenus.has(b.id)) continue;
-    let merite = false;
-    if (b.condition_type === "QUIZ_REUSSIS") merite = quizReussis >= b.condition_valeur;
-    else if (b.condition_type === "SCORE_PARFAIT") merite = nbParfaits >= 1;
-    if (merite) {
-      await connection.query(
-        `INSERT IGNORE INTO B_QZ_BADGE_UTILISATEUR (id_Badge, id_UTILISATEUR, dateObtention) VALUES (?,?,?)`,
-        [b.id, userId, now]
-      );
-      nouveaux.push({ code: b.code, nom: b.nom, description: b.description, icone: b.icone });
-    }
-  }
-  return nouveaux;
+  const { ajoutes } = await synchroniserBadges(connection, userId);
+  return ajoutes.map(({ code, nom, description, icone }) => ({ code, nom, description, icone }));
 };
 
 // Tous les badges + drapeau "obtenu" pour l'utilisateur connecte
 const getMesBadges = async (req, res, next) => {
   const userId = req.auth ? req.auth.userId : null;
   try {
-    const [rows] = await db.query(
-      `SELECT b.id, b.code, b.nom, b.description, b.icone,
-              bu.dateObtention,
-              IF(bu.id IS NULL, 0, 1) AS obtenu
-       FROM B_QZ_BADGE b
-       LEFT JOIN B_QZ_BADGE_UTILISATEUR bu
-         ON bu.id_Badge = b.id AND bu.id_UTILISATEUR = ?
-       ORDER BY b.condition_valeur, b.id`,
-      [userId]
-    );
-    return res.status(200).send(rows);
+    return res.status(200).send(await badgesUtilisateur(db, userId));
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Error request" });
@@ -1517,7 +1528,7 @@ const getRapportQuestions = async (req, res, next) => {
   const userId = req.auth ? req.auth.userId : null;
   try {
     if (!(await peutGererQuiz(userId, id))) {
-      return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+      return res.status(403).json({ message: "Accès non autorisé à ce quiz" });
     }
     const per = filtrePeriode(req.query, "t.date_tentative");
     if (per.erreur) return res.status(400).json({ message: per.erreur });
@@ -1626,7 +1637,7 @@ const autoriserRetest = async (req, res, next) => {
       [id_Quiz, id_UTILISATEUR]
     );
     if (ex.length) {
-      return res.status(200).json({ message: "Un retest est deja en attente pour cet agent." });
+      return res.status(200).json({ message: "Un retest est déjà en attente pour cet agent." });
     }
     const now = new Date();
     await db.query(
@@ -1642,7 +1653,7 @@ const autoriserRetest = async (req, res, next) => {
        VALUES (?,?,?,?,?,?)`,
       [id_Quiz, id_UTILISATEUR, "Retest autorise", `Un retest vous a ete autorise : ${titreQuiz}`, 0, now]
     );
-    return res.status(201).json({ message: "Retest autorise et notifie a l'agent" });
+    return res.status(201).json({ message: "Retest autorisé et notifié à l'agent" });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Error request" });
@@ -1660,7 +1671,7 @@ const getQuizByPin = async (req, res, next) => {
   }
   try {
     const [r] = await db.query(
-      "SELECT id, titre, statut, Etat, date_fermeture FROM B_QZ_QUIZ WHERE code_pin=?",
+      `SELECT id, titre, statut, Etat, date_fermeture, ${SQL_TOTAL_POINTS("B_QZ_QUIZ")} AS total_points FROM B_QZ_QUIZ WHERE code_pin=?`,
       [String(pin).trim()]
     );
     if (!r.length) {
@@ -1693,7 +1704,7 @@ const getRapportQuestionsRatees = async (req, res) => {
   const userId = req.auth ? req.auth.userId : null;
   try {
     if (!(await peutVoirDetailQuiz(userId, id))) {
-      return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+      return res.status(403).json({ message: "Accès non autorisé à ce quiz" });
     }
     // Invité : seuls les agents de son site sont comptés.
     const siteImpose = await siteImposeRapport(userId, id);
@@ -1747,7 +1758,7 @@ const getRapportParticipants = async (req, res) => {
   try {
     await cloturerSessionsExpirees({ idQuiz: id }); // passages au temps épuisé
     if (!(await peutVoirDetailQuiz(userId, id))) {
-      return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+      return res.status(403).json({ message: "Accès non autorisé à ce quiz" });
     }
     const where = ["t.id_Quiz = ?"];
     const params = [id];
@@ -1825,7 +1836,7 @@ const getTentativeDetail = async (req, res) => {
     );
     if (!tr.length) return res.status(404).json({ message: "Tentative introuvable" });
     if (!(await peutVoirDetailQuiz(userId, tr[0].id_Quiz))) {
-      return res.status(403).json({ message: "Acces non autorise" });
+      return res.status(403).json({ message: "Accès non autorisé" });
     }
     // Invité : uniquement les tentatives des agents de son site.
     const siteImpose = await siteImposeRapport(userId, tr[0].id_Quiz);
@@ -1968,7 +1979,7 @@ const getQuizPublics = async (req, res) => {
               (SELECT TIMESTAMPDIFF(SECOND, ss.date_debut, NOW()) FROM B_QZ_SESSION ss
                  WHERE ss.id_Quiz = q.id AND ss.id_UTILISATEUR = ?) AS temps_ecoule_secondes
        FROM B_QZ_QUIZ q
-       WHERE ${SQL_QUIZ_DISPONIBLE} AND q.acces = 'PUBLIC'
+       WHERE ${SQL_QUIZ_DISPONIBLE} AND ${SQL_BAREME_CONFORME} AND q.acces = 'PUBLIC'
          AND (SELECT COUNT(*) FROM B_QZ_QUESTION qq WHERE qq.id_Quiz = q.id) > 0
          AND EXISTS (SELECT 1 FROM B_QZ_PARTICIPANT p WHERE p.id_Quiz = q.id AND p.id_UTILISATEUR = ?)
        ORDER BY q.id DESC`,
@@ -1987,7 +1998,7 @@ const getQuizIpDemandes = async (req, res) => {
   const userId = req.auth ? req.auth.userId : null;
   try {
     if (!(await peutGererQuiz(userId, id))) {
-      return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+      return res.status(403).json({ message: "Accès non autorisé à ce quiz" });
     }
     // Invité autorisé : seulement les demandes des agents de son site.
     const siteImpose = await siteImposeRapport(userId, id);
@@ -2020,12 +2031,12 @@ const traiterDemandeIp = async (req, res) => {
     if (!drows.length) return res.status(404).json({ message: "Demande introuvable" });
     const dem = drows[0];
     if (dem.statut !== "EN_ATTENTE") {
-      return res.status(409).json({ message: "Demande deja traitee" });
+      return res.status(409).json({ message: "Demande déjà traitée" });
     }
     // Mêmes droits que la gestion du quiz ; l'invité autorisé ne traite que
     // les demandes des agents de son site.
     if (!(await peutGererQuiz(userId, dem.id_Quiz))) {
-      return res.status(403).json({ message: "Acces non autorise" });
+      return res.status(403).json({ message: "Accès non autorisé" });
     }
     const siteAgent = await siteDe(dem.id_UTILISATEUR);
     const siteImpose = await siteImposeRapport(userId, dem.id_Quiz);
@@ -2050,13 +2061,13 @@ const traiterDemandeIp = async (req, res) => {
           WHERE d.id_Quiz=? AND d.adresse_ip=? AND d.statut='EN_ATTENTE' AND u.id_Site=?`,
         [now, userId, dem.id_Quiz, dem.adresse_ip, siteAgent]
       );
-      return res.status(200).json({ message: "Acces autorise pour cette adresse IP" });
+      return res.status(200).json({ message: "Accès autorisé pour cette adresse IP" });
     }
     await db.query(
       "UPDATE B_QZ_IP_DEMANDE SET statut='REFUSE', dateTraitement=?, id_traitePar=? WHERE id=?",
       [now, userId, demandeId]
     );
-    return res.status(200).json({ message: "Demande refusee" });
+    return res.status(200).json({ message: "Demande refusée" });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Error request" });
@@ -2069,7 +2080,7 @@ const getQuizIps = async (req, res) => {
   const userId = req.auth ? req.auth.userId : null;
   try {
     if (!(await peutVoirDetailQuiz(userId, id))) {
-      return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+      return res.status(403).json({ message: "Accès non autorisé à ce quiz" });
     }
     // Invité autorisé : seulement les IP autorisées pour son site.
     const siteImpose = await siteImposeRapport(userId, id);
@@ -2105,7 +2116,7 @@ const addQuizIp = async (req, res) => {
   }
   try {
     if (!(await peutGererQuiz(userId, id))) {
-      return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+      return res.status(403).json({ message: "Accès non autorisé à ce quiz" });
     }
     // Invité autorisé : uniquement pour son site.
     const siteImpose = await siteImposeRapport(userId, id);
@@ -2123,7 +2134,7 @@ const addQuizIp = async (req, res) => {
     return res.status(201).json({ message: "Adresse IP ajoutee", id: r.insertId });
   } catch (error) {
     if (error && error.code === "ER_DUP_ENTRY") {
-      return res.status(409).json({ message: "Cette adresse IP est deja autorisee pour ce site" });
+      return res.status(409).json({ message: "Cette adresse IP est déjà autorisée pour ce site" });
     }
     console.log(error);
     res.status(500).json({ message: "Error request" });
@@ -2137,14 +2148,14 @@ const deleteQuizIp = async (req, res) => {
     const [rows] = await db.query("SELECT id_Quiz, id_Site FROM B_QZ_IP_AUTORISEE WHERE id = ?", [ipId]);
     if (!rows.length) return res.status(404).json({ message: "Introuvable" });
     if (!(await peutGererQuiz(userId, rows[0].id_Quiz))) {
-      return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+      return res.status(403).json({ message: "Accès non autorisé à ce quiz" });
     }
     const siteImpose = await siteImposeRapport(userId, rows[0].id_Quiz);
     if (siteImpose != null && Number(rows[0].id_Site) !== siteImpose) {
       return res.status(403).json({ message: "Vous ne pouvez supprimer que les adresses IP de votre site." });
     }
     await db.query("DELETE FROM B_QZ_IP_AUTORISEE WHERE id = ?", [ipId]);
-    return res.status(200).json({ message: "Adresse IP supprimee" });
+    return res.status(200).json({ message: "Adresse IP supprimée" });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Error request" });
@@ -2171,7 +2182,7 @@ const rechercherUtilisateursDiffusion = async (req, res) => {
     if (!isNaN(idQuiz)) {
       const userId = req.auth ? req.auth.userId : null;
       if (!(await peutGererQuiz(userId, idQuiz))) {
-        return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+        return res.status(403).json({ message: "Accès non autorisé à ce quiz" });
       }
       if (!(await estCoteProprietaire(userId, idQuiz))) {
         sIds = [await siteDe(userId)].filter((x) => x != null);
@@ -2208,7 +2219,7 @@ const getParticipantsQuiz = async (req, res) => {
   const { id } = req.params;
   try {
     const userId = req.auth ? req.auth.userId : null;
-    if (!(await peutGererQuiz(userId, id))) return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+    if (!(await peutGererQuiz(userId, id))) return res.status(403).json({ message: "Accès non autorisé à ce quiz" });
     // Utilisateur AUTORISÉ (site invité) : uniquement les participants de son site
     // (site figé au moment de la diffusion).
     const params = [id];
@@ -2242,9 +2253,11 @@ const diffuserParticipants = async (req, res) => {
   if (!ids.length) return res.status(400).json({ message: "Aucun participant sélectionné : la diffusion est refusée." });
   try {
     const userId = req.auth ? req.auth.userId : null;
-    if (!(await peutGererQuiz(userId, id))) return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+    if (!(await peutGererQuiz(userId, id))) return res.status(403).json({ message: "Accès non autorisé à ce quiz" });
     const [[quiz]] = await db.query("SELECT id, titre FROM B_QZ_QUIZ WHERE id=?", [id]);
     if (!quiz) return res.status(404).json({ message: "Quiz introuvable" });
+    const totalPts = await totalPointsQuiz(db, id);
+    if (totalPts !== BAREME_TOTAL) return res.status(409).json({ message: msgBareme(totalPts), total_points: totalPts });
 
     // Participants déjà désignés : conservés tels quels (pas de re-notification).
     const [ex] = await db.query("SELECT id_UTILISATEUR FROM B_QZ_PARTICIPANT WHERE id_Quiz=?", [id]);
@@ -2297,7 +2310,7 @@ const getAutorises = async (req, res) => {
   const { id } = req.params;
   try {
     const userId = req.auth ? req.auth.userId : null;
-    if (!(await peutGererQuiz(userId, id))) return res.status(403).json({ message: "Acces non autorise a ce quiz" });
+    if (!(await peutGererQuiz(userId, id))) return res.status(403).json({ message: "Accès non autorisé à ce quiz" });
     const [rows] = await db.query(
       `SELECT a.id, a.id_UTILISATEUR, u.nom, u.prenom, u.nom_utilisateur, st.nom AS site,
               au.nom_utilisateur AS auteur,
@@ -2751,6 +2764,7 @@ const reprendreQuestions = async (req, res) => {
 
 module.exports = {
   getAllQuiz,
+  repartirPoints,
   getSourcesQuestions,
   getQuestionsSource,
   reprendreQuestions,

@@ -1,90 +1,73 @@
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { NgxPermissionsModule, NgxPermissionsService, NgxRolesService } from 'ngx-permissions';
-import { LocalStorageService, MemoryStorageService } from '@shared/services/storage.service';
-import { admin, TokenService } from '@core/authentication';
+import { NgxPermissionsService, NgxRolesService } from 'ngx-permissions';
+import { of } from 'rxjs';
+import { AuthService } from '@core/authentication';
 import { MenuService } from '@core/bootstrap/menu.service';
+import { MENU } from '@core/bootstrap/menu-data';
 import { StartupService } from '@core/bootstrap/startup.service';
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { PermissionsService } from '@core/authorization/permissions.service';
 
 describe('StartupService', () => {
-  let httpMock: HttpTestingController;
+  const permissions = ['canAdd', 'canDelete', 'canEdit', 'canRead'];
+  let utilisateur: any;
+  let menuServeur: any[];
+  let ngxPerms: jasmine.SpyObj<NgxPermissionsService>;
+  let ngxRoles: jasmine.SpyObj<NgxRolesService>;
+  let menu: jasmine.SpyObj<MenuService>;
+  let perms: jasmine.SpyObj<PermissionsService>;
   let startup: StartupService;
-  let tokenService: TokenService;
-  let menuService: MenuService;
-  let mockPermissionsService: NgxPermissionsService;
-  let mockRolesService: NgxRolesService;
 
   beforeEach(() => {
+    utilisateur = { id: 1, roles: 'R_SUP' };
+    menuServeur = [];
+    ngxPerms = jasmine.createSpyObj('NgxPermissionsService', ['loadPermissions']);
+    ngxRoles = jasmine.createSpyObj('NgxRolesService', ['flushRoles', 'addRoles']);
+    menu = jasmine.createSpyObj('MenuService', ['set']);
+    perms = jasmine.createSpyObj('PermissionsService', ['load']);
+    perms.load.and.returnValue(of(undefined) as any);
     TestBed.configureTestingModule({
-      imports: [NgxPermissionsModule.forRoot()],
       providers: [
-        {
-          provide: LocalStorageService,
-          useClass: MemoryStorageService,
-        },
-        {
-          provide: NgxPermissionsService,
-          useValue: {
-            loadPermissions: (permissions: string[]) => void 0,
-          },
-        },
-        {
-          provide: NgxRolesService,
-          useValue: {
-            flushRoles: () => void 0,
-            addRoles: (params: { ADMIN: string[] }) => void 0,
-          },
-        },
         StartupService,
-        provideHttpClient(withInterceptorsFromDi()),
-        provideHttpClientTesting(),
+        { provide: AuthService, useValue: { change: () => of(utilisateur), menu: () => of(menuServeur) } },
+        { provide: NgxPermissionsService, useValue: ngxPerms },
+        { provide: NgxRolesService, useValue: ngxRoles },
+        { provide: MenuService, useValue: menu },
+        { provide: PermissionsService, useValue: perms },
       ],
     });
-    httpMock = TestBed.inject(HttpTestingController);
     startup = TestBed.inject(StartupService);
-    tokenService = TestBed.inject(TokenService);
-    menuService = TestBed.inject(MenuService);
-    mockPermissionsService = TestBed.inject(NgxPermissionsService);
-    mockRolesService = TestBed.inject(NgxRolesService);
   });
 
-  afterEach(() => httpMock.verify());
-
-  it('should load menu when token changed and token valid', async () => {
-    const menuData = { menu: [] };
-    const permissions = ['canAdd', 'canDelete', 'canEdit', 'canRead'];
-    spyOn(menuService, 'addNamespace');
-    spyOn(menuService, 'set');
-    spyOn(mockPermissionsService, 'loadPermissions');
-    spyOn(mockRolesService, 'flushRoles');
-    spyOn(mockRolesService, 'addRoles');
-
+  it('charge les permissions, le rôle de l\'utilisateur et les permissions fines', async () => {
     await startup.load();
-
-    tokenService.set({ access_token: 'token', token_type: 'bearer' });
-
-    httpMock.expectOne('/me').flush(admin);
-    httpMock.expectOne('/me/menu').flush(menuData);
-
-    expect(menuService.addNamespace).toHaveBeenCalledWith(menuData.menu, 'menu');
-    expect(menuService.set).toHaveBeenCalledWith(menuData.menu);
-    expect(mockPermissionsService.loadPermissions).toHaveBeenCalledWith(permissions);
-    expect(mockRolesService.flushRoles).toHaveBeenCalledWith();
-    expect(mockRolesService.addRoles).toHaveBeenCalledWith({ ADMIN: permissions });
+    expect(ngxPerms.loadPermissions).toHaveBeenCalledWith(permissions);
+    expect(ngxRoles.flushRoles).toHaveBeenCalled();
+    expect(ngxRoles.addRoles).toHaveBeenCalledWith({ R_SUP: permissions });
+    expect(perms.load).toHaveBeenCalled();
   });
 
-  it('should clear menu when token changed and token invalid', async () => {
-    spyOn(menuService, 'addNamespace');
-    spyOn(menuService, 'set');
-
+  it('reprend le rôle tel quel (plus de repli « R_TC » pour un profil non listé)', async () => {
+    utilisateur = { id: 2, roles: 'R_BO' };
     await startup.load();
+    expect(ngxRoles.addRoles).toHaveBeenCalledWith({ R_BO: permissions });
+    expect(ngxRoles.addRoles).not.toHaveBeenCalledWith({ R_TC: permissions });
+  });
 
-    tokenService.set({ access_token: '', token_type: 'bearer' });
+  it('n\'ajoute aucun rôle pour un visiteur non connecté', async () => {
+    utilisateur = {};
+    await startup.load();
+    expect(ngxRoles.flushRoles).toHaveBeenCalled();
+    expect(ngxRoles.addRoles).not.toHaveBeenCalled();
+  });
 
-    httpMock.expectNone('/me/menu');
+  it('utilise le menu statique quand le serveur n\'en fournit pas', async () => {
+    await startup.load();
+    expect(menu.set).toHaveBeenCalledWith(MENU);
+  });
 
-    expect(menuService.addNamespace).toHaveBeenCalledWith([], 'menu');
-    expect(menuService.set).toHaveBeenCalledWith([]);
+  it('utilise le menu du serveur s\'il en fournit un', async () => {
+    menuServeur = [{ route: 'x', name: 'X', type: 'link', icon: 'home' }];
+    await startup.load();
+    expect(menu.set).toHaveBeenCalledWith(menuServeur as any);
   });
 });

@@ -6,10 +6,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { FormsModule } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
 import * as XLSX from 'xlsx';
 import { SondageService } from '@shared/services/sondage.service';
-import { QuestionRapport, RapportSondage, TYPES_QUESTION } from '../interfaces';
+import { NonRepondant, QuestionRapport, RapportSondage, TYPES_QUESTION } from '../interfaces';
 import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
@@ -22,6 +24,8 @@ import { ChargementComponent } from '@shared/components/chargement/chargement.co
     MatIconModule,
     MatChipsModule,
     MatTooltipModule,
+    MatExpansionModule,
+    FormsModule,
   ],
   templateUrl: './rapport-sondage.component.html',
   styleUrl: './rapport-sondage.component.scss',
@@ -57,11 +61,6 @@ export class RapportSondageComponent implements OnInit {
   // % d'une option (sur le total des réponses de la question)
   pct(nb: number, total: number): number {
     return total > 0 ? Math.round((nb / total) * 100) : 0;
-  }
-  // largeur de barre relative au max
-  largeur(nb: number, options: { nb: number }[]): number {
-    const max = Math.max(1, ...options.map(o => o.nb));
-    return (nb / max) * 100;
   }
 
   retour() {
@@ -110,10 +109,56 @@ export class RapportSondageComponent implements OnInit {
         }
       }
     }
-    const ws = XLSX.utils.json_to_sheet(lignes);
     const wb = XLSX.utils.book_new();
+    const pa = this.rapport.participation;
+    const synthese: (string | number)[][] = [
+      ['Sondage', this.rapport.nom],
+      ['Réponses au total', this.rapport.nb_passations],
+    ];
+    if (pa && pa.cibles) {
+      synthese.push(
+        ['Ciblés', pa.cibles],
+        ['  dont internes', pa.internes],
+        ['  dont externes (lien public anonyme)', pa.externes],
+        ['Touchés (ciblés internes ayant répondu)', pa.touches],
+        ['Taux de participation (internes)', pa.taux != null ? `${pa.taux} %` : '—'],
+      );
+    } else {
+      synthese.push(['Cible', 'Aucune cible définie']);
+    }
+    if (pa) synthese.push(['Réponses via le lien public (anonymes)', pa.anonymes], ['Réponses hors cible', pa.hors_cible]);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(synthese), 'Synthèse');
+    for (const q of this.rapport.questions) {
+      if (q.type === 'INFO') continue;
+      for (const l of lignes) if (l['Question'] === q.libelle && l['Répondants'] === undefined) l['Répondants'] = q.nb_repondants ?? 0;
+    }
+    const ws = XLSX.utils.json_to_sheet(lignes);
     XLSX.utils.book_append_sheet(wb, ws, 'Rapport');
+    if (pa && pa.non_repondants.length) {
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pa.non_repondants.map(n => ({
+        Nom: n.nom, Prénom: n.prenom, Identifiant: n.nom_utilisateur || '', Site: n.site || '',
+        Fonction: n.fonction || '', Email: n.email || '', Envoi: this.envoi(n),
+      }))), 'Non-répondants');
+    }
     XLSX.writeFile(wb, `Rapport_sondage_${this.sondageId}.xlsx`);
+  }
+
+  /** Recherche dans la liste des non-répondants. */
+  rechercheNR = '';
+  get nonRepondantsFiltres(): NonRepondant[] {
+    const l = this.rapport?.participation?.non_repondants || [];
+    const q = this.rechercheNR.trim().toLowerCase();
+    if (!q) return l;
+    return l.filter(n => [n.nom, n.prenom, n.nom_utilisateur, n.site, n.fonction, n.email]
+      .some(v => (v || '').toLowerCase().includes(q)));
+  }
+  /** Canal et date du dernier envoi (email / SMS), sinon « Dans l'application ». */
+  envoi(n: NonRepondant): string {
+    const fr = (d?: string | null) => (d ? new Date(d).toLocaleDateString('fr-FR') : '');
+    const e: string[] = [];
+    if (n.date_envoi_email) e.push(`Email le ${fr(n.date_envoi_email)}`);
+    if (n.date_envoi_sms) e.push(`SMS le ${fr(n.date_envoi_sms)}`);
+    return e.length ? e.join(' · ') : "Dans l'application";
   }
 
   // helper de typage pour le template
