@@ -85,9 +85,9 @@
             matTooltipPosition="above"
           >
             @if (element.ETAT === 'ACTIF') {
-              <span style="color: green !important"> {{ element.ETAT }} </span>
+              <span style="color: var(--qx-vert, green) !important"> {{ element.ETAT }} </span>
             } @else {
-              <span style="color: rgba(207, 13, 13, 0.897)"> {{ element.ETAT }} </span>
+              <span style="color: var(--qx-rouge, rgba(207, 13, 13, 0.897))"> {{ element.ETAT }} </span>
             }
           </td>
         </ng-container>
@@ -101,9 +101,9 @@
             matTooltipPosition="above"
           >
             @if (element.on_time === 'OUI') {
-              <span style="color: green; font-weight: 600"> {{ element.on_time }}</span>
+              <span style="color: var(--qx-vert, green); font-weight: 600"> {{ element.on_time }}</span>
             } @else {
-              <span style="color: red; font-weight: 600"> {{ element.on_time }}</span>
+              <span style="color: var(--qx-rouge, red); font-weight: 600"> {{ element.on_time }}</span>
             }
           </td>
         </ng-container>

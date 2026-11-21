@@ -20,7 +20,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
   styles: [`
     .app-chargement { display: flex; flex-direction: column; align-items: center; justify-content: center;
       gap: 12px; padding: 32px 16px; width: 100%; }
-    .texte { color: rgba(0, 0, 0, 0.6); font-size: 14px; }
+    .texte { color: var(--qx-texte-2, rgba(0, 0, 0, 0.6)); font-size: 14px; }
   `],
 })
 export class ChargementComponent {

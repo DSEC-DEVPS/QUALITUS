@@ -1,7 +1,7 @@
 /* Styles généraux */
 
 .container-fluid {
-  background-color: #f8f9fa;
+  background-color: var(--qx-surface-2, #f8f9fa);
   padding: 10px;
 }
 nav {
@@ -11,20 +11,20 @@ nav {
 /* Titre de la section Vérifications */
 .verification-title {
   font-weight: bold;
-  color: #333;
+  color: var(--qx-texte, #333);
   margin-bottom: 15px;
 }
 
 /* Style de l'iframe */
 iframe {
-  border: 2px solid #ddd;
+  border: 2px solid var(--qx-bordure, #ddd);
   border-radius: 8px;
 }
 
 /* Style des onglets */
 .mat-tab-group {
-  background-color: white;
-  border: 1px solid #ddd;
+  background-color: var(--qx-surface, white);
+  border: 1px solid var(--qx-bordure, #ddd);
   border-radius: 8px;
   padding: 15px;
   box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
@@ -32,7 +32,7 @@ iframe {
 
 .mat-tab-label {
   font-weight: bold;
-  color: #333;
+  color: var(--qx-texte, #333);
 }
 
 /* Style des boutons */
@@ -64,7 +64,7 @@ button {
 /* Style du champ commentaire */
 .commentaire-box {
   width: 100%;
-  border: 1px solid #ccc;
+  border: 1px solid var(--qx-bordure, #ccc);
   border-radius: 5px;
   padding: 8px;
 }
@@ -118,7 +118,7 @@ textarea {
 hr {
   border: none;
   border-top: 3px double #ff8e36 !important;
-  color: #000;
+  color: var(--qx-texte, #000);
   overflow: visible;
   text-align: center;
   height: 5px;
@@ -136,21 +136,21 @@ hr {
   color: #fff;
 }
 .utilite::after {
-  background: #fff;
+  background: var(--qx-surface, #fff);
   content: 'Utilité';
   padding: 0 4px;
   position: relative;
   top: -13px;
 }
 .exactitude::after {
-  background: #fff;
+  background: var(--qx-surface, #fff);
   content: 'exactitude';
   padding: 0 4px;
   position: relative;
   top: -13px;
 }
 .Quiz::after {
-  background: #fff;
+  background: var(--qx-surface, #fff);
   content: 'Quiz';
   padding: 0 4px;
   position: relative;
@@ -223,7 +223,7 @@ hr {
 /*
 .excel-container {
   padding: 20px;
-  background-color: white;
+  background-color: var(--qx-surface, white);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
@@ -247,7 +247,7 @@ hr {
 */
 .excel-container {
   padding: 20px;
-  background-color: white;
+  background-color: var(--qx-surface, white);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   margin: 20px 0;
@@ -270,19 +270,19 @@ hr {
   width: 100%;
   height: 650px;
   overflow: hidden;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--qx-bordure, #e0e0e0);
 }
 
 /* Style personnalisé pour les en-têtes */
 :host ::ng-deep .header-cell {
   font-weight: bold !important;
-  background-color: #f5f5f5 !important;
+  background-color: var(--qx-surface-2, #f5f5f5) !important;
 }
 
 /* Styles supplémentaires pour Handsontable */
 :host ::ng-deep .handsontable th {
   font-weight: bold !important;
-  background-color: #f0f0f0 !important;
+  background-color: var(--qx-surface-2, #f0f0f0) !important;
   text-align: center !important;
 }
 
@@ -317,11 +317,11 @@ mdc-button .mdc-button__label {
    color: #fff;
 }
 html .mat-accent.mat-mdc-radio-button {
-    --mdc-radio-selected-focus-icon-color: #cc7a00;
-    --mdc-radio-selected-hover-icon-color: #cc7a00;
-    --mdc-radio-selected-icon-color: #cc7a00;
-    --mdc-radio-selected-pressed-icon-color: #cc7a00;
-    --mat-radio-checked-ripple-color: #cc7a00;
+    --mdc-radio-selected-focus-icon-color: var(--qx-orange-texte, #cc7a00);
+    --mdc-radio-selected-hover-icon-color: var(--qx-orange-texte, #cc7a00);
+    --mdc-radio-selected-icon-color: var(--qx-orange-texte, #cc7a00);
+    --mdc-radio-selected-pressed-icon-color: var(--qx-orange-texte, #cc7a00);
+    --mat-radio-checked-ripple-color: var(--qx-orange-texte, #cc7a00);
 }
 .cdk-overlay-container .center-snackbar {
   position: fixed !important;

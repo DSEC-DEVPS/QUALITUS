@@ -44,7 +44,8 @@ html {
 $dark-config: (
   color: (
     theme-type: 'dark',
-    primary: mat.$cyan-palette,
+    // Charte QUALITUS : l'orange reste la couleur d'accent en mode sombre.
+    primary: mat.$orange-palette,
     tertiary: mat.$orange-palette,
   ),
 );

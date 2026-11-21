@@ -11,9 +11,9 @@ table {
 
 /* Badges : panneau dépliable ; détail dans badges-quiz.component.ts */
 .panneau-badges mat-panel-title { font-size: 1.1rem; font-weight: 500; align-items: center; gap: 10px; }
-.resume-badges { font-size: 13px; font-weight: 400; color: #888; }
+.resume-badges { font-size: 13px; font-weight: 400; color: var(--qx-texte-3, #888); }
 .icones-badges { justify-content: flex-end; gap: 4px; flex-wrap: wrap; }
-.icones-badges mat-icon { font-size: 20px; width: 20px; height: 20px; color: #ff7900; }
+.icones-badges mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--qx-orange-texte, #ff7900); }
 
 mat-chip.ok {
   --mdc-chip-label-text-color: #fff;

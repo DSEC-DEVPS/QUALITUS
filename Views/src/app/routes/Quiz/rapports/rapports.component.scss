@@ -20,13 +20,13 @@
   white-space: nowrap;
 }
 .taux.rouge {
-  color: #c62828;
+  color: var(--qx-rouge, #c62828);
 }
 .taux.orange {
-  color: #e07800;
+  color: var(--qx-orange-texte, #e07800);
 }
 .taux.vert {
-  color: #1b8a3a;
+  color: var(--qx-vert, #1b8a3a);
 }
 
 .q-table {
@@ -36,7 +36,7 @@
   th,
   td {
     padding: 6px 8px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    border-bottom: 1px solid var(--qx-bordure, rgba(0, 0, 0, 0.08));
     text-align: left;
     vertical-align: top;
   }
@@ -51,8 +51,8 @@
   padding: 2px 8px;
   border-radius: 10px;
   font-size: 11px;
-  background: #e3f2fd;
-  color: #1565c0;
+  background: var(--qx-bleu-pale, #e3f2fd);
+  color: var(--qx-bleu, #1565c0);
 }
 .periode-info mat-icon { vertical-align: middle; }
 

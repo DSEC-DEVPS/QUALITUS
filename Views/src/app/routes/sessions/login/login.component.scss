@@ -52,7 +52,7 @@ mat-icon {
 }
 .profile {
   padding: 50px 5px;
-  background-color: #ffffff !important ;
+  background-color: var(--qx-surface, #ffffff) !important ;
   border-radius: 10px;
 }
 .title {
@@ -62,7 +62,7 @@ mat-icon {
 }
 .subtitle {
   font-size: small;
-  color: #000;
+  color: var(--qx-texte, #000);
 }
 
 .mdc-button {
@@ -73,6 +73,9 @@ mat-icon {
 .mat-mdc-button[disabled] {
   padding: 5px 20px;
   background-color: #ff8e36a5;
+}
+:host-context(.theme-dark) .mat-mdc-button[disabled] {
+  color: rgba(0, 0, 0, 0.6);
 }
 .mat-mdc-button:not(:disabled) {
   // color: var(--mdc-text-button-label-text-color, var(--mat-app-primary));

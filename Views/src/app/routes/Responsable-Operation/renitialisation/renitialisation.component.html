@@ -63,7 +63,7 @@
         <ng-container matColumnDef="fonction">
           <th mat-header-cell *matHeaderCellDef mat-sort-header>Fonction</th>
           <td mat-cell *matCellDef="let row">
-            <span style="color: green">{{ row.fonction }}</span>
+            <span style="color: var(--qx-vert, green)">{{ row.fonction }}</span>
           </td>
         </ng-container>
         <ng-container matColumnDef="programme">
@@ -126,7 +126,7 @@
           <th mat-header-cell *matHeaderCellDef>Mot de passe</th>
           <td mat-cell *matCellDef="let row" style="text-align: center">
             <mat-icon
-              style="color: green"
+              style="color: var(--qx-vert, green)"
               (click)="deleteSomething(row.id)"
               matTooltip="Réinitialiser le mot de passe"
               matTooltipPosition="above"

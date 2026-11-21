@@ -1,3 +1,4 @@
+import { ThemeToggleComponent } from '../widgets/theme-toggle.component';
 import { Component, EventEmitter, Input, Output, ViewEncapsulation } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -26,6 +27,7 @@ import { UserComponent } from '../widgets/user.component';
     BrandingComponent,
     GithubButtonComponent,
     NotificationComponent,
+    ThemeToggleComponent,
     TranslateComponent,
     UserComponent,
   ],

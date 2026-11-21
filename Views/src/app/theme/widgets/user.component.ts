@@ -55,13 +55,13 @@ import { AuthService, SettingsService, User } from '@core';
     ::ng-deep .menu-utilisateur { min-width: 260px !important; }
     ::ng-deep .menu-utilisateur .mu-entete { display: flex; align-items: center; gap: 12px; padding: 10px 16px 12px; cursor: default; }
     ::ng-deep .menu-utilisateur .mu-avatar { width: 44px; height: 44px; border-radius: 50%; border: 2px solid #ffd2a8; }
-    ::ng-deep .menu-utilisateur .mu-nom { font-weight: 600; color: #2b2b2b; line-height: 1.2; }
-    ::ng-deep .menu-utilisateur .mu-fonction { font-size: 12px; color: #e65100; margin-top: 2px; }
-    ::ng-deep .menu-utilisateur .mu-site { display: flex; align-items: center; gap: 2px; font-size: 12px; color: #888; margin-top: 2px; }
+    ::ng-deep .menu-utilisateur .mu-nom { font-weight: 600; color: var(--qx-texte, #2b2b2b); line-height: 1.2; }
+    ::ng-deep .menu-utilisateur .mu-fonction { font-size: 12px; color: var(--qx-orange-texte, #e65100); margin-top: 2px; }
+    ::ng-deep .menu-utilisateur .mu-site { display: flex; align-items: center; gap: 2px; font-size: 12px; color: var(--qx-texte-3, #888); margin-top: 2px; }
     ::ng-deep .menu-utilisateur .mu-site mat-icon { font-size: 14px; width: 14px; height: 14px; }
     ::ng-deep .menu-utilisateur .mu-sep { height: 1px; background: rgba(0, 0, 0, .08); margin: 4px 0; }
     ::ng-deep .menu-utilisateur .mu-ic { color: #ff8e36 !important; }
-    ::ng-deep .menu-utilisateur .mu-deconnexion, ::ng-deep .menu-utilisateur .mu-deconnexion mat-icon { color: #c62828 !important; }
+    ::ng-deep .menu-utilisateur .mu-deconnexion, ::ng-deep .menu-utilisateur .mu-deconnexion mat-icon { color: var(--qx-rouge, #c62828) !important; }
   `,
   standalone: true,
   imports: [RouterLink, MatButtonModule, MatIconModule, MatMenuModule, TranslateModule],

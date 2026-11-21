@@ -87,22 +87,22 @@ interface Modele { introduction: string; cloture: string; initial: string; }
     </mat-card>
   `,
   styles: [`
-    .aide { color: #666; font-size: 0.9rem; margin: 4px 0 14px; }
+    .aide { color: var(--qx-texte-2, #666); font-size: 0.9rem; margin: 4px 0 14px; }
     .choix-type { margin-bottom: 16px; }
     .choix-type mat-icon { margin-right: 4px; vertical-align: middle; font-size: 18px; width: 18px; height: 18px; }
     .grille { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
     @media (max-width: 1100px) { .grille { grid-template-columns: 1fr; } }
     .plein { width: 100%; }
-    .variables { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 12px; font-size: 0.85rem; color: #666; }
+    .variables { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 12px; font-size: 0.85rem; color: var(--qx-texte-2, #666); }
     .variable { font-family: monospace; font-size: 12px; line-height: 26px; min-height: 26px; padding: 0 8px; }
     .actions { display: flex; justify-content: flex-end; gap: 8px; }
-    .apercu-titre { font-size: 0.8rem; color: #888; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
-    .papier { background: #fff; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,.08); border-top: 5px solid #ff7900; padding: 16px 20px; line-height: 1.55; font-size: 0.92rem; }
+    .apercu-titre { font-size: 0.8rem; color: var(--qx-texte-3, #888); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
+    .papier { background: var(--qx-surface, #fff); border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,.08); border-top: 5px solid #ff7900; padding: 16px 20px; line-height: 1.55; font-size: 0.92rem; }
     .papier.felicitation { border-top-color: #2e7d32; }
-    .papier .entete { font-weight: 600; font-size: 1.05rem; color: #ff7900; margin-bottom: 10px; }
-    .papier.felicitation .entete { color: #2e7d32; }
+    .papier .entete { font-weight: 600; font-size: 1.05rem; color: var(--qx-orange-texte, #ff7900); margin-bottom: 10px; }
+    .papier.felicitation .entete { color: var(--qx-vert, #2e7d32); }
     .papier p { margin: 0 0 8px; }
-    .bloc-auto { display: flex; align-items: center; gap: 6px; margin: 12px 0; padding: 10px; border: 1px dashed #ccc; border-radius: 6px; color: #999; font-size: 0.85rem; }
+    .bloc-auto { display: flex; align-items: center; gap: 6px; margin: 12px 0; padding: 10px; border: 1px dashed var(--qx-bordure, #ccc); border-radius: 6px; color: var(--qx-texte-3, #999); font-size: 0.85rem; }
     .bloc-auto mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .signature { margin-top: 12px !important; }
   `],

@@ -128,12 +128,12 @@ type Utilisateur = { id: number; nom: string; prenom: string; login: string };
   styles: [
     `
       .ligne { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
-      .aide { font-size: 12px; color: #757575; margin: 0 0 12px; }
+      .aide { font-size: 12px; color: var(--qx-texte-2, #757575); margin: 0 0 12px; }
       .utilisateur { width: 320px; }
       .jours { width: 280px; }
       mat-radio-button { margin-right: 12px; }
       .apercu { max-width: 560px; margin-top: 8px; }
-      .vide { color: #757575; margin-top: 8px; }
+      .vide { color: var(--qx-texte-2, #757575); margin-top: 8px; }
     `,
   ],
 })

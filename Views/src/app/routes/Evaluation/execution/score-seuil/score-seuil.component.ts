@@ -32,12 +32,12 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     :host { display: block; }
     .score-seuil { min-width: 0; }
     .valeurs { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
-    .pct { color: #b45300; font-size: 0.9rem; }
-    .pct.ok { color: #2e7d32; }
-    .seuil { color: #888; font-size: 0.78rem; flex: 1; }
-    .pastille { font-size: 0.7rem; font-weight: 600; padding: 1px 8px; border-radius: 10px; background: rgba(255,121,0,.14); color: #b45300; white-space: nowrap; }
-    .pastille.ok { background: rgba(46,125,50,.12); color: #2e7d32; }
-    .barre { position: relative; height: 6px; border-radius: 3px; background: #eceff1; }
+    .pct { color: var(--qx-orange-texte, #b45300); font-size: 0.9rem; }
+    .pct.ok { color: var(--qx-vert, #2e7d32); }
+    .seuil { color: var(--qx-texte-3, #888); font-size: 0.78rem; flex: 1; }
+    .pastille { font-size: 0.7rem; font-weight: 600; padding: 1px 8px; border-radius: 10px; background: rgba(255,121,0,.14); color: var(--qx-orange-texte, #b45300); white-space: nowrap; }
+    .pastille.ok { background: rgba(46,125,50,.12); color: var(--qx-vert, #2e7d32); }
+    .barre { position: relative; height: 6px; border-radius: 3px; background: var(--qx-surface-2, #eceff1); }
     .remplissage { height: 100%; border-radius: 3px; background: #ff7900; }
     .remplissage.ok { background: #2e7d32; }
     .repere { position: absolute; top: -3px; width: 2px; height: 12px; background: #546e7a; border-radius: 1px; }

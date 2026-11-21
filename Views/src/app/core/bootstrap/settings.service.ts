@@ -73,12 +73,23 @@ export class SettingsService {
     if (theme) {
       this.setOptions({ theme });
     }
-    if (this.getThemeColor() === 'dark') {
+    const sombre = this.getThemeColor() === 'dark';
+    if (sombre) {
       this.htmlElement.classList.add('theme-dark');
     } else {
       this.htmlElement.classList.remove('theme-dark');
     }
+    // Bootstrap 5.3 (page d'accueil, tableaux Bootstrap) suit le même thème.
+    this.htmlElement.setAttribute('data-bs-theme', sombre ? 'dark' : 'light');
+    // Réglage « Auto » : suivre en direct un changement du thème du système.
+    if (!this.ecouteSysteme && typeof window !== 'undefined' && window.matchMedia) {
+      this.ecouteSysteme = true;
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => {
+        if (this.options.theme === 'auto') this.setTheme();
+      });
+    }
   }
+  private ecouteSysteme = false;
 
   getTranslateLang() {
     if (this.options.language === 'auto') {

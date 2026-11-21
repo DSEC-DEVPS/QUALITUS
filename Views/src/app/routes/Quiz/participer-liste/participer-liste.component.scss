@@ -10,14 +10,14 @@
   align-items: center;
   gap: 14px;
   padding: 14px 18px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--qx-bordure, rgba(0, 0, 0, 0.1));
   border-left: 4px solid #f57c00;
   border-radius: 10px;
-  background: #fff;
+  background: var(--qx-surface, #fff);
   margin-bottom: 16px;
 }
 .banner > mat-icon {
-  color: #f57c00;
+  color: var(--qx-orange-texte, #f57c00);
   font-size: 30px;
   width: 30px;
   height: 30px;
@@ -25,10 +25,10 @@
 .banner-titre {
   font-weight: 700;
   font-size: 1.15rem;
-  color: #2b2b2b;
+  color: var(--qx-texte, #2b2b2b);
 }
 .banner-sous {
-  color: #6b6b6b;
+  color: var(--qx-texte-2, #6b6b6b);
   font-size: 0.88rem;
 }
 
@@ -96,8 +96,8 @@
   flex-wrap: wrap;
   padding: 14px 16px;
   margin-bottom: 10px;
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: var(--qx-surface, #fff);
+  border: 1px solid var(--qx-bordure, rgba(0, 0, 0, 0.14));
   border-radius: 8px;
 }
 .quiz-row:hover {
@@ -115,14 +115,14 @@
 }
 
 .chrono-chip {
-  --mdc-chip-label-text-color: #1565c0;
+  --mdc-chip-label-text-color: var(--qx-bleu, #1565c0);
   font-weight: 600;
 }
 .chrono-chip.urgent {
-  --mdc-chip-label-text-color: #c62828;
+  --mdc-chip-label-text-color: var(--qx-rouge, #c62828);
 }
 mat-chip.deja {
-  --mdc-chip-label-text-color: #8a4b00;
+  --mdc-chip-label-text-color: var(--qx-orange-texte, #8a4b00);
 }
 
 .quiz-row.en-cours {

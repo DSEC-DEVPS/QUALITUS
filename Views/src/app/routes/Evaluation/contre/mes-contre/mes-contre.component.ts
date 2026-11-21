@@ -95,19 +95,19 @@ import { Pagination } from '@shared/utils/pagination';
   `,
   styles: `
     .contre-liste { padding: 16px; }
-    .vide { color: rgba(0, 0, 0, .6); padding: 8px 0; }
-    .table-cadre { border: 1px solid #ece7e1; border-radius: 8px; overflow: hidden; background: #fff; }
+    .vide { color: var(--qx-texte-2, rgba(0, 0, 0, .6)); padding: 8px 0; }
+    .table-cadre { border: 1px solid var(--qx-bordure, #ece7e1); border-radius: 8px; overflow: hidden; background: var(--qx-surface, #fff); }
     .table { width: 100%; }
     .ligne { cursor: pointer; transition: background .12s; }
-    .ligne:hover { background: #fff6ee; }
+    .ligne:hover { background: var(--qx-orange-pale, #fff6ee); }
     .ligne:hover .col-ouvrir mat-icon { color: var(--orange, #f57c00); transform: translateX(2px); }
-    .fort { font-weight: 600; color: #2b2b2b; }
-    .num { font-family: monospace; color: #666; }
-    .col-ouvrir { width: 40px; text-align: right; mat-icon { color: #bbb; transition: transform .12s; } }
+    .fort { font-weight: 600; color: var(--qx-texte, #2b2b2b); }
+    .num { font-family: monospace; color: var(--qx-texte-2, #666); }
+    .col-ouvrir { width: 40px; text-align: right; mat-icon { color: var(--qx-texte-3, #bbb); transition: transform .12s; } }
     .pastille { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px 2px 6px; border-radius: 12px; font-size: 12.5px; font-weight: 600;
       mat-icon { font-size: 16px; width: 16px; height: 16px; } }
-    .pastille.succes { background: #e8f5e9; color: #2e7d32; }
-    .pastille.echec { background: #fdecea; color: #c62828; }
+    .pastille.succes { background: var(--qx-vert-pale, #e8f5e9); color: var(--qx-vert, #2e7d32); }
+    .pastille.echec { background: var(--qx-rouge-pale, #fdecea); color: var(--qx-rouge, #c62828); }
   `,
 })
 export class MesContreComponent implements OnInit {

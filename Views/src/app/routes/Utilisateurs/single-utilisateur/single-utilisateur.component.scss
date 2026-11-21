@@ -1,5 +1,5 @@
 .container {
-  background-color: #f8f9fa;
+  background-color: var(--qx-surface-2, #f8f9fa);
 }
 .image_profile {
   display: block;
@@ -16,7 +16,7 @@ ul li {
   font-family: poppins, sans-serif;
   font-size: small;
   font-weight: bold;
-  color: rgba(35, 34, 34, 0.808);
+  color: var(--qx-texte, rgba(35, 34, 34, 0.808));
 }
 .sub_title {
   font-family: poppins, sans-serif;
@@ -75,15 +75,15 @@ mat-icon {
 }
 
 .mat-mdc-header-row {
-  background-color: #f0f0f0 !important;
+  background-color: var(--qx-surface-2, #f0f0f0) !important;
 }
 
 .mat-mdc-header-cell {
   font-weight: bold !important;
-  color: #333 !important;
+  color: var(--qx-texte, #333) !important;
   font-size: 12px !important;
 }
 
 .mat-mdc-row:hover {
-  background-color: #e8f0fe !important;
+  background-color: var(--qx-bleu-pale, #e8f0fe) !important;
 }

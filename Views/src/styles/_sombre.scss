@@ -1,0 +1,108 @@
+// =====================================================================
+// MODE SOMBRE QUALITUS
+// Les couleurs neutres et pâles des composants sont écrites
+// `var(--qx-…, <couleur claire>)` : la couleur claire sert tant que la variable
+// n'est pas définie. Les variables ne sont définies QUE sous `.theme-dark`, le
+// mode clair est donc inchangé.
+// =====================================================================
+.theme-dark {
+  // --- Textes
+  --qx-texte: rgba(255, 255, 255, 0.92);
+  --qx-texte-2: rgba(255, 255, 255, 0.72);
+  --qx-texte-3: rgba(255, 255, 255, 0.52);
+  // --- Surfaces
+  --qx-surface: #252a2f;
+  --qx-surface-verre: rgba(32, 36, 40, 0.9);
+  --qx-surface-2: #2c3238;
+  --qx-surface-3: #363d44;
+  --qx-survol: rgba(255, 255, 255, 0.05);
+  --qx-bordure: rgba(255, 255, 255, 0.12);
+  // --- Teintes pâles (pastilles, lignes colorées, encadrés)
+  --qx-orange-pale: rgba(255, 142, 54, 0.16);
+  --qx-vert-pale: rgba(102, 187, 106, 0.16);
+  --qx-rouge-pale: rgba(239, 83, 80, 0.16);
+  --qx-bleu-pale: rgba(66, 165, 245, 0.16);
+  // --- Textes colorés (éclaircis pour rester lisibles sur fond sombre)
+  --qx-vert: #81c784;
+  --qx-rouge: #ef9a9a;
+  --qx-orange-texte: #ffb74d;
+  --qx-bleu: #90caf9;
+
+  // Lignes alternées des listes de fiches / archives
+  --qx-ligne-impaire: rgba(255, 214, 170, 0.06);
+  --qx-ligne-paire: rgba(170, 230, 190, 0.05);
+
+  // --- Variables Material forcées en clair par certains écrans
+  --mat-tab-header-inactive-label-text-color: var(--qx-texte-2);
+  --mat-tab-header-inactive-hover-label-text-color: var(--qx-texte);
+  --mat-tab-header-inactive-focus-label-text-color: var(--qx-texte);
+  --mdc-form-field-label-text-color: var(--qx-texte);
+  --mat-checkbox-label-text-color: var(--qx-texte);
+  --mat-radio-label-text-color: var(--qx-texte);
+  --mat-slide-toggle-label-text-color: var(--qx-texte);
+  --mdc-chip-label-text-color: var(--qx-texte);
+
+  // Ancien raccourci utilisé par quelques écrans
+  --orange-fonce: #ffb74d;
+
+  // --- Fond : la photo du bureau est atténuée pour ne pas éblouir
+  .matero-container-wrap::before {
+    opacity: 0.06 !important;
+    filter: grayscale(0.4) brightness(0.7);
+  }
+
+  // --- Cartes « verre » (fond visible au travers)
+  .mat-mdc-card:not([class*='bg-']) {
+    --mdc-elevated-card-container-color: var(--qx-surface-verre);
+    --mdc-outlined-card-container-color: var(--qx-surface-verre);
+    background-color: var(--qx-surface-verre) !important;
+  }
+  .mat-mdc-dialog-container .mat-mdc-card,
+  .mat-mdc-dialog-container mat-card { background-color: transparent !important; }
+
+  // --- Boutons désactivés
+  button.mat-mdc-raised-button.mat-mdc-button-disabled,
+  button.mat-mdc-unelevated-button.mat-mdc-button-disabled,
+  button.mat-mdc-raised-button:disabled,
+  button.mat-mdc-unelevated-button:disabled {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    color: rgba(255, 255, 255, 0.38) !important;
+  }
+
+  // --- Tableaux Material : en-têtes et survol
+  .mat-mdc-table { background: transparent; }
+  .mat-mdc-header-row { background: var(--qx-surface-2); }
+  .mat-mdc-row:hover { background: var(--qx-survol); }
+
+  // --- Champs « fill » : fond légèrement relevé
+  .mdc-text-field--filled:not(.mdc-text-field--disabled) { background-color: rgba(255, 255, 255, 0.06); }
+
+  // --- Boîtes de confirmation (ngx-awesome-popup)
+  .ngx-awesome-popup-overlay .evo-dialog-box, .ngx-awesome-popup-overlay .ed-container,
+  .ngx-awesome-popup-overlay .confirm-box-container, .ngx-awesome-popup-overlay [class*='ed-'] {
+    background-color: var(--qx-surface) !important;
+    color: var(--qx-texte) !important;
+  }
+  .ngx-awesome-popup-overlay .ed-title, .ngx-awesome-popup-overlay .ed-message,
+  .ngx-awesome-popup-overlay .ed-content, .ngx-awesome-popup-overlay h1, .ngx-awesome-popup-overlay p {
+    color: var(--qx-texte) !important;
+  }
+
+  // --- Liens hors Material
+  a:not(.mat-mdc-button-base):not(.menu-heading):not([mat-list-item]) { color: var(--qx-orange-texte); }
+
+  // --- Libellés Material restés noirs (onglets inactifs, cases, radios, puces)
+  .mat-mdc-tab:not(.mdc-tab--active) .mdc-tab__text-label { color: var(--qx-texte-2) !important; }
+  .mat-mdc-tab.mdc-tab--active .mdc-tab__text-label { color: var(--qx-texte) !important; }
+  .mat-mdc-tab .mdc-tab-indicator__content--underline { border-color: #ff8e36 !important; }
+  .mdc-form-field > label, .mdc-label { color: var(--qx-texte); }
+  .mat-mdc-standard-chip .mdc-evolution-chip__text-label { color: var(--qx-texte) !important; }
+  .mat-mdc-standard-chip:not(.mdc-evolution-chip--disabled) { --mdc-chip-elevated-container-color: var(--qx-surface-3); }
+
+  // --- Barres de défilement discrètes
+  ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.18); border-radius: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  // --- Contenu des fiches (texte saisi dans l'éditeur) : couleurs forcées neutralisées
+  .contenu-fiche, .fiche-contenu, .ql-editor { color: var(--qx-texte); }
+}

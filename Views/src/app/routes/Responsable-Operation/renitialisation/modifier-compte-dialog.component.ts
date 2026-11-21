@@ -113,11 +113,11 @@ export interface ModifierCompteData {
     `
       .grille { display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; }
       .grille h3 { grid-column: 1 / -1; margin: 8px 0 6px; font-size: 14px; color: #ff8e36; font-weight: 600; }
-      .info { display: flex; align-items: center; gap: 6px; background: #fff3e0; color: #8a4b00;
+      .info { display: flex; align-items: center; gap: 6px; background: var(--qx-orange-pale, #fff3e0); color: var(--qx-orange-texte, #8a4b00);
               padding: 8px 10px; border-radius: 6px; font-size: 13px; }
       .info mat-icon { font-size: 18px; width: 18px; height: 18px; }
-      .rech-select { padding: 6px 12px; position: sticky; top: 0; background: #fff; z-index: 1; }
-      .rech-select input { width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 6px 8px; }
+      .rech-select { padding: 6px 12px; position: sticky; top: 0; background: var(--qx-surface, #fff); z-index: 1; }
+      .rech-select input { width: 100%; border: 1px solid var(--qx-bordure, #ddd); border-radius: 4px; padding: 6px 8px; }
     `,
   ],
 })

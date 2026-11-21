@@ -11,8 +11,8 @@
 .preview-card {
   padding: 20px;
   border-radius: 10px;
-  border: 1px solid #e0e0e0;
-  background-color: #fff;
+  border: 1px solid var(--qx-bordure, #e0e0e0);
+  background-color: var(--qx-surface, #fff);
 }
 
 /* Champs de formulaire */
@@ -103,7 +103,7 @@ table {
   //--mdc-outlined-text-field-container-shape: 15px !important;
 }
 mat-card {
-  background: #ffffff9a;
+  background: var(--qx-surface-verre, #ffffff9a);
 }
 mat-card-header {
   display: flex;
@@ -117,5 +117,5 @@ mat-card-header {
   align-items: center;
   gap: 6px;
   margin: 0;
-  color: #555;
+  color: var(--qx-texte-2, #555);
 }

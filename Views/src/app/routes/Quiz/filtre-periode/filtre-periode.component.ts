@@ -57,7 +57,7 @@ import { Periode } from '@shared/periode';
     `
       .filtre-periode { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
       .champ-date { width: 160px; }
-      .erreur-periode { color: #c62828; font-size: 12px; }
+      .erreur-periode { color: var(--qx-rouge, #c62828); font-size: 12px; }
     `,
   ],
 })

@@ -30,19 +30,19 @@ import { MatIconModule } from '@angular/material/icon';
   `,
   styles: [`
     .erreur-page { display: flex; justify-content: center; padding: 48px 16px; }
-    .carte { max-width: 520px; text-align: center; background: #fff; border-radius: 12px; padding: 32px 28px;
+    .carte { max-width: 520px; text-align: center; background: var(--qx-surface, #fff); border-radius: 12px; padding: 32px 28px;
              box-shadow: 0 4px 18px rgba(0,0,0,.08); }
     .icone { display: inline-flex; align-items: center; justify-content: center; width: 72px; height: 72px; border-radius: 50%;
              background: rgba(255,121,0,.12); }
-    .icone mat-icon { font-size: 38px; width: 38px; height: 38px; color: #ff7900; }
+    .icone mat-icon { font-size: 38px; width: 38px; height: 38px; color: var(--qx-orange-texte, #ff7900); }
     .icone.alerte { background: rgba(198,40,40,.1); }
-    .icone.alerte mat-icon { color: #c62828; }
-    .code { margin-top: 10px; font-size: 0.85rem; font-weight: 600; color: #999; letter-spacing: .08em; }
-    h2 { margin: 4px 0 8px; font-size: 1.35rem; font-weight: 600; color: #333; }
-    p { color: #666; margin: 0 0 20px; line-height: 1.5; }
+    .icone.alerte mat-icon { color: var(--qx-rouge, #c62828); }
+    .code { margin-top: 10px; font-size: 0.85rem; font-weight: 600; color: var(--qx-texte-3, #999); letter-spacing: .08em; }
+    h2 { margin: 4px 0 8px; font-size: 1.35rem; font-weight: 600; color: var(--qx-texte, #333); }
+    p { color: var(--qx-texte-2, #666); margin: 0 0 20px; line-height: 1.5; }
     .motif { display: flex; align-items: flex-start; gap: 8px; text-align: left; margin: 4px 0 14px; padding: 10px 12px;
-             border-radius: 8px; background: #fff4ea; border: 1px solid #f6d2b0; color: #5a3a1a; font-weight: 500; }
-    .motif mat-icon { color: #ff7900; flex: none; font-size: 20px; width: 20px; height: 20px; }
+             border-radius: 8px; background: var(--qx-orange-pale, #fff4ea); border: 1px solid #f6d2b0; color: var(--qx-orange-texte, #5a3a1a); font-weight: 500; }
+    .motif mat-icon { color: var(--qx-orange-texte, #ff7900); flex: none; font-size: 20px; width: 20px; height: 20px; }
     .actions { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
   `],
 })

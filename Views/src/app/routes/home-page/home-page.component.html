@@ -19,6 +19,7 @@
       <button mat-icon-button class="hide-small" (click)="toggleFullscreen()">
         <mat-icon>fullscreen</mat-icon>
       </button>
+      <app-theme-toggle />
       <app-notification class="hide-small" />
       <app-user />
       <button mat-raised-button (click)="RouterOnWorkSpace()">Mon espace</button>
@@ -350,7 +351,7 @@
         </ng-container>
         <ng-container matColumnDef="ETAT">
           <mat-header-cell *matHeaderCellDef class="colTitle"> ETAT </mat-header-cell>
-          <mat-cell *matCellDef="let element" style="font-size: 13px; color: red">
+          <mat-cell *matCellDef="let element" style="font-size: 13px; color: var(--qx-rouge, red)">
             {{ element.ETAT }}
           </mat-cell>
         </ng-container>

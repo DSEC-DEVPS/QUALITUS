@@ -18,10 +18,10 @@
   .table-grilles { width: 100%; }
 
   .ligne { cursor: pointer; }
-  .ligne:hover { background: rgba(0, 0, 0, 0.03); }
+  .ligne:hover { background: var(--qx-survol, rgba(0, 0, 0, 0.03)); }
 
-  .vide { color: rgba(0, 0, 0, 0.6); }
+  .vide { color: var(--qx-texte-2, rgba(0, 0, 0, 0.6)); }
 
-  mat-chip.chip-active { background: #c8e6c9; }
-  mat-chip.chip-brouillon { background: #ffe0b2; }
+  mat-chip.chip-active { background: var(--qx-vert-pale, #c8e6c9); }
+  mat-chip.chip-brouillon { background: var(--qx-orange-pale, #ffe0b2); }
 }

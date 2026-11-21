@@ -2,7 +2,7 @@
   font-family: Arial, Helvetica, sans-serif;
 }
 .home_button {
-  color: #000;
+  color: var(--qx-texte, #000);
   background: transparent;
   padding: 5px 5px;
   border: 2px solid #603514;
@@ -190,7 +190,7 @@
 }
 
 .stat {
-  background-color: #fff;
+  background-color: var(--qx-surface, #fff);
 }
 .example-section {
   display: flex;
@@ -221,7 +221,7 @@
 }
 
 #contenu {
-  background-color: white;
+  background-color: var(--qx-surface, white);
   box-shadow:
     3px 3px rgb(207, 203, 203),
     -0.6em 0 0.6em rgb(190, 189, 189);
@@ -392,7 +392,7 @@ td {
   --mdc-filled-text-field-container-shape: 15px !important;
 }
 .title {
-  color: #ff0000;
+  color: var(--qx-rouge, #ff0000);
 }
 .wrapper {
   background: transparent;
@@ -446,25 +446,25 @@ td {
 }
 
 .mat-mdc-row:nth-child(odd) {
-  background-color: #ddd3c89a;
+  background-color: var(--qx-ligne-impaire, #ddd3c89a);
 }
 
 .mat-mdc-row:nth-child(even) {
-  background-color: #c7dccc4e;
+  background-color: var(--qx-ligne-paire, #c7dccc4e);
 }
 
 .mat-mdc-header-row {
-  background-color: #f0f0f0 !important;
+  background-color: var(--qx-surface-2, #f0f0f0) !important;
 }
 
 .mat-mdc-header-cell {
   font-weight: bold !important;
-  color: #333 !important;
+  color: var(--qx-texte, #333) !important;
   font-size: 12px !important;
 }
 
 .mat-mdc-row:hover {
-  background-color: #e8f0fe !important;
+  background-color: var(--qx-bleu-pale, #e8f0fe) !important;
 }
 .my-excel-table {
   /* Tous les styles mentionnés ci-dessus, sans ::ng-deep */
@@ -593,7 +593,7 @@ td {
 
   .mat-calendar-table-header,
   .mat-calendar-body-label {
-    color: rgba(255, 165, 0, 0.8) !important; // En-têtes en orange
+    color: var(--qx-orange-texte, rgba(255, 165, 0, 0.8)) !important; // En-têtes en orange
   }
 
   .mat-calendar-body-cell-content {

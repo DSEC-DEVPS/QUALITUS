@@ -42,7 +42,7 @@
         <ng-container matColumnDef="ETAT">
           <th mat-header-cell *matHeaderCellDef mat-sort-header>ETAT</th>
           <td mat-cell *matCellDef="let row">
-            <span style="color: rgb(217, 11, 11); font-style: italic">{{ row.ETAT }}</span>
+            <span style="color: var(--qx-rouge, rgb(217, 11, 11)); font-style: italic">{{ row.ETAT }}</span>
           </td>
         </ng-container>
 
@@ -50,7 +50,7 @@
         <ng-container matColumnDef="nom_utilisateur">
           <th mat-header-cell *matHeaderCellDef mat-sort-header>Login</th>
           <td mat-cell *matCellDef="let row" (click)="display_details_agents(row.id_UTILISATEUR)">
-            <span style="color: green">{{ row.nom_utilisateur }}</span>
+            <span style="color: var(--qx-vert, green)">{{ row.nom_utilisateur }}</span>
           </td>
         </ng-container>
 
@@ -59,7 +59,7 @@
           <th mat-header-cell *matHeaderCellDef mat-sort-header>Retest</th>
           <td mat-cell *matCellDef="let row">
             <mat-icon
-              style="color: green"
+              style="color: var(--qx-vert, green)"
               (click)="deleteSomething(row.id_UTILISATEUR, row.id_FICHE)"
               matTooltip="Lancer le retest"
               matTooltipPosition="above"

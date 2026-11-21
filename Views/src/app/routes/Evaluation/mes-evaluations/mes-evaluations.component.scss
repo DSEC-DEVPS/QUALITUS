@@ -4,8 +4,8 @@
 .filtres mat-form-field { width: 180px; }
 .tab { width: 100%; }
 .ligne { cursor: pointer; }
-.ligne:hover { background: #f5f7fa; }
-.vide { padding: 24px; text-align: center; color: rgba(0,0,0,.5); }
+.ligne:hover { background: var(--qx-surface-2, #f5f7fa); }
+.vide { padding: 24px; text-align: center; color: var(--qx-texte-3, rgba(0,0,0,.5)); }
 .badge { padding: 2px 8px; border-radius: 10px; font-size: 12px; }
-.badge[data-c="SUCCES"] { background: #e8f5e9; color: #2e7d32; }
-.badge[data-c="ECHEC"] { background: #ffebee; color: #c62828; }
+.badge[data-c="SUCCES"] { background: var(--qx-vert-pale, #e8f5e9); color: var(--qx-vert, #2e7d32); }
+.badge[data-c="ECHEC"] { background: var(--qx-rouge-pale, #ffebee); color: var(--qx-rouge, #c62828); }

@@ -60,17 +60,17 @@ import { TentativeDetail } from '../interfaces';
     `
       .entete { margin-bottom: 12px; }
       .nom { font-weight: 600; font-size: 1.1rem; }
-      .sous { color: #6b6b6b; margin-bottom: 8px; }
-      .dates { color: #8a8a8a; font-size: 0.85rem; margin-top: 6px; }
-      .pts { margin-left: auto; color: #6b6b6b; font-size: 0.85rem; white-space: nowrap; }
-      mat-chip.ok { --mdc-chip-label-text-color: #1b5e20; }
-      mat-chip.ko { --mdc-chip-label-text-color: #b71c1c; }
+      .sous { color: var(--qx-texte-2, #6b6b6b); margin-bottom: 8px; }
+      .dates { color: var(--qx-texte-3, #8a8a8a); font-size: 0.85rem; margin-top: 6px; }
+      .pts { margin-left: auto; color: var(--qx-texte-2, #6b6b6b); font-size: 0.85rem; white-space: nowrap; }
+      mat-chip.ok { --mdc-chip-label-text-color: var(--qx-vert, #1b5e20); }
+      mat-chip.ko { --mdc-chip-label-text-color: var(--qx-rouge, #b71c1c); }
       h4 { margin: 14px 0 6px; }
       .questions { list-style: none; padding: 0; margin: 0; }
-      .questions li { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.06); }
-      .questions mat-icon.ok { color: #2e7d32; }
-      .questions mat-icon.ko { color: #c62828; }
-      .muted { color: #8a8a8a; }
+      .questions li { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--qx-bordure, rgba(0,0,0,0.06)); }
+      .questions mat-icon.ok { color: var(--qx-vert, #2e7d32); }
+      .questions mat-icon.ko { color: var(--qx-rouge, #c62828); }
+      .muted { color: var(--qx-texte-3, #8a8a8a); }
     `,
   ],
 })

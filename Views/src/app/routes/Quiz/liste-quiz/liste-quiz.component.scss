@@ -14,7 +14,7 @@ table {
 
 .pin {
   letter-spacing: 1px;
-  color: #b26a00;
+  color: var(--qx-orange-texte, #b26a00);
 }
 
 /* État (Ouvert / Clôturé) et statut (Actif / Inactif) */
@@ -24,13 +24,13 @@ table {
   border-radius: 12px;
   font-size: 12px;
   font-weight: 500;
-  background: #e8f5e9;
-  color: #2e7d32;
+  background: var(--qx-vert-pale, #e8f5e9);
+  color: var(--qx-vert, #2e7d32);
 }
 .badge-etat.cloture, .badge-statut.inactif {
-  background: #eceff1;
-  color: #607d8b;
+  background: var(--qx-surface-2, #eceff1);
+  color: var(--qx-texte-2, #607d8b);
 }
 
 .badge-bareme { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
-  color: #b71c1c; background: #fdecea; border: 1px solid #f5c6c3; white-space: nowrap; }
+  color: var(--qx-rouge, #b71c1c); background: var(--qx-rouge-pale, #fdecea); border: 1px solid #f5c6c3; white-space: nowrap; }

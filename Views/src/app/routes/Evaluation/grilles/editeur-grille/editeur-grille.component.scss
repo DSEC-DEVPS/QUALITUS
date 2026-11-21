@@ -7,20 +7,20 @@
   .champ-nom { min-width: 260px; }
   .bloc-mode { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
 
-  mat-chip.chip-active { background: #c8e6c9; }
-  mat-chip.chip-brouillon { background: #ffe0b2; }
+  mat-chip.chip-active { background: var(--qx-vert-pale, #c8e6c9); }
+  mat-chip.chip-brouillon { background: var(--qx-orange-pale, #ffe0b2); }
 
   .controles {
     border-left: 4px solid #e53935;
     &.ok { border-left-color: #43a047; }
     .cumul-grille { margin-bottom: 8px; }
-    .ecart { color: #e53935; }
+    .ecart { color: var(--qx-rouge, #e53935); }
     .alerte {
       display: flex; gap: 8px; padding: 8px; margin-top: 8px;
-      color: #b71c1c; background: #ffebee; border-radius: 4px;
+      color: var(--qx-rouge, #b71c1c); background: var(--qx-rouge-pale, #ffebee); border-radius: 4px;
       ul { margin: 4px 0 0; padding-left: 18px; }
     }
-    .succes { display: flex; align-items: center; gap: 8px; color: #2e7d32; }
+    .succes { display: flex; align-items: center; gap: 8px; color: var(--qx-vert, #2e7d32); }
   }
 
   .titre-form { display: block; margin-bottom: 8px; font-weight: 600; }
@@ -30,20 +30,20 @@
   .petit { width: 110px; }
   .spacer { flex: 1 1 auto; }
 
-  .edition-cat { padding: 8px; margin-bottom: 12px; background: rgba(0, 0, 0, 0.02); border-radius: 4px; }
+  .edition-cat { padding: 8px; margin-bottom: 12px; background: var(--qx-survol, rgba(0, 0, 0, 0.02)); border-radius: 4px; }
 
   .sous-cat {
     padding: 12px; margin: 8px 0 8px 16px; border-left: 3px solid #90caf9; border-radius: 4px;
-    .poids-calc { font-size: 0.85rem; color: rgba(0, 0, 0, 0.6); }
+    .poids-calc { font-size: 0.85rem; color: var(--qx-texte-2, rgba(0, 0, 0, 0.6)); }
     .cumul { font-size: 0.85rem; }
   }
 
   .erreurs { margin-left: 16px; }
   .ligne-erreur { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 4px 0; }
-  .ligne-erreur .score { font-size: 0.85rem; color: #1976d2; }
+  .ligne-erreur .score { font-size: 0.85rem; color: var(--qx-bleu, #1976d2); }
 
-  .ico-critique { color: #e53935; font-size: 18px; width: 18px; height: 18px; vertical-align: middle; }
-  .badge-archive { margin-left: 8px; padding: 1px 6px; font-size: 0.7rem; color: #616161; background: #eeeeee; border-radius: 8px; }
+  .ico-critique { color: var(--qx-rouge, #e53935); font-size: 18px; width: 18px; height: 18px; vertical-align: middle; }
+  .badge-archive { margin-left: 8px; padding: 1px 6px; font-size: 0.7rem; color: var(--qx-texte-2, #616161); background: var(--qx-surface-3, #eeeeee); border-radius: 8px; }
   .archive { opacity: 0.6; }
   .ajout-sc { margin: 8px 0 0 16px; }
 }

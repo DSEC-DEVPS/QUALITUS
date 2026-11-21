@@ -7,10 +7,10 @@
   .assistant .grand { flex: 1 1 320px; min-width: 260px; }
   .table { width: 100%; }
   .ligne { cursor: pointer; }
-  .ligne:hover { background: rgba(0, 0, 0, 0.03); }
-  .vide { color: rgba(0, 0, 0, 0.6); }
-  mat-chip.chip-succes { background: #c8e6c9; }
-  mat-chip.chip-echec { background: #ffcdd2; }
+  .ligne:hover { background: var(--qx-survol, rgba(0, 0, 0, 0.03)); }
+  .vide { color: var(--qx-texte-2, rgba(0, 0, 0, 0.6)); }
+  mat-chip.chip-succes { background: var(--qx-vert-pale, #c8e6c9); }
+  mat-chip.chip-echec { background: var(--qx-rouge-pale, #ffcdd2); }
 }
 
 // Champ de recherche en tête des listes déroulantes (rendu dans le panneau)
@@ -18,8 +18,8 @@
   position: sticky; top: 0; z-index: 1;
   display: flex; align-items: center; gap: 8px;
   padding: 8px 16px; background: var(--mat-select-panel-background-color, #fff);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-  mat-icon { color: rgba(0, 0, 0, 0.54); }
+  border-bottom: 1px solid var(--qx-bordure, rgba(0, 0, 0, 0.12));
+  mat-icon { color: var(--qx-texte-2, rgba(0, 0, 0, 0.54)); }
   input { flex: 1; border: none; outline: none; font: inherit; background: transparent; padding: 6px 0; }
 }
-.aucun-select { padding: 12px 16px; color: rgba(0, 0, 0, 0.6); }
+.aucun-select { padding: 12px 16px; color: var(--qx-texte-2, rgba(0, 0, 0, 0.6)); }

@@ -127,7 +127,7 @@ $shadow-primary: 0 4px 16px rgba(255, 142, 54, 0.25);
 // ============================================
 
 .card {
-  background-color: rgb(238, 233, 233);
+  background-color: var(--qx-surface-2, rgb(238, 233, 233));
   padding-top: 5px;
   padding-bottom: 5px;
 }
@@ -153,14 +153,14 @@ $shadow-primary: 0 4px 16px rgba(255, 142, 54, 0.25);
 
   .mat-mdc-text-field-wrapper {
     height: 42px !important;
-    background-color: $bg-white !important;
+    background-color: var(--qx-surface, #{$bg-white}) !important;
 
     border-radius: 8px !important;
 
     transition: all 0.3s ease;
 
     &:hover {
-      background-color: lighten($primary-color, 45%) !important;
+      background-color: var(--qx-orange-pale, #{lighten($primary-color, 45%)}) !important;
     }
   }
 
@@ -192,7 +192,7 @@ $shadow-primary: 0 4px 16px rgba(255, 142, 54, 0.25);
   // ------------------------------------------
 
   .mat-mdc-floating-label {
-    color: #333 !important;
+    color: var(--qx-texte, #333) !important;
 
     font-size: 11px !important;
     font-weight: 600 !important;
@@ -216,7 +216,7 @@ $shadow-primary: 0 4px 16px rgba(255, 142, 54, 0.25);
 
   .mat-mdc-input-element {
     font-size: 11px !important;
-    color: $text-dark !important;
+    color: var(--qx-texte, #{$text-dark}) !important;
     font-weight: 500 !important;
 
     height: auto !important;
@@ -227,7 +227,7 @@ $shadow-primary: 0 4px 16px rgba(255, 142, 54, 0.25);
   // ------------------------------------------
 
   input::placeholder {
-    color: #999 !important;
+    color: var(--qx-texte-3, #999) !important;
     font-size: 10px !important;
     opacity: 1 !important;
   }
@@ -319,7 +319,7 @@ $shadow-primary: 0 4px 16px rgba(255, 142, 54, 0.25);
 
   .mat-calendar-table-header,
   .mat-calendar-body-label {
-    color: rgba(255, 165, 0, 0.8) !important;
+    color: var(--qx-orange-texte, rgba(255, 165, 0, 0.8)) !important;
   }
 
   .mat-calendar-body-cell-content {
@@ -337,7 +337,7 @@ $shadow-primary: 0 4px 16px rgba(255, 142, 54, 0.25);
 // ============================================
 
 .container {
-  background-color: rgba(253, 237, 237, 0.9);
+  background-color: var(--qx-rouge-pale, rgba(253, 237, 237, 0.9));
 }
 
 
@@ -392,7 +392,7 @@ ul li {
   font-size: small;
   font-weight: bold;
 
-  color: rgba(35, 34, 34, 0.808);
+  color: var(--qx-texte, rgba(35, 34, 34, 0.808));
 }
 
 .sub_title {
@@ -493,20 +493,20 @@ tr > th {
 }
 
 .mat-mdc-row:nth-child(odd) {
-  background-color: #ddd3c89a;
+  background-color: var(--qx-ligne-impaire, #ddd3c89a);
 }
 
 .mat-mdc-row:nth-child(even) {
-  background-color: #c7dccc4e;
+  background-color: var(--qx-ligne-paire, #c7dccc4e);
 }
 
 .mat-mdc-header-row {
-  background-color: #f0f0f0 !important;
+  background-color: var(--qx-surface-2, #f0f0f0) !important;
 }
 
 .mat-mdc-header-cell {
   font-weight: bold !important;
-  color: #333 !important;
+  color: var(--qx-texte, #333) !important;
   font-size: 10px !important;
 }
 
@@ -515,7 +515,7 @@ tr > th {
 }
 
 .mat-mdc-row:hover {
-  background-color: #e8f0fe !important;
+  background-color: var(--qx-bleu-pale, #e8f0fe) !important;
 }
 
 
@@ -536,8 +536,8 @@ tr > th {
 .card {
   background: linear-gradient(
     135deg,
-    $bg-white 0%,
-    lighten($bg-light, 2%) 100%
+    var(--qx-surface, #{$bg-white}) 0%,
+    var(--qx-surface-2, #{lighten($bg-light, 2%)}) 100%
   );
 
   border-radius: 12px;
@@ -548,7 +548,7 @@ tr > th {
 
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 
-  border: 1px solid $border-color;
+  border: 1px solid var(--qx-bordure, #{$border-color});
 
   position: relative;
 
@@ -621,7 +621,7 @@ tr > th {
 
     font-weight: 600;
 
-    color: $text-light;
+    color: var(--qx-texte-2, #{$text-light});
 
     text-transform: capitalize;
 
@@ -711,8 +711,8 @@ tr > th {
 .left {
   background: linear-gradient(
     135deg,
-    $bg-white 0%,
-    lighten($bg-light, 1%) 100%
+    var(--qx-surface, #{$bg-white}) 0%,
+    var(--qx-surface-2, #{lighten($bg-light, 1%)}) 100%
   );
 
   border-radius: 16px;
@@ -721,7 +721,7 @@ tr > th {
 
   animation: fadeInLeft 0.8s ease-out 0.4s both;
 
-  border: 1px solid $border-color;
+  border: 1px solid var(--qx-bordure, #{$border-color});
 
   transition: all 0.3s ease;
 
@@ -782,7 +782,7 @@ tr > th {
 // ============================================
 
 .details_profile {
-  background: $bg-white;
+  background: var(--qx-surface, #{$bg-white});
 
   border-radius: 12px;
 
@@ -792,7 +792,7 @@ tr > th {
 
   animation: fadeInUp 0.6s ease-out 0.6s both;
 
-  border: 1px solid $border-color;
+  border: 1px solid var(--qx-bordure, #{$border-color});
 
 
   ul {
@@ -805,7 +805,7 @@ tr > th {
       padding: 8px 0;
 
       border-bottom: 1px solid
-        lighten($border-color, 5%);
+        var(--qx-bordure, #{lighten($border-color, 5%)});
 
       transition: all 0.3s ease;
 
@@ -828,7 +828,7 @@ tr > th {
 
       &:hover {
         background:
-          lighten($primary-color, 45%);
+          var(--qx-orange-pale, #{lighten($primary-color, 45%)});
 
         padding-left: 8px;
 
@@ -844,7 +844,7 @@ tr > th {
       .title {
         font-weight: 600;
 
-        color: $text-dark;
+        color: var(--qx-texte, #{$text-dark});
 
         margin-right: 8px;
 
@@ -854,7 +854,7 @@ tr > th {
 
 
       .sub_title {
-        color: $text-light;
+        color: var(--qx-texte-2, #{$text-light});
 
         font-weight: 400;
       }
@@ -922,8 +922,8 @@ tr > th {
       background:
         linear-gradient(
           135deg,
-          $bg-white 0%,
-          lighten($bg-light, 2%) 100%
+          var(--qx-surface, #{$bg-white}) 0%,
+          var(--qx-surface-2, #{lighten($bg-light, 2%)}) 100%
         );
 
       border-radius:
@@ -941,7 +941,7 @@ tr > th {
 
       &:hover {
         background:
-          lighten($primary-color, 45%);
+          var(--qx-orange-pale, #{lighten($primary-color, 45%)});
 
         border-radius: 8px;
       }
@@ -999,13 +999,13 @@ tr > th {
   animation:
     fadeInUp 0.6s ease-out;
 
-  border: 1px solid $border-color;
+  border: 1px solid var(--qx-bordure, #{$border-color});
 
 
   table {
     width: 100%;
 
-    background: $bg-white;
+    background: var(--qx-surface, #{$bg-white});
 
 
     th {
@@ -1057,13 +1057,13 @@ tr > th {
     td {
       padding: 14px 12px;
 
-      color: $text-dark;
+      color: var(--qx-texte, #{$text-dark});
 
       font-size: 14px;
 
       border-bottom:
         1px solid
-        lighten($border-color, 5%);
+        var(--qx-bordure, #{lighten($border-color, 5%)});
 
       transition: all 0.3s ease;
 
@@ -1078,7 +1078,7 @@ tr > th {
 
         &:hover {
           background:
-            lighten($primary-color, 45%);
+            var(--qx-orange-pale, #{lighten($primary-color, 45%)});
 
           color: $secondary-color;
 
@@ -1106,7 +1106,7 @@ tr > th {
 
       &:hover {
         background:
-          lighten($primary-color, 47%);
+          var(--qx-orange-pale, #{lighten($primary-color, 47%)});
 
         box-shadow:
           0 2px 8px
@@ -1129,8 +1129,8 @@ tr > th {
     background:
       linear-gradient(
         135deg,
-        $bg-white 0%,
-        lighten($bg-light, 2%) 100%
+        var(--qx-surface, #{$bg-white}) 0%,
+        var(--qx-surface-2, #{lighten($bg-light, 2%)}) 100%
       );
 
     border-radius:
@@ -1144,7 +1144,7 @@ tr > th {
 
     .mat-mdc-paginator-page-size-label,
     .mat-mdc-paginator-range-label {
-      color: $text-light;
+      color: var(--qx-texte-2, #{$text-light});
 
       font-weight: 500;
     }
@@ -1160,7 +1160,7 @@ tr > th {
 
       &:hover:not([disabled]) {
         background:
-          lighten($primary-color, 40%);
+          var(--qx-orange-pale, #{lighten($primary-color, 40%)});
 
         transform: scale(1.1);
 
@@ -1185,7 +1185,7 @@ tr > th {
 
         &:hover {
           background:
-            lighten($primary-color, 45%);
+            var(--qx-orange-pale, #{lighten($primary-color, 45%)});
 
           border-radius: 6px;
         }
@@ -1428,9 +1428,9 @@ tr > th {
   background:
     linear-gradient(
       90deg,
-      lighten($border-color, 10%) 25%,
-      lighten($border-color, 5%) 50%,
-      lighten($border-color, 10%) 75%
+      var(--qx-bordure, #{lighten($border-color, 10%)}) 25%,
+      var(--qx-bordure, #{lighten($border-color, 5%)}) 50%,
+      var(--qx-bordure, #{lighten($border-color, 10%)}) 75%
     );
 
   background-size: 200% 100%;
@@ -1476,14 +1476,14 @@ html {
   background:
     rgba($primary-color, 0.3);
 
-  color: $text-dark;
+  color: var(--qx-texte, #{$text-dark});
 }
 
 ::-moz-selection {
   background:
     rgba($primary-color, 0.3);
 
-  color: $text-dark;
+  color: var(--qx-texte, #{$text-dark});
 }
 
 .barre-retour {
@@ -1494,4 +1494,4 @@ html {
 .spinner-carte { display: inline-block; vertical-align: middle; margin: 2px auto; }
 /* Badges quiz de l'agent */
 .badges-agent { padding: 8px 12px 12px; }
-.badges-agent .badges-titre { font-size: 14px; font-weight: 600; color: #444; margin-bottom: 8px; }
+.badges-agent .badges-titre { font-size: 14px; font-weight: 600; color: var(--qx-texte, #444); margin-bottom: 8px; }

@@ -8,21 +8,21 @@
   padding: 2px 12px;
   border-radius: 14px;
   border: 1px solid #90a4ae;
-  color: #546e7a;
+  color: var(--qx-texte-2, #546e7a);
   font-size: 0.8rem;
   font-weight: 600;
 }
 .badge.actif {
   border-color: #43a047;
-  color: #2e7d32;
+  color: var(--qx-vert, #2e7d32);
 }
 .badge.desactif {
   border-color: #c62828;
-  color: #c62828;
+  color: var(--qx-rouge, #c62828);
 }
 
 .filtres { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 12px; }
 .filtres .f-recherche { flex: 1 1 260px; }
 .filtres .f-statut { flex: 0 0 170px; }
 .filtres .f-champ { flex: 0 0 210px; }
-.nb-rep { color: rgba(0, 0, 0, .5); font-size: 12px; margin-left: 4px; }
+.nb-rep { color: var(--qx-texte-3, rgba(0, 0, 0, .5)); font-size: 12px; margin-left: 4px; }

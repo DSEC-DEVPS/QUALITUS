@@ -6,6 +6,6 @@
   .compte-rendu { margin-top: 16px; }
   .compte-rendu .bloc { padding: 8px 12px; margin-top: 8px; border-radius: 4px; }
   .compte-rendu .bloc ul { margin: 4px 0 0; padding-left: 18px; }
-  .compte-rendu .bloc.ok { background: #e8f5e9; }
-  .compte-rendu .bloc.ko { background: #ffebee; }
+  .compte-rendu .bloc.ok { background: var(--qx-vert-pale, #e8f5e9); }
+  .compte-rendu .bloc.ko { background: var(--qx-rouge-pale, #ffebee); }
 }

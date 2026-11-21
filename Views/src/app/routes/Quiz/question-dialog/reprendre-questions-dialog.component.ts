@@ -113,13 +113,13 @@ export interface ReprendreQuestionsResult {
     `
       .w-100 { width: 100%; }
       .src-titre { font-weight: 500; line-height: 1.2; }
-      .src-meta { font-size: 12px; color: #757575; line-height: 1.2; }
+      .src-meta { font-size: 12px; color: var(--qx-texte-2, #757575); line-height: 1.2; }
       .entete-liste { display: flex; align-items: center; justify-content: space-between; margin: 12px 0 4px; }
-      .liste { max-height: 340px; overflow: auto; border: 1px solid rgba(0,0,0,0.08); border-radius: 6px; }
-      .ligne { padding: 6px 10px; border-bottom: 1px solid rgba(0,0,0,0.06); }
+      .liste { max-height: 340px; overflow: auto; border: 1px solid var(--qx-bordure, rgba(0,0,0,0.08)); border-radius: 6px; }
+      .ligne { padding: 6px 10px; border-bottom: 1px solid var(--qx-bordure, rgba(0,0,0,0.06)); }
       .ligne.presente { opacity: 0.6; }
-      .infos { margin-left: 40px; font-size: 12px; color: #6b6b6b; display: flex; gap: 6px; flex-wrap: wrap; }
-      .deja { color: #e65100; }
+      .infos { margin-left: 40px; font-size: 12px; color: var(--qx-texte-2, #6b6b6b); display: flex; gap: 6px; flex-wrap: wrap; }
+      .deja { color: var(--qx-orange-texte, #e65100); }
       .lib { white-space: normal; }
     `,
   ],

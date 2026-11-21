@@ -6,6 +6,7 @@
 @use 'styles/helpers';
 @use 'styles/plugins';
 @use 'styles/custom';
+@use 'styles/sombre';
 /* You can add global styles to this file, and also import other style files */
 @import '../node_modules/@costlydeveloper/ngx-awesome-popup/styles/theme';
 /*
@@ -45,16 +46,16 @@
 }
 .mat-mdc-outlined-button.mat-primary {
   --mdc-outlined-button-label-text-color: #ff7900;
-  color: #ff7900 !important;
+  color: var(--qx-orange-texte, #ff7900) !important;
   border-color: rgba(255, 121, 0, 0.5) !important;
 }
 .mat-mdc-button.mat-primary {
   --mdc-text-button-label-text-color: #ff7900;
-  color: #ff7900 !important;
+  color: var(--qx-orange-texte, #ff7900) !important;
 }
 .mat-mdc-icon-button.mat-primary {
   --mdc-icon-button-icon-color: #ff7900;
-  color: #ff7900 !important;
+  color: var(--qx-orange-texte, #ff7900) !important;
 }
 
 
@@ -63,8 +64,8 @@ button.mat-mdc-raised-button.mat-mdc-button-disabled,
 button.mat-mdc-unelevated-button.mat-mdc-button-disabled,
 button.mat-mdc-raised-button:disabled,
 button.mat-mdc-unelevated-button:disabled {
-  background-color: #e6e8eb !important;
-  color: rgba(0, 0, 0, 0.4) !important;
+  background-color: var(--qx-surface-3, #e6e8eb) !important;
+  color: var(--qx-texte-3, rgba(0, 0, 0, 0.4)) !important;
   box-shadow: none !important;
 }
 
@@ -92,7 +93,7 @@ button.mat-mdc-unelevated-button:disabled {
 .cal-header .cal-tt p { margin: 6px 0 0; color: rgba(255,255,255,.92); font-size: 13px; max-width: 680px; line-height: 1.5; }
 .cal-header .cal-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .cal-header .cal-actions .mat-mdc-button { color: #fff; }
-.cal-header .cal-actions .mat-mdc-unelevated-button, .cal-header .cal-actions .mat-mdc-raised-button { background: #fff !important; color: #ff8e36 !important; box-shadow: none; }
+.cal-header .cal-actions .mat-mdc-unelevated-button, .cal-header .cal-actions .mat-mdc-raised-button { background: var(--qx-surface, #fff) !important; color: #ff8e36 !important; box-shadow: none; }
 .cal-header .cal-actions .mat-mdc-outlined-button { color: #fff; border-color: rgba(255,255,255,.6); }
 /* cal-header — en-têtes riches (détails : retour, chrono, toggle, badges) */
 .cal-header .mat-mdc-icon-button { color: #fff; }
@@ -103,29 +104,29 @@ button.mat-mdc-unelevated-button:disabled {
 .cal-header .cal-actions .mat-mdc-outlined-button, .cal-header .cal-actions .mat-mdc-stroked-button { color: #fff; border-color: rgba(255,255,255,.6); }
 
 
-.cal-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px 16px 2px; background: #f7f8fa; border: 1px solid #eceef1; border-radius: 12px; margin-bottom: 16px; }
+.cal-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px 16px 2px; background: var(--qx-surface-2, #f7f8fa); border: 1px solid var(--qx-bordure, #eceef1); border-radius: 12px; margin-bottom: 16px; }
 .cal-toolbar mat-form-field { width: 190px; }
 .cal-toolbar .cal-tb-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; padding-bottom: 12px; }
 
-.cal-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 56px 16px; color: rgba(0,0,0,.45); text-align: center; }
+.cal-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 56px 16px; color: var(--qx-texte-3, rgba(0,0,0,.45)); text-align: center; }
 .cal-empty mat-icon { font-size: 46px; width: 46px; height: 46px; opacity: .45; }
-.cal-empty .cal-empty-sub { font-size: 13px; color: rgba(0,0,0,.4); }
+.cal-empty .cal-empty-sub { font-size: 13px; color: var(--qx-texte-3, rgba(0,0,0,.4)); }
 
-.cal-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; background: #eceff1; color: #546e7a; white-space: nowrap; }
-.cal-badge[data-st="OUVERTE"] { background: #e3f2fd; color: #1565c0; }
-.cal-badge[data-st="RESULTATS_EN_REVISION"] { background: #fff1e6; color: #b26a00; }
-.cal-badge[data-st="VALIDEE"] { background: #e8f0fe; color: #1a56c4; }
-.cal-badge[data-st="CLOTUREE"] { background: #e8f5e9; color: #2e7d32; }
-.cal-badge[data-c="SUCCES"] { background: #e8f5e9; color: #2e7d32; }
-.cal-badge[data-c="ECHEC"] { background: #ffebee; color: #c62828; }
-.cal-badge[data-e="EN_COURS"] { background: #e3f2fd; color: #1565c0; }
-.cal-badge[data-e="TERMINEE"] { background: #e8f5e9; color: #2e7d32; }
+.cal-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; background: var(--qx-surface-2, #eceff1); color: var(--qx-texte-2, #546e7a); white-space: nowrap; }
+.cal-badge[data-st="OUVERTE"] { background: var(--qx-bleu-pale, #e3f2fd); color: var(--qx-bleu, #1565c0); }
+.cal-badge[data-st="RESULTATS_EN_REVISION"] { background: var(--qx-orange-pale, #fff1e6); color: var(--qx-orange-texte, #b26a00); }
+.cal-badge[data-st="VALIDEE"] { background: var(--qx-bleu-pale, #e8f0fe); color: var(--qx-bleu, #1a56c4); }
+.cal-badge[data-st="CLOTUREE"] { background: var(--qx-vert-pale, #e8f5e9); color: var(--qx-vert, #2e7d32); }
+.cal-badge[data-c="SUCCES"] { background: var(--qx-vert-pale, #e8f5e9); color: var(--qx-vert, #2e7d32); }
+.cal-badge[data-c="ECHEC"] { background: var(--qx-rouge-pale, #ffebee); color: var(--qx-rouge, #c62828); }
+.cal-badge[data-e="EN_COURS"] { background: var(--qx-bleu-pale, #e3f2fd); color: var(--qx-bleu, #1565c0); }
+.cal-badge[data-e="TERMINEE"] { background: var(--qx-vert-pale, #e8f5e9); color: var(--qx-vert, #2e7d32); }
 
 .cal-card { border-radius: 14px !important; }
 .cal-table { width: 100%; }
-.cal-table .mat-mdc-header-cell { background: #f7f8fa; font-weight: 500; color: rgba(0,0,0,.7); }
+.cal-table .mat-mdc-header-cell { background: var(--qx-surface-2, #f7f8fa); font-weight: 500; color: var(--qx-texte-2, rgba(0,0,0,.7)); }
 .cal-row-link { cursor: pointer; transition: background .12s; }
-.cal-row-link:hover { background: #f5f7fa; }
+.cal-row-link:hover { background: var(--qx-surface-2, #f5f7fa); }
 
 @media (max-width: 640px) {
   .cal-page { padding: 14px; }
@@ -140,7 +141,7 @@ button.mat-mdc-unelevated-button:disabled {
 .cal-form .plein { width: 100%; }
 .cal-form .petit { width: 130px; }
 .cal-duree { display: flex; align-items: center; gap: 12px; width: 100%; flex-wrap: wrap; }
-.cal-duree .lbl { font-size: 13px; color: rgba(0,0,0,.6); }
+.cal-duree .lbl { font-size: 13px; color: var(--qx-texte-2, rgba(0,0,0,.6)); }
 .cal-card-actions { padding: 8px 16px 16px !important; gap: 8px; }
 
 
@@ -160,8 +161,8 @@ button.mat-mdc-unelevated-button:disabled {
   text-align: left !important;
   margin: 0 0 14px !important;
   padding-bottom: 10px;
-  border-bottom: 1px solid #eceef1;
-  color: rgba(0, 0, 0, 0.87);
+  border-bottom: 1px solid var(--qx-bordure, #eceef1);
+  color: var(--qx-texte, rgba(0, 0, 0, 0.87));
 }
 /* Aplatir la carte interne (évite l'effet carte-dans-modal) */
 .mat-mdc-dialog-container mat-card,
@@ -207,7 +208,7 @@ mat-icon, .material-icons, .mat-icon, i.material-icons {
 .mat-mdc-card:not([class*='bg-']) {
   --mdc-elevated-card-container-color: #ffffff9a;
   --mdc-outlined-card-container-color: #ffffff9a;
-  background-color: #ffffff9a !important;
+  background-color: var(--qx-surface-verre, #ffffff9a) !important;
 }
 /* Les dialogues restent opaques (lisibilité) — la carte interne d'un dialogue demeure transparente */
 .mat-mdc-dialog-container .mat-mdc-card,
@@ -241,12 +242,12 @@ mat-icon, .material-icons, .mat-icon, i.material-icons {
 .cal-band .cal-band-title { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 500; color: #fff; margin: 0; }
 .cal-band .cal-band-title mat-icon { font-size: 26px; width: 26px; height: 26px; }
 .cal-band .cal-band-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.cal-band .cal-band-actions .mat-mdc-unelevated-button, .cal-band .cal-band-actions .mat-mdc-raised-button { background: #fff !important; color: #ff8e36 !important; box-shadow: none; }
+.cal-band .cal-band-actions .mat-mdc-unelevated-button, .cal-band .cal-band-actions .mat-mdc-raised-button { background: var(--qx-surface, #fff) !important; color: #ff8e36 !important; box-shadow: none; }
 .cal-band .cal-band-actions .mat-mdc-button, .cal-band .cal-band-actions .mat-mdc-icon-button, .cal-band .cal-band-actions .mat-mdc-slide-toggle { color: #fff; }
 .cal-band .cal-band-actions .mat-mdc-outlined-button, .cal-band .cal-band-actions .mat-mdc-stroked-button { color: #fff; border-color: rgba(255,255,255,.6); }
 /* la carte qui porte le bandeau : le contenu vient juste dessous, coins bas arrondis */
 .cal-band + .mat-mdc-card-content { padding-top: 16px; }
-.cal-desc { color: rgba(0,0,0,.6); font-size: 13px; margin: 0 0 12px; }
+.cal-desc { color: var(--qx-texte-2, rgba(0,0,0,.6)); font-size: 13px; margin: 0 0 12px; }
 .cal-filtres-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px; }
 .cal-filtres-row mat-form-field { width: 190px; }
 .cal-filtres-row .sp { margin-left: auto; display: flex; gap: 8px; }
@@ -300,7 +301,7 @@ mat-icon, .material-icons, .mat-icon, i.material-icons {
   .container { max-width: none; width: 100%; padding: 0; }
   .dlg-titre {
     display: flex; align-items: center; gap: 10px; margin: 0; padding: 16px 22px;
-    font-size: 1.1rem; font-weight: 600; color: #2b2b2b; border-bottom: 1px solid #f0ebe5;
+    font-size: 1.1rem; font-weight: 600; color: var(--qx-texte, #2b2b2b); border-bottom: 1px solid var(--qx-bordure, #f0ebe5);
     &::before { content: ''; width: 4px; height: 20px; border-radius: 2px; background: #ff8e36; }
   }
   .row, .register-template { margin: 0 !important; }
@@ -313,6 +314,6 @@ mat-icon, .material-icons, .mat-icon, i.material-icons {
   .mat-mdc-form-field { width: 100%; }
   .m-t-8.text-center {
     display: flex; flex-direction: row-reverse; justify-content: flex-start; align-items: center; gap: 8px;
-    margin: 6px -22px 0 !important; padding: 12px 22px 0; border-top: 1px solid #f0ebe5;
+    margin: 6px -22px 0 !important; padding: 12px 22px 0; border-top: 1px solid var(--qx-bordure, #f0ebe5);
   }
 }

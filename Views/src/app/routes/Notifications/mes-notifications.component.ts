@@ -144,13 +144,13 @@ export const CATEGORIES_NOTIFICATION: { code: string; libelle: string }[] = [
       .filtres { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
       .champ { width: 170px; }
       .titre { font-weight: 500; }
-      .message { font-size: 12px; color: #616161; }
+      .message { font-size: 12px; color: var(--qx-texte-2, #616161); }
       .non-lue .titre { font-weight: 700; }
-      .pastille { background: #ffebee; color: #c62828; border-radius: 10px; padding: 2px 8px; font-size: 12px; }
-      .lue { color: #9e9e9e; font-size: 12px; }
-      .actions { white-space: nowrap; text-align: right; color: #757575; }
+      .pastille { background: var(--qx-rouge-pale, #ffebee); color: var(--qx-rouge, #c62828); border-radius: 10px; padding: 2px 8px; font-size: 12px; }
+      .lue { color: var(--qx-texte-3, #9e9e9e); font-size: 12px; }
+      .actions { white-space: nowrap; text-align: right; color: var(--qx-texte-2, #757575); }
       .ligne { cursor: pointer; }
-      .ligne:hover { background: rgba(0, 0, 0, 0.03); }
+      .ligne:hover { background: var(--qx-survol, rgba(0, 0, 0, 0.03)); }
       .w-100 { width: 100%; }
     `,
   ],

@@ -51,26 +51,26 @@ interface GroupeBadges { code: string; libelle: string; badges: BadgeUtilisateur
   `,
   styles: [`
     .groupe { margin-bottom: 14px; }
-    .groupe-titre { font-size: 13px; font-weight: 600; color: #ff7900; margin-bottom: 8px; }
-    .groupe-titre span { color: #888; font-weight: 400; margin-left: 6px; }
+    .groupe-titre { font-size: 13px; font-weight: 600; color: var(--qx-orange-texte, #ff7900); margin-bottom: 8px; }
+    .groupe-titre span { color: var(--qx-texte-3, #888); font-weight: 400; margin-left: 6px; }
     .bq-liste { display: flex; flex-wrap: wrap; gap: 14px; }
-    .bq { position: relative; width: 116px; text-align: center; padding: 10px 6px 8px; border: 1px solid rgba(0,0,0,.1);
+    .bq { position: relative; width: 116px; text-align: center; padding: 10px 6px 8px; border: 1px solid var(--qx-bordure, rgba(0,0,0,.1));
              border-radius: 10px; opacity: .45; filter: grayscale(1); }
     .bq.gagne { opacity: 1; filter: none; border-color: #ff7900; box-shadow: 0 2px 8px rgba(255,121,0,.2); }
-    .bq mat-icon { font-size: 38px; width: 38px; height: 38px; color: #ff7900; }
+    .bq mat-icon { font-size: 38px; width: 38px; height: 38px; color: var(--qx-orange-texte, #ff7900); }
     .badge-nom { font-size: .8rem; font-weight: 600; margin-top: 4px; }
-    .compteur { position: absolute; top: 6px; left: 8px; font-size: 12px; font-weight: 700; color: #ff7900; }
-    .rarete { font-size: 11px; color: #888; margin-top: 2px; }
+    .compteur { position: absolute; top: 6px; left: 8px; font-size: 12px; font-weight: 700; color: var(--qx-orange-texte, #ff7900); }
+    .rarete { font-size: 11px; color: var(--qx-texte-3, #888); margin-top: 2px; }
     .rarete.rare { color: #8e24aa; font-weight: 600; }
     .verrou { position: absolute; top: 6px; right: 6px; }
-    .verrou mat-icon { font-size: 16px; width: 16px; height: 16px; color: #999; }
+    .verrou mat-icon { font-size: 16px; width: 16px; height: 16px; color: var(--qx-texte-3, #999); }
     .compact { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
     .mini { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px 3px 6px; border-radius: 14px;
-            background: #fff3e0; border: 1px solid #ffcc80; font-size: 12px; font-weight: 600; }
-    .mini mat-icon { font-size: 18px; width: 18px; height: 18px; color: #ff7900; }
-    .mini b { color: #ff7900; }
-    .vide { color: #888; font-size: 13px; }
-    .total { margin-left: auto; color: #888; font-size: 12px; }
+            background: var(--qx-orange-pale, #fff3e0); border: 1px solid #ffcc80; font-size: 12px; font-weight: 600; }
+    .mini mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--qx-orange-texte, #ff7900); }
+    .mini b { color: var(--qx-orange-texte, #ff7900); }
+    .vide { color: var(--qx-texte-3, #888); font-size: 13px; }
+    .total { margin-left: auto; color: var(--qx-texte-3, #888); font-size: 12px; }
   `],
 })
 export class BadgesQuizComponent {

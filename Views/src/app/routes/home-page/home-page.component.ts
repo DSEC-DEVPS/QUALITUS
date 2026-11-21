@@ -1,3 +1,4 @@
+import { ThemeToggleComponent } from '../../theme/widgets/theme-toggle.component';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -61,7 +62,7 @@ import { filtrerListeFiche } from '@shared/utils/filtrerListeFiche';
   standalone: true,
   encapsulation: ViewEncapsulation.None,
   providers: [DatePipe],
-  imports: [
+  imports: [ThemeToggleComponent,
     MatProgressSpinnerModule,
     MatTableModule,
     MatSortModule,

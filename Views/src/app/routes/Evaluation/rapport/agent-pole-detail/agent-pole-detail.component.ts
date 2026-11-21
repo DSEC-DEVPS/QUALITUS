@@ -135,31 +135,31 @@ import { ChargementComponent } from '@shared/components/chargement/chargement.co
     .info-carte { flex: 1 1 320px; }
     .info-carte h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; }
     .info-carte dl { display: grid; grid-template-columns: 130px 1fr; gap: 4px 12px; margin: 0; }
-    .info-carte dt { color: #666; font-size: 12px; }
+    .info-carte dt { color: var(--qx-texte-2, #666); font-size: 12px; }
     .titre-evals { margin: 8px 0; }
     .eval-actions { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
-    .eval-actions .lecture { color: #888; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
-    .tag { background: #ffe0b2; padding: 2px 8px; border-radius: 10px; font-size: 12px; white-space: nowrap; }
-    .tag.fort { background: #ffcdd2; color: #b71c1c; font-weight: 600; }
+    .eval-actions .lecture { color: var(--qx-texte-3, #888); display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
+    .tag { background: var(--qx-orange-pale, #ffe0b2); padding: 2px 8px; border-radius: 10px; font-size: 12px; white-space: nowrap; }
+    .tag.fort { background: var(--qx-rouge-pale, #ffcdd2); color: var(--qx-rouge, #b71c1c); font-weight: 600; }
     ::ng-deep .ep-tete.mat-expansion-panel-header { height: auto !important; min-height: 58px; padding-top: 8px; padding-bottom: 8px; }
     .ep-titre { display: flex; flex-direction: column; line-height: 1.25; }
-    .ep-date { font-weight: 600; color: #2b2b2b; }
-    .ep-sous { font-size: 12px; color: #777; }
+    .ep-date { font-weight: 600; color: var(--qx-texte, #2b2b2b); }
+    .ep-sous { font-size: 12px; color: var(--qx-texte-2, #777); }
     .ep-desc { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
-    .ep-cat { font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #e8f5e9; color: #2e7d32; white-space: nowrap; }
-    .ep-cat.ko { background: #fdecea; color: #c62828; }
-    .ep-pa { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #777; white-space: nowrap;
+    .ep-cat { font-size: 12px; padding: 2px 8px; border-radius: 10px; background: var(--qx-vert-pale, #e8f5e9); color: var(--qx-vert, #2e7d32); white-space: nowrap; }
+    .ep-cat.ko { background: var(--qx-rouge-pale, #fdecea); color: var(--qx-rouge, #c62828); }
+    .ep-pa { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--qx-texte-2, #777); white-space: nowrap;
       mat-icon { font-size: 16px; width: 16px; height: 16px; } }
-    .ep-pa[data-etat='TERMINE'] { color: #2e7d32; }
-    .ep-pa[data-etat='EN_COURS'] { color: #e65100; }
-    .ep-echecs { border: 1px solid #f5d6d3; background: #fffafa; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+    .ep-pa[data-etat='TERMINE'] { color: var(--qx-vert, #2e7d32); }
+    .ep-pa[data-etat='EN_COURS'] { color: var(--qx-orange-texte, #e65100); }
+    .ep-echecs { border: 1px solid #f5d6d3; background: var(--qx-rouge-pale, #fffafa); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
     .ep-echec { display: grid; grid-template-columns: minmax(160px, 1fr) 2fr 150px; align-items: center; gap: 12px; padding: 4px 0; font-size: 13px; }
     .ep-lib { font-weight: 500; }
-    .crit-mini { margin-left: 6px; font-size: 10.5px; color: #b71c1c; background: #ffcdd2; padding: 0 6px; border-radius: 8px; }
-    .ep-barre { position: relative; height: 8px; background: #eee; border-radius: 4px;
+    .crit-mini { margin-left: 6px; font-size: 10.5px; color: var(--qx-rouge, #b71c1c); background: var(--qx-rouge-pale, #ffcdd2); padding: 0 6px; border-radius: 8px; }
+    .ep-barre { position: relative; height: 8px; background: var(--qx-surface-3, #eee); border-radius: 4px;
       span { position: absolute; left: 0; top: 0; bottom: 0; background: #e53935; border-radius: 4px; }
       i { position: absolute; top: -3px; bottom: -3px; width: 2px; background: #2b2b2b; } }
-    .ep-score { text-align: right; font-weight: 600; color: #c62828; small { font-weight: 400; color: #888; } }
+    .ep-score { text-align: right; font-weight: 600; color: var(--qx-rouge, #c62828); small { font-weight: 400; color: var(--qx-texte-3, #888); } }
   `,
 })
 export class AgentPoleDetailComponent implements OnInit {

@@ -13,7 +13,7 @@
   border: 1px solid #f5a623;
   background: rgba(245, 166, 35, 0.1);
   border-radius: 8px;
-  color: #8a4b00;
+  color: var(--qx-orange-texte, #8a4b00);
 }
 
 .filtres {
@@ -41,6 +41,6 @@
 }
 
 mat-icon.ok {
-  color: #2e7d32;
+  color: var(--qx-vert, #2e7d32);
   margin-right: 4px;
 }

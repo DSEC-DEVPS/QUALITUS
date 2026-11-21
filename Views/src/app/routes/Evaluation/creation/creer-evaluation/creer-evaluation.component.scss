@@ -6,8 +6,8 @@
   .grille-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; align-items: center; }
   .plein { width: 100%; }
   .grille-resolue { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 4px; }
-  .grille-resolue.ok { color: #2e7d32; background: #e8f5e9; }
-  .grille-resolue.ko { color: #b71c1c; background: #ffebee; }
+  .grille-resolue.ok { color: var(--qx-vert, #2e7d32); background: var(--qx-vert-pale, #e8f5e9); }
+  .grille-resolue.ko { color: var(--qx-rouge, #b71c1c); background: var(--qx-rouge-pale, #ffebee); }
   .dmt-champs { display: flex; gap: 12px; }
   .petit { width: 110px; }
   .actions { margin-top: 8px; }

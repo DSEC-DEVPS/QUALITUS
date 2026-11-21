@@ -39,8 +39,8 @@ export interface LettreDialogData {
     .entete-dialog { display: flex; align-items: center; gap: 8px; padding: 8px 8px 0 24px; }
     .entete-dialog h2[mat-dialog-title] { margin: 0; padding: 0; flex: 0 1 auto; }
     .entete-dialog .espace { flex: 1 1 auto; }
-    .ico { color: #c2560c; }
-    .ico.ok { color: #1b8a3a; }
+    .ico { color: var(--qx-orange-texte, #c2560c); }
+    .ico.ok { color: var(--qx-vert, #1b8a3a); }
     mat-dialog-content { max-height: 75vh; }
     @media (max-width: 600px) {
       .entete-dialog { padding: 6px 4px 0 16px; }

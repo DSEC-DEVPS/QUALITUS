@@ -162,15 +162,15 @@ export interface QuestionDialogData {
       .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
       .options, .conditions { margin: 6px 0 12px; }
       .options-tete { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-      .options-tete small { color: #8a8a8a; font-weight: 400; }
+      .options-tete small { color: var(--qx-texte-3, #8a8a8a); font-weight: 400; }
       .option-ligne { display: flex; align-items: center; gap: 6px; }
       .cond-ligne { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-      .cond-si { color: #555; }
+      .cond-si { color: var(--qx-texte-2, #555); }
       .cond-q { min-width: 180px; flex: 1; }
       .cond-op { width: 120px; }
       .cond-val { min-width: 140px; }
-      .conditions { border-top: 1px solid rgba(0,0,0,0.08); padding-top: 8px; }
-      .muted { color: #8a8a8a; }
+      .conditions { border-top: 1px solid var(--qx-bordure, rgba(0,0,0,0.08)); padding-top: 8px; }
+      .muted { color: var(--qx-texte-3, #8a8a8a); }
       mat-slide-toggle { margin-top: 4px; }
     `,
   ],

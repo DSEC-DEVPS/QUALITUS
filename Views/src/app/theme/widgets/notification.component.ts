@@ -78,7 +78,7 @@ import { UserService } from '@shared/services/user.service';
     
     .notification-read {
       opacity: 0.6;
-      background-color: #f9f9f9;
+      background-color: var(--qx-surface-2, #f9f9f9);
     }
     
     .notification-template {
@@ -91,7 +91,7 @@ import { UserService } from '@shared/services/user.service';
     }
     
     mat-list-item:hover {
-      background-color: #f5f5f5;
+      background-color: var(--qx-surface-2, #f5f5f5);
     }
   `,
   standalone: true,
@@ -346,8 +346,8 @@ import { iconeNotification } from './notification-icon';
       justify-content: space-between;
       align-items: center;
       padding: 8px 12px;
-      border-bottom: 1px solid #e0e0e0;
-      background-color: #f5f5f5;
+      border-bottom: 1px solid var(--qx-bordure, #e0e0e0);
+      background-color: var(--qx-surface-2, #f5f5f5);
     }
 
     .notification-title {
@@ -358,7 +358,7 @@ import { iconeNotification } from './notification-icon';
     .notification-footer {
       display: flex;
       justify-content: center;
-      border-top: 1px solid #e0e0e0;
+      border-top: 1px solid var(--qx-bordure, #e0e0e0);
       padding: 4px;
     }
 
@@ -377,26 +377,26 @@ import { iconeNotification } from './notification-icon';
     }
 
     .notification-list mat-list-item:hover {
-      background-color: #f5f5f5;
+      background-color: var(--qx-surface-2, #f5f5f5);
     }
 
     .notification-list mat-list-item.unread {
-      background-color: #e3f2fd;
+      background-color: var(--qx-bleu-pale, #e3f2fd);
     }
 
     .notification-list mat-list-item.unread:hover {
-      background-color: #bbdefb;
+      background-color: var(--qx-bleu-pale, #bbdefb);
     }
 
     .notification-author {
       font-size: 12px;
       font-weight: bold;
-      color: #333;
+      color: var(--qx-texte, #333);
     }
 
     .notification-title-text {
       font-size: 11px;
-      color: #1976d2;
+      color: var(--qx-bleu, #1976d2);
       font-style: italic;
       /* Message sur 3 lignes au plus (ex. motif d'un rejet) au lieu d'une seule */
       display: -webkit-box;
@@ -432,7 +432,7 @@ import { iconeNotification } from './notification-icon';
       align-items: center;
       justify-content: center;
       padding: 40px 20px;
-      color: #9e9e9e;
+      color: var(--qx-texte-3, #9e9e9e);
     }
 
     .no-notifications mat-icon {
@@ -445,7 +445,7 @@ import { iconeNotification } from './notification-icon';
     hr {
       margin: 0;
       border: none;
-      border-top: 1px solid #e0e0e0;
+      border-top: 1px solid var(--qx-bordure, #e0e0e0);
     }
   `,
   standalone: true,
