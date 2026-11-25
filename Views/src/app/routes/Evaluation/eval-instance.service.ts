@@ -53,6 +53,8 @@ export interface EvaluationListe {
   coaching_statut?: string | null;
 }
 
+export interface PageEvaluations { lignes: EvaluationListe[]; total: number; page: number; taille: number; }
+
 export interface FiltresEvaluation {
   q?: string;
   statut?: string;
@@ -65,6 +67,12 @@ export interface FiltresEvaluation {
   date_fin?: any;
   inactifs?: boolean;
   portee?: string; // 'mes-agents' | 'coaching' (vues superviseur)
+  /** Mes coaching : 'perimetre' = tout son périmètre (evaluation.voir_tous). */
+  etendue?: string;
+  /** Mes coaching : 'a_faire' | 'en_cours' | 'termine'. */
+  coaching_etat?: string;
+  /** Période sur la date d'appel (défaut) ou 'evaluation'. */
+  date_sur?: string;
 }
 
 export interface CompteRenduMasse {
@@ -88,6 +96,14 @@ export class EvalInstanceService {
     }
     const s = qs.toString() ? `?${qs}` : '';
     return this.http.get<EvaluationListe[]>(`/api/v1/eval/evaluation/all${s}`);
+  }
+  /** Une page de la liste (pagination côté serveur). */
+  getEvaluationsPage(filtres: FiltresEvaluation, page: { page: number; taille: number }): Observable<PageEvaluations> {
+    const qs = new URLSearchParams();
+    Object.entries({ ...filtres, ...page }).forEach(([k, v]) => {
+      if (v !== null && v !== undefined && v !== '' && v !== false) qs.set(k, String(v));
+    });
+    return this.http.get<PageEvaluations>(`/api/v1/eval/evaluation/all?${qs}`);
   }
   setActif(id: number, actif: boolean) {
     return this.http.put(`/api/v1/eval/evaluation/${id}/actif`, { actif });

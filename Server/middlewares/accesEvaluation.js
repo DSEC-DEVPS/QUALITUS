@@ -95,4 +95,62 @@ const garderEvaluation = (niveau, resoudre = parParamId) => async (req, res, nex
   }
 };
 
-module.exports = { droitsEvaluation, garderEvaluation, parParamId, parCorpsEvaluation, parLignePlanAction, parCoaching };
+/**
+ * Middleware : plan d'actions et coaching ne concernent qu'une évaluation
+ * TERMINÉE et conclue en ÉCHEC (contrôle serveur, l'écran ne suffit pas).
+ */
+const exigerEchecTermine = (resoudre = parParamId) => async (req, res, next) => {
+  try {
+    const id = await resoudre(req);
+    if (id === undefined || id === null || id === "" || !/^\d+$/.test(String(id))) {
+      return res.status(404).json({ message: "Évaluation introuvable." });
+    }
+    const [[e]] = await db.query(`SELECT statut, conclusion FROM b_evaluation WHERE id = ?`, [id]);
+    if (!e) return res.status(404).json({ message: "Évaluation introuvable." });
+    if (e.statut !== "TERMINE" || e.conclusion !== "ECHEC") {
+      return res.status(409).json({ message: "Le plan d'actions et le coaching ne concernent qu'une évaluation terminée en échec." });
+    }
+    return next();
+  } catch (err) {
+    console.error("exigerEchecTermine:", err && err.message);
+    return res.status(500).json({ message: "Erreur lors du contrôle de l'évaluation." });
+  }
+};
+
+/**
+ * Middleware de modification d'une action du plan (out107). Une fois créée, une action
+ * ne change plus que par son STATUT et sa SYNTHÈSE ; une action close (Réalisé, Abandonné,
+ * Annulé…) ne change plus du tout.
+ *  - peuvent modifier : le PORTEUR de l'action, et qui a un droit sur l'évaluation
+ *    (agir) avec evaluation.coacher ;
+ *  - ces derniers peuvent aussi attribuer un porteur s'il n'y en a pas (anciennes actions) ;
+ *  - tout autre champ envoyé est ignoré.
+ */
+const garderLignePlanAction = async (req, res, next) => {
+  try {
+    const { estStatutClos } = require("../utils/planAction");
+    const [[l]] = await db.query(
+      `SELECT l.id_porteur, st.libelle AS statut, e.id, e.id_agent, e.id_evaluateur, e.id_site, e.statut AS statut_evaluation
+         FROM b_eval_plan_action_ligne l JOIN b_evaluation e ON e.id = l.id_evaluation
+         LEFT JOIN b_eval_ref_statut_pa st ON st.id = l.id_statut WHERE l.id = ?`, [req.params.id]
+    );
+    if (!l) return res.status(404).json({ message: "Action introuvable." });
+    const d = await droitsEvaluation(req.auth.userId, { ...l, statut: l.statut_evaluation });
+    const porteur = l.id_porteur != null && Number(l.id_porteur) === Number(req.auth.userId);
+    if (!d.coacher && !porteur) {
+      return res.status(403).json({ message: "Seuls le porteur de l'action et ceux qui coachent cette évaluation peuvent la modifier." });
+    }
+    if (estStatutClos(l.statut)) return res.status(409).json({ message: "Cette action est close : elle ne peut plus être modifiée." });
+    const b = req.body || {};
+    req.body = {};
+    const garder = ["id_statut", "synthese"];
+    if (d.coacher && l.id_porteur == null) garder.push("id_porteur");
+    for (const k of garder) if (Object.prototype.hasOwnProperty.call(b, k)) req.body[k] = b[k];
+    return next();
+  } catch (err) {
+    console.error("garderLignePlanAction:", err && err.message);
+    return res.status(500).json({ message: "Erreur lors du contrôle d'accès." });
+  }
+};
+
+module.exports = { droitsEvaluation, garderEvaluation, exigerEchecTermine, garderLignePlanAction, parParamId, parCorpsEvaluation, parLignePlanAction, parCoaching };

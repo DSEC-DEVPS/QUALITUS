@@ -85,6 +85,7 @@ export class ExecuterEvaluationComponent implements OnInit {
     this.service.getDetail(this.id).subscribe({
       next: d => {
         this.detail = d;
+        this.syntheseEnregistree = this.normSynthese(d?.evaluation?.synthese);
         const idPrec = this.categorieActive?.id;
         this.categorieActive = d.categories.find(c => c.id === idPrec) || d.categories[0];
         this.chargement = false;
@@ -133,13 +134,24 @@ export class ExecuterEvaluationComponent implements OnInit {
     this.detail.conclusion_live = r.conclusion_live;
   }
 
+  /** Dernière synthèse enregistrée (out114 : on n'enregistre que si le texte change). */
+  private syntheseEnregistree: string | null = null;
+  private normSynthese(v: any): string { return String(v ?? '').trim(); }
+
   enregistrerResolution(): void {
     if (!this.detail || this.terminee) return;
     const ev = this.detail.evaluation;
-    this.service.setResolution(this.id, ev.resolution, ev.synthese || undefined).subscribe({
-      next: () => this.toastr.success('Enregistré.'),
+    const synthese = this.normSynthese(ev.synthese);
+    this.service.setResolution(this.id, ev.resolution, synthese).subscribe({
+      next: (r: any) => { this.syntheseEnregistree = synthese; if (!r?.inchange) this.toastr.success('Enregistré.'); },
       error: err => this.toastr.error(err?.error?.message || 'Erreur.'),
     });
+  }
+  /** Sortie du champ Synthèse : enregistre seulement si le texte a réellement changé. */
+  enregistrerSynthese(): void {
+    if (!this.detail || this.terminee) return;
+    if (this.normSynthese(this.detail.evaluation.synthese) === this.syntheseEnregistree) return;
+    this.enregistrerResolution();
   }
 
   async terminer(): Promise<void> {

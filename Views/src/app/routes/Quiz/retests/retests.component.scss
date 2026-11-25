@@ -2,3 +2,37 @@
 .m-b-16 { margin-bottom: 16px; }
 table { width: 100%; }
 .rouge { color: var(--qx-rouge, #c62828); font-weight: 600; }
+
+.rt-synthese {
+  margin-bottom: 12px;
+  color: var(--qx-texte-2, #6b6b6b);
+}
+.rt-synthese strong {
+  color: var(--qx-texte, #2b2b2b);
+  font-size: 1.05rem;
+}
+.rt-filtres {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.rt-quiz {
+  width: 320px;
+  max-width: 100%;
+}
+.rt-recherche {
+  width: 260px;
+  max-width: 100%;
+}
+.rt-nowrap {
+  white-space: nowrap;
+}
+.rt-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+  padding: 6px 0;
+  white-space: nowrap;
+}

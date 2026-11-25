@@ -6,7 +6,7 @@
       @if (donnees?.perimetre) {
         <div class="sous-titre">
           <mat-icon>{{ donnees!.perimetre!.type === 'global' ? 'public' : donnees!.perimetre!.type === 'equipe' ? 'groups' : 'location_on' }}</mat-icon>
-          {{ donnees!.perimetre!.libelle }} · {{ libellePeriode }}
+          {{ donnees!.perimetre!.libelle }}@if (donnees!.programme) { · Programme {{ donnees!.programme!.nom }}} · {{ libellePeriode }}@if (donnees!.comparaison) { · comparé à {{ donnees!.comparaison!.libelle }}}
         </div>
       }
     </div>
@@ -20,15 +20,18 @@
     }
   </div>
 
-  <!-- Filtres -->
+  <!-- Filtres : une ligne, intitulés visibles -->
   <div class="tdb-filtres">
-    <mat-button-toggle-group [value]="preset" (change)="appliquerPreset($event.value)" hideSingleSelectionIndicator>
-      <mat-button-toggle value="mois">Ce mois</mat-button-toggle>
-      <mat-button-toggle value="mois_precedent">Mois dernier</mat-button-toggle>
-      <mat-button-toggle value="trimestre">3 derniers mois</mat-button-toggle>
-      <mat-button-toggle value="annee">Cette année</mat-button-toggle>
-      <mat-button-toggle value="perso">Personnalisée</mat-button-toggle>
-    </mat-button-toggle-group>
+    <div class="filtre">
+      <span class="filtre-libelle">Période</span>
+      <mat-button-toggle-group [value]="preset" (change)="appliquerPreset($event.value)" hideSingleSelectionIndicator aria-label="Période">
+        <mat-button-toggle value="mois">Ce mois</mat-button-toggle>
+        <mat-button-toggle value="mois_precedent">Mois dernier</mat-button-toggle>
+        <mat-button-toggle value="trimestre">3 derniers mois</mat-button-toggle>
+        <mat-button-toggle value="annee">Cette année</mat-button-toggle>
+        <mat-button-toggle value="perso">Personnalisée</mat-button-toggle>
+      </mat-button-toggle-group>
+    </div>
     @if (preset === 'perso') {
       <mat-form-field appearance="outline" class="champ-date" subscriptSizing="dynamic">
         <mat-label>Du</mat-label>
@@ -39,7 +42,6 @@
         <input matInput type="date" [(ngModel)]="au" (change)="datesModifiees()" />
       </mat-form-field>
     }
-    <span class="espace"></span>
     @if ((donnees?.options_perimetre?.length || 0) > 1) {
       <mat-form-field appearance="outline" class="champ-perimetre" subscriptSizing="dynamic">
         <mat-label>Périmètre</mat-label>
@@ -50,8 +52,19 @@
         </mat-select>
       </mat-form-field>
     }
+    @if ((donnees?.options_programme?.length || 0) > 0) {
+      <mat-form-field appearance="outline" class="champ-perimetre" subscriptSizing="dynamic" floatLabel="always">
+        <mat-label>Programme</mat-label>
+        <mat-select [(ngModel)]="programme" (selectionChange)="charger()" placeholder="Tous les programmes">
+          <mat-option [value]="null">Tous les programmes</mat-option>
+          @for (o of donnees!.options_programme; track o.id) {
+            <mat-option [value]="o.id">{{ o.nom }} <small class="muted">· {{ n(o.utilisateurs) }} utilisateur{{ o.utilisateurs > 1 ? 's' : '' }}</small></mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    }
     @if (donnees?.auteur_fiches) {
-      <mat-slide-toggle [(ngModel)]="mesFiches" (change)="charger()">Uniquement mes chargements</mat-slide-toggle>
+      <mat-slide-toggle class="mes-fiches" [(ngModel)]="mesFiches" (change)="charger()">Uniquement mes chargements</mat-slide-toggle>
     }
   </div>
 
@@ -65,184 +78,400 @@
         <div class="vide"><mat-icon>info</mat-icon> Aucun indicateur n'est disponible pour votre profil sur ce périmètre.</div>
       }
 
+      <!-- L'ESSENTIEL -->
+      @if (essentiel.length) {
+        <section class="essentiel" aria-label="L'essentiel">
+          <div class="ess-titre">
+            <h2>L'essentiel</h2>
+            <span>vert : bon · orange : à surveiller · rouge : à traiter@if (donnees.comparaison) { — écart avec {{ donnees.comparaison.libelle }} (détail au survol)}</span>
+          </div>
+          <div class="ess-grille">
+            @for (k of essentiel; track k.cle) {
+              <button type="button" class="ess-carte" (click)="choisirOnglet(k.onglet)" [attr.aria-label]="k.libelle + ' : ' + k.valeur + ', voir le détail'">
+                <span class="ess-tete">
+                  <span class="ess-libelle">{{ k.libelle }}</span>
+                  @if (k.niveau !== 'neutre') { <span class="pastille niv-{{ k.niveau }}"><span class="point"></span>{{ libelleNiveau[k.niveau] }}</span> }
+                </span>
+                <span class="ess-valeur-ligne">
+                  <span class="ess-valeur niv-{{ k.niveau }}">{{ k.valeur }}</span>
+                  @if (k.ecart; as d) { <span class="ecart {{ d.classe }}" [matTooltip]="d.titre">{{ d.texte }}</span> }
+                </span>
+                @if (k.barre !== null) { <span class="t-barre niv-{{ k.niveau }}"><span [style.width.%]="k.barre"></span></span> }
+                <span class="ess-detail">{{ k.detail }}</span>
+              </button>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- ONGLETS -->
+      @if (onglets.length) {
+        <div class="onglets" role="tablist" aria-label="Sections du tableau de bord">
+          @for (o of onglets; track o.id) {
+            <button type="button" role="tab" class="onglet" [class.actif]="onglet === o.id" [attr.aria-selected]="onglet === o.id" (click)="choisirOnglet(o.id)">
+              {{ o.libelle }}
+              @if (o.badge > 0) { <span class="badge" [matTooltip]="o.badge + ' élément' + (o.badge > 1 ? 's' : '') + ' à traiter'">{{ o.badge }}</span> }
+            </button>
+          }
+        </div>
+      }
+
       <!-- BASECO -->
-      @if (donnees.blocs.baseco; as b) {
-        <section class="bloc">
-          <h2><mat-icon>menu_book</mat-icon> Baseco — chargements
+      @if (onglet === 'baseco' && donnees.blocs.baseco; as b) {
+        <section class="bloc" role="tabpanel">
+          <div class="bloc-infos">
             <span class="compte">{{ n(b.fiches_publiees) }} chargement{{ b.fiches_publiees > 1 ? 's' : '' }} mis à disposition{{ donnees.mes_fiches ? ' (les vôtres)' : '' }}</span>
-          </h2>
-          <div class="tuiles">
+            @if (ecarts['baseco.fiches_publiees']; as d) { <span class="ecart {{ d.classe }}" [matTooltip]="d.titre">{{ d.texte }}</span> }
+            @if (b.en_delai_j2) { <span class="compte provisoire"><mat-icon>schedule</mat-icon>{{ b.en_delai_j2 }} encore dans leur délai J+2 : taux J et J+2 provisoires</span> }
+          </div>
+          <div class="tuiles" [class.cols-3]="nbTuilesBaseco === 5 || nbTuilesBaseco === 6">
             <div class="tuile">
-              <div class="t-tete">Lecture <mat-icon class="aide" matTooltip="Part des destinataires (site et fonction ciblés par le chargement) qui l'ont ouvert au moins une fois.">help_outline</mat-icon></div>
-              <div class="t-valeur">{{ taux(b.lecture) }}</div>
-              <div class="t-barre"><div [style.width.%]="largeur(b.lecture)"></div></div>
-              <div class="t-detail">{{ n(b.lecture.num) }} lecture{{ b.lecture.num > 1 ? 's' : '' }} sur {{ n(b.lecture.den) }} destinataire{{ b.lecture.den > 1 ? 's' : '' }}</div>
+              <div class="t-tete"><span>Lecture <small class="t-sous">couverture actuelle</small> <mat-icon class="aide" matTooltip="Part des destinataires d'aujourd'hui (utilisateurs actifs dont le site et la fonction sont ciblés, nouveaux arrivants compris, hors auteur) qui ont ouvert le chargement au moins une fois, à n'importe quelle date. Ce taux évolue : il monte avec les lectures et baisse quand un nouvel arrivant ciblé n'a pas encore lu. Chargement archivé : figé à la date d'archivage.">help_outline</mat-icon></span>
+                @if (ecarts['baseco.lecture']; as d) { <span class="ecart {{ d.classe }}" [matTooltip]="d.titre">{{ d.texte }}</span> }</div>
+              <div class="t-valeur {{ classeTaux(b.lecture) }}">{{ taux(b.lecture) }}</div>
+              <div class="t-barre {{ classeTaux(b.lecture) }}"><span [style.width.%]="largeur(b.lecture)"></span></div>
+              <div class="t-detail">{{ n(b.lecture.num) }} lecture{{ b.lecture.num > 1 ? 's' : '' }} sur {{ n(b.lecture.den) }} destinataire{{ b.lecture.den > 1 ? 's' : '' }} actuel{{ b.lecture.den > 1 ? 's' : '' }}</div>
             </div>
             <div class="tuile">
-              <div class="t-tete">Lecture le jour J <mat-icon class="aide" matTooltip="Destinataires ayant ouvert le chargement le jour même de sa mise à disposition.">help_outline</mat-icon></div>
-              <div class="t-valeur">{{ taux(b.lecture_j) }}</div>
-              <div class="t-barre"><div [style.width.%]="largeur(b.lecture_j)"></div></div>
-              <div class="t-detail">{{ n(b.lecture_j.num) }} sur {{ n(b.lecture_j.den) }}</div>
+              <div class="t-tete"><span>Lecture le jour J <mat-icon class="aide" matTooltip="Destinataires présents à la mise à disposition (compte créé au plus tard ce jour-là) ayant ouvert le chargement le jour même. Les nouveaux arrivants ne comptent pas. Calcul en direct : un chargement du jour peut encore faire monter le taux jusqu'à minuit, puis sa contribution est figée.">help_outline</mat-icon></span>
+                @if (ecarts['baseco.lecture_j']; as d) { <span class="ecart {{ d.classe }}" [matTooltip]="d.titre">{{ d.texte }}</span> }</div>
+              <div class="t-valeur {{ classeTaux(b.lecture_j) }}">{{ taux(b.lecture_j) }}</div>
+              <div class="t-barre {{ classeTaux(b.lecture_j) }}"><span [style.width.%]="largeur(b.lecture_j)"></span></div>
+              <div class="t-detail">{{ n(b.lecture_j.num) }} sur {{ n(b.lecture_j.den) }} destinataire{{ b.lecture_j.den > 1 ? 's' : '' }} à la publication</div>
+              @if (b.en_delai_j) { <div class="t-provisoire"><mat-icon>schedule</mat-icon><span>dont {{ b.en_delai_j }} chargement{{ b.en_delai_j > 1 ? 's' : '' }} du jour (provisoire)</span></div> }
             </div>
             <div class="tuile">
-              <div class="t-tete">Lecture sous 2 jours <mat-icon class="aide" matTooltip="Destinataires ayant ouvert le chargement au plus tard 2 jours après sa mise à disposition (J+2 inclus).">help_outline</mat-icon></div>
-              <div class="t-valeur">{{ taux(b.lecture_j2) }}</div>
-              <div class="t-barre"><div [style.width.%]="largeur(b.lecture_j2)"></div></div>
-              <div class="t-detail">{{ n(b.lecture_j2.num) }} sur {{ n(b.lecture_j2.den) }}</div>
+              <div class="t-tete"><span>Lecture sous 2 jours <mat-icon class="aide" matTooltip="Mêmes destinataires que « Lecture le jour J » (présents à la mise à disposition), ayant ouvert le chargement au plus tard 2 jours calendaires après (J, J+1 ou J+2). Calcul en direct : un chargement encore dans son délai peut faire monter le taux, puis sa contribution est figée.">help_outline</mat-icon></span>
+                @if (ecarts['baseco.lecture_j2']; as d) { <span class="ecart {{ d.classe }}" [matTooltip]="d.titre">{{ d.texte }}</span> }</div>
+              <div class="t-valeur {{ classeTaux(b.lecture_j2) }}">{{ taux(b.lecture_j2) }}</div>
+              <div class="t-barre {{ classeTaux(b.lecture_j2) }}"><span [style.width.%]="largeur(b.lecture_j2)"></span></div>
+              <div class="t-detail">{{ n(b.lecture_j2.num) }} sur {{ n(b.lecture_j2.den) }} destinataire{{ b.lecture_j2.den > 1 ? 's' : '' }} à la publication</div>
+              @if (b.en_delai_j2) { <div class="t-provisoire"><mat-icon>schedule</mat-icon><span>dont {{ b.en_delai_j2 }} chargement{{ b.en_delai_j2 > 1 ? 's' : '' }} encore dans le délai (provisoire)</span></div> }
             </div>
-            <div class="tuile">
-              <div class="t-tete">Utilité <mat-icon class="aide" matTooltip="Part des avis des lecteurs jugeant le chargement utile.">help_outline</mat-icon></div>
-              <div class="t-valeur">{{ taux(b.utilite) }}</div>
-              <div class="t-barre"><div [style.width.%]="largeur(b.utilite)"></div></div>
-              <div class="t-detail">{{ b.utilite.den ? n(b.utilite.num) + ' avis favorable' + (b.utilite.num > 1 ? 's' : '') + ' sur ' + n(b.utilite.den) : 'Aucun avis sur la période' }}</div>
-            </div>
-            <div class="tuile">
-              <div class="t-tete">Exactitude <mat-icon class="aide" matTooltip="Part des avis des lecteurs jugeant le contenu exact.">help_outline</mat-icon></div>
-              <div class="t-valeur">{{ taux(b.exactitude) }}</div>
-              <div class="t-barre"><div [style.width.%]="largeur(b.exactitude)"></div></div>
-              <div class="t-detail">{{ b.exactitude.den ? n(b.exactitude.num) + ' sur ' + n(b.exactitude.den) + ' avis' : 'Aucun avis sur la période' }}</div>
-            </div>
-            @if (b.ponctualite) {
+            @if (b.utilite.den) {
               <div class="tuile">
-                <div class="t-tete">Ponctualité (on time) <mat-icon class="aide" matTooltip="Chargements publiés dans le délai prévu par leur SLA, parmi ceux dont le délai a été mesuré.">help_outline</mat-icon></div>
-                <div class="t-valeur">{{ taux(b.ponctualite) }}</div>
-                <div class="t-barre"><div [style.width.%]="largeur(b.ponctualite)"></div></div>
-                <div class="t-detail">{{ b.ponctualite.den ? n(b.ponctualite.num) + ' dans les délais sur ' + n(b.ponctualite.den) : 'Aucun délai mesuré' }}</div>
+                <div class="t-tete"><span>Utilité <mat-icon class="aide" matTooltip="Part des avis des lecteurs jugeant le chargement utile.">help_outline</mat-icon></span>
+                  @if (ecarts['baseco.utilite']; as d) { <span class="ecart {{ d.classe }}" [matTooltip]="d.titre">{{ d.texte }}</span> }</div>
+                <div class="t-valeur {{ classeTaux(b.utilite) }}">{{ taux(b.utilite) }}</div>
+                <div class="t-barre {{ classeTaux(b.utilite) }}"><span [style.width.%]="largeur(b.utilite)"></span></div>
+                <div class="t-detail">{{ n(b.utilite.num) }} avis favorable{{ b.utilite.num > 1 ? 's' : '' }} sur {{ n(b.utilite.den) }}</div>
               </div>
             }
-            <div class="tuile">
-              <div class="t-tete">Quiz de fiche réussi du 1er coup <mat-icon class="aide" matTooltip="Quiz associés aux chargements, réussis dès le premier essai.">help_outline</mat-icon></div>
-              <div class="t-valeur">{{ taux(b.maitrise_premier_essai) }}</div>
-              <div class="t-barre"><div [style.width.%]="largeur(b.maitrise_premier_essai)"></div></div>
-              <div class="t-detail">{{ b.maitrise_premier_essai.den ? n(b.maitrise_premier_essai.num) + ' sur ' + n(b.maitrise_premier_essai.den) + ' quiz passé' + (b.maitrise_premier_essai.den > 1 ? 's' : '') : 'Aucun quiz passé' }}</div>
+            @if (b.exactitude.den) {
+              <div class="tuile">
+                <div class="t-tete"><span>Exactitude <mat-icon class="aide" matTooltip="Part des avis des lecteurs jugeant le contenu exact.">help_outline</mat-icon></span>
+                  @if (ecarts['baseco.exactitude']; as d) { <span class="ecart {{ d.classe }}" [matTooltip]="d.titre">{{ d.texte }}</span> }</div>
+                <div class="t-valeur {{ classeTaux(b.exactitude) }}">{{ taux(b.exactitude) }}</div>
+                <div class="t-barre {{ classeTaux(b.exactitude) }}"><span [style.width.%]="largeur(b.exactitude)"></span></div>
+                <div class="t-detail">{{ n(b.exactitude.num) }} sur {{ n(b.exactitude.den) }} avis</div>
+              </div>
+            }
+            @if (b.ponctualite && b.ponctualite.den) {
+              <div class="tuile">
+                <div class="t-tete"><span>Ponctualité (on time) <mat-icon class="aide" matTooltip="Chargements publiés dans le délai prévu par leur SLA, parmi ceux dont le délai a été mesuré.">help_outline</mat-icon></span>
+                  @if (ecarts['baseco.ponctualite']; as d) { <span class="ecart {{ d.classe }}" [matTooltip]="d.titre">{{ d.texte }}</span> }</div>
+                <div class="t-valeur {{ classeTaux(b.ponctualite) }}">{{ taux(b.ponctualite) }}</div>
+                <div class="t-barre {{ classeTaux(b.ponctualite) }}"><span [style.width.%]="largeur(b.ponctualite)"></span></div>
+                <div class="t-detail">{{ n(b.ponctualite.num) }} dans les délais sur {{ n(b.ponctualite.den) }}</div>
+              </div>
+            }
+            @if (b.maitrise_premier_essai.den) {
+              <div class="tuile">
+                <div class="t-tete"><span>Quiz de fiche réussi du 1er coup <mat-icon class="aide" matTooltip="Quiz associés aux chargements, réussis dès le premier essai.">help_outline</mat-icon></span>
+                  @if (ecarts['baseco.maitrise_premier_essai']; as d) { <span class="ecart {{ d.classe }}" [matTooltip]="d.titre">{{ d.texte }}</span> }</div>
+                <div class="t-valeur {{ classeTaux(b.maitrise_premier_essai) }}">{{ taux(b.maitrise_premier_essai) }}</div>
+                <div class="t-barre {{ classeTaux(b.maitrise_premier_essai) }}"><span [style.width.%]="largeur(b.maitrise_premier_essai)"></span></div>
+                <div class="t-detail">{{ n(b.maitrise_premier_essai.num) }} sur {{ n(b.maitrise_premier_essai.den) }} quiz passé{{ b.maitrise_premier_essai.den > 1 ? 's' : '' }}</div>
+              </div>
+            }
+            @if (b.reussite_apres_retest.den) {
+              <div class="tuile">
+                <div class="t-tete"><span>Réussite après retest <mat-icon class="aide" matTooltip="Parmi les lecteurs ayant dû repasser le quiz de fiche, part de ceux qui l'ont finalement réussi.">help_outline</mat-icon></span>
+                  @if (ecarts['baseco.reussite_apres_retest']; as d) { <span class="ecart {{ d.classe }}" [matTooltip]="d.titre">{{ d.texte }}</span> }</div>
+                <div class="t-valeur {{ classeTaux(b.reussite_apres_retest) }}">{{ taux(b.reussite_apres_retest) }}</div>
+                <div class="t-barre {{ classeTaux(b.reussite_apres_retest) }}"><span [style.width.%]="largeur(b.reussite_apres_retest)"></span></div>
+                <div class="t-detail">{{ n(b.reussite_apres_retest.num) }} sur {{ n(b.reussite_apres_retest.den) }} retest{{ b.reussite_apres_retest.den > 1 ? 's' : '' }}</div>
+              </div>
+            }
+          </div>
+          @if (sansDonnee.baseco?.length) {
+            <div class="sans-donnee"><mat-icon>info_outline</mat-icon> Sans donnée sur la période : {{ sansDonnee.baseco!.join(' · ') }}</div>
+          }
+          @if ((b.a_relancer?.length || 0) + (b.moins_lues?.length || 0) > 0) {
+            <div class="relances">
+              @if (b.a_relancer?.length) {
+                <div class="rel-bloc">
+                  <h3><mat-icon>notifications_active</mat-icon> À relancer maintenant <small>encore dans le délai J+2, du moins lu au plus lu</small></h3>
+                  <div class="rel-defile">
+                    <table class="rel-table">
+                      <colgroup><col class="c-titre" /><col class="c-jour" /><col class="c-lus" /><col class="c-taux" /><col class="c-delai" /></colgroup>
+                      <thead><tr><th>Chargement</th><th>Publié</th><th>Lus</th><th>Taux</th><th>Délai</th></tr></thead>
+                      <tbody>
+                        @for (f of b.a_relancer; track f.id) {
+                          <tr class="cliquable" tabindex="0" (click)="ouvrirFiche(f.id)" (keydown.enter)="ouvrirFiche(f.id)" [attr.aria-label]="'Ouvrir ' + f.titre">
+                            <td class="rel-titre" [matTooltip]="f.titre">{{ f.titre }}</td>
+                            <td>{{ jourCourt(f.jour_pub) }}</td>
+                            <td>{{ n(f.lus) }} / {{ n(f.destinataires) }}</td>
+                            <td><span class="rel-taux niv-{{ niveauTaux(f.taux) }}">{{ tauxNombre(f.taux) }}</span></td>
+                            <td><span class="rel-delai" [class.urgent]="f.jour_j_en_cours || f.jours_restants_j2 <= 0">{{ delaiRestant(f) }}</span></td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              }
+              @if (b.moins_lues?.length) {
+                <div class="rel-bloc">
+                  <h3><mat-icon>trending_down</mat-icon> Les moins lus de la période <small>délai J+2 écoulé, couverture actuelle</small></h3>
+                  <div class="rel-defile">
+                    <table class="rel-table">
+                      <colgroup><col class="c-titre" /><col class="c-jour" /><col class="c-lus" /><col class="c-taux" /><col class="c-taux" /></colgroup>
+                      <thead><tr><th>Chargement</th><th>Publié</th><th>Lus</th><th>Lecture</th><th>Sous 2 j</th></tr></thead>
+                      <tbody>
+                        @for (f of b.moins_lues; track f.id) {
+                          <tr class="cliquable" tabindex="0" (click)="ouvrirFiche(f.id)" (keydown.enter)="ouvrirFiche(f.id)" [attr.aria-label]="'Ouvrir ' + f.titre">
+                            <td class="rel-titre" [matTooltip]="f.titre">{{ f.titre }}@if (f.archive) { <small class="muted"> · archivé</small> }</td>
+                            <td>{{ jourCourt(f.jour_pub) }}</td>
+                            <td>{{ n(f.lus) }} / {{ n(f.destinataires) }}</td>
+                            <td><span class="rel-taux niv-{{ niveauTaux(f.taux) }}">{{ tauxNombre(f.taux) }}</span></td>
+                            <td>{{ tauxNombre(f.taux_j2) }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              }
             </div>
-            <div class="tuile">
-              <div class="t-tete">Réussite après retest <mat-icon class="aide" matTooltip="Parmi les lecteurs ayant dû repasser le quiz de fiche, part de ceux qui l'ont finalement réussi.">help_outline</mat-icon></div>
-              <div class="t-valeur">{{ taux(b.reussite_apres_retest) }}</div>
-              <div class="t-barre"><div [style.width.%]="largeur(b.reussite_apres_retest)"></div></div>
-              <div class="t-detail">{{ b.reussite_apres_retest.den ? n(b.reussite_apres_retest.num) + ' sur ' + n(b.reussite_apres_retest.den) + ' retest' + (b.reussite_apres_retest.den > 1 ? 's' : '') : 'Aucun retest' }}</div>
+          }
+        </section>
+      }
+
+      <!-- ÉVALUATIONS ET COACHING -->
+      @if (onglet === 'evaluations') {
+        <section class="bloc" role="tabpanel">
+          @if (donnees.blocs.evaluations; as e) {
+            <h3 class="sous-bloc">Évaluations <small>programme pris sur l'évaluation</small></h3>
+            <div class="tuiles">
+              <div class="tuile">
+                <div class="t-tete"><span>Évaluations terminées</span>
+                  @if (ecarts['evaluations.terminees']; as d) { <span class="ecart {{ d.classe }}" [matTooltip]="d.titre">{{ d.texte }}</span> }</div>
+                <div class="t-valeur">{{ n(e.terminees) }}</div>
+                <div class="t-detail">{{ n(e.en_cours) }} en cours sur la période</div>
+              </div>
+              @if (e.reussite.den) {
+                <div class="tuile">
+                  <div class="t-tete"><span>Taux de réussite <mat-icon class="aide" matTooltip="Évaluations terminées dont la conclusion est « Réussite ».">help_outline</mat-icon></span>
+                    @if (ecarts['evaluations.reussite']; as d) { <span class="ecart {{ d.classe }}" [matTooltip]="d.titre">{{ d.texte }}</span> }</div>
+                  <div class="t-valeur {{ classeTaux(e.reussite) }}">{{ taux(e.reussite) }}</div>
+                  <div class="t-barre {{ classeTaux(e.reussite) }}"><span [style.width.%]="largeur(e.reussite)"></span></div>
+                  <div class="t-detail">{{ n(e.reussite.num) }} réussite{{ e.reussite.num > 1 ? 's' : '' }} sur {{ n(e.reussite.den) }}</div>
+                </div>
+              }
+              <div class="tuile" [class.alerte]="e.approbation_en_attente.num > 0">
+                <div class="t-tete"><span>En attente d'approbation <mat-icon class="aide" matTooltip="Évaluations terminées dont l'agent n'a pas encore validé la lettre.">help_outline</mat-icon></span>
+                  @if (ecarts['evaluations.approbation_en_attente']; as d) { <span class="ecart {{ d.classe }}" [matTooltip]="d.titre">{{ d.texte }}</span> }</div>
+                <div class="t-valeur" [class.niv-moyen]="e.approbation_en_attente.num > 0">{{ n(e.approbation_en_attente.num) }}</div>
+                <div class="t-detail">{{ e.approbation_en_attente.den ? 'sur ' + n(e.approbation_en_attente.den) + ' terminée' + (e.approbation_en_attente.den > 1 ? 's' : '') : 'Aucune évaluation terminée' }}</div>
+              </div>
+              @if (!donnees.blocs.coaching) {
+                <div class="tuile" [class.alerte]="e.coaching_a_faire > 0">
+                  <div class="t-tete"><span>Coachings à réaliser <mat-icon class="aide" matTooltip="Évaluations en échec dont le coaching n'est pas encore terminé.">help_outline</mat-icon></span>
+                    @if (ecarts['evaluations.coaching_a_faire']; as d) { <span class="ecart {{ d.classe }}" [matTooltip]="d.titre">{{ d.texte }}</span> }</div>
+                  <div class="t-valeur niv-{{ niveauAlerte(e.coaching_a_faire) }}">{{ n(e.coaching_a_faire) }}</div>
+                  <div class="t-detail">évaluation{{ e.coaching_a_faire > 1 ? 's' : '' }} en échec à coacher</div>
+                </div>
+              }
             </div>
+            @if (sansDonnee.evaluations?.length) {
+              <div class="sans-donnee"><mat-icon>info_outline</mat-icon> Sans donnée sur la période : {{ sansDonnee.evaluations!.join(' · ') }}</div>
+            }
+          }
+          @if (donnees.blocs.coaching; as c) {
+            <h3 class="sous-bloc">Suivi du coaching <small>évaluations en échec sur la période</small></h3>
+            <div class="tuiles">
+              <a class="tuile lien" [class.alerte]="c.a_faire > 0" routerLink="/mon-espace/evaluation/mes-coaching" [queryParams]="lienCoaching('a_faire')">
+                <div class="t-tete"><span>À faire <mat-icon class="aide" matTooltip="Évaluations en échec dont le coaching n'a pas commencé.">help_outline</mat-icon></span>
+                  @if (ecarts['coaching.a_faire']; as d) { <span class="ecart {{ d.classe }}" [matTooltip]="d.titre">{{ d.texte }}</span> }</div>
+                <div class="t-valeur niv-{{ niveauAlerte(c.a_faire) }}">{{ n(c.a_faire) }}</div>
+                <div class="t-detail">coaching{{ c.a_faire > 1 ? 's' : '' }} à commencer <mat-icon class="fleche">arrow_forward</mat-icon></div>
+              </a>
+              <a class="tuile lien" routerLink="/mon-espace/evaluation/mes-coaching" [queryParams]="lienCoaching('en_cours')">
+                <div class="t-tete"><span>En cours <mat-icon class="aide" matTooltip="Coachings commencés, pas encore terminés.">help_outline</mat-icon></span></div>
+                <div class="t-valeur">{{ n(c.en_cours) }}</div>
+                <div class="t-detail">coaching{{ c.en_cours > 1 ? 's' : '' }} en cours <mat-icon class="fleche">arrow_forward</mat-icon></div>
+              </a>
+              <a class="tuile lien" routerLink="/mon-espace/evaluation/mes-coaching" [queryParams]="lienCoaching('termine')">
+                <div class="t-tete"><span>Terminés</span>
+                  @if (ecarts['coaching.termines']; as d) { <span class="ecart {{ d.classe }}" [matTooltip]="d.titre">{{ d.texte }}</span> }</div>
+                <div class="t-valeur">{{ n(c.termines) }}</div>
+                <div class="t-detail">coaching{{ c.termines > 1 ? 's' : '' }} terminé{{ c.termines > 1 ? 's' : '' }} <mat-icon class="fleche">arrow_forward</mat-icon></div>
+              </a>
+            </div>
+          }
+        </section>
+      }
+
+      <!-- PLANS D'ACTIONS -->
+      @if (onglet === 'plans' && donnees.blocs.plans_actions; as pa) {
+        <section class="bloc" role="tabpanel">
+          <h3 class="sous-bloc">Suivi des plans d'actions <small>en cours, en retard et échéance proche : état actuel</small></h3>
+          <div class="tuiles">
+            <a class="tuile lien" routerLink="/mon-espace/evaluation/plans-actions" [queryParams]="lienPlans('en_cours')">
+              <div class="t-tete"><span>En cours <mat-icon class="aide" matTooltip="Actions pas encore réalisées (état actuel).">help_outline</mat-icon></span></div>
+              <div class="t-valeur">{{ n(pa.en_cours) }}</div>
+              <div class="t-detail">action{{ pa.en_cours > 1 ? 's' : '' }} à mener <mat-icon class="fleche">arrow_forward</mat-icon></div>
+            </a>
+            <a class="tuile lien" [class.alerte]="pa.en_retard > 0" routerLink="/mon-espace/evaluation/plans-actions" [queryParams]="lienPlans('en_retard')">
+              <div class="t-tete"><span>En retard <mat-icon class="aide" matTooltip="Actions non réalisées dont l'échéance est dépassée.">help_outline</mat-icon></span></div>
+              <div class="t-valeur niv-{{ niveauAlerte(pa.en_retard) }}">{{ n(pa.en_retard) }}</div>
+              <div class="t-detail">échéance dépassée <mat-icon class="fleche">arrow_forward</mat-icon></div>
+            </a>
+            <a class="tuile lien" routerLink="/mon-espace/evaluation/plans-actions" [queryParams]="lienPlans('proche')">
+              <div class="t-tete"><span>Échéance proche <mat-icon class="aide" matTooltip="Actions non réalisées à échéance dans les 7 prochains jours.">help_outline</mat-icon></span></div>
+              <div class="t-valeur" [class.niv-moyen]="pa.echeance_proche > 0">{{ n(pa.echeance_proche) }}</div>
+              <div class="t-detail">dans les 7 jours <mat-icon class="fleche">arrow_forward</mat-icon></div>
+            </a>
+            <a class="tuile lien" routerLink="/mon-espace/evaluation/plans-actions" [queryParams]="lienPlans('realisee')">
+              <div class="t-tete"><span>Réalisées <mat-icon class="aide" matTooltip="Actions réalisées pendant la période choisie.">help_outline</mat-icon></span>
+                @if (ecarts['plans_actions.realisees']; as d) { <span class="ecart {{ d.classe }}" [matTooltip]="d.titre">{{ d.texte }}</span> }</div>
+              <div class="t-valeur">{{ n(pa.realisees) }}</div>
+              <div class="t-detail">sur la période <mat-icon class="fleche">arrow_forward</mat-icon></div>
+            </a>
           </div>
         </section>
       }
 
-      <!-- ÉVALUATIONS -->
-      @if (donnees.blocs.evaluations; as e) {
-        <section class="bloc">
-          <h2><mat-icon>assignment_turned_in</mat-icon> Évaluations</h2>
-          <div class="tuiles">
-            <div class="tuile">
-              <div class="t-tete">Évaluations terminées</div>
-              <div class="t-valeur">{{ n(e.terminees) }}</div>
-              <div class="t-detail">{{ n(e.en_cours) }} en cours sur la période</div>
+      <!-- QUIZ ET SONDAGES -->
+      @if (onglet === 'quiz') {
+        <section class="bloc" role="tabpanel">
+          @if (donnees.blocs.quiz; as q) {
+            <h3 class="sous-bloc">Quiz</h3>
+            <div class="tuiles">
+              <div class="tuile">
+                <div class="t-tete"><span>Quiz ouverts</span></div>
+                <div class="t-valeur">{{ n(q.quiz_ouverts) }}</div>
+                <div class="t-detail">diffusés sur ce périmètre</div>
+              </div>
+              @if (q.reussite.den) {
+                <div class="tuile">
+                  <div class="t-tete"><span>Taux de réussite <mat-icon class="aide" matTooltip="Passages réussis parmi tous les passages terminés sur la période (retests compris).">help_outline</mat-icon></span>
+                    @if (ecarts['quiz.reussite']; as d) { <span class="ecart {{ d.classe }}" [matTooltip]="d.titre">{{ d.texte }}</span> }</div>
+                  <div class="t-valeur {{ classeTaux(q.reussite) }}">{{ taux(q.reussite) }}</div>
+                  <div class="t-barre {{ classeTaux(q.reussite) }}"><span [style.width.%]="largeur(q.reussite)"></span></div>
+                  <div class="t-detail">{{ n(q.tentatives) }} passage{{ q.tentatives > 1 ? 's' : '' }} · {{ n(q.participants) }} participant{{ q.participants > 1 ? 's' : '' }}</div>
+                </div>
+              }
+              @if (q.reussite_premier_essai.den) {
+                <div class="tuile">
+                  <div class="t-tete"><span>Réussite au 1er essai</span>
+                    @if (ecarts['quiz.reussite_premier_essai']; as d) { <span class="ecart {{ d.classe }}" [matTooltip]="d.titre">{{ d.texte }}</span> }</div>
+                  <div class="t-valeur {{ classeTaux(q.reussite_premier_essai) }}">{{ taux(q.reussite_premier_essai) }}</div>
+                  <div class="t-barre {{ classeTaux(q.reussite_premier_essai) }}"><span [style.width.%]="largeur(q.reussite_premier_essai)"></span></div>
+                  <div class="t-detail">{{ n(q.reussite_premier_essai.num) }} sur {{ n(q.reussite_premier_essai.den) }} premiers passages</div>
+                </div>
+              }
+              <div class="tuile" [class.alerte]="q.echecs_sans_retest > 0">
+                <div class="t-tete"><span>Échecs sans retest <mat-icon class="aide" matTooltip="Agents en échec au dernier passage d'un quiz ouvert qui autorise les retests, sans décision prise (ni retest accordé, ni refusé, maximum non atteint).">help_outline</mat-icon></span></div>
+                <div class="t-valeur" [class.niv-moyen]="q.echecs_sans_retest > 0">{{ n(q.echecs_sans_retest) }}</div>
+                <div class="t-detail">retest{{ q.echecs_sans_retest > 1 ? 's' : '' }} à décider</div>
+              </div>
             </div>
-            <div class="tuile">
-              <div class="t-tete">Taux de réussite <mat-icon class="aide" matTooltip="Évaluations terminées dont la conclusion est « Réussite ».">help_outline</mat-icon></div>
-              <div class="t-valeur">{{ taux(e.reussite) }}</div>
-              <div class="t-barre"><div [style.width.%]="largeur(e.reussite)"></div></div>
-              <div class="t-detail">{{ e.reussite.den ? n(e.reussite.num) + ' réussite' + (e.reussite.num > 1 ? 's' : '') + ' sur ' + n(e.reussite.den) : 'Aucune évaluation terminée' }}</div>
+          }
+          @if (donnees.blocs.sondages; as s) {
+            <h3 class="sous-bloc">Sondages</h3>
+            <div class="tuiles">
+              <div class="tuile">
+                <div class="t-tete"><span>Sondages actifs</span></div>
+                <div class="t-valeur">{{ n(s.sondages_actifs) }}</div>
+                <div class="t-detail">ciblant ce périmètre</div>
+              </div>
+              @if (s.reponse_cibles.den) {
+                <div class="tuile">
+                  <div class="t-tete"><span>Taux de réponse <mat-icon class="aide" matTooltip="Destinataires des sondages actifs ayant terminé leur réponse (état actuel).">help_outline</mat-icon></span></div>
+                  <div class="t-valeur {{ classeTaux(s.reponse_cibles) }}">{{ taux(s.reponse_cibles) }}</div>
+                  <div class="t-barre {{ classeTaux(s.reponse_cibles) }}"><span [style.width.%]="largeur(s.reponse_cibles)"></span></div>
+                  <div class="t-detail">{{ n(s.reponse_cibles.num) }} sur {{ n(s.reponse_cibles.den) }} destinataires</div>
+                </div>
+              }
+              <div class="tuile">
+                <div class="t-tete"><span>Réponses reçues</span>
+                  @if (ecarts['sondages.reponses_periode']; as d) { <span class="ecart {{ d.classe }}" [matTooltip]="d.titre">{{ d.texte }}</span> }</div>
+                <div class="t-valeur">{{ n(s.reponses_periode) }}</div>
+                <div class="t-detail">sur la période</div>
+              </div>
             </div>
-            <div class="tuile" [class.alerte]="e.approbation_en_attente.num > 0">
-              <div class="t-tete">En attente d'approbation <mat-icon class="aide" matTooltip="Évaluations terminées dont l'agent n'a pas encore validé la lettre.">help_outline</mat-icon></div>
-              <div class="t-valeur">{{ n(e.approbation_en_attente.num) }}</div>
-              <div class="t-detail">{{ e.approbation_en_attente.den ? 'sur ' + n(e.approbation_en_attente.den) + ' terminée' + (e.approbation_en_attente.den > 1 ? 's' : '') : 'Aucune évaluation terminée' }}</div>
-            </div>
-            <div class="tuile" [class.alerte]="e.coaching_a_faire > 0">
-              <div class="t-tete">Coachings à réaliser <mat-icon class="aide" matTooltip="Évaluations en échec dont le coaching n'est pas encore terminé.">help_outline</mat-icon></div>
-              <div class="t-valeur">{{ n(e.coaching_a_faire) }}</div>
-              <div class="t-detail">évaluation{{ e.coaching_a_faire > 1 ? 's' : '' }} en échec à coacher</div>
-            </div>
-          </div>
-        </section>
-      }
-
-      <!-- QUIZ -->
-      @if (donnees.blocs.quiz; as q) {
-        <section class="bloc">
-          <h2><mat-icon>quiz</mat-icon> Quiz</h2>
-          <div class="tuiles">
-            <div class="tuile">
-              <div class="t-tete">Quiz ouverts</div>
-              <div class="t-valeur">{{ n(q.quiz_ouverts) }}</div>
-              <div class="t-detail">diffusés sur ce périmètre</div>
-            </div>
-            <div class="tuile">
-              <div class="t-tete">Taux de réussite <mat-icon class="aide" matTooltip="Passages réussis parmi tous les passages terminés sur la période (retests compris).">help_outline</mat-icon></div>
-              <div class="t-valeur">{{ taux(q.reussite) }}</div>
-              <div class="t-barre"><div [style.width.%]="largeur(q.reussite)"></div></div>
-              <div class="t-detail">{{ n(q.tentatives) }} passage{{ q.tentatives > 1 ? 's' : '' }} · {{ n(q.participants) }} participant{{ q.participants > 1 ? 's' : '' }}</div>
-            </div>
-            <div class="tuile">
-              <div class="t-tete">Réussite au 1er essai</div>
-              <div class="t-valeur">{{ taux(q.reussite_premier_essai) }}</div>
-              <div class="t-barre"><div [style.width.%]="largeur(q.reussite_premier_essai)"></div></div>
-              <div class="t-detail">{{ q.reussite_premier_essai.den ? n(q.reussite_premier_essai.num) + ' sur ' + n(q.reussite_premier_essai.den) + ' premiers passages' : 'Aucun passage' }}</div>
-            </div>
-            <div class="tuile" [class.alerte]="q.echecs_sans_retest > 0">
-              <div class="t-tete">Échecs sans retest <mat-icon class="aide" matTooltip="Agents dont le dernier passage d'un quiz encore ouvert est un échec et à qui aucun retest n'a été accordé.">help_outline</mat-icon></div>
-              <div class="t-valeur">{{ n(q.echecs_sans_retest) }}</div>
-              <div class="t-detail">retest{{ q.echecs_sans_retest > 1 ? 's' : '' }} à décider</div>
-            </div>
-          </div>
-        </section>
-      }
-
-      <!-- SONDAGES -->
-      @if (donnees.blocs.sondages; as s) {
-        <section class="bloc">
-          <h2><mat-icon>poll</mat-icon> Sondages</h2>
-          <div class="tuiles">
-            <div class="tuile">
-              <div class="t-tete">Sondages actifs</div>
-              <div class="t-valeur">{{ n(s.sondages_actifs) }}</div>
-              <div class="t-detail">ciblant ce périmètre</div>
-            </div>
-            <div class="tuile">
-              <div class="t-tete">Taux de réponse <mat-icon class="aide" matTooltip="Destinataires des sondages actifs ayant terminé leur réponse.">help_outline</mat-icon></div>
-              <div class="t-valeur">{{ taux(s.reponse_cibles) }}</div>
-              <div class="t-barre"><div [style.width.%]="largeur(s.reponse_cibles)"></div></div>
-              <div class="t-detail">{{ s.reponse_cibles.den ? n(s.reponse_cibles.num) + ' sur ' + n(s.reponse_cibles.den) + ' destinataires' : 'Aucun destinataire' }}</div>
-            </div>
-            <div class="tuile">
-              <div class="t-tete">Réponses reçues</div>
-              <div class="t-valeur">{{ n(s.reponses_periode) }}</div>
-              <div class="t-detail">sur la période</div>
-            </div>
-          </div>
+          }
+          @if (sansDonnee.quiz?.length) {
+            <div class="sans-donnee"><mat-icon>info_outline</mat-icon> Sans donnée sur la période : {{ sansDonnee.quiz!.join(' · ') }}</div>
+          }
         </section>
       }
 
       <!-- CALIBRAGE -->
-      @if (donnees.blocs.calibrage; as c) {
-        <section class="bloc">
-          <h2><mat-icon>tune</mat-icon> Calibrage
+      @if (onglet === 'calibrage' && donnees.blocs.calibrage; as c) {
+        <section class="bloc" role="tabpanel">
+          <h3 class="sous-bloc">Calibrage
             @if (c.perimetre_site) { <span class="compte">sessions de votre site</span> }
-          </h2>
+            @if (c.programme_non_applique) { <span class="compte" matTooltip="Une session de calibrage n'est pas rattachée à un programme.">non filtré par programme</span> }
+          </h3>
           <div class="tuiles">
             <div class="tuile">
-              <div class="t-tete">Sessions en cours</div>
+              <div class="t-tete"><span>Sessions en cours</span></div>
               <div class="t-valeur">{{ n(c.en_cours) }}</div>
               <div class="t-detail">{{ n(c.en_preparation) }} en préparation</div>
             </div>
             <div class="tuile">
-              <div class="t-tete">Sessions clôturées</div>
+              <div class="t-tete"><span>Sessions clôturées</span>
+                @if (ecarts['calibrage.cloturees']; as d) { <span class="ecart {{ d.classe }}" [matTooltip]="d.titre">{{ d.texte }}</span> }</div>
               <div class="t-valeur">{{ n(c.cloturees) }}</div>
               <div class="t-detail">sur la période</div>
             </div>
-            <div class="tuile">
-              <div class="t-tete">Participation <mat-icon class="aide" matTooltip="Participants ayant terminé leur évaluation, sur les sessions en cours et celles clôturées dans la période.">help_outline</mat-icon></div>
-              <div class="t-valeur">{{ taux(c.participation) }}</div>
-              <div class="t-barre"><div [style.width.%]="largeur(c.participation)"></div></div>
-              <div class="t-detail">{{ c.participation.den ? n(c.participation.num) + ' sur ' + n(c.participation.den) + ' participants' : 'Aucun participant' }}</div>
-            </div>
+            @if (c.participation.den) {
+              <div class="tuile">
+                <div class="t-tete"><span>Participation <mat-icon class="aide" matTooltip="Participants ayant terminé leur évaluation, sur les sessions en cours et celles clôturées dans la période.">help_outline</mat-icon></span></div>
+                <div class="t-valeur {{ classeTaux(c.participation) }}">{{ taux(c.participation) }}</div>
+                <div class="t-barre {{ classeTaux(c.participation) }}"><span [style.width.%]="largeur(c.participation)"></span></div>
+                <div class="t-detail">{{ n(c.participation.num) }} sur {{ n(c.participation.den) }} participants</div>
+              </div>
+            }
           </div>
+          @if (sansDonnee.calibrage?.length) {
+            <div class="sans-donnee"><mat-icon>info_outline</mat-icon> Sans donnée sur la période : {{ sansDonnee.calibrage!.join(' · ') }}</div>
+          }
         </section>
       }
 
-      <!-- RÉPARTITION PAR SITE (vision globale) -->
-      @if (donnees.par_site?.length) {
-        <section class="bloc">
-          <h2><mat-icon>public</mat-icon> Par site</h2>
+      <!-- PAR SITE (vision globale) -->
+      @if (onglet === 'sites' && donnees.par_site?.length) {
+        <section class="bloc" role="tabpanel">
+          <div class="carte-sites">
+            <div class="sites-tete">
+              <h3 class="sous-bloc">Comparaison des sites</h3>
+              <div class="legende">
+                @if (donnees.blocs.baseco) { <span><i class="c-lecture"></i>Lecture Baseco</span> }
+                @if (donnees.blocs.evaluations) { <span><i class="c-evals"></i>Réussite évaluations</span> }
+                @if (donnees.blocs.quiz) { <span><i class="c-quiz"></i>Réussite quiz</span> }
+              </div>
+            </div>
+            @for (l of donnees.par_site; track l.id) {
+              <div class="site-ligne">
+                <span class="site-nom">{{ l.nom }}</span>
+                <div class="site-barres">
+                  @if (donnees.blocs.baseco) {
+                    <div class="barre-ligne" [matTooltip]="'Lecture Baseco : ' + taux(l.lecture)"><span class="piste"><span class="c-lecture" [style.width.%]="barreSite(l.lecture)"></span></span><b>{{ taux(l.lecture) }}</b></div>
+                  }
+                  @if (donnees.blocs.evaluations) {
+                    <div class="barre-ligne" [matTooltip]="'Réussite évaluations : ' + taux(l.reussite_evaluations)"><span class="piste"><span class="c-evals" [style.width.%]="barreSite(l.reussite_evaluations)"></span></span><b>{{ taux(l.reussite_evaluations) }}</b></div>
+                  }
+                  @if (donnees.blocs.quiz) {
+                    <div class="barre-ligne" [matTooltip]="'Réussite quiz : ' + taux(l.reussite_quiz)"><span class="piste"><span class="c-quiz" [style.width.%]="barreSite(l.reussite_quiz)"></span></span><b>{{ taux(l.reussite_quiz) }}</b></div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
           <div class="table-wrap">
             <table class="table-sites">
               <thead>

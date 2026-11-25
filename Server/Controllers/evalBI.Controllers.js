@@ -27,39 +27,143 @@ const notifierValidateurs = async (conn, message, idEvaluation) => {
 };
 
 // ===================== ARBORESCENCE (admin) ==========================
+// Utilisée = une évaluation fait référence à l'une de ses options, ou une
+// proposition (BI) attend une décision : suppression -> archivage (out104).
+const SQL_ARBO_UTILISEE = (a) => `(EXISTS (SELECT 1 FROM b_evaluation_bi eb JOIN b_eval_bi_option ou ON ou.id = eb.id_option WHERE ou.id_arborescence = ${a}.id)
+  OR EXISTS (SELECT 1 FROM b_eval_bi_option oa WHERE oa.id_arborescence = ${a}.id AND oa.etat = 'EN_ATTENTE'))`;
+
+/** GET /eval/bi/arborescence?etat=ACTIF|ARCHIVE|TOUS (défaut ACTIF) &id_grille &id_site */
 const getArborescences = async (req, res) => {
   try {
     const { id_grille, id_site } = req.query;
+    const etat = String(req.query.etat || "ACTIF").toUpperCase();
     const clauses = [], params = [];
+    if (etat === "ACTIF" || etat === "ARCHIVE") { clauses.push("a.etat=?"); params.push(etat); }
     if (id_grille) { clauses.push("a.id_grille=?"); params.push(id_grille); }
     if (id_site) { clauses.push("a.id_site=?"); params.push(id_site); }
     const where = clauses.length ? "WHERE " + clauses.join(" AND ") : "";
     const [rows] = await db.query(
-      `SELECT a.*, g.nom AS grille, s.nom AS site
+      `SELECT a.*, g.nom AS grille, s.nom AS site,
+              (SELECT COUNT(*) FROM b_eval_bi_option o WHERE o.id_arborescence = a.id AND o.etat = 'ACTIF') AS nb_options,
+              (SELECT COUNT(*) FROM b_eval_bi_option o WHERE o.id_arborescence = a.id AND o.etat = 'EN_ATTENTE') AS nb_en_attente,
+              (SELECT COUNT(*) FROM b_eval_bi_option o WHERE o.id_arborescence = a.id) AS nb_options_total,
+              (SELECT COUNT(DISTINCT eb.id_evaluation) FROM b_evaluation_bi eb JOIN b_eval_bi_option ou ON ou.id = eb.id_option
+                WHERE ou.id_arborescence = a.id) AS nb_evaluations,
+              ${SQL_ARBO_UTILISEE("a")} AS utilisee
        FROM b_eval_bi_arborescence a
        LEFT JOIN b_eval_grille g ON a.id_grille=g.id
        LEFT JOIN b_site s ON a.id_site=s.id
        ${where} ORDER BY g.nom, s.nom`, params
     );
+    for (const r of rows) {
+      r.utilisee = !!Number(r.utilisee);
+      // Grille et site modifiables tant que l'arborescence n'a aucune option.
+      r.couple_modifiable = Number(r.nb_options_total) === 0;
+    }
     return res.status(200).json(rows);
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors du chargement." }); }
 };
 
+/** Message 409 pour un couple grille / site déjà pris (arborescence active ou archivée). */
+const messageCoupleExistant = async (idGrille, idSite, saufId = 0) => {
+  const [[x]] = await db.query(
+    `SELECT etat FROM b_eval_bi_arborescence WHERE id_grille=? AND id_site=? AND id<>?`, [idGrille, idSite, saufId]
+  );
+  if (!x) return null;
+  return x.etat === "ARCHIVE"
+    ? "Une arborescence archivée existe déjà pour ce couple grille / site : restaurez-la."
+    : "Une arborescence existe déjà pour ce couple grille / site.";
+};
+
 const addArborescence = async (req, res) => {
-  const { id_grille, id_site, point_depart_libelle } = req.body;
-  if (!id_grille || !id_site || !point_depart_libelle) {
+  const { id_grille, id_site } = req.body;
+  const point = String(req.body.point_depart_libelle || "").replace(/\s+/g, " ").trim().slice(0, 200);
+  if (!id_grille || !id_site || !point) {
     return res.status(400).json({ message: "Grille, site et point de départ obligatoires." });
   }
   try {
+    const existe = await messageCoupleExistant(id_grille, id_site);
+    if (existe) return res.status(409).json({ message: existe });
     const [r] = await db.query(
-      `INSERT INTO b_eval_bi_arborescence (id_grille, id_site, point_depart_libelle, dateCreation) VALUES (?, ?, ?, NOW())`,
-      [id_grille, id_site, point_depart_libelle]
+      `INSERT INTO b_eval_bi_arborescence (id_grille, id_site, point_depart_libelle, dateCreation, etat) VALUES (?, ?, ?, NOW(), 'ACTIF')`,
+      [id_grille, id_site, point]
     );
     return res.status(201).json({ id: r.insertId, message: "Arborescence créée." });
   } catch (e) {
     if (e.code === "ER_DUP_ENTRY") return res.status(409).json({ message: "Une arborescence existe déjà pour ce couple grille/site." });
     console.log(e); return res.status(500).json({ message: "Erreur lors de la création." });
   }
+};
+
+/**
+ * PUT /eval/bi/arborescence/:id — point de départ toujours modifiable ; grille et
+ * site seulement tant que l'arborescence n'a aucune option (donc aucune évaluation liée).
+ */
+const updateArborescence = async (req, res) => {
+  const id = Number(req.params.id);
+  const b = req.body || {};
+  try {
+    const [[a]] = await db.query(`SELECT * FROM b_eval_bi_arborescence WHERE id=?`, [id]);
+    if (!a) return res.status(404).json({ message: "Arborescence introuvable." });
+    const point = b.point_depart_libelle === undefined ? a.point_depart_libelle
+      : String(b.point_depart_libelle || "").replace(/\s+/g, " ").trim().slice(0, 200);
+    if (!point) return res.status(400).json({ message: "Le point de départ est obligatoire." });
+    const idGrille = b.id_grille ? Number(b.id_grille) : a.id_grille;
+    const idSite = b.id_site ? Number(b.id_site) : a.id_site;
+    const coupleChange = idGrille !== Number(a.id_grille) || idSite !== Number(a.id_site);
+    if (coupleChange) {
+      const [[n]] = await db.query(`SELECT COUNT(*) AS n FROM b_eval_bi_option WHERE id_arborescence=?`, [id]);
+      if (Number(n.n) > 0) {
+        return res.status(409).json({ message: "Cette arborescence a des options : seul le point de départ est modifiable." });
+      }
+      const existe = await messageCoupleExistant(idGrille, idSite, id);
+      if (existe) return res.status(409).json({ message: existe });
+    }
+    if (!coupleChange && point === a.point_depart_libelle) return res.status(200).json({ message: "Aucune modification.", inchange: true });
+    await db.query(
+      `UPDATE b_eval_bi_arborescence SET id_grille=?, id_site=?, point_depart_libelle=?, dateModification=NOW() WHERE id=?`,
+      [idGrille, idSite, point, id]
+    );
+    return res.status(200).json({ message: "Arborescence modifiée." });
+  } catch (e) {
+    if (e.code === "ER_DUP_ENTRY") return res.status(409).json({ message: "Une arborescence existe déjà pour ce couple grille/site." });
+    console.log(e); return res.status(500).json({ message: "Erreur lors de la modification." });
+  }
+};
+
+/**
+ * DELETE /eval/bi/arborescence/:id — utilisée : archivée ; sinon supprimée avec
+ * ses options (les plus profondes d'abord).
+ */
+const deleteArborescence = async (req, res) => {
+  const id = Number(req.params.id);
+  try {
+    const out = await withTx(async (conn) => {
+      const [[a]] = await conn.query(`SELECT a.id, a.etat, ${SQL_ARBO_UTILISEE("a")} AS utilisee FROM b_eval_bi_arborescence a WHERE a.id=?`, [id]);
+      if (!a) return { notFound: true };
+      if (Number(a.utilisee)) {
+        await conn.query(`UPDATE b_eval_bi_arborescence SET etat='ARCHIVE', dateArchivage=NOW() WHERE id=?`, [id]);
+        return { archivee: true };
+      }
+      await conn.query(`DELETE FROM b_eval_bi_option WHERE id_arborescence=? ORDER BY niveau DESC, id DESC`, [id]);
+      await conn.query(`DELETE FROM b_eval_bi_arborescence WHERE id=?`, [id]);
+      return { supprimee: true };
+    });
+    if (out.notFound) return res.status(404).json({ message: "Arborescence introuvable." });
+    if (out.archivee) return res.status(200).json({ archivee: true, message: "Arborescence utilisée par des évaluations : elle a été archivée." });
+    return res.status(200).json({ supprimee: true, message: "Arborescence supprimée." });
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors de la suppression." }); }
+};
+
+/** PUT /eval/bi/arborescence/:id/restaurer — de nouveau proposée dans les évaluations. */
+const restaurerArborescence = async (req, res) => {
+  try {
+    const [r] = await db.query(
+      `UPDATE b_eval_bi_arborescence SET etat='ACTIF', dateArchivage=NULL, dateModification=NOW() WHERE id=? AND etat='ARCHIVE'`, [req.params.id]
+    );
+    if (!r.affectedRows) return res.status(404).json({ message: "Arborescence archivée introuvable." });
+    return res.status(200).json({ message: "Arborescence restaurée." });
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors de la restauration." }); }
 };
 
 // Arbre complet des options ACTIVES d'une arborescence
@@ -132,9 +236,11 @@ const getEvaluationBI = async (req, res) => {
       `SELECT id, id_grille_origine, id_site, statut, resolution FROM b_evaluation WHERE id=?`, [idEval]
     );
     if (!e) return res.status(404).json({ message: "Évaluation introuvable." });
+    // Arborescence archivée : plus proposée aux évaluations non terminées (out104) ;
+    // une évaluation terminée affiche de toute façon ses libellés enregistrés.
     const [[arbo]] = await db.query(
-      `SELECT * FROM b_eval_bi_arborescence WHERE id_grille=? AND id_site=?`,
-      [e.id_grille_origine, e.id_site]
+      `SELECT * FROM b_eval_bi_arborescence WHERE id_grille=? AND id_site=? AND (etat='ACTIF' OR ?)`,
+      [e.id_grille_origine, e.id_site, e.statut === "TERMINE" ? 1 : 0]
     );
     const [choix] = await db.query(
       `SELECT niveau, id_option, libelle FROM b_evaluation_bi WHERE id_evaluation=? ORDER BY niveau`, [idEval]
@@ -236,15 +342,18 @@ const getOptionsEnAttente = async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT o.id, o.niveau, o.libelle, o.id_evaluation_origine, o.dateCreation,
-              g.nom AS grille, s.nom AS site,
-              u.nom AS proposeur_nom, u.prenom AS proposeur_prenom,
-              parent.libelle AS parent_libelle
+              o.id_arborescence, a.point_depart_libelle, g.nom AS grille, s.nom AS site,
+              o.propose_par, u.nom AS proposeur_nom, u.prenom AS proposeur_prenom,
+              parent.libelle AS parent_libelle,
+              ag.nom AS agent_nom, ag.prenom AS agent_prenom, ev.date_appel
        FROM b_eval_bi_option o
        JOIN b_eval_bi_arborescence a ON o.id_arborescence=a.id
        LEFT JOIN b_eval_grille g ON a.id_grille=g.id
        LEFT JOIN b_site s ON a.id_site=s.id
        LEFT JOIN b_utilisateur u ON o.propose_par=u.id
        LEFT JOIN b_eval_bi_option parent ON o.id_parent=parent.id
+       LEFT JOIN b_evaluation ev ON ev.id=o.id_evaluation_origine
+       LEFT JOIN b_utilisateur ag ON ag.id=ev.id_agent
        WHERE o.etat='EN_ATTENTE' ORDER BY o.dateCreation DESC`
     );
     return res.status(200).json(rows);
@@ -367,7 +476,7 @@ const deleteDependentsSetRejected = async (conn, id, validePar, motif) => {
 };
 
 module.exports = {
-  getArborescences, addArborescence, getArbreOptions, addOption, updateOption, deplacerOptionArbre, deleteOption,
+  getArborescences, addArborescence, updateArborescence, deleteArborescence, restaurerArborescence, getArbreOptions, addOption, updateOption, deplacerOptionArbre, deleteOption,
   getEvaluationBI, getOptionsEnfants, saveEvaluationBI, proposerOption,
   getOptionsEnAttente, validerOption, rejeterOption,
 };

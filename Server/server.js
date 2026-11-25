@@ -4,9 +4,18 @@ const colors = require("colors");
 const dotenv = require("dotenv");
 const mysqlPool = require("./config/db");
 const path = require("path");
+const parametres = require("./config/parametres");
+const { viderCachePermissionsApresModif } = require("./middlewares/permission");
 
 /** config dotenv */
 dotenv.config();
+
+// Une promesse rejetée sans gestionnaire (ex. erreur SQL « Lock wait timeout » dans
+// un traitement lancé sans await) arrêtait tout le serveur : on la journalise et
+// l'API continue de répondre.
+process.on("unhandledRejection", (raison) => {
+  console.error("Promesse rejetée non gérée :", raison && (raison.sqlMessage || raison.stack || raison));
+});
 const PORT = process.env.SERVER_PORT;
 // rest object
 
@@ -25,8 +34,20 @@ app.use((req, res, next) => {
 });
 /* middlewares */
 
-app.use(morgan(`dev`));
+// Journal : une ligne par requête (« toutes », comme avant), ou seulement les
+// erreurs et les requêtes lentes (« erreurs », défaut en production) pour ne pas
+// ralentir le serveur ni remplir les journaux à 700 utilisateurs.
+if (parametres.journalRequetes === "toutes") {
+  app.use(morgan(`dev`));
+} else {
+  app.use(morgan(":date[iso] :method :url :status :response-time ms - :res[content-length]", {
+    skip: (req, res) => res.statusCode < 400 && Number(morgan["response-time"](req, res) || 0) < parametres.seuilLentMs,
+  }));
+}
+// Import Excel de comptes : jusqu'à 500 lignes, au-delà de la limite par défaut (100 ko).
+app.use("/api/v1/utilisateur-import", express.json({ limit: "2mb" }));
 app.use(express.json());
+app.use(viderCachePermissionsApresModif);
 app.use("/chargements", express.static(path.join(__dirname, "chargements")));
 
 //app.use(express.static("Frontend"));
@@ -53,6 +74,17 @@ app.use("/api/v1", require("./Routes/calibrageResultats.Routes")); // calibrage 
 app.use("/api/v1", require("./Routes/sondage.Routes"));
 app.use("/api/v1", require("./Routes/comptes.Routes")); // Gérer les comptes — permission Jauge
 app.use("/api/v1", require("./Routes/tableauDeBord.Routes")); // Tableau de bord par périmètre
+// Erreur non rattrapée dans une route : réponse JSON 500 sans détail technique
+// (Express renvoyait une page HTML avec la pile d'appels).
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error(`${req.method} ${req.originalUrl} :`, (err && (err.sqlMessage || err.stack)) || err);
+  if (res.headersSent) return;
+  if (err && err.type === "entity.parse.failed") return res.status(400).json({ message: "Requête invalide." });
+  if (err && err.type === "entity.too.large") return res.status(413).json({ message: "Requête trop volumineuse." });
+  res.status(500).json({ message: "Une erreur s'est produite, veuillez réessayer plus tard." });
+});
+
 /*app.get("/{*test}", (req, res) => {
   res.sendFile(path.join(__dirname + "/Frontend/index.html"));
 });*/

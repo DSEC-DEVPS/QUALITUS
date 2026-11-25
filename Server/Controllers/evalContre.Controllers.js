@@ -134,6 +134,58 @@ const getEvaluationsByEvaluateur = async (req, res) => {
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors du chargement." }); }
 };
 
+// --- Page « Contre-évaluation » (out103) : évaluations TERMINÉES du périmètre,
+// filtrées par site (imposé hors site à vision globale), évaluateur et période
+// (date d'évaluation), avec l'état de leur contre-évaluation éventuelle.
+const getEvaluationsAContreEvaluer = async (req, res) => {
+  const userId = Number(req.auth.userId);
+  const q = req.query || {};
+  try {
+    const p = await porteeContre(userId);
+    const where = ["e.statut='TERMINE'", "e.actif=1"];
+    const params = [];
+    const idSite = /^\d+$/.test(String(q.id_site || "")) ? Number(q.id_site) : null;
+    if (idSite !== null) {
+      if (!siteAutorise(p, idSite)) return res.status(403).json({ message: "Vous ne pouvez contre-évaluer que les évaluations de votre site." });
+      where.push("e.id_site=?"); params.push(idSite);
+    } else if (!p.visionGlobale) {
+      where.push("e.id_site=?"); params.push(p.idSite ?? -1);
+    }
+    if (/^\d+$/.test(String(q.id_evaluateur || ""))) { where.push("e.id_evaluateur=?"); params.push(Number(q.id_evaluateur)); }
+    const dateEval = "COALESCE(e.date_evaluation, e.date_creation)";
+    if (estDateYMD(q.date_debut)) { where.push(`${dateEval} >= ?`); params.push(q.date_debut + " 00:00:00"); }
+    if (estDateYMD(q.date_fin)) { where.push(`${dateEval} <= ?`); params.push(q.date_fin + " 23:59:59"); }
+    const [rows] = await db.query(
+      `SELECT e.id, e.date_appel, ${dateEval} AS date_evaluation, e.identifiant_appel, e.numero_case, e.conclusion,
+              e.id_evaluateur, (e.id_evaluateur = ?) AS propre,
+              ev.nom AS evaluateur_nom, ev.prenom AS evaluateur_prenom, ev.nom_utilisateur AS evaluateur_login,
+              ag.nom AS agent_nom, ag.prenom AS agent_prenom, ag.nom_utilisateur AS agent_login,
+              s.nom AS site, gr.nom AS grille, t.libelle AS type_evaluation,
+              ce.id AS contre_id, ce.statut AS contre_statut, ce.actif AS contre_actif, ce.conclusion AS contre_conclusion,
+              (ce.id_responsable = ?) AS contre_mienne,
+              re.nom AS contre_responsable_nom, re.prenom AS contre_responsable_prenom
+         FROM b_evaluation e
+         LEFT JOIN b_utilisateur ev ON ev.id = e.id_evaluateur
+         LEFT JOIN b_utilisateur ag ON ag.id = e.id_agent
+         LEFT JOIN b_site s ON s.id = e.id_site
+         LEFT JOIN b_eval_grille gr ON gr.id = e.id_grille_origine
+         LEFT JOIN b_eval_ref_type_evaluation t ON t.id = e.id_type_evaluation
+         LEFT JOIN b_eval_contre_evaluation ce ON ce.id_evaluation_initiale = e.id
+         LEFT JOIN b_utilisateur re ON re.id = ce.id_responsable
+        WHERE ${where.join(" AND ")}
+        ORDER BY ${dateEval} DESC, e.id DESC
+        LIMIT 5000`, [userId, userId, ...params]
+    );
+    // Ouvrir la contre-évaluation existante : son créateur, ou contre_evaluation.voir_tous (périmètre déjà appliqué).
+    for (const r of rows) {
+      r.propre = !!Number(r.propre);
+      r.contre_mienne = !!Number(r.contre_mienne);
+      r.peut_ouvrir_contre = !!r.contre_id && (r.contre_mienne || p.voirTous);
+    }
+    return res.status(200).json(rows);
+  } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors du chargement." }); }
+};
+
 // --- Création : recopie du snapshot de l'évaluation initiale (F.42bis C) ---
 const creerContre = async (req, res) => {
   const idInit = req.params.idEvaluation;
@@ -207,9 +259,14 @@ const getAllContre = async (req, res) => {
     // du périmètre (tous les sites pour le site à vision globale, sinon son site).
     const where = ["ce.actif=1"];
     const params = [];
-    const p = q.portee === "toutes" ? await porteeContre(userId) : null;
+    // portee=autres (out103, « Créées par d'autres ») : idem « toutes », sans les siennes.
+    const transverse = q.portee === "toutes" || q.portee === "autres";
+    const p = transverse ? await porteeContre(userId) : null;
     if (p && p.voirTous) {
       if (!p.visionGlobale) { where.push("e.id_site=?"); params.push(p.idSite ?? -1); }
+      if (q.portee === "autres") { where.push("ce.id_responsable<>?"); params.push(userId); }
+    } else if (q.portee === "autres") {
+      return res.status(200).json([]);
     } else {
       where.push("ce.id_responsable=?"); params.push(userId);
     }
@@ -220,12 +277,14 @@ const getAllContre = async (req, res) => {
       `SELECT ce.id, ce.statut, ce.id_responsable, (ce.id_responsable = ${db.escape(Number(userId))}) AS est_createur,
               ce.conclusion, ce.date_creation, ce.date_visibilite, ce.date_evaluation,
               e.id AS id_evaluation_initiale, e.identifiant_appel, ev.nom AS evaluateur_nom, ev.prenom AS evaluateur_prenom,
-              ag.nom AS agent_nom, ag.prenom AS agent_prenom, r.nom AS responsable_nom, r.prenom AS responsable_prenom
+              ag.nom AS agent_nom, ag.prenom AS agent_prenom, ag.nom_utilisateur AS agent_login,
+              r.nom AS responsable_nom, r.prenom AS responsable_prenom, s.nom AS site
        FROM b_eval_contre_evaluation ce
        JOIN b_evaluation e ON ce.id_evaluation_initiale=e.id
        LEFT JOIN b_utilisateur ev ON e.id_evaluateur=ev.id
        LEFT JOIN b_utilisateur ag ON e.id_agent=ag.id
        LEFT JOIN b_utilisateur r ON ce.id_responsable=r.id
+       LEFT JOIN b_site s ON s.id=e.id_site
        WHERE ${where.join(" AND ")}
        ORDER BY ce.date_creation DESC`, params
     );
@@ -250,7 +309,8 @@ const getMesContre = async (req, res) => {
     const [rows] = await db.query(
       `SELECT ce.id, ce.statut, ce.conclusion, ce.date_creation, ce.date_visibilite, ce.date_evaluation,
               e.id AS id_evaluation_initiale, e.identifiant_appel, ev.nom AS evaluateur_nom, ev.prenom AS evaluateur_prenom,
-              ag.nom AS agent_nom, ag.prenom AS agent_prenom, r.nom AS responsable_nom, r.prenom AS responsable_prenom
+              ag.nom AS agent_nom, ag.prenom AS agent_prenom, ag.nom_utilisateur AS agent_login,
+              r.nom AS responsable_nom, r.prenom AS responsable_prenom
        FROM b_eval_contre_evaluation ce
        JOIN b_evaluation e ON ce.id_evaluation_initiale=e.id
        LEFT JOIN b_utilisateur ev ON e.id_evaluateur=ev.id
@@ -356,14 +416,20 @@ const setResolution = async (req, res) => {
   const uid = req.auth.userId;
   const { resolution, synthese, date_visibilite } = req.body;
   try {
-    const [[ce]] = await db.query(`SELECT statut, id_responsable FROM b_eval_contre_evaluation WHERE id=?`, [id]);
+    const [[ce]] = await db.query(
+      `SELECT statut, id_responsable, resolution, synthese, DATE_FORMAT(date_visibilite, '%Y-%m-%d') AS date_visibilite
+         FROM b_eval_contre_evaluation WHERE id=?`, [id]);
     if (!ce) return res.status(404).json({ message: "Introuvable." });
     if (Number(ce.id_responsable) !== Number(uid) && (await getUserRole(uid)) !== "R_ADMI") {
       return res.status(403).json({ message: "Réservé au responsable de la contre-évaluation." });
     }
     if (ce.statut === "TERMINE") return res.status(409).json({ message: "Terminée : non modifiable." });
-    await db.query(`UPDATE b_eval_contre_evaluation SET resolution=?, synthese=?, date_visibilite=? WHERE id=?`,
-      [resolution || null, synthese !== undefined ? synthese : null, date_visibilite || null, id]);
+    // out114 : rien n'est réécrit si rien ne change (espaces de début / fin ignorés).
+    const nouv = [resolution || null, synthese !== undefined ? (String(synthese ?? "").trim() || null) : null,
+      date_visibilite ? String(date_visibilite).slice(0, 10) : null];
+    const avant = [ce.resolution || null, String(ce.synthese ?? "").trim() || null, ce.date_visibilite || null];
+    if (nouv.every((v, i) => v === avant[i])) return res.status(200).json({ message: "Aucune modification.", inchange: true });
+    await db.query(`UPDATE b_eval_contre_evaluation SET resolution=?, synthese=?, date_visibilite=? WHERE id=?`, [...nouv, id]);
     return res.status(200).json({ message: "Enregistré." });
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur." }); }
 };
@@ -440,6 +506,6 @@ const supprimerContre = async (req, res) => {
 
 module.exports = {
   getContexteContre,
-  getEvaluateursBySite, getEvaluationsByEvaluateur, creerContre, getAllContre, getMesContre, getContre,
+  getEvaluateursBySite, getEvaluationsByEvaluateur, getEvaluationsAContreEvaluer, creerContre, getAllContre, getMesContre, getContre,
   toggleErreur, setResolution, terminerContre, setActifContre, supprimerContre,
 };

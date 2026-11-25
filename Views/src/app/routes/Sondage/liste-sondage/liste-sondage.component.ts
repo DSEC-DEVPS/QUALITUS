@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
@@ -18,8 +18,8 @@ import { SondageService } from '@shared/services/sondage.service';
 import { Sondage } from '../interfaces';
 
 import { CanDirective } from '@core/authorization/can.directive';
-import { MatPaginatorModule } from '@angular/material/paginator';
-import { Pagination } from '@shared/utils/pagination';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { PaginationServeur } from '@shared/utils/pagination-serveur';
 import { finalize } from 'rxjs';
 import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 import { DatePipe } from '@angular/common';
@@ -49,21 +49,21 @@ export type ChampDate = 'creation' | 'modification' | 'reponse';
   templateUrl: './liste-sondage.component.html',
   styleUrl: './liste-sondage.component.scss',
 })
-export class ListeSondageComponent implements OnInit {
+export class ListeSondageComponent implements OnInit, OnDestroy {
   chargement = true;
   private readonly srv = inject(SondageService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastrService);
 
-  readonly pag = new Pagination<Sondage>();
-  /** Sondages renvoyés par le serveur (période et date choisie déjà appliquées). */
-  private tous: Sondage[] = [];
-  get sondages(): Sondage[] { return this.pag.donnees; }
+  /** Pagination côté serveur (out113) : seule la page affichée est chargée. */
+  readonly pag = new PaginationServeur<Sondage>();
+  get sondages(): Sondage[] { return this.pag.page; }
   cols = ['id', 'nom', 'langue', 'statut', 'nb_questions', 'date', 'actions'];
 
-  // --- Filtres : recherche et statut (sur la liste chargée), période côté serveur
+  // --- Filtres (appliqués par le serveur) ; par défaut : sondages actifs et en cours de rédaction
+  static readonly STATUT_DEFAUT = 'NON_DESACTIF';
   recherche = '';
-  statut: '' | 'ENCOURS' | 'ACTIF' | 'DESACTIF' = '';
+  statut: '' | 'NON_DESACTIF' | 'ENCOURS' | 'ACTIF' | 'DESACTIF' = 'NON_DESACTIF';
   champDate: ChampDate = 'creation';
   periode: Periode = { du: null, au: null };
   readonly champs: { v: ChampDate; l: string; col: string }[] = [
@@ -72,35 +72,46 @@ export class ListeSondageComponent implements OnInit {
     { v: 'reponse', l: 'Date de réponse', col: 'Dernière réponse' },
   ];
   get colDate(): string { return this.champs.find(c => c.v === this.champDate)?.col || 'Date'; }
-  get filtresActifs(): boolean { return !!(this.recherche.trim() || this.statut || this.periode.du || this.periode.au); }
+  get filtresActifs(): boolean {
+    return !!(this.recherche.trim() || this.statut !== ListeSondageComponent.STATUT_DEFAUT || this.periode.du || this.periode.au);
+  }
+  private minuterie: any = null;
+  private requete = 0;
 
   ngOnInit(): void {
     this.charger();
   }
+  ngOnDestroy(): void { clearTimeout(this.minuterie); }
 
   charger() {
     this.chargement = true;
-    this.srv.getAll(this.periode, this.champDate).pipe(finalize(() => (this.chargement = false))).subscribe({
-      next: d => { this.tous = d || []; this.appliquer(true); },
-      error: () => this.toast.error('Impossible de charger les sondages'),
-    });
+    const n = ++this.requete;
+    this.srv.getAllPage(this.periode, this.champDate, { q: this.recherche.trim(), statut: this.statut }, this.pag.params())
+      .pipe(finalize(() => { if (n === this.requete) this.chargement = false; }))
+      .subscribe({
+        next: r => {
+          if (n !== this.requete) return;
+          this.pag.recevoir(r);
+          if (this.pag.pageVideApresRetrait) { this.pag.pageIndex--; this.charger(); }
+        },
+        error: () => this.toast.error('Impossible de charger les sondages'),
+      });
   }
 
-  /** Recherche (nom) et statut, appliqués sur la liste chargée. */
-  appliquer(garderPage = false): void {
-    const q = this.recherche.trim().toLowerCase();
-    this.pag.definir(this.tous.filter(s =>
-      (!q || (s.nom || '').toLowerCase().includes(q) || String(s.id) === q) &&
-      (!this.statut || (this.statut === 'ENCOURS' ? s.statut !== 'ACTIF' && s.statut !== 'DESACTIF' : s.statut === this.statut))
-    ), garderPage);
+  /** Recherche (nom ou n°) et statut : première page, après une courte pause de frappe. */
+  appliquer(): void {
+    clearTimeout(this.minuterie);
+    this.minuterie = setTimeout(() => { this.pag.premiere(); this.charger(); }, 300);
   }
-  changerPeriode(p: Periode): void { this.periode = p; this.charger(); }
-  changerChamp(): void { if (this.periode.du || this.periode.au) this.charger(); }
+  changerPage(e: PageEvent): void { this.pag.changer(e); this.charger(); }
+  changerPeriode(p: Periode): void { this.periode = p; this.pag.premiere(); this.charger(); }
+  changerChamp(): void { if (this.periode.du || this.periode.au) { this.pag.premiere(); this.charger(); } }
   effacerFiltres(): void {
-    this.recherche = ''; this.statut = '';
-    const avecPeriode = !!(this.periode.du || this.periode.au);
+    this.recherche = ''; this.statut = ListeSondageComponent.STATUT_DEFAUT as 'NON_DESACTIF';
     this.periode = { du: null, au: null };
-    if (avecPeriode) this.charger(); else this.appliquer();
+    clearTimeout(this.minuterie);
+    this.pag.premiere();
+    this.charger();
   }
   /** Date affichée : celle sur laquelle porte le filtre. */
   dateDe(s: Sondage): string | null | undefined {

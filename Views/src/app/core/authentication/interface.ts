@@ -80,6 +80,10 @@ export interface url {
   Quiz: Quiz[];
   Commentaire?: boolean;
   Data?: any;
+  Categorie?: string | null;
+  Sous_Categorie?: string | null;
+  dateDebut?: string | null;
+  dateFin?: string | null;
 }
 export interface Quiz {
   id: number;
@@ -227,6 +231,7 @@ export interface agent_by_superviseur {
   id: number;
   nom: string;
   prenom: string;
+  nom_utilisateur: string | null;
   email: string;
   telephone: string;
   adresse: string;
@@ -239,6 +244,8 @@ export interface detailsUtilisateur {
   id: number;
   nom: string | null;
   prenom: string | null;
+  nom_utilisateur?: string | null;
+  status?: string | null;
   telephone: string | null;
   email: string | null;
   Fonction: string | null;

@@ -1,4 +1,6 @@
 import { Component, Inject, OnInit, inject } from '@angular/core';
+import { fmtPoints, lirePoints, r2 } from '../bareme';
+import { PointsPipe } from '../points.pipe';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -37,7 +39,7 @@ interface OptionEdit {
 @Component({
   selector: 'app-question-dialog',
   standalone: true,
-  imports: [
+  imports: [PointsPipe,
     MatFormFieldModule,
     MatDialogClose,
     MatInputModule,
@@ -67,8 +69,8 @@ export class QuestionDialogComponent implements OnInit {
   titre = '';
   type: 'VRAI_FAUX' | 'QCU' | 'QCM' = 'VRAI_FAUX';
   libelle = '';
-  /** Barème de la question : entier de 1 à 100 (5 par défaut). */
-  points: number = 5;
+  /** Barème de la question : de 0,01 à 100, 2 décimales (5 par défaut). Saisie texte (virgule acceptée). */
+  points: string = '5';
   options: OptionEdit[] = [];
   bonneIndex = 0; // pour les types a reponse unique (VRAI_FAUX / QCU)
 
@@ -80,15 +82,15 @@ export class QuestionDialogComponent implements OnInit {
     if (q) {
       this.type = (q.type as any) || 'VRAI_FAUX';
       this.libelle = q.libelle || '';
-      this.points = q.points ?? 5;
+      this.points = fmtPoints(q.points ?? 5);
       const opts = q.options || [];
       this.options = opts.map(o => ({ libelle: o.libelle, correct: !!o.est_correcte }));
       this.bonneIndex = Math.max(0, this.options.findIndex(o => o.correct));
     }
     // Nouvelle question : on propose les points qui restent à répartir.
     if (!q && this.data.pointsAutres !== undefined) {
-      const reste = 100 - this.data.pointsAutres;
-      if (reste >= 1) this.points = Math.min(100, reste);
+      const reste = r2(100 - this.data.pointsAutres);
+      if (reste >= 0.01) this.points = fmtPoints(Math.min(100, reste));
     }
     if (!this.options.length) {
       this.appliquerType();
@@ -98,7 +100,7 @@ export class QuestionDialogComponent implements OnInit {
   /** Total du barème si la question est enregistrée avec les points saisis. */
   get totalApres(): number | null {
     if (this.data.pointsAutres === undefined || !this.pointsValides) return null;
-    return this.data.pointsAutres + Number(this.points);
+    return r2(this.data.pointsAutres + (lirePoints(this.points) ?? 0));
   }
 
   get estUnique(): boolean {
@@ -143,8 +145,7 @@ export class QuestionDialogComponent implements OnInit {
   }
 
   get pointsValides(): boolean {
-    const n = Number(this.points);
-    return Number.isInteger(n) && n >= 1 && n <= 100;
+    return lirePoints(this.points) !== null;
   }
 
   valider() {
@@ -174,7 +175,7 @@ export class QuestionDialogComponent implements OnInit {
     this.dialogRef.close({
       type: this.type,
       libelle: this.libelle.trim(),
-      points: Number(this.points),
+      points: lirePoints(this.points)!,
       options: optionsFinales,
     } as QuestionDialogResult);
   }

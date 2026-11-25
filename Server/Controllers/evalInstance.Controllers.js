@@ -251,6 +251,11 @@ const getAllEvaluations = async (req, res) => {
     const role = await getUserRole(userId);
     const where = [];
     const params = [];
+    // Visibilité (out111) : jointure sur l'union des évaluations visibles, chaque
+    // branche s'appuyant sur un index (évaluateur, agents supervisés, agent, site),
+    // au lieu d'un OR qui obligeait à parcourir toute la table.
+    let jointureVisibilite = "";
+    const paramsVisibilite = [];
 
     // Normalisation / validation des filtres (aucune valeur brute non vérifiée)
     const fStatut = dansEnsemble(q.statut, ["NON_TERMINE", "EN_ATTENTE_VALIDATION_OPTION", "TERMINE"]);
@@ -258,6 +263,8 @@ const getAllEvaluations = async (req, res) => {
     const fTypeRessource = dansEnsemble(q.type_ressource, ["HUMAINE", "AUTOMATISEE"]);
     const fTypeEval = dansEnsemble(q.type_evaluation, ["EVALUATION", "EVALUATION_SUPPLEMENTAIRE"]);
     const fSite = entierOuNull(q.id_site);
+    // Programme enregistré sur l'évaluation (lien du tableau de bord filtré par programme, out124).
+    const fProgramme = entierOuNull(q.id_programme);
     const fContexte = entierOuNull(q.id_contexte);
     const fDateDebut = estDateYMD(q.date_debut) ? q.date_debut : null;
     const fDateFin = estDateYMD(q.date_fin) ? q.date_fin : null;
@@ -275,10 +282,34 @@ const getAllEvaluations = async (req, res) => {
       where.push(`e.statut='TERMINE'`);
       params.push(userId, userId);
     } else if (q.portee === "coaching") {
-      // évaluations de MES agents nécessitant un coaching (échec), quel que soit l'évaluateur
-      where.push(`e.id_agent IN (SELECT id_AGENT FROM b_r_superviseur_agent WHERE id_SUPERVISEUR=?)`);
+      // évaluations de MES agents nécessitant un coaching (échec), quel que soit l'évaluateur ;
+      // etendue=perimetre (evaluation.voir_tous / administrateur) : tout son périmètre
+      // de site (tous les sites pour le site à vision globale), comme le tableau de bord.
+      let perimetre = false;
+      if (q.etendue === "perimetre") {
+        const { permissionsEffectives } = require("../middlewares/permission");
+        const { porteeSite } = require("../utils/siteVisionGlobale");
+        const { set } = await permissionsEffectives(userId);
+        if (role === "R_ADMI") perimetre = true;
+        else if (set.has("evaluation.voir_tous")) {
+          const p = await porteeSite(userId);
+          if (p.visionGlobale) perimetre = true;
+          else if (p.idSite !== null) { where.push(`e.id_site=?`); params.push(p.idSite); perimetre = true; }
+        }
+      }
+      if (!perimetre) {
+        where.push(`e.id_agent IN (SELECT id_AGENT FROM b_r_superviseur_agent WHERE id_SUPERVISEUR=?)`);
+        params.push(userId);
+      }
+      where.push(`e.statut='TERMINE'`);
       where.push(`e.conclusion='ECHEC'`);
-      params.push(userId);
+      // état du coaching : à faire (aucun coaching), en cours (commencé), terminé
+      const SQL_CO = (st) => `EXISTS (SELECT 1 FROM b_eval_coaching co WHERE co.id_evaluation=e.id AND ${st})`;
+      if (q.coaching_etat === "a_faire") where.push(`NOT ${SQL_CO("1=1")}`);
+      else if (q.coaching_etat === "en_cours") where.push(`${SQL_CO("co.statut<>'TERMINE'")} AND NOT ${SQL_CO("co.statut='TERMINE'")}`);
+      else if (q.coaching_etat === "termine") where.push(SQL_CO("co.statut='TERMINE'"));
+      // à faire ou en cours (défaut de l'écran Mes coaching, out113)
+      else if (q.coaching_etat === "non_termine") where.push(`NOT ${SQL_CO("co.statut='TERMINE'")}`);
       // filtre sur l'état du coaching (terminé ou non)
       if (q.coaching_termine === "true") {
         where.push(`EXISTS (SELECT 1 FROM b_eval_coaching co WHERE co.id_evaluation=e.id AND co.statut='TERMINE')`);
@@ -298,17 +329,17 @@ const getAllEvaluations = async (req, res) => {
       const { set } = await permissionsEffectives(userId);
       const portee = set.has("evaluation.voir_tous") ? await porteeSite(userId) : null;
       if (!(portee && portee.visionGlobale)) {
-        const ou = [
-          `e.id_evaluateur=?`,
-          `e.id_agent IN (SELECT id_AGENT FROM b_r_superviseur_agent WHERE id_SUPERVISEUR=?)`,
-          `(e.id_agent=? AND e.statut='TERMINE')`,
+        const branches = [
+          `SELECT v1.id FROM b_evaluation v1 WHERE v1.id_evaluateur = ?`,
+          `SELECT v2.id FROM b_evaluation v2 JOIN b_r_superviseur_agent sa ON sa.id_AGENT = v2.id_agent AND sa.id_SUPERVISEUR = ?`,
+          `SELECT v3.id FROM b_evaluation v3 WHERE v3.id_agent = ? AND v3.statut = 'TERMINE'`,
         ];
-        params.push(userId, userId, userId);
+        paramsVisibilite.push(userId, userId, userId);
         if (portee && portee.idSite !== null) {
-          ou.push(`e.id_site=?`);
-          params.push(portee.idSite);
+          branches.push(`SELECT v4.id FROM b_evaluation v4 WHERE v4.id_site = ?`);
+          paramsVisibilite.push(portee.idSite);
         }
-        where.push(`(${ou.join(" OR ")})`);
+        jointureVisibilite = `JOIN (${branches.join(" UNION ")}) vis ON vis.id = e.id`;
       }
     }
 
@@ -326,14 +357,49 @@ const getAllEvaluations = async (req, res) => {
     if (fConclusion) { where.push(`e.conclusion=?`); params.push(fConclusion); }
     if (fTypeRessource) { where.push(`e.type_ressource=?`); params.push(fTypeRessource); }
     if (fSite) { where.push(`e.id_site=?`); params.push(fSite); }
+    if (fProgramme) { where.push(`e.id_programme=?`); params.push(fProgramme); }
     if (fContexte) { where.push(`e.id_contexte=?`); params.push(fContexte); }
     if (fTypeEval) { where.push(`t.code=?`); params.push(fTypeEval); }
-    if (fDateDebut) { where.push(`e.date_appel >= ?`); params.push(fDateDebut + " 00:00:00"); }
-    if (fDateFin) { where.push(`e.date_appel <= ?`); params.push(fDateFin + " 23:59:59"); }
+    // Période sur la date d'appel (défaut) ou, date_sur=evaluation, sur la date de
+    // l'évaluation (même base que le tableau de bord).
+    const colDate = q.date_sur === "evaluation" ? "COALESCE(e.date_evaluation, e.date_creation)" : "e.date_appel";
+    if (fDateDebut) { where.push(`${colDate} >= ?`); params.push(fDateDebut + " 00:00:00"); }
+    if (fDateFin) { where.push(`${colDate} <= ?`); params.push(fDateFin + " 23:59:59"); }
     if (fQ) {
-      where.push(`(e.identifiant_appel LIKE ? OR e.numero_case LIKE ? OR e.numero_appel LIKE ? OR ag.nom LIKE ? OR ag.nom_utilisateur LIKE ?)`);
-      const like = `%${fQ}%`;
-      params.push(like, like, like, like, like);
+      // Chaque mot doit apparaître dans au moins un champ (« nom prénom » fonctionne) ;
+      // casse et accents ignorés par la collation. % et _ saisis sont pris littéralement.
+      const mots = fQ.split(/\s+/).filter(Boolean).slice(0, 5);
+      for (const mot of mots) {
+        where.push(`(e.identifiant_appel LIKE ? OR e.numero_case LIKE ? OR e.numero_appel LIKE ? OR ag.nom LIKE ? OR ag.prenom LIKE ? OR ag.nom_utilisateur LIKE ?)`);
+        const like = `%${mot.replace(/[\\%_]/g, (c) => "\\" + c)}%`;
+        params.push(like, like, like, like, like, like);
+      }
+    }
+
+    const clauseWhere = where.length ? "WHERE " + where.join(" AND ") : "";
+    const jointuresFiltres = `
+       LEFT JOIN b_utilisateur ag ON e.id_agent = ag.id
+       LEFT JOIN b_eval_ref_type_evaluation t ON e.id_type_evaluation = t.id`;
+
+    // Pagination côté serveur (out111) : ?page=1&taille=25 -> { lignes, total, page, taille }.
+    // Sans « page » : liste complète (compatibilité).
+    const pagine = q.page !== undefined;
+    let idsPage = null, total = null, page = 1, taille = 25;
+    if (pagine) {
+      page = Math.max(1, parseInt(q.page, 10) || 1);
+      taille = Math.min(100, Math.max(5, parseInt(q.taille, 10) || 25));
+      const [[c]] = await db.query(
+        `SELECT COUNT(*) AS n FROM b_evaluation e ${jointureVisibilite} ${jointuresFiltres} ${clauseWhere}`,
+        [...paramsVisibilite, ...params]
+      );
+      total = Number(c.n);
+      const [ids] = await db.query(
+        `SELECT e.id FROM b_evaluation e ${jointureVisibilite} ${jointuresFiltres} ${clauseWhere}
+          ORDER BY e.date_creation DESC, e.id DESC LIMIT ? OFFSET ?`,
+        [...paramsVisibilite, ...params, taille, (page - 1) * taille]
+      );
+      idsPage = ids.map((r) => r.id);
+      if (!idsPage.length) return res.status(200).json({ lignes: [], total, page, taille });
     }
 
     const [rows] = await db.query(
@@ -353,10 +419,12 @@ const getAllEvaluations = async (req, res) => {
        LEFT JOIN b_eval_ref_contexte ctx ON e.id_contexte = ctx.id
        LEFT JOIN b_eval_grille gr ON e.id_grille_origine = gr.id
        LEFT JOIN b_site s ON e.id_site = s.id
-       ${where.length ? "WHERE " + where.join(" AND ") : ""}
-       ORDER BY e.date_creation DESC`,
-      params
+       ${idsPage ? "" : jointureVisibilite}
+       ${idsPage ? `WHERE e.id IN (${idsPage.map(() => "?").join(",")})` : clauseWhere}
+       ORDER BY e.date_creation DESC, e.id DESC`,
+      idsPage ? idsPage : [...paramsVisibilite, ...params]
     );
+    if (pagine) return res.status(200).json({ lignes: rows, total, page, taille });
     return res.status(200).json(rows);
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors du chargement." }); }
 };

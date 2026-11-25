@@ -17,6 +17,7 @@
         <mat-form-field appearance="outline" class="f-statut" subscriptSizing="dynamic">
           <mat-label>Statut</mat-label>
           <mat-select [(ngModel)]="statut" (selectionChange)="appliquer()">
+            <mat-option value="NON_DESACTIF">Actifs et en cours</mat-option>
             <mat-option value="">Tous</mat-option>
             <mat-option value="ENCOURS">En cours</mat-option>
             <mat-option value="ACTIF">Actif</mat-option>
@@ -104,13 +105,13 @@
           <tr mat-row *matRowDef="let row; columns: cols"></tr>
           <tr class="mat-row" *matNoDataRow>
             <td class="mat-cell text-center p-16" [attr.colspan]="cols.length">
-              {{ filtresActifs ? 'Aucun sondage ne correspond aux filtres.' : 'Aucun sondage pour le moment.' }}
+              {{ filtresActifs ? 'Aucun sondage ne correspond aux filtres.' : 'Aucun sondage actif ou en cours.' }}
             </td>
           </tr>
         </table>
         @if (pag.length) {
           <mat-paginator [length]="pag.length" [pageIndex]="pag.pageIndex" [pageSize]="pag.pageSize"
-                         [pageSizeOptions]="pag.tailles" showFirstLastButtons (page)="pag.changer($event)" />
+                         [pageSizeOptions]="pag.tailles" showFirstLastButtons (page)="changerPage($event)" />
         }
       </div>
     </mat-card-content>

@@ -1,17 +1,17 @@
 <div class="container">
-  <h6>Modification du Motif</h6>
+  <h2 class="dlg-titre">Modifier le motif</h2>
   <div class="row m-auto justify-content-center register-template">
     <div class="col-sm-8">
       <mat-card>
         <mat-card-content>
-          <form [formGroup]="formMotifMaVoixCompte" class="form-field-full">
-            <div class="row">
-              <div class="col-sm-6 m-auto">
+          <form [formGroup]="formMotifMaVoixCompte" class="form-field-full" (ngSubmit)="formMotifMaVoixCompte.valid && handleOnSumit()">
+            <div class="d-block">
+              <div class="col-sm-6 col-md-6 m-auto">
                 <mat-form-field appearance="fill">
-                  <mat-label>Nom</mat-label>
-                  <input matInput formControlName="nomMotif" required />
-                  @if (formMotifMaVoixCompte.get('source')?.invalid) {
-                    <mat-error>{{ 'Ce champ est obligatoire' }}</mat-error>
+                  <mat-label>Nom du motif</mat-label>
+                  <input matInput formControlName="nomMotif" required cdkFocusInitial />
+                  @if (formMotifMaVoixCompte.get('nomMotif')?.invalid) {
+                    <mat-error>Ce champ est obligatoire</mat-error>
                   }
                 </mat-form-field>
               </div>
@@ -20,13 +20,13 @@
             <div class="m-t-8 text-center">
               <button
                 mat-flat-button
-                (click)="handleOnSumit()"
+                type="submit"
                 [loading]="isSubmitting"
                 [disabled]="formMotifMaVoixCompte.invalid"
               >
                 Modifier
               </button>
-              <button mat-button mat-dialog-close>Annuler</button>
+              <button mat-button type="button" mat-dialog-close>Annuler</button>
             </div>
           </form>
         </mat-card-content>

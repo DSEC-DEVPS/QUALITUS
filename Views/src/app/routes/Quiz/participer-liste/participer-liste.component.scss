@@ -128,3 +128,107 @@ mat-chip.deja {
 .quiz-row.en-cours {
   border-left: 4px solid #ff9800;
 }
+
+/* Sections Quiz disponibles / Quiz terminés */
+.section-entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  flex-wrap: wrap;
+  margin: 18px 0 10px;
+}
+.section-entete .liste-titre {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.termines-entete {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--qx-bordure, rgba(0, 0, 0, 0.1));
+}
+.compteur {
+  display: inline-block;
+  min-width: 22px;
+  padding: 0 7px;
+  border-radius: 11px;
+  background: var(--qx-survol, rgba(0, 0, 0, 0.06));
+  color: var(--qx-texte-2, #6b6b6b);
+  font-size: 0.8rem;
+  text-align: center;
+  line-height: 22px;
+}
+.sous-compteur {
+  color: var(--qx-texte-2, #6b6b6b);
+  font-weight: 400;
+  font-size: 0.85rem;
+}
+.section-filtres {
+  display: flex;
+  align-items: center;
+  gap: 10px 14px;
+  flex-wrap: wrap;
+}
+.recherche {
+  width: 260px;
+}
+.vide {
+  padding: 12px 4px;
+  margin: 0;
+}
+.pagination {
+  background: transparent;
+  margin-bottom: 4px;
+}
+
+.quiz-titre .cadenas {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  vertical-align: -3px;
+  margin-right: 4px;
+  color: var(--qx-bleu, #1565c0);
+}
+.etat-chip {
+  font-weight: 600;
+}
+mat-chip.etat-A_COMMENCER {
+  --mdc-chip-label-text-color: var(--qx-bleu, #1565c0);
+}
+mat-chip.etat-RETEST {
+  --mdc-chip-label-text-color: var(--qx-orange-texte, #8a4b00);
+}
+mat-chip.etat-REUSSI {
+  --mdc-chip-label-text-color: var(--qx-vert, #2e7d32);
+}
+mat-chip.etat-ECHEC {
+  --mdc-chip-label-text-color: var(--qx-rouge, #c62828);
+}
+mat-chip.ferme {
+  --mdc-chip-label-text-color: var(--qx-texte-2, #6b6b6b);
+  font-style: italic;
+}
+.quiz-row.retest {
+  border-left: 4px solid #ff9800;
+}
+.quiz-row.termine.reussi {
+  border-left: 4px solid var(--qx-vert, #2e7d32);
+}
+.quiz-row.termine.echec {
+  border-left: 4px solid var(--qx-rouge, #c62828);
+}
+
+/* Quiz arrivé à échéance : non passé / passage en délai de grâce */
+mat-chip.etat-NON_PASSE {
+  --mdc-chip-label-text-color: var(--qx-texte-2, #6b6b6b);
+}
+.quiz-row.non-passe {
+  border-left: 4px solid var(--qx-bordure-forte, #9e9e9e);
+}
+mat-chip.grace-chip {
+  --mdc-chip-label-text-color: var(--qx-orange-texte, #8a4b00);
+  font-weight: 600;
+}

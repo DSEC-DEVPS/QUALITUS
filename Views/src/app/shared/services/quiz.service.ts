@@ -1,8 +1,9 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { message } from '@core';
 import { Periode, paramsPeriode } from '@shared/periode';
+import { PageServeur, paramsPage } from '@shared/utils/pagination-serveur';
 import {
   Quiz,
   Question,
@@ -21,6 +22,7 @@ import {
   QuizIpDemande,
   SiteOption,
   QuizPublic,
+  MesQuiz,
   RapportParticipant,
   TentativeDetail,
   QuestionRatee,
@@ -28,6 +30,15 @@ import {
   QuizSource,
   QuestionSource,
 } from '../../routes/Quiz/interfaces';
+
+/** Page du rapport de difficulté (out113) : lignes (rang compris) + synthèse de la période. */
+export interface PageRapportQuiz extends PageServeur<RapportQuiz & { rang: number | null }> {
+  synthese: {
+    nb_quiz: number; nb_avec_tentatives: number; total_tentatives: number; total_reussites: number;
+    taux_global: number | null; total_designes: number; total_non_passes: number;
+    taux_participation_global: number | null; score_global: number | null; a_des_limites: boolean;
+  };
+}
 
 /**
  * Service du generateur de quiz (nouveau modele structure).
@@ -41,6 +52,15 @@ export class QuizService {
   /* ----- Quiz ----- */
   getAll(periode?: Periode | null): Observable<Quiz[]> {
     return this.http.get<Quiz[]>(`${this.base}/all`, { params: paramsPeriode(periode) });
+  }
+  /**
+   * Liste des quiz filtrée et triée par le serveur : une page (`page`), ou toutes les
+   * lignes pour l'export (`page` absent -> export=1).
+   */
+  getAllPage(periode: Periode | null, filtres: { q?: string; statut?: string; tri?: string; sens?: string; site_createur?: string },
+             page?: { page: number; taille: number } | null): Observable<PageServeur<Quiz> & { sites_createurs?: { id: string; nom: string }[] }> {
+    const params = paramsPage({ ...paramsPeriode(periode), ...filtres, ...(page ? {} : { export: 1 }) }, page);
+    return this.http.get<PageServeur<Quiz> & { sites_createurs?: { id: string; nom: string }[] }>(`${this.base}/all`, { params });
   }
   getOne(id: number): Observable<Quiz> {
     return this.http.get<Quiz>(`${this.base}/${id}`);
@@ -81,8 +101,15 @@ export class QuizService {
   }
 
   /* ----- Contenus KB (fiches) ----- */
-  getFichesRecentes(): Observable<FicheRecente[]> {
-    return this.http.get<FicheRecente[]>(`${this.base}/fiches/recentes`);
+  /** Fiches ACTIVES dont le titre contient `q` (30 max) ; sans `q` : les plus récentes. */
+  getFichesRecentes(q = ''): Observable<FicheRecente[]> {
+    const params = q.trim() ? new HttpParams().set('q', q.trim()) : undefined;
+    return this.http.get<FicheRecente[]>(`${this.base}/fiches/recentes`, { params });
+  }
+
+  /** Détail des fiches déjà liées à un quiz (quel que soit leur état). */
+  getFichesParIds(ids: number[]): Observable<FicheRecente[]> {
+    return this.http.get<FicheRecente[]>(`${this.base}/fiches/recentes`, { params: new HttpParams().set('ids', ids.join(',')) });
   }
 
   /* ----- Sites (pour l'attribution d'un quiz a des sites) ----- */
@@ -151,11 +178,22 @@ export class QuizService {
     return this.http.get<QuizPublic[]>(`${this.base}/participer/en-cours`);
   }
 
+  /** Écran Participer : quiz disponibles (publics + privés déverrouillés) et terminés. */
+  getMesQuiz(): Observable<MesQuiz> {
+    return this.http.get<MesQuiz>(`${this.base}/participer/mes-quiz`);
+  }
+
   /* ----- Phase 2 : participation ----- */
   getDisponibles(): Observable<QuizDisponible[]> {
     return this.http.get<QuizDisponible[]>(`${this.base}/participer/disponibles`);
   }
   /** Quiz à passer. `pin` : obligatoire pour un quiz privé (saisi dans l'écran Participer). */
+  /** Écran d'accueil : informations et fiches, sans questions ni démarrage du chronomètre. */
+  getQuizApercu(id: number, pin?: string | null): Observable<QuizAPasser> {
+    const options = pin ? { params: { pin } } : {};
+    return this.http.get<QuizAPasser>(`${this.base}/participer/${id}/apercu`, options);
+  }
+  /** Démarrage (ou reprise) : questions + heure de début enregistrée côté serveur. */
   getQuizAPasser(id: number, pin?: string | null): Observable<QuizAPasser> {
     const options = pin ? { params: { pin } } : {};
     return this.http.get<QuizAPasser>(`${this.base}/participer/${id}`, options);
@@ -169,6 +207,11 @@ export class QuizService {
   ): Observable<ResultatSoumission> {
     return this.http.post<ResultatSoumission>(`${this.base}/participer/${id}/soumettre`, {
       reponses,
+    });
+  }
+  getMesScoresPage(periode: Periode | null, page: { page: number; taille: number }): Observable<PageServeur<ScoreHistorique>> {
+    return this.http.get<PageServeur<ScoreHistorique>>(`${this.base}/historique/mes-scores`, {
+      params: paramsPage(paramsPeriode(periode), page),
     });
   }
   getMesScores(periode?: Periode | null): Observable<ScoreHistorique[]> {
@@ -216,6 +259,14 @@ export class QuizService {
       params: paramsPeriode(periode),
     });
   }
+  /** Une page du rapport, avec la synthèse calculée sur tous les quiz de la période. */
+  getRapportDifficultePage(periode: Periode | null, filtres: { q?: string; masquer_sans_tentative?: boolean },
+                           page: { page: number; taille: number }): Observable<PageRapportQuiz> {
+    const f = { q: filtres.q, masquer_sans_tentative: filtres.masquer_sans_tentative ? 1 : '' };
+    return this.http.get<PageRapportQuiz>(`${this.base}/rapports/difficulte`, {
+      params: paramsPage({ ...paramsPeriode(periode), ...f }, page),
+    });
+  }
   getRapportQuestions(id: number, periode?: Periode | null): Observable<RapportQuestion[]> {
     return this.http.get<RapportQuestion[]>(`${this.base}/rapports/questions/${id}`, {
       params: paramsPeriode(periode),
@@ -246,6 +297,14 @@ export class QuizService {
   }
   autoriserRetest(id_Quiz: number, id_UTILISATEUR: number): Observable<message> {
     return this.http.post<message>(`${this.base}/retest/autoriser`, { id_Quiz, id_UTILISATEUR });
+  }
+  /** Classe l'échec d'un agent « retest non autorisé » (sort de la page). */
+  refuserRetest(id_Quiz: number, id_UTILISATEUR: number): Observable<message & { nb?: number }> {
+    return this.http.post<message & { nb?: number }>(`${this.base}/retest/refuser`, { id_Quiz, id_UTILISATEUR });
+  }
+  /** Classe tous les échecs en attente d'un quiz « retest non autorisé ». */
+  refuserRetestsQuiz(id_Quiz: number): Observable<message & { nb?: number }> {
+    return this.http.post<message & { nb?: number }>(`${this.base}/retest/refuser`, { id_Quiz, tous: true });
   }
 
   /* ----- Autorisations IP (liste blanche par quiz) ----- */

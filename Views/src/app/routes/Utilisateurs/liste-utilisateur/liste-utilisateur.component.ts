@@ -22,6 +22,7 @@ import { TitleCasePipe } from '@angular/common';
 import { MatIcon, MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { AjouterUtilisateurComponent } from '../ajouter-utilisateur/ajouter-utilisateur.component';
+import { ImportUtilisateursComponent } from '../import-utilisateurs/import-utilisateurs.component';
 import { CanDirective } from '@core/authorization/can.directive';
 import * as ExcelJS from 'exceljs';
 import * as XLSX from 'xlsx';
@@ -115,6 +116,16 @@ export class ListeUtilisateurComponent implements OnInit {
     }
   }
 
+  /** Import Excel de comptes ; la liste est rechargée si des comptes ont été créés. */
+  openImport(): void {
+    this.dialog
+      .open(ImportUtilisateursComponent, { width: 'calc(100% - 30px)', maxWidth: '1200px', maxHeight: 'calc(100% - 30px)', disableClose: true })
+      .afterClosed()
+      .subscribe(cree => {
+        if (cree) this.ngOnInit();
+      });
+  }
+
   openDialog(): void {
     this.dialog.open(AjouterUtilisateurComponent, {
       height: 'calc(100% - 30px)',
@@ -163,7 +174,10 @@ export class ListeUtilisateurComponent implements OnInit {
   }
 
   NavigeOnSinglePageUtilisateur(id: number) {
-    this.router.navigateByUrl(`mon-espace/Utilisateurs/details/${id}`);
+    // Fiche détaillée commune avec « Mes agents » ; « Retour » revient à cette liste.
+    this.router.navigate(['/mon-espace/Utilisateurs/details', id], {
+      state: { retour: '/mon-espace/Utilisateurs/Liste' },
+    });
   }
 
   deleteSomething(id: number) {

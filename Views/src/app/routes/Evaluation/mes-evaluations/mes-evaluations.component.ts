@@ -13,8 +13,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { ToastrService } from 'ngx-toastr';
 import { EvalInstanceService, EvaluationListe, FiltresEvaluation } from '../eval-instance.service';
-import { MatPaginatorModule } from '@angular/material/paginator';
-import { Pagination } from '@shared/utils/pagination';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { PaginationServeur, debutPeriodeParDefaut } from '@shared/utils/pagination-serveur';
 import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
@@ -32,25 +32,30 @@ export class MesEvaluationsComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly toastr = inject(ToastrService);
 
-  readonly pag = new Pagination<EvaluationListe>();
-  get evaluations(): EvaluationListe[] { return this.pag.donnees; }
-  set evaluations(v: EvaluationListe[]) { this.pag.definir(v); }
+  /** Pagination côté serveur : seule la page affichée est chargée. */
+  readonly pag = new PaginationServeur<EvaluationListe>();
+  get evaluations(): EvaluationListe[] { return this.pag.page; }
   chargement = false;
-  filtres: FiltresEvaluation = {};
+  /** Par défaut : les 3 derniers mois (modifiable par le filtre « Du »). */
+  filtres: FiltresEvaluation = { date_debut: debutPeriodeParDefaut() };
   colonnes = ['date_appel', 'grille', 'type_evaluation', 'statut', 'conclusion', 'actions'];
 
   ngOnInit(): void { this.charger(); }
+
+  /** Nouveau filtre : retour à la première page. */
+  filtrer(): void { this.pag.premiere(); this.charger(); }
 
   charger(): void {
     this.chargement = true;
     const f: any = { ...this.filtres };
     if (this.filtres.date_debut) f.date_debut = toYMD(this.filtres.date_debut);
     if (this.filtres.date_fin) f.date_fin = toYMD(this.filtres.date_fin);
-    this.service.getEvaluations(f).subscribe({
-      next: e => { this.evaluations = e; this.chargement = false; },
+    this.service.getEvaluationsPage(f, this.pag.params()).subscribe({
+      next: r => { this.pag.recevoir(r); this.chargement = false; },
       error: () => { this.toastr.error('Impossible de charger vos évaluations.'); this.chargement = false; },
     });
   }
-  reinitialiser(): void { this.filtres = {}; this.charger(); }
+  changerPage(e: PageEvent): void { this.pag.changer(e); this.charger(); }
+  reinitialiser(): void { this.filtres = { date_debut: debutPeriodeParDefaut() }; this.filtrer(); }
   ouvrir(e: EvaluationListe): void { this.router.navigate(['/mon-espace/evaluation/executer', e.id]); }
 }

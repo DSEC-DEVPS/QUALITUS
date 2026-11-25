@@ -10,7 +10,7 @@
         <div class="col-sm-4 text-start p-0">
           <input matInput (keyup)="applyFilter($event)" placeholder="Login" />
         </div>
-        <div class="col-sm-4"><input type="file" /></div>
+        <div class="col-sm-4"></div>
         <div class="col-sm-4 text-end p-0">
           <mat-icon
             class="add_icon"
@@ -20,6 +20,15 @@
             (click)="openDialog()"
           >
             person_add</mat-icon
+          >
+          <mat-icon
+            class="add_icon"
+            *appCan="'utilisateur.creer'"
+            matTooltip="Importer (Excel)"
+            matTooltipPosition="above"
+            (click)="openImport()"
+          >
+            upload_file</mat-icon
           >
           <mat-icon
             (click)="download()"

@@ -184,7 +184,8 @@ export class QuestionSondageDialogComponent {
   obligatoire = true;
   curseur_min = 1;
   curseur_max = 10;
-  options: { libelle: string }[] = [];
+  /** id : option existante (libellé corrigé sur place, réponses conservées). */
+  options: { id?: number; libelle: string }[] = [];
   conditions: ConditionSondage[] = [];
 
   constructor(
@@ -199,7 +200,7 @@ export class QuestionSondageDialogComponent {
       this.obligatoire = q.obligatoire === 1;
       this.curseur_min = q.curseur_min ?? 1;
       this.curseur_max = q.curseur_max ?? 10;
-      this.options = (q.options || []).map(o => ({ libelle: o.libelle }));
+      this.options = (q.options || []).map(o => ({ id: o.id, libelle: o.libelle }));
       this.conditions = (q.conditions || []).map(c => ({ ...c }));
     } else {
       this.page = data.pageParDefaut || 1;

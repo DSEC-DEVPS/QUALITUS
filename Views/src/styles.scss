@@ -317,3 +317,35 @@ mat-icon, .material-icons, .mat-icon, i.material-icons {
     margin: 6px -22px 0 !important; padding: 12px 22px 0; border-top: 1px solid var(--qx-bordure, #f0ebe5);
   }
 }
+
+// Fenêtre de résultat (quiz, contrôle) : carte arrondie, contenu géré par PopupComponent
+.qx-score-dialog .mat-mdc-dialog-surface {
+  border-radius: 18px !important;
+  overflow: hidden;
+}
+
+// ---------------------------------------------------------------------------
+// Listes cliquables (Mes coaching, Évaluations de mes agents, Suivi des plans
+// d'actions) : main au survol, ligne surlignée, flèche d'ouverture, pastilles.
+// ---------------------------------------------------------------------------
+.qx-liste {
+  .table-cadre { border: 1px solid var(--qx-bordure, #ece7e1); border-radius: 8px; overflow: hidden; background: var(--qx-surface, #fff); }
+  table.table { width: 100%; background: transparent; }
+  tr.ligne { cursor: pointer; transition: background .12s; }
+  tr.ligne:hover { background: var(--qx-orange-pale, #fff6ee); }
+  tr.ligne:hover .col-ouvrir mat-icon { color: #f57c00; transform: translateX(2px); }
+  .col-ouvrir { width: 40px; text-align: right; }
+  .col-ouvrir mat-icon { color: var(--qx-texte-3, #bbb); transition: transform .12s; vertical-align: middle; }
+  .fort { font-weight: 600; color: var(--qx-texte, #2b2b2b); }
+  .login, .discret { color: var(--qx-texte-3, rgba(0, 0, 0, .55)); margin-left: 4px; font-size: 12.5px; }
+  .vide { color: var(--qx-texte-2, rgba(0, 0, 0, .6)); padding: 24px 8px; text-align: center; }
+  .compteur { color: var(--qx-texte-2, rgba(0, 0, 0, .6)); font-size: 13px; margin: 0 0 8px; }
+  .pastille { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px 2px 6px; border-radius: 12px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+  .pastille mat-icon { font-size: 16px; width: 16px; height: 16px; }
+  .pastille.succes { background: var(--qx-vert-pale, #e8f5e9); color: var(--qx-vert, #2e7d32); }
+  .pastille.echec { background: var(--qx-rouge-pale, #fdecea); color: var(--qx-rouge, #c62828); }
+  .pastille.attente { background: var(--qx-orange-pale, #fff1e6); color: var(--qx-orange-texte, #b26a00); }
+  .pastille.neutre { background: var(--qx-surface-2, #f1f3f5); color: var(--qx-texte-2, #555); }
+}
+// Site affiché à côté d'un nom dans une liste déroulante (porteur, contributeurs)
+.site-opt { color: var(--qx-texte-3, rgba(0, 0, 0, .5)); font-size: 12px; }

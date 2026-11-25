@@ -84,6 +84,18 @@
   @if (sondageId) {
     <mat-card>
       <mat-card-content>
+        @if (sondage?.nb_reponses) {
+          <div class="bandeau-reponses" role="note">
+            <mat-icon>info</mat-icon>
+            <span>
+              <strong>Ce sondage a déjà {{ sondage!.nb_reponses }} réponse{{ sondage!.nb_reponses! > 1 ? 's' : '' }}.</strong>
+              Corriger le libellé d'une question ou d'une réponse proposée ne change rien aux réponses.
+              Ajouter ou supprimer une question ou une réponse proposée, changer un type ou l'échelle d'un curseur
+              remettra le sondage à zéro
+              (après confirmation) : les réponses seront supprimées et les participants devront répondre à nouveau.
+            </span>
+          </div>
+        }
         <div class="d-flex align-items-center justify-content-between flex-wrap m-b-8">
           <h6 class="m-0">Questions ({{ questions.length }})</h6>
           <button mat-flat-button color="primary" (click)="ajouterQuestion()">

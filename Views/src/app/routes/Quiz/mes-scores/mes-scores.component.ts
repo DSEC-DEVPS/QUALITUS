@@ -1,9 +1,11 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { PointsPipe } from '../points.pipe';
 import { DatePipe } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule } from '@angular/material/paginator';
-import { Pagination } from '@shared/utils/pagination';
+import { PaginationServeur, periodeParDefaut } from '@shared/utils/pagination-serveur';
+import { PageEvent } from '@angular/material/paginator';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -20,7 +22,7 @@ import { BadgesQuizComponent } from '../badges-quiz/badges-quiz.component';
 @Component({
   selector: 'app-mes-scores',
   standalone: true,
-  imports: [ChargementComponent, BadgesQuizComponent, MatExpansionModule, MatCardModule, MatTableModule, MatPaginatorModule, MatIconModule, MatChipsModule, MatTooltipModule, DatePipe, FiltrePeriodeComponent],
+  imports: [PointsPipe, ChargementComponent, BadgesQuizComponent, MatExpansionModule, MatCardModule, MatTableModule, MatPaginatorModule, MatIconModule, MatChipsModule, MatTooltipModule, DatePipe, FiltrePeriodeComponent],
   templateUrl: './mes-scores.component.html',
   styleUrl: './mes-scores.component.scss',
 })
@@ -29,11 +31,12 @@ export class MesScoresComponent implements OnInit {
   private readonly quizSrv = inject(QuizService);
   private readonly toast = inject(ToastrService);
 
-  readonly pag = new Pagination<ScoreHistorique>();
+  /** Pagination côté serveur (out113) : seule la page affichée est chargée. */
+  readonly pag = new PaginationServeur<ScoreHistorique>();
   displayedColumns = ['date_tentative', 'quiz_titre', 'num_essai', 'score', 'statut'];
   badges: BadgeUtilisateur[] = [];
-  /** Période sur la date de la tentative (filtre serveur). */
-  periode: Periode = { du: null, au: null };
+  /** Période sur la date de la tentative (filtre serveur) : 3 derniers mois par défaut. */
+  periode: Periode = periodeParDefaut();
 
   /** Panneau des badges : replié par défaut, l'état est mémorisé dans le navigateur. */
   private static readonly CLE_BADGES = 'qualitus.mesScores.badgesOuverts';
@@ -54,14 +57,20 @@ export class MesScoresComponent implements OnInit {
 
   chargerScores() {
     this.chargement = true;
-    this.quizSrv.getMesScores(this.periode).pipe(finalize(() => (this.chargement = false))).subscribe({
-      next: d => this.pag.definir(d),
+    this.quizSrv.getMesScoresPage(this.periode, this.pag.params()).pipe(finalize(() => (this.chargement = false))).subscribe({
+      next: r => this.pag.recevoir(r),
       error: () => this.toast.error("Impossible de charger l'historique"),
     });
   }
 
   changerPeriode(p: Periode) {
     this.periode = p;
+    this.pag.premiere();
+    this.chargerScores();
+  }
+
+  changerPage(e: PageEvent) {
+    this.pag.changer(e);
     this.chargerScores();
   }
 }

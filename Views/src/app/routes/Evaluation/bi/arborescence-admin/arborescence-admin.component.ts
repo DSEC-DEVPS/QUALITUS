@@ -4,54 +4,60 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
+import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ToastrService } from 'ngx-toastr';
+import { finalize } from 'rxjs';
 import { PermissionsService } from '../../../../core/authorization/permissions.service';
-import { EvalBiService, Arborescence, BiOption } from '../../eval-bi.service';
+import { EvalBiService, Arborescence } from '../../eval-bi.service';
 import { EvalGrilleService, Grille } from '../../eval-grille.service';
 import { ConfirmationService } from '@shared/services/confirmation.service';
-import { finalize } from 'rxjs';
 import { ChargementComponent } from '@shared/components/chargement/chargement.component';
-import { ArbreOptionsComponent, DemandeAjout, DemandeDeplacement, OptionArbre } from '../../arbre-options/arbre-options.component';
 import { correspondRecherche } from '@shared/utils/recherche';
+import { Pagination } from '@shared/utils/pagination';
+import { ArboFormDialogComponent, DonneesFormArbo } from './arbo-form-dialog.component';
+import { ArboOptionsDialogComponent, DonneesOptionsArbo } from './arbo-options-dialog.component';
 
+/**
+ * Arborescences BI : tableau des arborescences (grille, site, point de départ,
+ * options, évaluations), bouton d'ajout en haut à droite, colonne Actions
+ * (visionner les options, éditer, supprimer — une arborescence utilisée est
+ * archivée au lieu d'être supprimée ; restaurer depuis « Archivées »).
+ */
 @Component({
   selector: 'app-arborescence-admin',
   standalone: true,
-  imports: [ArbreOptionsComponent, ChargementComponent, CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule],
+  imports: [ChargementComponent, CommonModule, FormsModule, MatCardModule, MatButtonModule, MatButtonToggleModule, MatIconModule,
+    MatFormFieldModule, MatInputModule, MatTableModule, MatTooltipModule, MatPaginatorModule, MatDialogModule],
   templateUrl: './arborescence-admin.component.html',
   styleUrl: './arborescence-admin.component.scss',
 })
 export class ArborescenceAdminComponent implements OnInit {
-  chargementOptions = false;
-  chargement = true;
   private readonly confirmation = inject(ConfirmationService);
   private readonly perms = inject(PermissionsService);
-  /** Paramétrage réservé à evaluation.parametrer (lecture seule sinon). */
-  get peutParametrer(): boolean {
-    return this.perms.can('evaluation.parametrer');
-  }
   private readonly service = inject(EvalBiService);
   private readonly grilleService = inject(EvalGrilleService);
   private readonly http = inject(HttpClient);
   private readonly toastr = inject(ToastrService);
+  private readonly dialog = inject(MatDialog);
 
+  /** Paramétrage réservé à evaluation.parametrer (lecture seule sinon). */
+  get peutParametrer(): boolean { return this.perms.can('evaluation.parametrer'); }
+
+  readonly colonnes = ['grille', 'site', 'depart', 'options', 'evaluations', 'date', 'actions'];
+  readonly pag = new Pagination<Arborescence>();
+  chargement = true;
   grilles: Grille[] = [];
   sites: { id: number; nom: string }[] = [];
   arborescences: Arborescence[] = [];
-  /** Recherche dans la liste des arborescences (grille, site, point de départ). */
-  rechercheArbo = '';
-  get arborescencesFiltrees(): Arborescence[] {
-    return this.arborescences.filter(a => correspondRecherche(this.rechercheArbo, [a.grille, a.site, a.point_depart_libelle]));
-  }
-
-  nouvelle = { id_grille: null as number | null, id_site: null as number | null, point_depart_libelle: '' };
-
-  arboSelectionnee?: Arborescence;
-  options: BiOption[] = [];
+  etat: 'ACTIF' | 'ARCHIVE' = 'ACTIF';
+  recherche = '';
 
   ngOnInit(): void {
     this.grilleService.getGrilles().subscribe({ next: g => (this.grilles = g) });
@@ -61,64 +67,52 @@ export class ArborescenceAdminComponent implements OnInit {
 
   charger(): void {
     this.chargement = true;
-    this.service.getArborescences().pipe(finalize(() => (this.chargement = false))).subscribe({ next: a => (this.arborescences = a) });
+    this.service.getArborescences({ etat: this.etat }).pipe(finalize(() => (this.chargement = false))).subscribe({
+      next: a => { this.arborescences = a || []; this.appliquer(true); },
+    });
   }
 
-  creer(): void {
-    if (!this.nouvelle.id_grille || !this.nouvelle.id_site || !this.nouvelle.point_depart_libelle.trim()) {
-      this.toastr.warning('Grille, site et point de départ obligatoires.'); return;
-    }
-    this.service.addArborescence({
-      id_grille: this.nouvelle.id_grille, id_site: this.nouvelle.id_site,
-      point_depart_libelle: this.nouvelle.point_depart_libelle.trim(),
-    }).subscribe({
-      next: () => { this.toastr.success('Arborescence créée.'); this.nouvelle = { id_grille: null, id_site: null, point_depart_libelle: '' }; this.charger(); },
+  appliquer(garderPage = false): void {
+    this.pag.definir(this.arborescences.filter(a => correspondRecherche(this.recherche, [a.grille, a.site, a.point_depart_libelle])), garderPage);
+  }
+
+  changerEtat(e: 'ACTIF' | 'ARCHIVE'): void { this.etat = e; this.charger(); }
+
+  private formulaire(arbo: Arborescence | null): void {
+    const data: DonneesFormArbo = { arbo, grilles: this.grilles, sites: this.sites };
+    this.dialog.open(ArboFormDialogComponent, { data, panelClass: 'dlg-ref', width: '520px' }).afterClosed()
+      .subscribe(ok => { if (ok) this.charger(); });
+  }
+  ajouter(): void { this.formulaire(null); }
+  editer(a: Arborescence): void { this.formulaire(a); }
+
+  visionner(a: Arborescence): void {
+    const data: DonneesOptionsArbo = { arbo: a, modifiable: this.peutParametrer && a.etat !== 'ARCHIVE' };
+    const ref = this.dialog.open(ArboOptionsDialogComponent, { data, panelClass: 'dlg-ref', width: '960px', maxWidth: '96vw' });
+    ref.afterClosed().subscribe(() => { if (ref.componentInstance?.modifie) this.charger(); });
+  }
+
+  async supprimer(a: Arborescence): Promise<void> {
+    const nom = `« ${a.grille} / ${a.site} »`;
+    const confirme = a.utilisee
+      ? await this.confirmation.confirmer({
+          titre: 'Archiver l\'arborescence', type: 'attention', oui: 'Archiver',
+          message: `L'arborescence ${nom} est utilisée par des évaluations : elle sera archivée (plus proposée dans les évaluations, restaurable) au lieu d'être supprimée.`,
+        })
+      : await this.confirmation.confirmer({
+          titre: 'Supprimer l\'arborescence', type: 'danger', oui: 'Supprimer',
+          message: `Supprimer définitivement l'arborescence ${nom}${a.nb_options ? ` et ses ${a.nb_options} option${(a.nb_options || 0) > 1 ? 's' : ''}` : ''} ?`,
+        });
+    if (!confirme) return;
+    this.service.deleteArborescence(a.id).subscribe({
+      next: r => { this.toastr.success(r.archivee ? 'Arborescence archivée.' : 'Arborescence supprimée.'); this.charger(); },
       error: err => this.toastr.error(err?.error?.message || 'Erreur.'),
     });
   }
 
-  ouvrir(a: Arborescence): void {
-    this.arboSelectionnee = a;
-    this.chargerOptions();
-  }
-
-  chargerOptions(): void {
-    if (!this.arboSelectionnee) return;
-    this.chargementOptions = true;
-    this.service.getArbreOptions(this.arboSelectionnee.id).pipe(finalize(() => (this.chargementOptions = false))).subscribe({ next: o => (this.options = o) });
-  }
-
-
-
-
-  // ---------- arbre (composant commun) ----------
-  ajouterOptionArbre(d: DemandeAjout): void {
-    if (!this.arboSelectionnee) return;
-    this.service.addOption({ id_arborescence: this.arboSelectionnee.id, ...d }).subscribe({
-      next: () => { this.toastr.success('Option ajoutée.'); this.chargerOptions(); },
-      error: err => this.toastr.error(err?.error?.message || 'Erreur.'),
-    });
-  }
-  renommerOptionArbre(d: { id: number; libelle: string }): void {
-    this.service.updateOption(d.id, d.libelle).subscribe({
-      next: () => { this.toastr.success('Option renommée.'); this.chargerOptions(); },
-      error: err => this.toastr.error(err?.error?.message || 'Erreur.'),
-    });
-  }
-  async supprimerOptionArbre(d: { option: OptionArbre; nbDescendantes: number }): Promise<void> {
-    const sous = d.nbDescendantes ? ` et ses ${d.nbDescendantes} sous-option${d.nbDescendantes > 1 ? 's' : ''}` : '';
-    if (!(await this.confirmation.confirmer({ titre: 'Supprimer l\'option', message: `Supprimer « ${d.option.libelle} »${sous} ?`, type: 'danger' }))) return;
-    this.service.deleteOption(d.option.id).subscribe({
-      next: () => { this.toastr.success('Supprimée.'); this.chargerOptions(); },
-      error: err => this.toastr.error(err?.error?.message || 'Erreur.'),
-    });
-  }
-  async deplacerOptionArbre(d: DemandeDeplacement): Promise<void> {
-    const sous = d.nbDescendantes ? ` (avec ses ${d.nbDescendantes} sous-option${d.nbDescendantes > 1 ? 's' : ''})` : '';
-    const cible = d.parent ? `sous « ${d.parent.libelle} » (niveau ${d.parent.niveau + 1})` : 'au niveau 1';
-    if (!(await this.confirmation.confirmer({ titre: 'Déplacer l\'option', message: `Déplacer « ${d.option.libelle} »${sous} ${cible} ?`, type: 'attention' }))) return;
-    this.service.deplacerOption(d.option.id, d.parent ? d.parent.id : null).subscribe({
-      next: () => { this.toastr.success('Option déplacée.'); this.chargerOptions(); },
+  restaurer(a: Arborescence): void {
+    this.service.restaurerArborescence(a.id).subscribe({
+      next: () => { this.toastr.success('Arborescence restaurée.'); this.charger(); },
       error: err => this.toastr.error(err?.error?.message || 'Erreur.'),
     });
   }

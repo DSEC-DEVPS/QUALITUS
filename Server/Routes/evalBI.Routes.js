@@ -17,6 +17,10 @@ const router = express.Router();
 // options en attente -> evaluation.valider.
 router.get("/eval/bi/arborescence", auth, permission("EVALUATION","PARAMETRER"), bi.getArborescences);
 router.post("/eval/bi/arborescence", auth, permission("EVALUATION","PARAMETRER"), bi.addArborescence);
+// Modifier / supprimer (archivage si utilisée) / restaurer une arborescence (out104)
+router.put("/eval/bi/arborescence/:id", auth, permission("EVALUATION","PARAMETRER"), bi.updateArborescence);
+router.delete("/eval/bi/arborescence/:id", auth, permission("EVALUATION","PARAMETRER"), bi.deleteArborescence);
+router.put("/eval/bi/arborescence/:id/restaurer", auth, permission("EVALUATION","PARAMETRER"), bi.restaurerArborescence);
 router.get("/eval/bi/arborescence/:id/options", auth, permission("EVALUATION","PARAMETRER"), bi.getArbreOptions);
 
 // Options (cascade + attente) — routes spécifiques avant /option/:id

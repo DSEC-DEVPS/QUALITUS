@@ -623,8 +623,6 @@ tr > th {
 
     color: var(--qx-texte-2, #{$text-light});
 
-    text-transform: capitalize;
-
     margin-bottom: 12px;
 
     line-height: 1.5;
@@ -1495,3 +1493,9 @@ html {
 /* Badges quiz de l'agent */
 .badges-agent { padding: 8px 12px 12px; }
 .badges-agent .badges-titre { font-size: 14px; font-weight: 600; color: var(--qx-texte, #444); margin-bottom: 8px; }
+
+/* out122 : login et statut de l'agent */
+.sub_title.login { font-weight: 600; }
+.statut-agent { display: inline-block; padding: 1px 10px; border-radius: 10px; font-size: 12px; font-weight: 600;
+  background: var(--qx-vert-pale, #e8f5e9); color: var(--qx-vert, #2e7d32); }
+.statut-agent.inactif { background: var(--qx-rouge-pale, #fdecea); color: var(--qx-rouge, #c62828); }

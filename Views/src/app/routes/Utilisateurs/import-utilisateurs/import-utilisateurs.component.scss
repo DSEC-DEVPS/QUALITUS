@@ -1,0 +1,21 @@
+.imp { display: flex; flex-direction: column; gap: 12px; padding: 8px 16px 16px; max-height: 100%; }
+.imp-tete { display: flex; align-items: center; justify-content: space-between; }
+.imp-etapes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.imp-etape { display: flex; gap: 10px; padding: 12px; border: 1px solid rgba(0, 0, 0, .12); border-radius: 8px; }
+.imp-etape p { margin: 4px 0 10px; font-size: 12px; opacity: .75; }
+.imp-etape .num { flex: 0 0 28px; height: 28px; border-radius: 50%; background: #ff7900; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; }
+.fichier { margin-left: 8px; font-size: 12px; opacity: .8; }
+.imp-resume { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.imp-resume .espace { flex: 1; }
+.chip { padding: 3px 10px; border-radius: 12px; background: rgba(0, 0, 0, .06); font-size: 13px; }
+.chip.ok { background: #e3f4e8; color: #1b6b35; }
+.chip.ko { background: #fde7e7; color: #a12020; }
+.imp-table { overflow: auto; max-height: 50vh; border: 1px solid rgba(0, 0, 0, .12); border-radius: 8px; }
+.imp-table table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.imp-table th { position: sticky; top: 0; background: #fafafa; text-align: left; padding: 6px 10px; border-bottom: 1px solid rgba(0, 0, 0, .12); }
+.imp-table td { padding: 6px 10px; border-bottom: 1px solid rgba(0, 0, 0, .06); vertical-align: top; }
+.imp-table tr.ko td { background: #fff6f6; }
+.st { padding: 2px 8px; border-radius: 10px; font-size: 12px; white-space: nowrap; }
+.st.ok { background: #e3f4e8; color: #1b6b35; }
+.st.ko { background: #fde7e7; color: #a12020; }
+@media (max-width: 900px) { .imp-etapes { grid-template-columns: 1fr; } }

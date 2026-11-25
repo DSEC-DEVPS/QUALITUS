@@ -37,12 +37,13 @@
         </mat-form-field>
         <mat-form-field appearance="outline" *ngIf="peutOrganiser"><mat-label>Statut</mat-label>
           <mat-select [(ngModel)]="filtres.statut" name="st">
+            <mat-option value="NON_FIGEE">Non figées</mat-option>
             <mat-option [value]="undefined">Tous</mat-option>
             <mat-option *ngFor="let s of statuts" [value]="s.v">{{ s.l }}</mat-option>
           </mat-select>
         </mat-form-field>
         <span class="sp">
-          <button mat-flat-button color="primary" (click)="charger()"><mat-icon>filter_alt</mat-icon> Appliquer</button>
+          <button mat-flat-button color="primary" (click)="appliquer()"><mat-icon>filter_alt</mat-icon> Appliquer</button>
           <button mat-button (click)="reinitialiser()">Réinitialiser</button>
         </span>
       </div>
@@ -86,13 +87,15 @@
       </table>
       @if (pag.length) {
         <mat-paginator [length]="pag.length" [pageIndex]="pag.pageIndex" [pageSize]="pag.pageSize"
-                       [pageSizeOptions]="pag.tailles" showFirstLastButtons (page)="pag.changer($event)" />
+                       [pageSizeOptions]="pag.tailles" showFirstLastButtons (page)="changerPage($event)" />
       }
 
       <div class="cal-empty" *ngIf="!chargement && !sessions.length">
-        <mat-icon>{{ toutes.length ? 'search_off' : 'tune' }}</mat-icon>
-        @if (toutes.length) {
+        <mat-icon>{{ avecRecherche ? 'search_off' : 'tune' }}</mat-icon>
+        @if (avecRecherche) {
           <span>Aucune session ne correspond à « {{ recherche }} »</span>
+        } @else if (filtres.statut === 'NON_FIGEE') {
+          <span>Aucune session en cours (les sessions figées sont masquées : choisissez « Tous » dans Statut)</span>
         } @else {
           <span>Aucune session de calibrage</span>
           <span class="cal-empty-sub" *appCan="'calibrage.organiser'">Cliquez sur « Nouvelle session » pour en créer une.</span>

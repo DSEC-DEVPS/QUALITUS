@@ -3,6 +3,7 @@
 // Sondage -> Questions (par page, types varies) -> Options.
 // =====================================================================
 const db = require("../config/db");
+const { lirePage, decouper } = require("../utils/paginationMemoire");
 const crypto = require("crypto");
 const XLSX = require("xlsx");
 
@@ -78,6 +79,37 @@ const TYPES = ["CHOIX_UNIQUE", "CHOIX_MULTIPLE", "OUVERTE", "CLASSEMENT", "CURSE
 // Types qui portent des options (reponses proposees)
 const TYPES_AVEC_OPTIONS = ["CHOIX_UNIQUE", "CHOIX_MULTIPLE", "CLASSEMENT"];
 
+/* ------------------------------------------------------------------ */
+/* Sondage déjà répondu : modifications qui remettent le sondage à zéro */
+/* ------------------------------------------------------------------ */
+// Ajouter / supprimer une question ou une option, changer le type d'une question ou
+// l'échelle d'un curseur rend les réponses existantes incohérentes. Si le sondage a
+// déjà des réponses, le serveur demande une confirmation explicite (409
+// CONFIRMATION_REQUISE) ; une fois confirmée, la modification est appliquée et TOUTES
+// les réponses sont supprimées : les cibles internes doivent répondre à nouveau
+// (sondage redemandé à la connexion / au rechargement). Corriger un libellé (question
+// ou option) ne touche pas aux réponses.
+const nbReponsesSondage = async (cx, idSondage) => {
+  const [[r]] = await cx.query("SELECT COUNT(*) AS n FROM B_SD_PASSATION WHERE id_Sondage=?", [idSondage]);
+  return Number(r.n) || 0;
+};
+const reinitialiserReponsesSondage = async (cx, idSondage) => {
+  const [r] = await cx.query("DELETE FROM B_SD_PASSATION WHERE id_Sondage=?", [idSondage]); // cascade réponses
+  return r.affectedRows || 0;
+};
+const confirmationRequise = (res, nb, motifs) =>
+  res.status(409).json({
+    code: "CONFIRMATION_REQUISE",
+    nb_reponses: nb,
+    motifs,
+    message:
+      `Ce sondage a déjà ${nb} réponse${nb > 1 ? "s" : ""}. ${motifs.join(", ")} : ` +
+      "le sondage sera remis à zéro et toutes les réponses supprimées.",
+  });
+const estConfirme = (req) =>
+  req.body?.confirmer_reinitialisation === true || ["1", "true"].includes(String(req.query?.confirmer || ""));
+const libelleOption = (o) => String((o && typeof o === "object" ? o.libelle : o) ?? "").trim();
+
 const getRole = async (userId) => {
   if (!userId) return null;
   const [r] = await db.query(
@@ -136,7 +168,17 @@ const getAllSondage = async (req, res) => {
        ORDER BY s.id DESC`,
       args
     );
-    return res.status(200).send(rows);
+    // out113 : ?page=&taille= -> recherche (nom ou n°) et statut appliqués ici comme à l'écran ;
+    // statut=NON_DESACTIF : actifs et en cours de rédaction (défaut de l'écran).
+    const pg = lirePage(req.query);
+    if (!pg) return res.status(200).send(rows);
+    const rech = String(req.query.q || "").trim().toLowerCase();
+    const st = String(req.query.statut || "");
+    const l = rows.filter((s) =>
+      (!rech || (s.nom || "").toLowerCase().includes(rech) || String(s.id) === rech) &&
+      (!st || (st === "ENCOURS" ? s.statut !== "ACTIF" && s.statut !== "DESACTIF"
+        : st === "NON_DESACTIF" ? s.statut !== "DESACTIF" : s.statut === st)));
+    return res.status(200).json(decouper(l, pg));
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Error request" });
@@ -154,6 +196,7 @@ const getOneSondage = async (req, res) => {
     }
     const sondage = rows[0];
     sondage.questions = await chargerQuestionsAvecOptions(id);
+    sondage.nb_reponses = await nbReponsesSondage(db, id);
     return res.status(200).send(sondage);
   } catch (error) {
     console.log(error);
@@ -314,6 +357,11 @@ const addQuestion = async (req, res) => {
       connection.release();
       return res.status(403).json({ message: "Accès non autorisé à ce sondage" });
     }
+    const nbReponses = await nbReponsesSondage(connection, id_Sondage);
+    if (nbReponses && !estConfirme(req)) {
+      connection.release();
+      return confirmationRequise(res, nbReponses, ["Ajouter une question"]);
+    }
     await connection.beginTransaction();
     const [r] = await connection.query(
       `INSERT INTO B_SD_QUESTION (id_Sondage, page, ordre, type, libelle, obligatoire, curseur_min, curseur_max, dateCreation)
@@ -342,8 +390,13 @@ const addQuestion = async (req, res) => {
       }
     }
     await enregistrerConditions(connection, r.insertId, req.body.conditions);
+    const supprimees = nbReponses ? await reinitialiserReponsesSondage(connection, id_Sondage) : 0;
     await connection.commit();
-    return res.status(201).json({ message: "Question ajoutee", id: r.insertId });
+    return res.status(201).json({
+      message: supprimees ? "Question ajoutée : sondage remis à zéro" : "Question ajoutée",
+      id: r.insertId,
+      reinitialise: supprimees > 0,
+    });
   } catch (error) {
     try { await connection.rollback(); } catch (e) {}
     console.log(error);
@@ -364,7 +417,9 @@ const updateQuestion = async (req, res) => {
   }
   const connection = await db.getConnection();
   try {
-    const [qr] = await connection.query(`SELECT id_Sondage FROM B_SD_QUESTION WHERE id=?`, [id]);
+    const [qr] = await connection.query(
+      `SELECT id_Sondage, type, curseur_min, curseur_max FROM B_SD_QUESTION WHERE id=?`, [id]
+    );
     if (!qr.length) {
       connection.release();
       return res.status(404).json({ message: "Question introuvable" });
@@ -372,6 +427,33 @@ const updateQuestion = async (req, res) => {
     if (!(await peutGerer(req.auth ? req.auth.userId : null, qr[0].id_Sondage))) {
       connection.release();
       return res.status(403).json({ message: "Accès non autorisé à ce sondage" });
+    }
+    const avant = qr[0];
+    const [optsAvant] = await connection.query(`SELECT id FROM B_SD_OPTION WHERE id_Question=?`, [id]);
+    const idsAvant = new Set(optsAvant.map((o) => o.id));
+    // Options envoyées : { id?, libelle } ; id connu = option existante (libellé corrigé sur place).
+    const envoyees = (TYPES_AVEC_OPTIONS.includes(type) && Array.isArray(options) ? options : [])
+      .map((o) => ({ id: o && typeof o === "object" && idsAvant.has(Number(o.id)) ? Number(o.id) : null, libelle: libelleOption(o) }))
+      .filter((o) => o.libelle);
+    const idsGardes = new Set(envoyees.filter((o) => o.id).map((o) => o.id));
+    const retirees = [...idsAvant].filter((x) => !idsGardes.has(x));
+    const ajoutees = envoyees.filter((o) => !o.id);
+    const motifs = [];
+    if (avant.type !== type) motifs.push("Changer le type de la question");
+    else if (type === "CURSEUR" && (Number(avant.curseur_min ?? 1) !== Number(curseur_min ?? 1) || Number(avant.curseur_max ?? 10) !== Number(curseur_max ?? 10))) {
+      motifs.push("Changer l'échelle du curseur");
+    }
+    // « Réponses proposées » : libellé des options dans l'éditeur.
+    if (avant.type === type && retirees.length) {
+      motifs.push(retirees.length > 1 ? "Supprimer des réponses proposées" : "Supprimer une réponse proposée");
+    }
+    if (avant.type === type && ajoutees.length) {
+      motifs.push(ajoutees.length > 1 ? "Ajouter des réponses proposées" : "Ajouter une réponse proposée");
+    }
+    const nbReponses = motifs.length ? await nbReponsesSondage(connection, avant.id_Sondage) : 0;
+    if (nbReponses && !estConfirme(req)) {
+      connection.release();
+      return confirmationRequise(res, nbReponses, motifs);
     }
     await connection.beginTransaction();
     await connection.query(
@@ -387,22 +469,27 @@ const updateQuestion = async (req, res) => {
         id,
       ]
     );
-    // Remplace l'ensemble des options
-    await connection.query(`DELETE FROM B_SD_OPTION WHERE id_Question=?`, [id]);
-    if (TYPES_AVEC_OPTIONS.includes(type) && Array.isArray(options)) {
-      let i = 0;
-      for (const o of options) {
-        const lib = (o && (o.libelle ?? o)) || "";
-        if (!String(lib).trim()) continue;
-        await connection.query(
-          `INSERT INTO B_SD_OPTION (id_Question, libelle, ordre) VALUES (?,?,?)`,
-          [id, String(lib).trim(), i++]
-        );
+    // Options mises à jour SUR PLACE (identifiants conservés) : les réponses déjà
+    // données et les conditions d'affichage qui pointent vers une option restent valides.
+    if (retirees.length) {
+      await connection.query(`DELETE FROM B_SD_CONDITION WHERE id_Option IN (?)`, [retirees]);
+      await connection.query(`DELETE FROM B_SD_OPTION WHERE id IN (?)`, [retirees]);
+    }
+    let i = 0;
+    for (const o of envoyees) {
+      if (o.id) {
+        await connection.query(`UPDATE B_SD_OPTION SET libelle=?, ordre=? WHERE id=?`, [o.libelle, i++, o.id]);
+      } else {
+        await connection.query(`INSERT INTO B_SD_OPTION (id_Question, libelle, ordre) VALUES (?,?,?)`, [id, o.libelle, i++]);
       }
     }
     await enregistrerConditions(connection, id, req.body.conditions);
+    const supprimees = nbReponses ? await reinitialiserReponsesSondage(connection, avant.id_Sondage) : 0;
     await connection.commit();
-    return res.status(200).json({ message: "Question modifiée" });
+    return res.status(200).json({
+      message: supprimees ? "Question modifiée : sondage remis à zéro" : "Question modifiée",
+      reinitialise: supprimees > 0,
+    });
   } catch (error) {
     try { await connection.rollback(); } catch (e) {}
     console.log(error);
@@ -420,8 +507,27 @@ const deleteQuestion = async (req, res) => {
     if (!(await peutGerer(req.auth ? req.auth.userId : null, qr[0].id_Sondage))) {
       return res.status(403).json({ message: "Accès non autorisé à ce sondage" });
     }
-    await db.query(`DELETE FROM B_SD_QUESTION WHERE id=?`, [id]); // cascade options
-    return res.status(200).json({ message: "Question supprimée" });
+    const nbReponses = await nbReponsesSondage(db, qr[0].id_Sondage);
+    if (nbReponses && !estConfirme(req)) return confirmationRequise(res, nbReponses, ["Supprimer une question"]);
+    const cx = await db.getConnection();
+    let supprimees = 0;
+    try {
+      await cx.beginTransaction();
+      // Conditions d'autres questions qui dépendaient de celle-ci : sans objet.
+      await cx.query(`DELETE FROM B_SD_CONDITION WHERE id_Question_source=?`, [id]);
+      await cx.query(`DELETE FROM B_SD_QUESTION WHERE id=?`, [id]); // cascade options + ses conditions
+      if (nbReponses) supprimees = await reinitialiserReponsesSondage(cx, qr[0].id_Sondage);
+      await cx.commit();
+    } catch (e) {
+      try { await cx.rollback(); } catch (e2) {}
+      throw e;
+    } finally {
+      cx.release();
+    }
+    return res.status(200).json({
+      message: supprimees ? "Question supprimée : sondage remis à zéro" : "Question supprimée",
+      reinitialise: supprimees > 0,
+    });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Error request" });
@@ -673,67 +779,72 @@ const getRapport = async (req, res) => {
     }
     const [srow] = await db.query("SELECT id, nom FROM B_SD_SONDAGE WHERE id=?", [id]);
     if (!srow.length) return res.status(404).json({ message: "Sondage introuvable" });
-    const [np] = await db.query(
-      "SELECT COUNT(*) AS n FROM B_SD_PASSATION WHERE id_Sondage=? AND termine=1",
-      [id]
-    );
+    // Performance (out110) : un nombre fixe de requêtes agrégées pour tout le sondage
+    // (plus une requête par question et par option), appuyées sur les index de la
+    // migration 56. Passations prises en compte : celles qui sont terminées.
+    const REP = `B_SD_REPONSE r JOIN B_SD_PASSATION pt ON pt.id = r.id_Passation AND pt.termine = 1 AND pt.id_Sondage = ?`;
+    const [[np], [questions], [options], [parOption], [parQuestion], [textes]] = await Promise.all([
+      db.query("SELECT COUNT(*) AS n FROM B_SD_PASSATION WHERE id_Sondage=? AND termine=1", [id]),
+      db.query("SELECT id, page, ordre, type, libelle, curseur_min, curseur_max FROM B_SD_QUESTION WHERE id_Sondage=? ORDER BY page, ordre, id", [id]),
+      db.query(`SELECT o.id, o.id_Question, o.libelle FROM B_SD_OPTION o JOIN B_SD_QUESTION q ON q.id = o.id_Question
+                 WHERE q.id_Sondage = ? ORDER BY o.id_Question, o.ordre, o.id`, [id]),
+      // choix et classement : nombre de réponses et rang moyen par option
+      db.query(`SELECT r.id_Question, r.id_Option, COUNT(*) AS nb, AVG(r.ordre) AS ordre_moyen
+                  FROM ${REP} WHERE r.id_Option IS NOT NULL GROUP BY r.id_Question, r.id_Option`, [id]),
+      // par question : lignes de réponse, curseur (moyenne, min, max), répondants
+      db.query(`SELECT r.id_Question, COUNT(*) AS nb, AVG(r.valeur_num) AS moyenne, MIN(r.valeur_num) AS mini,
+                       MAX(r.valeur_num) AS maxi, COUNT(DISTINCT r.id_Passation) AS repondants
+                  FROM ${REP} GROUP BY r.id_Question`, [id]),
+      // questions ouvertes : textes, du plus récent au plus ancien
+      db.query(`SELECT r.id_Question, r.valeur_texte FROM ${REP}
+                 JOIN B_SD_QUESTION qo ON qo.id = r.id_Question AND qo.type = 'OUVERTE'
+                 WHERE r.valeur_texte IS NOT NULL AND r.valeur_texte <> '' ORDER BY r.id DESC`, [id]),
+    ]);
     const nb_passations = np[0].n;
-    const [questions] = await db.query(
-      "SELECT id, page, ordre, type, libelle, curseur_min, curseur_max FROM B_SD_QUESTION WHERE id_Sondage=? ORDER BY page, ordre, id",
-      [id]
-    );
+    const optionsParQ = new Map();
+    for (const o of options) {
+      if (!optionsParQ.has(o.id_Question)) optionsParQ.set(o.id_Question, []);
+      optionsParQ.get(o.id_Question).push(o);
+    }
+    const statOpt = new Map(parOption.map((x) => [`${x.id_Question}:${x.id_Option}`, x]));
+    const statQ = new Map(parQuestion.map((x) => [x.id_Question, x]));
+    const textesParQ = new Map();
+    for (const t of textes) {
+      if (!textesParQ.has(t.id_Question)) textesParQ.set(t.id_Question, []);
+      textesParQ.get(t.id_Question).push(t.valeur_texte);
+    }
     for (const q of questions) {
+      const opts = optionsParQ.get(q.id) || [];
+      const sq = statQ.get(q.id);
       if (q.type === "CHOIX_UNIQUE" || q.type === "CHOIX_MULTIPLE") {
-        const [opts] = await db.query(
-          `SELECT o.id, o.libelle,
-                  (SELECT COUNT(*) FROM B_SD_REPONSE r JOIN B_SD_PASSATION pt ON pt.id = r.id_Passation AND pt.termine = 1 WHERE r.id_Question=o.id_Question AND r.id_Option=o.id) AS nb
-           FROM B_SD_OPTION o WHERE o.id_Question=? ORDER BY o.ordre, o.id`,
-          [q.id]
-        );
-        const total = opts.reduce((a, o) => a + o.nb, 0);
-        q.resultat = { options: opts, total };
+        const liste = opts.map((o) => ({ id: o.id, libelle: o.libelle, nb: Number((statOpt.get(`${q.id}:${o.id}`) || {}).nb || 0) }));
+        q.resultat = { options: liste, total: liste.reduce((a, o) => a + o.nb, 0) };
       } else if (q.type === "CLASSEMENT") {
-        const [opts] = await db.query(
-          `SELECT o.id, o.libelle, COUNT(r.id) AS nb, AVG(r.ordre) AS ordre_moyen
-           FROM B_SD_OPTION o
-           LEFT JOIN (B_SD_REPONSE r JOIN B_SD_PASSATION pt ON pt.id = r.id_Passation AND pt.termine = 1)
-                  ON r.id_Option=o.id AND r.id_Question=o.id_Question
-           WHERE o.id_Question=? GROUP BY o.id, o.libelle`,
-          [q.id]
-        );
-        // rang moyen = ordre (0-based) + 1
-        for (const o of opts) o.rang_moyen = o.ordre_moyen != null ? Number(o.ordre_moyen) + 1 : null;
-        opts.sort((a, b) => (a.rang_moyen ?? 999) - (b.rang_moyen ?? 999));
-        q.resultat = { options: opts };
+        const liste = opts.map((o) => {
+          const s = statOpt.get(`${q.id}:${o.id}`);
+          const ordre_moyen = s && s.ordre_moyen != null ? s.ordre_moyen : null;
+          // rang moyen = ordre (0-based) + 1
+          return { id: o.id, libelle: o.libelle, nb: Number((s || {}).nb || 0), ordre_moyen,
+                   rang_moyen: ordre_moyen != null ? Number(ordre_moyen) + 1 : null };
+        });
+        liste.sort((a, b) => (a.rang_moyen ?? 999) - (b.rang_moyen ?? 999));
+        q.resultat = { options: liste };
       } else if (q.type === "CURSEUR") {
-        const [st] = await db.query(
-          "SELECT COUNT(*) AS nb, AVG(r.valeur_num) AS moyenne, MIN(r.valeur_num) AS mini, MAX(r.valeur_num) AS maxi FROM B_SD_REPONSE r JOIN B_SD_PASSATION pt ON pt.id = r.id_Passation AND pt.termine = 1 WHERE r.id_Question=?",
-          [q.id]
-        );
         q.resultat = {
-          nb: st[0].nb,
-          moyenne: st[0].moyenne != null ? Math.round(Number(st[0].moyenne) * 100) / 100 : null,
-          mini: st[0].mini,
-          maxi: st[0].maxi,
+          nb: Number((sq || {}).nb || 0),
+          moyenne: sq && sq.moyenne != null ? Math.round(Number(sq.moyenne) * 100) / 100 : null,
+          mini: sq ? sq.mini : null,
+          maxi: sq ? sq.maxi : null,
         };
       } else if (q.type === "OUVERTE") {
-        const [txts] = await db.query(
-          "SELECT r.valeur_texte FROM B_SD_REPONSE r JOIN B_SD_PASSATION pt ON pt.id = r.id_Passation AND pt.termine = 1 WHERE r.id_Question=? AND r.valeur_texte IS NOT NULL AND r.valeur_texte<>'' ORDER BY r.id DESC",
-          [q.id]
-        );
-        q.resultat = { reponses: txts.map((t) => t.valeur_texte), nb: txts.length };
+        const reponses = textesParQ.get(q.id) || [];
+        q.resultat = { reponses, nb: reponses.length };
       } else {
         q.resultat = null; // INFO
       }
+      // Nombre de répondants par question (passations terminées ayant au moins une réponse).
+      q.nb_repondants = Number((sq || {}).repondants || 0);
     }
-    // Nombre de répondants par question (passations terminées ayant au moins une réponse).
-    const [parQ] = await db.query(
-      `SELECT r.id_Question, COUNT(DISTINCT r.id_Passation) AS n
-         FROM B_SD_REPONSE r JOIN B_SD_PASSATION p ON p.id = r.id_Passation AND p.termine = 1
-        WHERE p.id_Sondage = ? GROUP BY r.id_Question`, [id]
-    );
-    const nbParQ = new Map(parQ.map((x) => [x.id_Question, Number(x.n)]));
-    for (const q of questions) q.nb_repondants = nbParQ.get(q.id) || 0;
 
     // ---- Participation de la cible ----
     // « Touchés » = ciblés INTERNES ayant terminé le sondage (réponse rattachée à

@@ -1,0 +1,95 @@
+<div class="imp">
+  <div class="imp-tete">
+    <h2 mat-dialog-title class="m-0">Importer des utilisateurs (Excel)</h2>
+    <button mat-icon-button (click)="fermer()" matTooltip="Fermer"><mat-icon>close</mat-icon></button>
+  </div>
+  @if (enCours) {
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  }
+
+  <div class="imp-etapes">
+    <div class="imp-etape">
+      <div class="num">1</div>
+      <div>
+        <strong>Télécharger le modèle</strong>
+        <p>Les listes déroulantes contiennent les fonctions, sites, programmes, grilles et superviseurs que vous pouvez utiliser.</p>
+        <button mat-stroked-button color="primary" (click)="telechargerModele()" [disabled]="enCours">
+          <mat-icon>download</mat-icon> Télécharger le modèle
+        </button>
+      </div>
+    </div>
+    <div class="imp-etape">
+      <div class="num">2</div>
+      <div>
+        <strong>Déposer le fichier rempli</strong>
+        <p>Chaque ligne est vérifiée ; aucun compte n'est créé à cette étape. 500 lignes au maximum.</p>
+        <input #fichier type="file" accept=".xlsx" hidden (change)="choisirFichier($event)" />
+        <button mat-flat-button color="primary" (click)="fichier.click()" [disabled]="enCours">
+          <mat-icon>upload_file</mat-icon> Choisir le fichier
+        </button>
+        @if (nomFichier) {
+          <span class="fichier">{{ nomFichier }}</span>
+        }
+      </div>
+    </div>
+    <div class="imp-etape">
+      <div class="num">3</div>
+      <div>
+        <strong>Créer les comptes valides</strong>
+        <p>Les lignes en erreur sont ignorées : téléchargez-les, corrigez-les puis réimportez le fichier.</p>
+        <button mat-flat-button color="accent" class="creer" (click)="creer()"
+                [disabled]="enCours || etape !== 'verifie' || !resume.valides">
+          <mat-icon>group_add</mat-icon>
+          Créer {{ resume.valides && etape === 'verifie' ? 'les ' + resume.valides + ' compte(s) valide(s)' : 'les comptes valides' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @if (etape !== 'depot') {
+    <div class="imp-resume">
+      @if (etape === 'verifie') {
+        <span class="chip">{{ resume.total }} ligne(s)</span>
+        <span class="chip ok">{{ resume.valides }} valide(s)</span>
+        <span class="chip ko">{{ resume.erreurs }} en erreur</span>
+      } @else {
+        <span class="chip ok">{{ resume.crees }} compte(s) créé(s)</span>
+        <span class="chip ko">{{ resume.erreurs }} ligne(s) refusée(s)</span>
+      }
+      <span class="espace"></span>
+      @if (resume.erreurs) {
+        <button mat-button (click)="filtreErreurs = !filtreErreurs">
+          <mat-icon>filter_list</mat-icon> {{ filtreErreurs ? 'Toutes les lignes' : 'Seulement les erreurs' }}
+        </button>
+        <button mat-stroked-button color="warn" (click)="telechargerRefusees()" [disabled]="enCours">
+          <mat-icon>file_download</mat-icon> Lignes en erreur (Excel)
+        </button>
+      }
+    </div>
+
+    <div class="imp-table">
+      <table>
+        <thead>
+          <tr><th>Ligne</th><th>Login</th><th>Nom</th><th>Statut</th><th>Détail</th></tr>
+        </thead>
+        <tbody>
+          @for (r of affichees; track r.ligne) {
+            <tr [class.ko]="r.statut === 'ERREUR'">
+              <td>{{ r.ligne }}</td>
+              <td>{{ r.login || '—' }}</td>
+              <td>{{ r.prenom }} {{ r.nom }}</td>
+              <td>
+                @switch (r.statut) {
+                  @case ('OK') { <span class="st ok">Valide</span> }
+                  @case ('CREE') { <span class="st ok">Créé</span> }
+                  @default { <span class="st ko">Erreur</span> }
+                }
+              </td>
+              <td>{{ r.erreurs.length ? r.erreurs.join(' ; ') : '' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

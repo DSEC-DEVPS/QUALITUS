@@ -41,9 +41,27 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 
 import {
+  DateAdapter,
   MAT_DATE_FORMATS,
   MatNativeDateModule,
+  NativeDateAdapter,
 } from '@angular/material/core';
+import { Injectable } from '@angular/core';
+
+/** Calendrier natif en français : saisie au clavier jj/mm/aaaa (sinon lue comme mm/jj). */
+@Injectable()
+export class DateAdapterFr extends NativeDateAdapter {
+  override parse(value: unknown, parseFormat?: unknown): Date | null {
+    if (typeof value === 'string') {
+      const m = value.trim().match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/);
+      if (m) {
+        const d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+        return d.getMonth() === Number(m[2]) - 1 ? d : this.invalid();
+      }
+    }
+    return super.parse(value, parseFormat);
+  }
+}
 
 
 import { MatInputModule } from '@angular/material/input';
@@ -86,6 +104,7 @@ export const MY_DATE_FORMATS = {
     provide: MAT_DATE_FORMATS,
     useValue: MY_DATE_FORMATS,
   },
+  { provide: DateAdapter, useClass: DateAdapterFr },
   ],
 
   imports: [
@@ -127,6 +146,8 @@ export class SingleAgentComponent
   private readonly router = inject(Router);
 
   private readonly datePipe = inject(DatePipe);
+
+  private readonly dateAdapter = inject(DateAdapter);
 
   /** Écran d'origine (Mes agents par défaut, ou Gérer les comptes). */
   readonly retourUrl: string = (() => {
@@ -253,6 +274,9 @@ export class SingleAgentComponent
   // =========================================================
 
   ngOnInit(): void {
+
+    // Calendrier natif : dates affichées jj/mm/aaaa quelle que soit la langue du navigateur.
+    this.dateAdapter.setLocale('fr-FR');
 
     const id =
       this.route.snapshot.params['id'];

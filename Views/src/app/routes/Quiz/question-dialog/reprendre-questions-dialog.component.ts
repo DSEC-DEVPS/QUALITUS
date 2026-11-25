@@ -1,4 +1,5 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { PointsPipe } from '../points.pipe';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -31,7 +32,7 @@ export interface ReprendreQuestionsResult {
 @Component({
   selector: 'app-reprendre-questions-dialog',
   standalone: true,
-  imports: [
+  imports: [PointsPipe,
     FormsModule,
     DatePipe,
     MatDialogModule,
@@ -91,7 +92,7 @@ export interface ReprendreQuestionsResult {
                 <span class="lib">{{ i + 1 }}. {{ q.libelle }}</span>
               </mat-checkbox>
               <div class="infos">
-                <span>{{ q.points }} pt(s)</span>
+                <span>{{ q.points | points }} pt(s)</span>
                 <span>· {{ bonnesReponses(q) }}</span>
                 @if (q.deja_presente) {
                   <span class="deja">Déjà présente : ignorée</span>

@@ -83,15 +83,70 @@
             </mat-form-field>
           </div>
 
-          <div class="col-sm-12">
+          <div class="col-sm-6">
             <mat-form-field appearance="fill" class="w-100">
-              <mat-label>Contenus associés (fiches)</mat-label>
-              <mat-select formControlName="fiches" multiple>
-                @for (f of fiches; track f.id) {
-                  <mat-option [value]="f.id">{{ f.titre }}</mat-option>
-                }
+              <mat-label>Autoriser les retests</mat-label>
+              <mat-select formControlName="retest_auto">
+                <mat-option [value]="0">Non : seul le premier essai compte</mat-option>
+                <mat-option [value]="1">Oui : retest sur autorisation (créateur, son site, invités)</mat-option>
               </mat-select>
-              <mat-hint>Un quiz peut porter sur plusieurs contenus</mat-hint>
+              <mat-hint>Sans retest, les échecs n'apparaissent pas dans « Retests à autoriser ».</mat-hint>
+            </mat-form-field>
+          </div>
+          @if (form.get('retest_auto')?.value) {
+            <div class="col-sm-6">
+              <mat-form-field appearance="fill" class="w-100">
+                <mat-label>Nombre maximum de retests par agent</mat-label>
+                <input matInput type="number" min="1" max="10" step="1" formControlName="nb_retest_max" />
+                <mat-hint>Au-delà, l'agent ne figure plus dans « Retests à autoriser ».</mat-hint>
+                @if (form.get('nb_retest_max')?.invalid) {
+                  <mat-error>Entre 1 et 10.</mat-error>
+                }
+              </mat-form-field>
+            </div>
+          }
+
+          <div class="col-sm-12">
+            <mat-form-field appearance="fill" class="w-100 qz-fiches">
+              <mat-label>Contenus associés (fiches)</mat-label>
+              <mat-chip-grid #grilleFiches aria-label="Fiches associées" [disabled]="rechercheFiche.disabled">
+                @for (f of fichesChoisies; track f.id) {
+                  <mat-chip-row (removed)="retirerFiche(f)" [class.qz-fiche-archivee]="f.ETAT && f.ETAT !== 'ACTIF'">
+                    {{ f.titre }}
+                    @if (f.ETAT && f.ETAT !== 'ACTIF') {
+                      <span class="qz-fiche-etat">archivée</span>
+                    }
+                    <button matChipRemove [attr.aria-label]="'Retirer ' + f.titre">
+                      <mat-icon>cancel</mat-icon>
+                    </button>
+                  </mat-chip-row>
+                }
+                <input
+                  #saisieFiche
+                  placeholder="Rechercher une fiche active (titre, code…)"
+                  [formControl]="rechercheFiche"
+                  [matChipInputFor]="grilleFiches"
+                  [matAutocomplete]="autoFiches"
+                />
+              </mat-chip-grid>
+              <mat-autocomplete #autoFiches="matAutocomplete" class="qz-fiches-panneau" (optionSelected)="ajouterFiche($event)">
+                @for (f of resultatsFiches; track f.id) {
+                  <mat-option [value]="f" [disabled]="estFicheChoisie(f)">
+                    <div class="qz-opt-fiche">
+                      <span class="qz-opt-titre">{{ f.titre }}</span>
+                      <span class="qz-opt-meta">
+                        {{ f.Categorie || 'Sans catégorie' }}@if (f.Sous_Categorie) { › {{ f.Sous_Categorie }}}
+                        @if (f.date) { · {{ dateCourte(f.date) }}}
+                        @if (estFicheChoisie(f)) { · déjà associée}
+                      </span>
+                    </div>
+                  </mat-option>
+                }
+                @if (!resultatsFiches.length && !rechercheFicheEnCours) {
+                  <mat-option disabled>Aucune fiche active ne correspond.</mat-option>
+                }
+              </mat-autocomplete>
+              <mat-hint>Seules les fiches actives sont proposées · un quiz peut porter sur plusieurs contenus</mat-hint>
             </mat-form-field>
           </div>
 
@@ -162,9 +217,9 @@
           <div class="bareme" [class.ok]="baremeConforme" [class.sur]="totalPoints > 100">
             <mat-icon>{{ baremeConforme ? 'check_circle' : 'warning' }}</mat-icon>
             <div class="bareme-txt">
-              <b>Barème : {{ totalPoints }} / 100 points</b>
-              @if (totalPoints < 100) { — il reste {{ 100 - totalPoints }} point(s) à répartir. }
-              @if (totalPoints > 100) { — {{ totalPoints - 100 }} point(s) de trop. }
+              <b>Barème : {{ totalPoints | points }} / 100 points</b>
+              @if (totalPoints < 100) { — il reste {{ 100 - totalPoints | points }} point(s) à répartir. }
+              @if (totalPoints > 100) { — {{ totalPoints - 100 | points }} point(s) de trop. }
               @if (!baremeConforme) { <span class="bareme-bloc">Le quiz ne peut être ni activé, ni ouvert, ni diffusé tant que le total n'est pas de 100.</span> }
             </div>
             <div class="bareme-jauge"><div [style.width.%]="totalPoints > 100 ? 100 : totalPoints"></div></div>
@@ -183,7 +238,7 @@
               <div class="q-meta">
                 <mat-chip-set>
                   <mat-chip>{{ typeLabel(q) }}</mat-chip>
-                  <mat-chip>{{ q.points ?? 5 }} point(s)</mat-chip>
+                  <mat-chip>{{ q.points ?? 5 | points }} point(s)</mat-chip>
                   @if (coteProprietaire) {
                     <mat-chip class="ok">Bonne(s) réponse(s) : {{ bonnesReponses(q) }}</mat-chip>
                   }

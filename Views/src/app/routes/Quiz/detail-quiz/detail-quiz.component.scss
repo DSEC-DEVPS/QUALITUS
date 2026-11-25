@@ -273,3 +273,19 @@
 
 .meta-row .v.bareme-ko { color: var(--qx-rouge, #c62828); small { display: block; font-weight: 400; font-size: 11.5px; color: var(--qx-rouge, #c62828); } }
 .btn-repartir { margin-left: 8px; }
+
+/* Participants : statut de passage */
+.participation-resume {
+  margin: 0 0 8px;
+}
+.filtre-statut {
+  display: block;
+  margin-bottom: 8px;
+}
+.statut-passage {
+  font-weight: 600;
+}
+.sp-REUSSI { color: var(--qx-vert, #2e7d32); }
+.sp-ECHEC { color: var(--qx-rouge, #c62828); }
+.sp-EN_COURS { color: var(--qx-orange-texte, #8a4b00); }
+.sp-NON_PASSE { color: var(--qx-texte-2, #6b6b6b); }

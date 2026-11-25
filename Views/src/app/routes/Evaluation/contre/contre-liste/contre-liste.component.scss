@@ -1,16 +1,10 @@
-.contre-liste {
-  padding: 16px;
-  .entete { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-  .assistant { margin-bottom: 16px; }
-  .assistant .titre { display: block; margin-bottom: 8px; font-weight: 600; }
-  .assistant .ligne { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-  .assistant .grand { flex: 1 1 320px; min-width: 260px; }
-  .table { width: 100%; }
-  .ligne { cursor: pointer; }
-  .ligne:hover { background: var(--qx-survol, rgba(0, 0, 0, 0.03)); }
-  .vide { color: var(--qx-texte-2, rgba(0, 0, 0, 0.6)); }
-  mat-chip.chip-succes { background: var(--qx-vert-pale, #c8e6c9); }
-  mat-chip.chip-echec { background: var(--qx-rouge-pale, #ffcdd2); }
+.contre-page {
+  .large { width: 280px !important; }
+  .recherche { width: 320px !important; }
+  td.mat-mdc-cell { padding-top: 8px; padding-bottom: 8px; }
+  .col-actions { text-align: right; white-space: nowrap; }
+  .btn-ligne { margin-left: 8px; height: 34px; }
+  .btn-ligne mat-icon { font-size: 18px; width: 18px; height: 18px; }
 }
 
 // Champ de recherche en tête des listes déroulantes (rendu dans le panneau)
@@ -20,6 +14,5 @@
   padding: 8px 16px; background: var(--mat-select-panel-background-color, #fff);
   border-bottom: 1px solid var(--qx-bordure, rgba(0, 0, 0, 0.12));
   mat-icon { color: var(--qx-texte-2, rgba(0, 0, 0, 0.54)); }
-  input { flex: 1; border: none; outline: none; font: inherit; background: transparent; padding: 6px 0; }
+  input { flex: 1; border: none; outline: none; font: inherit; background: transparent; padding: 6px 0; color: inherit; }
 }
-.aucun-select { padding: 12px 16px; color: var(--qx-texte-2, rgba(0, 0, 0, 0.6)); }

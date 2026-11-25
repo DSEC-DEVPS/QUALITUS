@@ -53,6 +53,11 @@ export class ErrorInterceptor implements HttpInterceptor {
   }
 
   private handleError(req: HttpRequest<unknown>, error: HttpErrorResponse) {
+    // Confirmation demandée par le serveur (ex. sondage déjà répondu) : l'écran affiche
+    // sa propre fenêtre de confirmation, pas de notification d'erreur.
+    if (error.status === 409 && error.error?.code === 'CONFIRMATION_REQUISE') {
+      return throwError(() => error);
+    }
     if (error.status === STATUS.UNAUTHORIZED) {
       this.handleUnauthorized(req, error);
       return throwError(() => error);

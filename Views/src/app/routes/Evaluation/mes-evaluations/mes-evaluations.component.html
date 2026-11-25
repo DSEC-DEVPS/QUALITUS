@@ -31,7 +31,7 @@
       </mat-select>
     </mat-form-field>
     <div class="cal-tb-actions">
-      <button mat-flat-button color="primary" (click)="charger()"><mat-icon>search</mat-icon> Filtrer</button>
+      <button mat-flat-button color="primary" (click)="filtrer()"><mat-icon>search</mat-icon> Filtrer</button>
       <button mat-button (click)="reinitialiser()">Réinitialiser</button>
     </div>
   </div>
@@ -40,6 +40,7 @@
     <mat-card-content>
       <app-chargement *ngIf="chargement" />
 
+      <p class="compteur" *ngIf="!chargement && evaluations.length">{{ pag.length }} évaluation{{ pag.length > 1 ? 's' : '' }}{{ filtres.date_debut ? ' depuis le ' + (filtres.date_debut | date: 'dd/MM/yyyy') : '' }}</p>
       <table mat-table [dataSource]="pag.page" *ngIf="!chargement && evaluations.length" class="cal-table">
         <ng-container matColumnDef="date_appel">
           <th mat-header-cell *matHeaderCellDef>Date d'appel</th>
@@ -73,11 +74,11 @@
       </table>
       @if (pag.length) {
         <mat-paginator [length]="pag.length" [pageIndex]="pag.pageIndex" [pageSize]="pag.pageSize"
-                       [pageSizeOptions]="pag.tailles" showFirstLastButtons (page)="pag.changer($event)" />
+                       [pageSizeOptions]="pag.tailles" showFirstLastButtons (page)="changerPage($event)" />
       }
 
       <div class="cal-empty" *ngIf="!chargement && !evaluations.length">
-        <mat-icon>fact_check</mat-icon><span>Aucune évaluation</span>
+        <mat-icon>fact_check</mat-icon><span>Aucune évaluation{{ filtres.date_debut ? ' depuis le ' + (filtres.date_debut | date: 'dd/MM/yyyy') : '' }}</span>
       </div>
     </mat-card-content>
   </mat-card>

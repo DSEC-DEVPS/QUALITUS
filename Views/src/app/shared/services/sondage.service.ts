@@ -14,6 +14,7 @@ import {
 } from '../../routes/Sondage/interfaces';
 import { HttpParams } from '@angular/common/http';
 import { Periode, paramsPeriode } from '@shared/periode';
+import { PageServeur, paramsPage } from '@shared/utils/pagination-serveur';
 
 /** Service du module Sondage (sondages du personnel). Prefixe /api/v1/sondage. */
 @Injectable({ providedIn: 'root' })
@@ -28,6 +29,13 @@ export class SondageService {
     const params: Record<string, string> = { ...paramsPeriode(periode) };
     if (params['du'] || params['au']) params['champ'] = champ;
     return this.http.get<Sondage[]>(`${this.base}/all`, { params });
+  }
+  /** Une page de la liste (recherche et statut appliqués par le serveur). */
+  getAllPage(periode: Periode | null, champ: 'creation' | 'modification' | 'reponse', filtres: { q?: string; statut?: string },
+             page: { page: number; taille: number }): Observable<PageServeur<Sondage>> {
+    const params: Record<string, string> = { ...paramsPeriode(periode) };
+    if (params['du'] || params['au']) params['champ'] = champ;
+    return this.http.get<PageServeur<Sondage>>(`${this.base}/all`, { params: paramsPage({ ...params, ...filtres }, page) });
   }
   getOne(id: number): Observable<Sondage> {
     return this.http.get<Sondage>(`${this.base}/${id}`);
@@ -49,14 +57,26 @@ export class SondageService {
   }
 
   /* ----- Questions (+ options) ----- */
-  addQuestion(body: QuestionSondage): Observable<message & { id: number }> {
-    return this.http.post<message & { id: number }>(`${this.base}/question/add`, body);
+  /**
+   * Sondage déjà répondu : ajouter / supprimer une question ou une option, changer un type
+   * renvoie 409 CONFIRMATION_REQUISE ; on renvoie alors avec confirmer = true (remise à zéro).
+   */
+  addQuestion(body: QuestionSondage, confirmer = false): Observable<message & { id: number; reinitialise?: boolean }> {
+    return this.http.post<message & { id: number; reinitialise?: boolean }>(`${this.base}/question/add`, {
+      ...body,
+      confirmer_reinitialisation: confirmer,
+    });
   }
-  updateQuestion(id: number, body: QuestionSondage): Observable<message> {
-    return this.http.put<message>(`${this.base}/question/${id}`, body);
+  updateQuestion(id: number, body: QuestionSondage, confirmer = false): Observable<message & { reinitialise?: boolean }> {
+    return this.http.put<message & { reinitialise?: boolean }>(`${this.base}/question/${id}`, {
+      ...body,
+      confirmer_reinitialisation: confirmer,
+    });
   }
-  deleteQuestion(id: number): Observable<message> {
-    return this.http.delete<message>(`${this.base}/question/${id}`);
+  deleteQuestion(id: number, confirmer = false): Observable<message & { reinitialise?: boolean }> {
+    return this.http.delete<message & { reinitialise?: boolean }>(`${this.base}/question/${id}`, {
+      params: confirmer ? { confirmer: '1' } : {},
+    });
   }
 
   /* ----- Passation par lien public (token) ----- */

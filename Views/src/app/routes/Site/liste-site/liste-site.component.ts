@@ -70,6 +70,10 @@ export class ListeSiteComponent implements OnInit {
   private readonly router = inject(Router);
 
   ngOnInit(): void {
+    this.charger();
+  }
+  /** (Re)charge la liste : à l'ouverture et après un ajout / une modification. */
+  charger(): void {
     this.chargement = true;
     this.userService.getAllSite().pipe(finalize(() => (this.chargement = false))).subscribe(user => {
       this.downloadData = user;
@@ -110,6 +114,7 @@ export class ListeSiteComponent implements OnInit {
             this.userService.deleteSite(id).subscribe({
               next: resultat => {
                 this.toastSrv.success(resultat.message);
+                this.charger();
               },
               error: error => {
                 console.log(error);
@@ -133,7 +138,7 @@ export class ListeSiteComponent implements OnInit {
       width: '520px',
       maxWidth: '95vw',
       panelClass: 'dlg-ref',
-    });
+    }).afterClosed().subscribe(() => this.charger());
   }
 
   NavigeOnSinglePageUtilisateur(id: number) {
@@ -145,7 +150,7 @@ export class ListeSiteComponent implements OnInit {
       width: '520px',
       maxWidth: '95vw',
       panelClass: 'dlg-ref',
-    });
+    }).afterClosed().subscribe(() => this.charger());
   }
 
   download() {

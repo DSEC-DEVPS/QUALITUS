@@ -40,6 +40,8 @@ export interface Quiz {
   fiches?: number[]; // ids des contenus associes (n..n)
   fiches_detail?: { id_Fiche: number; titre: string }[];
   fiches_titres?: string | null; // libelles concatenes (liste)
+  /** Fiches liées (listes) : id, titre, état. */
+  fiches_liees?: FicheLiee[];
   sites?: number[]; // ids des sites cibles (n..n)
   sites_detail?: { id_Site: number; nom: string }[];
   sites_titres?: string | null; // noms de sites concatenes (liste)
@@ -47,7 +49,9 @@ export interface Quiz {
   origine?: 'SITE' | 'INVITE'; // quiz du site propriétaire vs site invité
   autorise?: number;            // 1 si l'utilisateur peut ouvrir le détail
   note_passage: number; // "Seuil de reussite"
-  retest_auto: number; // 0 | 1 (conserve en base, hors formulaire)
+  /** Retests possibles (0 | 1, non par défaut) : page « Retests à autoriser ». */
+  retest_auto: number;
+  /** Nombre maximum de retests par agent (1 à 10). */
   nb_retest_max: number;
   /** État : OUVERT | CLOTURER (participations ouvertes / closes) */
   Etat?: string;
@@ -57,6 +61,11 @@ export interface Quiz {
   cote_proprietaire?: number;
   /** Site de l'utilisateur connecté (Diffusion d'un utilisateur autorisé) */
   mon_site_id?: number | null;
+  /** Site du créateur du quiz (out115). */
+  createur_site_id?: number | null;
+  createur_site?: string | null;
+  /** Sites où l'utilisateur peut diffuser (null : tous) — out114. */
+  sites_diffusion?: number[] | null;
   dateCreation?: string;
   dateModification?: string;
   nb_questions?: number;
@@ -96,6 +105,19 @@ export interface FicheRecente {
   titre: string;
   dateModification?: string;
   dateEnregistrement?: string;
+  /** ACTIF / ARCHIVE (une fiche déjà liée peut avoir été archivée depuis). */
+  ETAT?: string;
+  Categorie?: string | null;
+  Sous_Categorie?: string | null;
+  /** Date de début (ou d'enregistrement), AAAA-MM-JJ. */
+  date?: string | null;
+}
+
+/** Fiche liée à un quiz (listes, rapports). */
+export interface FicheLiee {
+  id: number;
+  titre: string;
+  ETAT?: string;
 }
 
 export interface SiteOption {
@@ -136,6 +158,35 @@ export interface QuizPublic {
   temps_ecoule_secondes?: number | null;
   /** Quiz en cours : PUBLIC ou PRIVATE (reprise sans PIN). */
   acces?: string;
+  /** Quiz fermé par sa date, passage commencé avant : à soumettre avant cette heure. */
+  fin_grace?: string | null;
+}
+
+/** Écran Participer : quiz disponible (public ou privé déverrouillé) ou terminé. */
+export interface QuizParticiper {
+  id: number;
+  titre: string;
+  acces: 'PUBLIC' | 'PRIVATE' | string;
+  note_passage: number;
+  duree?: number | null;
+  dateCreation?: string;
+  nb_questions: number;
+  nb_essais: number;
+  retest_autorise: number;
+  derniere_reussi?: number | null;
+  dernier_score?: number | string | null;
+  date_dernier_passage?: string | null;
+  /** NON_PASSE : désigné, quiz arrivé à échéance (ou clôturé) sans aucun passage. */
+  etat: 'A_COMMENCER' | 'RETEST' | 'TERMINE' | 'NON_PASSE';
+  /** Terminé : quiz encore ouvert pour l'utilisateur (résultat et fiches consultables). */
+  peut_voir?: boolean;
+  /** Non passé : date de fermeture atteinte (null : clôturé manuellement). */
+  date_fermeture?: string | null;
+}
+
+export interface MesQuiz {
+  disponibles: QuizParticiper[];
+  termines: QuizParticiper[];
 }
 
 /* ----- Phase 2 : participation ----- */
@@ -183,6 +234,26 @@ export interface QuizAPasser {
   peut_participer?: boolean;
   /** Statut du dernier essai (TEMPS_ECOULE : durée épuisée sans soumission). */
   derniere_tentative_statut?: string | null;
+  /** Fiches liées actives accessibles à l'utilisateur (« Contenu à revoir »). */
+  contenus?: FicheLiee[];
+  /** Écran d'accueil : nombre de questions, d'essais, passage déjà commencé. */
+  nb_questions?: number;
+  nb_essais?: number;
+  total_points?: number;
+  acces?: string;
+  session_en_cours?: boolean;
+  /** Quiz fermé par sa date, passage commencé avant : à soumettre avant cette heure. */
+  fin_grace?: string | null;
+  /** Dernier passage du participant (résultat seulement) : écran « Voir » d'un quiz terminé. */
+  dernier_passage?: {
+    reussi: number;
+    score: number | null;
+    nb_points: number | null;
+    nb_points_total: number | null;
+    num_essai: number;
+    statut: string | null;
+    date: string | null;
+  } | null;
 }
 
 export interface RetestEchec {
@@ -197,6 +268,8 @@ export interface RetestEchec {
   prenom: string;
   login: string;
   retest_en_attente: number;
+  /** Nombre maximum de retests du quiz (num_essai - 1 = retests déjà passés). */
+  nb_retest_max: number;
 }
 
 export interface FeedbackItem {
@@ -289,6 +362,13 @@ export interface RapportQuiz {
   statut?: string;
   /** 1 : utilisateur invité, statistiques limitées aux agents de son site. */
   limite_site?: number;
+  /** Fiches liées au quiz (toutes, pas seulement la première). */
+  fiches_liees?: FicheLiee[];
+  /** Participation (état actuel, hors période) : désignés, ayant passé au moins une fois. */
+  nb_designes?: number;
+  nb_passes?: number;
+  nb_non_passes?: number;
+  taux_participation?: number | null;
 }
 
 export interface RapportQuestion {

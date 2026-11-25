@@ -1,130 +1,113 @@
-<div class="contre-liste">
-  <mat-card class="cal-panel"><mat-card-header class="cal-band"><span class="cal-band-title"><mat-icon>compare_arrows</mat-icon> Contre-évaluations</span></mat-card-header><mat-card-content>
-
-  <div class="entete">
-    
-    <button mat-raised-button color="primary" *appCan="'contre_evaluation.creer'" (click)="afficherAssistant = !afficherAssistant">
-      <mat-icon>add</mat-icon> Nouvelle contre-évaluation
-    </button>
-  </div>
-
-  @if (afficherAssistant) {
-    <mat-card class="assistant">
-      <mat-card-content>
-        <span class="titre">Site → Évaluateur → Évaluation terminée</span>
-        <div class="ligne">
-          <mat-form-field appearance="outline">
-            <mat-label>Site</mat-label>
-            <mat-select [(ngModel)]="idSite" (selectionChange)="onSite()" name="site">
-              @for (s of sites; track s.id) { <mat-option [value]="s.id">{{ s.nom }}</mat-option> }
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Évaluateur</mat-label>
-            <mat-select [(ngModel)]="idEvaluateur" (selectionChange)="onEvaluateur()" name="ev" [disabled]="!idSite"
-                        (openedChange)="ouverture($event, rechEv, 'evaluateur')">
-              <div class="recherche-select" (click)="$event.stopPropagation()">
-                <mat-icon>search</mat-icon>
-                <input #rechEv [(ngModel)]="rechercheEvaluateur" name="rechEv" placeholder="Nom, prénom ou login…"
-                       (keydown)="$event.stopPropagation()" autocomplete="off" />
-              </div>
-              @for (e of evaluateursFiltres; track e.id) { <mat-option [value]="e.id">{{ e.nom }} {{ e.prenom }} ({{ e.login }})</mat-option> }
-              @if (!evaluateursFiltres.length) { <div class="aucun-select">Aucun évaluateur ne correspond.</div> }
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field appearance="outline" class="grand">
-            <mat-label>Évaluation</mat-label>
-            <mat-select [(ngModel)]="idEvaluation" name="eval" [disabled]="!idEvaluateur"
-                        (openedChange)="ouverture($event, rechEval, 'evaluation')">
-              <div class="recherche-select" (click)="$event.stopPropagation()">
-                <mat-icon>search</mat-icon>
-                <input #rechEval [(ngModel)]="rechercheEvaluation" name="rechEval" placeholder="N° de case, identifiant d'appel ou agent…"
-                       (keydown)="$event.stopPropagation()" autocomplete="off" />
-              </div>
-              @for (e of evaluationsFiltrees; track e.id) {
-                <mat-option [value]="e.id">#{{ e.id }} — {{ e.type_evaluation || 'Évaluation' }} — {{ e.agent_nom }} {{ e.agent_prenom }}{{ e.agent_login ? ' (' + e.agent_login + ')' : '' }} — {{ e.date_evaluation ? (e.date_evaluation | date: 'dd/MM/yyyy') : '' }}{{ e.numero_case ? ' — Case ' + e.numero_case : '' }}{{ e.identifiant_appel ? ' — Appel ' + e.identifiant_appel : '' }} ({{ e.conclusion }})</mat-option>
-              }
-              @if (!evaluationsFiltrees.length) { <div class="aucun-select">Aucune évaluation ne correspond.</div> }
-            </mat-select>
-            @if (idEvaluateur && evaluations.length === 0) { <mat-hint>Aucune évaluation contre-évaluable.</mat-hint> }
-          </mat-form-field>
-          <button mat-raised-button color="primary" (click)="creer()">Créer</button>
-        </div>
-      </mat-card-content>
-    </mat-card>
-  }
-
-  <div class="cal-filtres-row">
-    @if (voirTous) {
-      <mat-button-toggle-group [(ngModel)]="portee" (change)="charger()" name="portee">
-        <mat-button-toggle value="miennes">Créées par moi</mat-button-toggle>
-        <mat-button-toggle value="toutes">Toutes</mat-button-toggle>
-      </mat-button-toggle-group>
-    }
-    <mat-form-field appearance="outline"><mat-label>Du</mat-label>
-      <input matInput [matDatepicker]="pd" [(ngModel)]="dateDebut" name="dd" /><mat-datepicker-toggle matSuffix [for]="pd"></mat-datepicker-toggle><mat-datepicker #pd></mat-datepicker>
-    </mat-form-field>
-    <mat-form-field appearance="outline"><mat-label>Au</mat-label>
-      <input matInput [matDatepicker]="pf" [(ngModel)]="dateFin" name="df" /><mat-datepicker-toggle matSuffix [for]="pf"></mat-datepicker-toggle><mat-datepicker #pf></mat-datepicker>
-    </mat-form-field>
-    <button mat-flat-button color="primary" (click)="charger()"><mat-icon>search</mat-icon> Filtrer</button>
-    <button mat-button (click)="reinitialiserFiltres()">Réinitialiser</button>
-  </div>
-
-  <mat-card>
+<div class="cal-page qx-liste contre-page">
+  <mat-card class="cal-panel">
+    <mat-card-header class="cal-band"><span class="cal-band-title"><mat-icon>compare_arrows</mat-icon> Contre-évaluation</span></mat-card-header>
     <mat-card-content>
-      @if (liste.length === 0) {
-        <p class="vide">Aucune contre-évaluation.</p>
-      } @else {
-        <table mat-table [dataSource]="pag.page" class="table">
-          <ng-container matColumnDef="evaluateur">
-            <th mat-header-cell *matHeaderCellDef>Évaluateur contrôlé</th>
-            <td mat-cell *matCellDef="let c">{{ c.evaluateur_nom }} {{ c.evaluateur_prenom }}</td>
-          </ng-container>
-          <ng-container matColumnDef="agent">
-            <th mat-header-cell *matHeaderCellDef>Agent</th>
-            <td mat-cell *matCellDef="let c">{{ c.agent_nom }} {{ c.agent_prenom }}</td>
-          </ng-container>
-          <ng-container matColumnDef="appel">
-            <th mat-header-cell *matHeaderCellDef>Éval. #</th>
-            <td mat-cell *matCellDef="let c">#{{ c.id_evaluation_initiale }}</td>
-          </ng-container>
-          <ng-container matColumnDef="statut">
-            <th mat-header-cell *matHeaderCellDef>Statut</th>
-            <td mat-cell *matCellDef="let c">{{ c.statut }}</td>
-          </ng-container>
-          <ng-container matColumnDef="conclusion">
-            <th mat-header-cell *matHeaderCellDef>Conclusion</th>
-            <td mat-cell *matCellDef="let c">
-              @if (c.conclusion === 'SUCCES') { <mat-chip class="chip-succes">Succès</mat-chip> }
-              @else if (c.conclusion === 'ECHEC') { <mat-chip class="chip-echec">Échec</mat-chip> }
-              @else { — }
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="visibilite">
-            <th mat-header-cell *matHeaderCellDef>Visibilité</th>
-            <td mat-cell *matCellDef="let c">{{ c.date_visibilite ? (c.date_visibilite | date: 'dd/MM/yyyy') : '—' }}</td>
-          </ng-container>
-          <ng-container matColumnDef="responsable">
-            <th mat-header-cell *matHeaderCellDef>Créée par</th>
-            <td mat-cell *matCellDef="let c">{{ c.responsable_nom }} {{ c.responsable_prenom }}</td>
-          </ng-container>
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef></th>
-            <td mat-cell *matCellDef="let c" (click)="$event.stopPropagation()">
-              @if (peut(c, 'contre_evaluation.desactiver')) { <button mat-icon-button title="Désactiver" (click)="desactiver(c, $event)"><mat-icon>block</mat-icon></button> }
-              @if (peut(c, 'contre_evaluation.supprimer')) { <button mat-icon-button color="warn" title="Supprimer" (click)="supprimer(c, $event)"><mat-icon>delete</mat-icon></button> }
-            </td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
-          <tr mat-row *matRowDef="let row; columns: colonnes" class="ligne" (click)="ouvrir(row)"></tr>
-        </table>
-        @if (pag.length) {
-          <mat-paginator [length]="pag.length" [pageIndex]="pag.pageIndex" [pageSize]="pag.pageSize"
-                         [pageSizeOptions]="pag.tailles" showFirstLastButtons (page)="pag.changer($event)" />
-        }
+      <p class="cal-desc">Évaluations terminées : choisissez celle à contre-évaluer. Les contre-évaluations créées se retrouvent dans « Mes contre-évaluations ».</p>
+
+      <div class="cal-filtres-row">
+        <mat-form-field appearance="outline">
+          <mat-label>Site</mat-label>
+          <mat-select [(ngModel)]="idSite" (selectionChange)="changerSite()" name="site" [disabled]="!visionGlobale">
+            @if (visionGlobale) { <mat-option [value]="0">Tous les sites</mat-option> }
+            @for (s of sites; track s.id) { <mat-option [value]="s.id">{{ s.nom }}</mat-option> }
+          </mat-select>
+          @if (!visionGlobale) { <mat-hint>Votre site</mat-hint> }
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="large">
+          <mat-label>Évaluateur</mat-label>
+          <mat-select [(ngModel)]="idEvaluateur" (selectionChange)="charger()" name="ev" (openedChange)="ouvertureEvaluateurs($event, rechEv)">
+            <div class="recherche-select" (click)="$event.stopPropagation()">
+              <mat-icon>search</mat-icon>
+              <input #rechEv [(ngModel)]="rechercheEvaluateur" name="rechEv" placeholder="Nom, prénom ou login…" (keydown)="$event.stopPropagation()" autocomplete="off" />
+            </div>
+            <mat-option [value]="0">Tous les évaluateurs</mat-option>
+            @for (e of evaluateursFiltres; track e.id) { <mat-option [value]="e.id">{{ e.nom }} {{ e.prenom }} ({{ e.login }})</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Évaluée du</mat-label>
+          <input matInput [matDatepicker]="pd" [(ngModel)]="dateDebut" (dateChange)="charger()" name="dd" /><mat-datepicker-toggle matSuffix [for]="pd"></mat-datepicker-toggle><mat-datepicker #pd></mat-datepicker>
+        </mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Au</mat-label>
+          <input matInput [matDatepicker]="pf" [(ngModel)]="dateFin" (dateChange)="charger()" name="df" /><mat-datepicker-toggle matSuffix [for]="pf"></mat-datepicker-toggle><mat-datepicker #pf></mat-datepicker>
+        </mat-form-field>
+      </div>
+      <div class="cal-filtres-row">
+        <mat-form-field appearance="outline" class="large"><mat-label>Contre-évaluation</mat-label>
+          <mat-select [(ngModel)]="etatContre" (selectionChange)="appliquer()" name="etat">
+            <mat-option value="">Toutes les évaluations</mat-option>
+            <mat-option value="non">Non contre-évaluées</mat-option>
+            <mat-option value="oui">Déjà contre-évaluées</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="recherche"><mat-label>Rechercher</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [(ngModel)]="recherche" (ngModelChange)="appliquer()" name="q" placeholder="Agent, n° de case, identifiant d'appel, n°" autocomplete="off" />
+        </mat-form-field>
+        <button mat-button (click)="reinitialiser()">Réinitialiser</button>
+      </div>
+
+      @if (chargement) { <app-chargement /> }
+      @else if (toutes.length === 0) { <p class="vide">Aucune évaluation terminée pour ces filtres.</p> }
+      @else if (pag.length === 0) { <p class="vide">Aucune évaluation ne correspond à la recherche.</p> }
+      @else {
+        <p class="compteur">{{ pag.length }} évaluation{{ pag.length > 1 ? 's' : '' }} terminée{{ pag.length > 1 ? 's' : '' }} · {{ compteNon }} non contre-évaluée{{ compteNon > 1 ? 's' : '' }}</p>
+        <div class="table-cadre">
+          <table mat-table [dataSource]="pag.page" class="table">
+            <ng-container matColumnDef="agent">
+              <th mat-header-cell *matHeaderCellDef>Agent</th>
+              <td mat-cell *matCellDef="let e"><span class="fort">{{ e.agent_nom }} {{ e.agent_prenom }}</span>
+                <div class="discret">#{{ e.id }}{{ e.agent_login ? ' · ' + e.agent_login : '' }}</div></td>
+            </ng-container>
+            <ng-container matColumnDef="evaluateur">
+              <th mat-header-cell *matHeaderCellDef>Évaluateur</th>
+              <td mat-cell *matCellDef="let e">{{ e.evaluateur_nom }} {{ e.evaluateur_prenom }}
+                @if (e.site && visionGlobale) { <div class="discret">{{ e.site }}</div> }</td>
+            </ng-container>
+            <ng-container matColumnDef="appel">
+              <th mat-header-cell *matHeaderCellDef>Appel / évaluation</th>
+              <td mat-cell *matCellDef="let e">
+                Appel du {{ e.date_appel ? (e.date_appel | date: 'dd/MM/yyyy') : '—' }}
+                <div class="discret">Évaluée le {{ e.date_evaluation | date: 'dd/MM/yyyy' }}{{ e.numero_case ? ' · Case ' + e.numero_case : '' }}</div>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="conclusion">
+              <th mat-header-cell *matHeaderCellDef>Conclusion</th>
+              <td mat-cell *matCellDef="let e">
+                @if (e.conclusion === 'SUCCES') { <span class="pastille succes"><mat-icon>check_circle</mat-icon> Succès</span> }
+                @else if (e.conclusion === 'ECHEC') { <span class="pastille echec"><mat-icon>cancel</mat-icon> Échec</span> }
+                @else { — }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="contre">
+              <th mat-header-cell *matHeaderCellDef>Contre-évaluation</th>
+              <td mat-cell *matCellDef="let e">
+                @if (!e.contre_id) { <span class="pastille neutre">Non contre-évaluée</span> }
+                @else if (!e.contre_actif) { <span class="pastille neutre"><mat-icon>block</mat-icon> Désactivée</span> }
+                @else if (e.contre_statut !== 'TERMINE') { <span class="pastille attente"><mat-icon>schedule</mat-icon> En cours</span> }
+                @else if (e.contre_conclusion === 'SUCCES') { <span class="pastille succes"><mat-icon>check_circle</mat-icon> Terminée · Succès</span> }
+                @else { <span class="pastille echec"><mat-icon>cancel</mat-icon> Terminée · Échec</span> }
+                @if (e.contre_id) { <div class="discret">par {{ e.contre_mienne ? 'vous' : (e.contre_responsable_prenom + ' ' + e.contre_responsable_nom) }}</div> }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef class="col-actions">Actions</th>
+              <td mat-cell *matCellDef="let e" class="col-actions">
+                <span [matTooltip]="blocage(e)">
+                  <button mat-flat-button color="primary" class="btn-ligne" [disabled]="!!blocage(e) || creation === e.id" (click)="contreEvaluer(e)">
+                    <mat-icon>{{ e.contre_id ? 'open_in_new' : 'compare_arrows' }}</mat-icon>
+                    {{ e.contre_id ? 'Ouvrir la contre-évaluation' : 'Contre-évaluer' }}
+                  </button>
+                </span>
+                <button mat-stroked-button class="btn-ligne" (click)="voirDetail(e)"><mat-icon>visibility</mat-icon> Voir le détail</button>
+              </td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
+            <tr mat-row *matRowDef="let row; columns: colonnes"></tr>
+          </table>
+        </div>
+        <mat-paginator [length]="pag.length" [pageIndex]="pag.pageIndex" [pageSize]="pag.pageSize"
+                       [pageSizeOptions]="pag.tailles" showFirstLastButtons (page)="pag.changer($event)" />
       }
     </mat-card-content>
   </mat-card>
-</mat-card-content></mat-card>
 </div>

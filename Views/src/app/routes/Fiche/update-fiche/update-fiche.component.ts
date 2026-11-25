@@ -25,6 +25,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { CategorieInterface, fonction, site, sla, Sous_CategorieInterface } from '@core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { urlFichier } from '@shared/utils/url-fichier';
 
 @Component({
   selector: 'app-forms-elements',
@@ -390,7 +391,7 @@ export class UpdateFicheComponent implements OnInit {
 
   downloadExistingFile() {
     if (this.existingFileUrl) {
-      window.open(this.existingFileUrl, '_blank');
+      window.open(urlFichier(this.existingFileUrl), '_blank');
     } else {
       this.toastSrv.info('URL du fichier non disponible');
     }

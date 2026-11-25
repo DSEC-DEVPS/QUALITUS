@@ -1,50 +1,78 @@
-<mat-card class="md-pt-5">
-  <mat-card-header> </mat-card-header>
-  <mat-card-content>
-    <div class="container 100vh">
-      <div class="row">
-        <div class="col- col-sm- col-md-6 col-lg-6 col-xl-6">
-          <img [src]="voiceUrl" alt="" />
-        </div>
-
-        <div class="col- col-sm- col-md-6 col-lg-6 col-xl-6">
-          <form [formGroup]="MavoixFormGroup" class="form-field-full">
-            <div class="input mb-3">
-              <label for="select" class="form-label">Motif *</label>
-              <select
-                name="libelleListe"
-                id="select"
-                class="form-select"
-                aria-label="Default select example"
-                formControlName="motif_ma_voix_compte"
-              >
-                <option selected>Choisisez le motif</option>
-                <option *ngFor="let item of motifMaVoix" [value]="item.id">
-                  {{ item.nomMotif }}
-                </option>
-              </select>
-            </div>
-            <div class="mb-3">
-              <label for="exampleFormControlTextarea1" class="form-label">Contenu*</label>
-              <textarea
-                class="form-control"
-                id="exampleFormControlTextarea1"
-                rows="3"
-                formControlName="message"
-              ></textarea>
-            </div>
-            <button
-              [style.backgroundColor]="'#FF7900'"
-              mat-button
-              class="btn btn-outline-dark bouton"
-              [disabled]="MavoixFormGroup.invalid"
-              (click)="add_ma_voix_compte()"
-            >
-              Envoyer
-            </button>
-          </form>
-        </div>
-      </div>
+<div class="mv-page">
+  <mat-card class="mv-carte">
+    <div class="mv-visuel">
+      <img [src]="voiceUrl" alt="" />
     </div>
-  </mat-card-content>
-</mat-card>
+
+    <div class="mv-contenu">
+      <header class="mv-entete">
+        <mat-icon class="mv-icone">campaign</mat-icon>
+        <div>
+          <h1 class="mv-titre">Ma voix compte</h1>
+          <p class="mv-sous-titre">
+            Une idée, une difficulté, une suggestion ? Exprimez-vous librement.
+          </p>
+        </div>
+      </header>
+
+      <div class="mv-anonyme" role="note">
+        <mat-icon>lock</mat-icon>
+        <span>
+          <strong>Votre message est anonyme</strong> : votre nom n'est ni enregistré ni transmis.
+          Seul votre site est conservé, pour l'analyse et le traitement des remontées.
+        </span>
+      </div>
+
+      @if (envoye) {
+        <div class="mv-confirmation" role="status">
+          <mat-icon>check_circle</mat-icon>
+          <div>
+            <div class="mv-confirmation-titre">Merci, votre message a bien été envoyé.</div>
+            <div class="mv-confirmation-texte">Il a été transmis de façon anonyme.</div>
+          </div>
+          <button mat-stroked-button type="button" (click)="nouveauMessage()">
+            <mat-icon>edit</mat-icon> Écrire un autre message
+          </button>
+        </div>
+      } @else {
+        <form [formGroup]="form" (ngSubmit)="envoyer()" class="mv-form">
+          <mat-form-field appearance="outline">
+            <mat-label>Motif</mat-label>
+            <mat-select formControlName="motif_ma_voix_compte">
+              @for (m of motifs; track m.id) {
+                <mat-option [value]="m.id">{{ m.nomMotif }}</mat-option>
+              }
+            </mat-select>
+            @if (!chargementMotifs && !motifs.length) {
+              <mat-hint>Aucun motif disponible pour le moment.</mat-hint>
+            }
+            @if (form.get('motif_ma_voix_compte')?.invalid) {
+              <mat-error>Choisissez un motif.</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Votre message</mat-label>
+            <textarea
+              matInput
+              formControlName="message"
+              rows="7"
+              [attr.maxlength]="max"
+              placeholder="Décrivez la situation, votre idée ou votre proposition…"
+            ></textarea>
+            <mat-hint align="end" [class.mv-limite]="longueur > max - 100">{{ longueur }} / {{ max }}</mat-hint>
+            @if (form.get('message')?.invalid) {
+              <mat-error>Écrivez votre message.</mat-error>
+            }
+          </mat-form-field>
+
+          <div class="mv-actions">
+            <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || envoi">
+              <mat-icon>send</mat-icon> {{ envoi ? 'Envoi…' : 'Envoyer' }}
+            </button>
+          </div>
+        </form>
+      }
+    </div>
+  </mat-card>
+</div>

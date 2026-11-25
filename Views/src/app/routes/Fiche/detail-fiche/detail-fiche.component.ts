@@ -26,6 +26,7 @@ import { HotTableModule } from '@handsontable/angular';
 import { MatButtonModule } from '@angular/material/button';
 import { CanDirective } from '@core/authorization/can.directive';
 import { ChargementComponent } from '@shared/components/chargement/chargement.component';
+import { urlFichier, urlVisionneuseOffice } from '@shared/utils/url-fichier';
 @Component({
   selector: 'app-detail-fiche',
   standalone: true,
@@ -198,16 +199,16 @@ export class DetailFicheComponent implements OnInit {
 
     switch (type.extention) {
       case '.pdf':
-        this.url = this.sanitizer.bypassSecurityTrustResourceUrl(type.url);
+        this.url = this.sanitizer.bypassSecurityTrustResourceUrl(urlFichier(type.url));
         break;
       case '.xlsx':
         this.url = this.sanitizer.bypassSecurityTrustResourceUrl(
-          `https://view.officeapps.live.com/op/embed.aspx?src=${type.url}`
+          urlVisionneuseOffice(type.url)
         );
         break;
       default:
         this.url = this.sanitizer.bypassSecurityTrustResourceUrl(
-          `https://view.officeapps.live.com/op/embed.aspx?src=${type.url}`
+          urlVisionneuseOffice(type.url)
         );
         break;
     }

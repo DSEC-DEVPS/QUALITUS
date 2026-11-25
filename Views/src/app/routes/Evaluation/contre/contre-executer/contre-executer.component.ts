@@ -56,6 +56,7 @@ export class ContreExecuterComponent implements OnInit {
     this.service.getDetail(this.id).pipe(finalize(() => (this.chargement = false))).subscribe({
       next: d => {
         this.detail = d;
+        this.syntheseEnregistree = this.normSynthese(d?.contre?.synthese);
         const prec = this.categorieActive?.id;
         this.categorieActive = d.categories.find(c => c.id === prec) || d.categories[0];
       },
@@ -90,12 +91,24 @@ export class ContreExecuterComponent implements OnInit {
   // La contre-évaluation n'a plus de section Résolution, mais garde une Synthèse
   // (rédigée par le contre-évaluateur) + la date de visibilité (obligatoire).
   // On envoie toujours les deux valeurs courantes ensemble.
+  /** Dernière synthèse enregistrée (out114 : on n'enregistre que si le texte change). */
+  private syntheseEnregistree: string | null = null;
+  private normSynthese(v: any): string { return String(v ?? '').trim(); }
+
   enregistrerCloture(): void {
     if (!this.detail || this.terminee) return;
     const c = this.detail.contre;
-    this.service.setResolution(this.id, { synthese: c.synthese || '', date_visibilite: toYMD(c.date_visibilite) }).subscribe({
-      next: () => this.toastr.success('Enregistré.'), error: err => this.toastr.error(err?.error?.message || 'Erreur.'),
+    const synthese = this.normSynthese(c.synthese);
+    this.service.setResolution(this.id, { synthese, date_visibilite: toYMD(c.date_visibilite) }).subscribe({
+      next: (r: any) => { this.syntheseEnregistree = synthese; if (!r?.inchange) this.toastr.success('Enregistré.'); },
+      error: err => this.toastr.error(err?.error?.message || 'Erreur.'),
     });
+  }
+  /** Sortie du champ Synthèse : enregistre seulement si le texte a réellement changé. */
+  enregistrerSynthese(): void {
+    if (!this.detail || this.terminee) return;
+    if (this.normSynthese(this.detail.contre.synthese) === this.syntheseEnregistree) return;
+    this.enregistrerCloture();
   }
 
   async terminer(): Promise<void> {

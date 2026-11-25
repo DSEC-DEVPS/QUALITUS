@@ -3,7 +3,11 @@
     <mat-icon>group_add</mat-icon>
     <div>
       <h2>Assignation des agents</h2>
-      <p>Rattachez un ou plusieurs agents de votre site à un superviseur. Un agent déjà rattaché change de superviseur.</p>
+      @if (admin) {
+        <p>Rattachez un ou plusieurs agents de n'importe quel site à un superviseur de n'importe quel site. Un agent déjà rattaché change de superviseur.</p>
+      } @else {
+        <p>Rattachez un ou plusieurs agents de votre site à un superviseur. Un agent déjà rattaché change de superviseur.</p>
+      }
     </div>
   </div>
 
@@ -11,7 +15,7 @@
     <section class="carte">
       <h3><span class="etape">1</span> Choisir les agents</h3>
       <mat-form-field appearance="outline" class="pleine" subscriptSizing="dynamic">
-        <mat-label>Rechercher un agent (nom, prénom, login)</mat-label>
+        <mat-label>{{ admin ? 'Rechercher un agent (nom, prénom, login, site)' : 'Rechercher un agent (nom, prénom, login)' }}</mat-label>
         <mat-icon matPrefix>search</mat-icon>
         <input matInput #saisie [(ngModel)]="recherche" [matAutocomplete]="auto" name="recherche" />
         <mat-autocomplete #auto="matAutocomplete" (optionSelected)="ajouter($event.option.value); saisie.value = ''; recherche = ''">
@@ -19,7 +23,7 @@
             <mat-option [value]="a">
               <div class="opt">
                 <span class="opt-nom">{{ a.prenom }} {{ a.nom }} <small>{{ a.login }}</small></span>
-                <span class="opt-sup">{{ a.superviseur ? 'Superviseur : ' + a.superviseur : 'Sans superviseur' }}</span>
+                <span class="opt-sup">@if (admin) {<span class="opt-site">{{ a.site || 'Sans site' }}</span> · }{{ a.superviseur ? 'Superviseur : ' + a.superviseur : 'Sans superviseur' }}</span>
               </div>
             </mat-option>
           } @empty {
@@ -32,7 +36,7 @@
         <div class="choisis">
           @for (a of choisis; track a.id) {
             <span class="puce">
-              {{ a.prenom }} {{ a.nom }}
+              {{ a.prenom }} {{ a.nom }}@if (admin) { <small class="puce-site">· {{ a.site || 'Sans site' }}</small> }
               <button type="button" (click)="retirer(a)" [attr.aria-label]="'Retirer ' + a.login"><mat-icon>close</mat-icon></button>
             </span>
           }
@@ -48,14 +52,24 @@
       <mat-form-field appearance="outline" class="pleine" subscriptSizing="dynamic">
         <mat-label>Superviseur</mat-label>
         <mat-select [(ngModel)]="idSuperviseur" name="sup" (selectionChange)="majEquipe()">
-          @for (s of superviseurs; track s.id) {
-            <mat-option [value]="s.id">{{ s.prenom }} {{ s.nom }} <small class="muted">· {{ s.nom_utilisateur }} · {{ s.nb_agents }} agent(s)</small></mat-option>
+          @if (admin) {
+            @for (g of superviseursParSite; track g.site) {
+              <mat-optgroup [label]="g.site">
+                @for (s of g.liste; track s.id) {
+                  <mat-option [value]="s.id">{{ s.prenom }} {{ s.nom }} <small class="muted">· {{ s.nom_utilisateur }} · {{ s.nb_agents }} agent(s)</small></mat-option>
+                }
+              </mat-optgroup>
+            }
+          } @else {
+            @for (s of superviseurs; track s.id) {
+              <mat-option [value]="s.id">{{ s.prenom }} {{ s.nom }} <small class="muted">· {{ s.nom_utilisateur }} · {{ s.nb_agents }} agent(s)</small></mat-option>
+            }
           }
         </mat-select>
       </mat-form-field>
       @if (superviseurChoisi) {
         <div class="equipe">
-          <div class="eq-titre">Équipe actuelle de {{ superviseurChoisi.prenom }} {{ superviseurChoisi.nom }} ({{ equipe.length }})</div>
+          <div class="eq-titre">Équipe actuelle de {{ superviseurChoisi.prenom }} {{ superviseurChoisi.nom }}@if (admin) { ({{ superviseurChoisi.site || 'Sans site' }})} · {{ equipe.length }} agent(s)</div>
           @for (a of equipe; track a.id) {
             <div class="eq-ligne"><mat-icon>person</mat-icon> {{ a.prenom }} {{ a.nom }} <small>{{ a.login }}</small></div>
           } @empty {
@@ -78,6 +92,17 @@
             <li><mat-icon>swap_horiz</mat-icon> {{ a.prenom }} {{ a.nom }} quitte <b>{{ a.superviseur }}</b></li>
           }
         </ul>
+      }
+      @if (interSites.length) {
+        <div class="inter-sites">
+          <mat-icon>warning_amber</mat-icon>
+          <div>
+            <b>Rattachement entre sites différents</b> — le superviseur est du site « {{ superviseurChoisi.site || 'Sans site' }} » :
+            <ul>
+              @for (a of interSites; track a.id) { <li>{{ a.prenom }} {{ a.nom }} ({{ a.site || 'Sans site' }})</li> }
+            </ul>
+          </div>
+        </div>
       }
       @if (dejaDansEquipe.length) {
         <p class="indice">{{ dejaDansEquipe.length }} agent(s) font déjà partie de cette équipe (aucun changement pour eux).</p>

@@ -34,3 +34,42 @@ table {
 
 .badge-bareme { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
   color: var(--qx-rouge, #b71c1c); background: var(--qx-rouge-pale, #fdecea); border: 1px solid #f5c6c3; white-space: nowrap; }
+
+/* Contenus associés : une étiquette par fiche liée */
+.qz-fiches-liens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 320px;
+}
+.qz-fiche-lien {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  text-decoration: none;
+  color: var(--qx-orange-texte, #b35400);
+  background-color: var(--qx-orange-pale, #fff1e6);
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  mat-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+    flex: 0 0 auto;
+  }
+}
+a.qz-fiche-lien:hover {
+  text-decoration: underline;
+}
+.qz-fiche-lien--archivee {
+  color: var(--qx-texte-3, #8a8f95);
+  background-color: var(--qx-surface-2, #f1f1f1);
+}

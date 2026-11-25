@@ -174,7 +174,7 @@
             <mat-form-field appearance="outline" class="plein">
               <mat-label>Synthèse</mat-label>
               <textarea matInput rows="3" [(ngModel)]="detail.evaluation.synthese" [disabled]="figee"
-                        (blur)="enregistrerResolution()" name="synthese"></textarea>
+                        (blur)="enregistrerSynthese()" name="synthese"></textarea>
             </mat-form-field>
 
             @if (!figee) {

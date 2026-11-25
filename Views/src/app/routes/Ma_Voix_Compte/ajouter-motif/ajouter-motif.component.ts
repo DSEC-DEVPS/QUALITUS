@@ -57,7 +57,7 @@ export class AjouterMotifComponent implements OnInit {
         this.isSubmitting = false;
       },
       next: () => {
-        this.toastSrv.success('Nouveau Programme ajouté avec succès');
+        this.toastSrv.success('Motif ajouté avec succès');
         this.isSubmitting = false;
         this.dialogRef.close();
       },

@@ -86,7 +86,7 @@
               <h3>Clôture</h3>
               <mat-form-field appearance="outline" class="plein">
                 <mat-label>Synthèse de la contre-évaluation</mat-label>
-                <textarea matInput rows="3" [(ngModel)]="detail.contre.synthese" [disabled]="terminee" (blur)="enregistrerCloture()" name="synth"></textarea>
+                <textarea matInput rows="3" [(ngModel)]="detail.contre.synthese" [disabled]="terminee" (blur)="enregistrerSynthese()" name="synth"></textarea>
               </mat-form-field>
               <mat-form-field appearance="outline" class="plein">
                 <mat-label>Date de visibilité (obligatoire)</mat-label>

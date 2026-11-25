@@ -100,3 +100,30 @@ mat-chip.ok {
   &.ok { background: var(--qx-vert-pale, #e8f5e9); border-color: #b9dfc4; color: var(--qx-vert, #1b5e20); mat-icon { color: var(--qx-vert, #43a047); } .bareme-jauge div { background: #43a047; } }
   &.sur { background: var(--qx-rouge-pale, #fdecea); border-color: #f5c6c3; color: var(--qx-rouge, #b71c1c); mat-icon { color: var(--qx-rouge, #e53935); } .bareme-jauge div { background: #e53935; } }
 }
+
+/* Contenus associés : étiquettes + recherche */
+.qz-fiche-archivee {
+  opacity: 0.75;
+}
+.qz-fiche-etat {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  background-color: var(--qx-orange-pale, #fff1e6);
+  color: var(--qx-orange-texte, #b35400);
+}
+.qz-opt-fiche {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  padding: 4px 0;
+}
+.qz-opt-titre {
+  font-weight: 500;
+  white-space: normal;
+}
+.qz-opt-meta {
+  font-size: 0.75rem;
+  color: var(--qx-texte-2, #5f6368);
+}

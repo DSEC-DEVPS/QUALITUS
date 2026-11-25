@@ -1,328 +1,430 @@
-/* Styles généraux */
+/* =========================================================
+   Lecture d'une fiche
+   Couleurs : variables --qx-* (mode sombre), valeur d'origine en repli.
+   ========================================================= */
 
-.container-fluid {
-  background-color: var(--qx-surface-2, #f8f9fa);
-  padding: 10px;
-}
-nav {
-  height: 60px;
-}
+$orange: #ff8e36;
+$orange-texte: #b35400; // orange lisible sur fond clair (contraste AA)
 
-/* Titre de la section Vérifications */
-.verification-title {
-  font-weight: bold;
-  color: var(--qx-texte, #333);
-  margin-bottom: 15px;
-}
+// Composant en ViewEncapsulation.None (styles globaux) : tout est limité à la page.
+app-lecture-fiche {
+  nav {
+    height: 60px;
+  }
+  .Logo {
+    position: relative;
+    width: 50px;
+    height: 50px;
+    object-fit: scale-down;
+    border: 1px solid #fff;
+  }
+  .bg-body-tertiary {
+    --bs-bg-opacity: 1;
+    background-color: $orange !important;
+  }
 
-/* Style de l'iframe */
-iframe {
-  border: 2px solid var(--qx-bordure, #ddd);
-  border-radius: 8px;
-}
+  .lf-page {
+    background-color: var(--qx-surface-2, #f8f9fa);
+    margin-top: 60px; // barre orange fixe
+    padding: 10px 16px 16px;
+    min-height: calc(100vh - 60px);
+    // Boutons « contour » : couleurs neutres (sinon la couleur primaire du thème)
+    --mdc-outlined-button-label-text-color: var(--qx-texte, #212529);
+    --mdc-outlined-button-outline-color: var(--qx-bordure, #c9c9c9);
+  }
 
-/* Style des onglets */
-.mat-tab-group {
-  background-color: var(--qx-surface, white);
-  border: 1px solid var(--qx-bordure, #ddd);
-  border-radius: 8px;
-  padding: 15px;
-  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
-}
+  /* ---------- Entête : retour, titre, actions ---------- */
 
-.mat-tab-label {
-  font-weight: bold;
-  color: var(--qx-texte, #333);
-}
+  .lf-entete {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 0 12px;
+  }
 
-/* Style des boutons */
-button {
-  width: 100px;
-  margin: 25px;
-  font-size: 16px;
-  font-weight: bold;
-}
+  .lf-retour {
+    border-radius: 20px;
+    mat-icon {
+      margin-right: 4px;
+    }
+  }
 
-.btn-success {
-  background-color: #28a745;
-  border: none;
-  color: white;
-}
+  .lf-titre-bloc {
+    min-width: 0;
+    text-align: center;
+  }
 
-.btn-danger {
-  background-color: #ff8e36;
-  border: none;
-  color: white;
-}
+  .lf-titre {
+    margin: 0;
+    font-family: poppins, sans-serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--qx-texte, #212529);
+    overflow-wrap: anywhere; // codes longs type #144#code* sans espace
+  }
 
-.btn-primary {
-  background-color: #ff8e36;
-  border: none;
-  color: white;
-}
+  .lf-meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px 16px;
+    margin-top: 4px;
+    font-size: 0.8rem;
+    color: var(--qx-texte-2, #5f6368);
 
-/* Style du champ commentaire */
-.commentaire-box {
-  width: 100%;
-  border: 1px solid var(--qx-bordure, #ccc);
-  border-radius: 5px;
-  padding: 8px;
-}
+    > span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+    .lf-sep {
+      margin: 0 4px;
+      opacity: 0.7;
+    }
+  }
 
-/* Style du bouton RETOUR */
-.btn-retour {
-  display: block;
-  margin: 20px auto; /* Centre horizontalement */
-  background-color: #ff8e36;
-  border: none;
-  color: white;
-  font-size: 18px;
-  padding: 7px 15px;
-  border-radius: 5px;
-  width: 130px; /* Ajuste la largeur pour un bon rendu */
-  text-align: center;
-}
-input[type='text'],
-textarea {
-  outline: none;
-  box-shadow: none !important;
-  border: 1px solid #ff8e36 !important;
-}
-.btn-retour:hover {
-  background-color: #ff8e36;
-}
+  .lf-actions {
+    display: flex;
+    justify-content: flex-end;
+    min-width: 40px;
 
-/* Centrage du bouton RETOUR */
-.row.mt-3 {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-.Logo {
-  position: relative;
-  width: 50px;
-  height: 50px;
-  object-fit: scale-down;
-  border: 1px solid #fff;
-}
-.bg-body-tertiary {
-  --bs-bg-opacity: 1;
-  background-color: rgba(var(--bs-tertiary-bg-rgb), var(--bs-bg-opacity)) !important;
-  background-color: #ff8e36 !important;
-}
-.iframe_content {
-  border: 1px solid #ff8e36;
-  border-radius: 10px;
-}
+    .mat-mdc-icon-button {
+      color: var(--qx-orange-texte, #{$orange-texte});
+    }
+  }
 
-hr {
-  border: none;
-  border-top: 3px double #ff8e36 !important;
-  color: var(--qx-texte, #000);
-  overflow: visible;
-  text-align: center;
-  height: 5px;
-}
-.example-margin {
-  margin-left: 40px;
-}
-.btn_non {
-  padding: 2px 1px;
-  font-size: 10px;
-  width: 40px;
-}
-.button_valide:hover {
-  background-color: #ff8e36;
-  color: #fff;
-}
-.utilite::after {
-  background: var(--qx-surface, #fff);
-  content: 'Utilité';
-  padding: 0 4px;
-  position: relative;
-  top: -13px;
-}
-.exactitude::after {
-  background: var(--qx-surface, #fff);
-  content: 'exactitude';
-  padding: 0 4px;
-  position: relative;
-  top: -13px;
-}
-.Quiz::after {
-  background: var(--qx-surface, #fff);
-  content: 'Quiz';
-  padding: 0 4px;
-  position: relative;
-  top: -13px;
-}
-.sond {
-  padding: 2px 3px;
-}
+  /* ---------- Document ---------- */
 
-::ng-deep .mat-mdc-tab.mdc-tab.mdc-tab.mdc-tab--active {
-  background-color: #ff8e36;
-  font-weight: 900;
-}
-.pdf-container {
-  position: relative;
-  width: 100%;
-  padding-bottom: 56.25%; /* Ratio 16:9, ajuste selon besoin */
-  height: 0;
-  overflow: hidden;
-}
+  iframe {
+    border: 1px solid var(--qx-bordure, #ddd);
+    border-radius: 8px;
+  }
 
-.pdf-container iframe {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  border: none;
-}
-/* Pour ajuster la hauteur en fonction de la taille de l'écran */
-@media (max-width: 576px) {
   .embed-responsive {
-    height: 100vh; /* 50% de la hauteur de l'écran sur mobile */
+    height: calc(100vh - 150px);
+    min-height: 480px;
+  }
+  .embed-responsive-item {
+    height: 100%;
+    width: 100%;
+  }
+
+  .excel-container {
+    padding: 16px;
+    background-color: var(--qx-surface, white);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .excel-viewer {
+    width: 100%;
+    min-height: 320px;
+    overflow: hidden;
+  }
+
+  .lf-excel-icone {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: var(--qx-orange-texte, #{$orange-texte});
+    &.lf-ok {
+      color: var(--qx-vert, #2e7d32);
+    }
+  }
+  .lf-excel-texte {
+    margin: 12px 0;
+    color: var(--qx-texte, #212529);
+  }
+  .lf-compte {
+    font-size: 18px;
+    color: var(--qx-orange-texte, #{$orange-texte});
+  }
+
+  /* PowerPoint */
+  .lf-zoom {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 8px;
+
+    .mat-mdc-icon-button {
+      color: var(--qx-orange-texte, #{$orange-texte});
+    }
+    .lf-zoom-reset {
+      min-width: 72px;
+      border-radius: 16px;
+    }
+    input[type='range'] {
+      width: 160px;
+      margin-left: 8px;
+      accent-color: $orange;
+    }
+  }
+  .lf-pptx-viewport {
+    width: 100%;
+    height: calc(100vh - 230px);
+    min-height: 420px;
+    border: 1px solid var(--qx-bordure, #ccc);
+    border-radius: 6px;
+    overflow: auto;
+    position: relative;
+  }
+
+  /* Handsontable (aperçu Excel conservé pour compatibilité) */
+  .header-cell {
+    font-weight: bold !important;
+    background-color: var(--qx-surface-2, #f5f5f5) !important;
+  }
+  .handsontable th {
+    font-weight: bold !important;
+    background-color: var(--qx-surface-2, #f0f0f0) !important;
+    text-align: center !important;
+  }
+  .handsontable td {
+    padding: 4px 8px !important;
+  }
+
+  /* ---------- Boutons ---------- */
+
+  .lf-btn-principal.mat-mdc-unelevated-button:not(:disabled) {
+    background-color: $orange;
+    color: #fff;
+  }
+  .lf-btn-principal.mat-mdc-unelevated-button:disabled {
+    background-color: var(--qx-surface-3, #ececec);
+    color: var(--qx-texte-3, rgba(0, 0, 0, 0.45));
+  }
+  .lf-plein {
+    width: 100%;
+    margin-top: 12px;
+  }
+
+  /* ---------- Panneau de droite ---------- */
+
+  .lf-panneau-col {
+    padding-top: 8px;
+  }
+
+  .lf-panneau {
+    position: sticky;
+    top: 70px;
+    background-color: var(--qx-surface, #fff);
+    border: 1px solid var(--qx-bordure, #e3e3e3);
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+  }
+
+  .lf-panneau .mat-mdc-tab-header {
+    border-bottom: 1px solid var(--qx-bordure, #e3e3e3);
+  }
+  .lf-panneau .mat-mdc-tab-group {
+    --mat-tab-header-inactive-label-text-color: var(--qx-texte-2, #5f6368);
+    --mat-tab-header-active-label-text-color: var(--qx-orange-texte, #{$orange-texte});
+    --mat-tab-header-active-focus-label-text-color: var(--qx-orange-texte, #{$orange-texte});
+    --mat-tab-header-active-hover-label-text-color: var(--qx-orange-texte, #{$orange-texte});
+    --mdc-tab-indicator-active-indicator-color: #{$orange};
+    --mat-tab-header-active-focus-indicator-color: #{$orange};
+    --mat-tab-header-active-hover-indicator-color: #{$orange};
+    font-weight: 600;
+  }
+
+  .lf-panneau {
+    .mdc-tab .mdc-tab__text-label {
+      color: var(--qx-texte-2, #5f6368);
+    }
+    .mdc-tab--active .mdc-tab__text-label {
+      color: var(--qx-orange-texte, #{$orange-texte});
+    }
+    .mdc-tab-indicator__content--underline {
+      border-color: #{$orange};
+    }
+  }
+
+  .lf-onglet {
+    padding: 14px 16px 16px;
+  }
+
+  .lf-section + .lf-section {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--qx-bordure, #eee);
+  }
+
+  .lf-section-titre {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--qx-texte, #212529);
+
+    mat-icon {
+      color: var(--qx-orange-texte, #{$orange-texte});
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  .lf-compteur {
+    margin-left: auto;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    background-color: var(--qx-orange-pale, #fff1e6);
+    color: var(--qx-orange-texte, #{$orange-texte});
+  }
+
+  .lf-question {
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    background-color: var(--qx-surface-2, #f7f7f8);
+
+    p {
+      display: flex;
+      gap: 8px;
+      margin: 0 0 4px;
+      font-size: 0.875rem;
+      font-weight: 400;
+      line-height: 1.4;
+      color: var(--qx-texte, #212529);
+    }
+  }
+
+  .lf-num {
+    flex: 0 0 22px;
+    height: 22px;
+    border-radius: 50%;
+    background-color: $orange;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .lf-choix {
+    display: flex;
+    gap: 12px;
+    padding-left: 22px;
+  }
+
+  .lf-panneau .mat-mdc-radio-button {
+    --mdc-radio-selected-focus-icon-color: #{$orange};
+    --mdc-radio-selected-hover-icon-color: #{$orange};
+    --mdc-radio-selected-icon-color: #{$orange};
+    --mdc-radio-selected-pressed-icon-color: #{$orange};
+    --mat-radio-checked-ripple-color: #{$orange};
+  }
+
+  .lf-question-simple,
+  .lf-aide {
+    margin: 0 0 12px;
+    font-size: 0.875rem;
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--qx-texte, #212529);
+  }
+  .lf-aide {
+    font-size: 0.8rem;
+    color: var(--qx-texte-2, #5f6368);
+  }
+
+  .lf-utilite {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+
+    button {
+      height: 42px;
+      border-radius: 8px;
+      mat-icon {
+        margin-right: 6px;
+      }
+    }
+    .lf-oui {
+      --mdc-outlined-button-label-text-color: var(--qx-vert, #2e7d32);
+      --mdc-outlined-button-outline-color: var(--qx-vert, #2e7d32);
+      &:hover {
+        background-color: var(--qx-vert-pale, #e8f5e9);
+      }
+    }
+    .lf-non {
+      --mdc-outlined-button-label-text-color: var(--qx-rouge, #c62828);
+      --mdc-outlined-button-outline-color: var(--qx-rouge, #c62828);
+      &:hover {
+        background-color: var(--qx-rouge-pale, #fdecea);
+      }
+    }
+  }
+
+  .lf-merci {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background-color: var(--qx-vert-pale, #e8f5e9);
+    color: var(--qx-vert, #2e7d32);
+    font-size: 0.875rem;
+  }
+  .lf-merci--partiel {
+    background-color: var(--qx-orange-pale, #fff1e6);
+    color: var(--qx-orange-texte, #b35400);
+  }
+
+  .commentaire-box {
+    width: 100%;
+    resize: vertical;
+    border: 1px solid var(--qx-bordure, #ccc);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.875rem;
+    background-color: var(--qx-surface, #fff);
+    color: var(--qx-texte, #212529);
+
+    &:focus {
+      outline: none;
+      border-color: $orange;
+      box-shadow: 0 0 0 3px rgba(255, 142, 54, 0.2);
+    }
+  }
+
+  /* ---------- Petits écrans ---------- */
+
+  @media (max-width: 767px) {
+    .lf-entete {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+    .lf-actions {
+      grid-column: 1 / -1;
+      justify-content: center;
+    }
+    .embed-responsive {
+      height: 75vh;
+    }
+    .lf-panneau {
+      position: static;
+      margin-top: 12px;
+    }
   }
 }
 
-@media (min-width: 577px) and (max-width: 991px) {
-  .embed-responsive {
-    height: 100vh; /* 60% de la hauteur de l'écran sur tablette */
-  }
-}
-
-@media (min-width: 992px) {
-  .embed-responsive {
-    height: 100vh; /* 80% de la hauteur de l'écran sur desktop */
-  }
-}
-
-/* Optionnel: pour s'assurer que l'iframe prend toute la hauteur disponible */
-.embed-responsive-item {
-  height: 100%;
-  width: 100%;
-}
-/*
-.container {
-  padding: 20px;
-}
-.sheet-selector {
-  margin-bottom: 20px;
-}
-.excel-container {
-  height: 650px;
-  width: 100%;
-  overflow: hidden;
-}
-.actions {
-  margin-top: 20px;
-}
-*/
-/*
-.excel-container {
-  padding: 20px;
-  background-color: var(--qx-surface, white);
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
-}
-
-.sheet-selector {
-  margin-bottom: 20px;
-}
-
-.excel-viewer {
-  height: 650px;
-  width: 100%;
-  overflow: hidden;
-}
-
-.actions {
-  margin-top: 20px;
-  display: flex;
-  justify-content: flex-end;
-}
-*/
-.excel-container {
-  padding: 20px;
-  background-color: var(--qx-surface, white);
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin: 20px 0;
-  width: 100%;
-  max-width: 100%;
-}
-
-.controls-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 5px;
-}
-
-.sheet-selector {
-  width: 200px;
-}
-
-.excel-viewer {
-  width: 100%;
-  height: 650px;
-  overflow: hidden;
-  border: 1px solid var(--qx-bordure, #e0e0e0);
-}
-
-/* Style personnalisé pour les en-têtes */
-:host ::ng-deep .header-cell {
-  font-weight: bold !important;
-  background-color: var(--qx-surface-2, #f5f5f5) !important;
-}
-
-/* Styles supplémentaires pour Handsontable */
-:host ::ng-deep .handsontable th {
-  font-weight: bold !important;
-  background-color: var(--qx-surface-2, #f0f0f0) !important;
-  text-align: center !important;
-}
-
-:host ::ng-deep .handsontable td {
-  padding: 4px 8px !important;
-}
-
-/* Assurer que le conteneur est bien positionné */
-:host ::ng-deep .handsontable-container {
-  margin: 0 !important;
-  width: 100% !important;
-  overflow: hidden !important;
-}
-.small-button {
-  line-height: 28px;
-  height: 28px;
-  font-size: 12px;
-  padding: 0 10px;
-  min-width: 70px;
-}
-
-.mdc-button:disabled {
-    cursor: default;
-    pointer-events: none;
-    background-color: #cc7a00;
-}
-.mat-mdc-button:not(:disabled) {
-    color: var(--mdc-text-button-label-text-color, var(--mat-app-primary));
-    background-color: #ff8e36;
-}
-mdc-button .mdc-button__label {
-   color: #fff;
-}
-html .mat-accent.mat-mdc-radio-button {
-    --mdc-radio-selected-focus-icon-color: var(--qx-orange-texte, #cc7a00);
-    --mdc-radio-selected-hover-icon-color: var(--qx-orange-texte, #cc7a00);
-    --mdc-radio-selected-icon-color: var(--qx-orange-texte, #cc7a00);
-    --mdc-radio-selected-pressed-icon-color: var(--qx-orange-texte, #cc7a00);
-    --mat-radio-checked-ripple-color: var(--qx-orange-texte, #cc7a00);
-}
+// Notification centrée (affichée dans l'overlay, hors du composant)
 .cdk-overlay-container .center-snackbar {
   position: fixed !important;
   top: 50% !important;

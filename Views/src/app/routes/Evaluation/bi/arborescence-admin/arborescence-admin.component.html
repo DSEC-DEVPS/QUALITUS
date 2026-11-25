@@ -1,71 +1,81 @@
-<div class="arbo-admin">
-  <mat-card class="cal-panel"><mat-card-header class="cal-band"><span class="cal-band-title"><mat-icon>account_tree</mat-icon> Arborescences Business Intelligence</span></mat-card-header><mat-card-content>
-
-  
-
-  @if (peutParametrer) {
-  <mat-card class="form-creation">
+<div class="cal-page qx-liste arbo-admin">
+  <mat-card class="cal-panel">
+    <mat-card-header class="cal-band"><span class="cal-band-title"><mat-icon>account_tree</mat-icon> Arborescences Business Intelligence</span></mat-card-header>
     <mat-card-content>
-      <span class="titre">Nouvelle arborescence (couple grille / site)</span>
-      <div class="ligne">
-        <mat-form-field appearance="outline">
-          <mat-label>Grille</mat-label>
-          <mat-select [(ngModel)]="nouvelle.id_grille" name="g">
-            @for (g of grilles; track g.id) { <mat-option [value]="g.id">{{ g.nom }}</mat-option> }
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Site</mat-label>
-          <mat-select [(ngModel)]="nouvelle.id_site" name="s">
-            @for (s of sites; track s.id) { <mat-option [value]="s.id">{{ s.nom }}</mat-option> }
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="grand">
-          <mat-label>Point de départ</mat-label>
-          <input matInput [(ngModel)]="nouvelle.point_depart_libelle" name="pd" />
-        </mat-form-field>
-        <button mat-raised-button color="primary" (click)="creer()"><mat-icon>add</mat-icon> Créer</button>
-      </div>
-    </mat-card-content>
-  </mat-card>
-  }
+      <p class="cal-desc">Une arborescence par couple grille / site : l'analyse des « 5 pourquoi » proposée pendant l'évaluation.</p>
 
-  <mat-card>
-    <mat-card-content>
-      <span class="titre">Arborescences existantes</span>
-      @if (arborescences.length > 5) {
-        <mat-form-field appearance="outline" class="recherche-arbo" subscriptSizing="dynamic">
+      <div class="barre">
+        <mat-button-toggle-group [value]="etat" (change)="changerEtat($event.value)" hideSingleSelectionIndicator>
+          <mat-button-toggle value="ACTIF">Actives</mat-button-toggle>
+          <mat-button-toggle value="ARCHIVE">Archivées</mat-button-toggle>
+        </mat-button-toggle-group>
+        <mat-form-field appearance="outline" class="recherche" subscriptSizing="dynamic">
           <mat-icon matPrefix>search</mat-icon>
           <mat-label>Rechercher (grille, site, point de départ)</mat-label>
-          <input matInput [(ngModel)]="rechercheArbo" name="rechArbo" autocomplete="off" />
+          <input matInput [(ngModel)]="recherche" (ngModelChange)="appliquer()" name="rech" autocomplete="off" />
         </mat-form-field>
-      }
-      @if (chargement) { <app-chargement /> }
-      @else if (arborescences.length === 0) { <p class="vide">Aucune arborescence.</p> }
-      @else if (arborescencesFiltrees.length === 0) { <p class="vide">Aucune arborescence ne correspond.</p> }
-      <ul class="liste-arbo">
-        @for (a of arborescencesFiltrees; track a.id) {
-          <li [class.active]="arboSelectionnee?.id === a.id" (click)="ouvrir(a)">
-            <strong>{{ a.grille }}</strong> / {{ a.site }} — <em>{{ a.point_depart_libelle }}</em>
-          </li>
+        <span class="espace"></span>
+        @if (peutParametrer && etat === 'ACTIF') {
+          <button mat-flat-button color="primary" (click)="ajouter()"><mat-icon>add</mat-icon> Nouvelle arborescence</button>
         }
-      </ul>
+      </div>
+
+      @if (chargement && !arborescences.length) { <app-chargement /> }
+      @else if (arborescences.length === 0) { <p class="vide">{{ etat === 'ACTIF' ? 'Aucune arborescence.' : 'Aucune arborescence archivée.' }}</p> }
+      @else if (pag.length === 0) { <p class="vide">Aucune arborescence ne correspond.</p> }
+      @else {
+        <p class="compteur">{{ pag.length }} arborescence{{ pag.length > 1 ? 's' : '' }}{{ etat === 'ARCHIVE' ? ' archivée' + (pag.length > 1 ? 's' : '') : '' }}</p>
+        <div class="table-cadre">
+          <table mat-table [dataSource]="pag.page" class="table">
+            <ng-container matColumnDef="grille">
+              <th mat-header-cell *matHeaderCellDef>Grille</th>
+              <td mat-cell *matCellDef="let a"><span class="fort">{{ a.grille }}</span></td>
+            </ng-container>
+            <ng-container matColumnDef="site">
+              <th mat-header-cell *matHeaderCellDef>Site</th>
+              <td mat-cell *matCellDef="let a">{{ a.site }}</td>
+            </ng-container>
+            <ng-container matColumnDef="depart">
+              <th mat-header-cell *matHeaderCellDef>Point de départ</th>
+              <td mat-cell *matCellDef="let a" class="col-depart">{{ a.point_depart_libelle }}</td>
+            </ng-container>
+            <ng-container matColumnDef="options">
+              <th mat-header-cell *matHeaderCellDef>Options</th>
+              <td mat-cell *matCellDef="let a">{{ a.nb_options || 0 }}
+                @if (a.nb_en_attente) { <span class="pastille attente" matTooltip="Propositions en attente de validation">{{ a.nb_en_attente }} en attente</span> }
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="evaluations">
+              <th mat-header-cell *matHeaderCellDef>Évaluations</th>
+              <td mat-cell *matCellDef="let a">{{ a.nb_evaluations || 0 }}</td>
+            </ng-container>
+            <ng-container matColumnDef="date">
+              <th mat-header-cell *matHeaderCellDef>{{ etat === 'ARCHIVE' ? 'Archivée le' : 'Créée le' }}</th>
+              <td mat-cell *matCellDef="let a">{{ (etat === 'ARCHIVE' ? a.dateArchivage : a.dateCreation) ? ((etat === 'ARCHIVE' ? a.dateArchivage : a.dateCreation) | date: 'dd/MM/yyyy') : '—' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef class="col-actions">Actions</th>
+              <td mat-cell *matCellDef="let a" class="col-actions">
+                <button mat-icon-button matTooltip="Visionner les options" (click)="visionner(a)"><mat-icon>visibility</mat-icon></button>
+                @if (peutParametrer) {
+                  @if (etat === 'ACTIF') {
+                    <button mat-icon-button matTooltip="Éditer" (click)="editer(a)"><mat-icon>edit</mat-icon></button>
+                    <button mat-icon-button color="warn" [matTooltip]="a.utilisee ? 'Archiver (utilisée par des évaluations)' : 'Supprimer'" (click)="supprimer(a)">
+                      <mat-icon>{{ a.utilisee ? 'archive' : 'delete' }}</mat-icon>
+                    </button>
+                  } @else {
+                    <button mat-icon-button matTooltip="Restaurer" (click)="restaurer(a)"><mat-icon>unarchive</mat-icon></button>
+                  }
+                }
+              </td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
+            <tr mat-row *matRowDef="let row; columns: colonnes"></tr>
+          </table>
+        </div>
+        <mat-paginator [length]="pag.length" [pageIndex]="pag.pageIndex" [pageSize]="pag.pageSize"
+                       [pageSizeOptions]="pag.tailles" showFirstLastButtons (page)="pag.changer($event)" />
+      }
     </mat-card-content>
   </mat-card>
-
-  @if (arboSelectionnee) {
-    <mat-card>
-      <mat-card-content>
-        <span class="titre">Options — {{ arboSelectionnee.grille }} / {{ arboSelectionnee.site }}</span>
-
-        @if (chargementOptions && !options.length) { <app-chargement /> }
-        @else {
-          <app-arbre-options [options]="options" [modifiable]="peutParametrer"
-                             (ajouter)="ajouterOptionArbre($event)" (renommer)="renommerOptionArbre($event)"
-                             (supprimer)="supprimerOptionArbre($event)" (deplacer)="deplacerOptionArbre($event)" />
-        }
-      </mat-card-content>
-    </mat-card>
-  }
-</mat-card-content></mat-card>
 </div>

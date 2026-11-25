@@ -32,8 +32,8 @@ import {
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, catchError, map, Observable, tap, throwError } from 'rxjs';
 import { environment } from '@env/environment';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { PopupComponent } from '@shared/components/popup/popup.component';
+import { MatDialog } from '@angular/material/dialog';
+import { PopupComponent, ResultatScore } from '@shared/components/popup/popup.component';
 
 export type TypeControleExactitude = 'controle_actif' | 'controle_m_1';
 
@@ -51,6 +51,7 @@ export interface BrouillonControle {
 export interface AgentAssignable {
   id: number; login: string; nom: string; prenom: string; fonction: string | null;
   id_superviseur: number | null; superviseur: string | null;
+  id_site?: number | null; site?: string | null;
 }
 
 @Injectable({
@@ -60,7 +61,7 @@ export class UserService {
   private baseUrl = environment.baseUrl;
   constructor(
     private http: HttpClient,
-    private snackBar: MatSnackBar
+    private dialog: MatDialog
   ) {}
   private _fiches$ = new BehaviorSubject<Fiche[]>([]);
   get fiches$(): Observable<Fiche[]> {
@@ -100,18 +101,29 @@ export class UserService {
     id_Programme: number;
     id_EvalGrille: number;
   }): Observable<message> {
-    return this.http.post<message>(`/api/v1/sign_in`, formValue);
+    // Route protégée (utilisateur.creer + périmètre de site) ; l'ancienne route publique /sign_in est supprimée.
+    return this.http.post<message>(`/api/v1/utilisateur/addUser`, formValue);
   }
-  showScoreNotification(score: number, message: string): void {
-    this.snackBar.openFromComponent(PopupComponent, {
-      data: {
-        score: score,
-        message: message,
-      },
-      duration: 10000,
-        horizontalPosition: 'center',
-    verticalPosition: 'top', // IMPORTANT
-    panelClass: ['center-snackbar'],
+  /** Listes du formulaire de création, limitées au périmètre de l'utilisateur connecté. */
+  getReferentielsCreation(): Observable<{
+    fonctions: fonction[];
+    sites: site[];
+    programmes: programme[];
+    grilles: { id: number; nom: string }[];
+    vision_globale: boolean;
+  }> {
+    return this.http.get<any>(`/api/v1/utilisateur-creation/referentiels`);
+  }
+  /**
+   * Fenêtre de résultat centrée (quiz d'une fiche, contrôle d'exactitude).
+   * Reste affichée jusqu'à « J'ai compris », Échap ou clic à l'extérieur.
+   */
+  showScoreNotification(score: number, message: string, options: Omit<ResultatScore, 'score' | 'message'> = {}): void {
+    this.dialog.open(PopupComponent, {
+      data: { score, message, ...options } as ResultatScore,
+      panelClass: 'qx-score-dialog',
+      autoFocus: 'dialog',
+      restoreFocus: true,
     });
   }
   getAllUtilisateur(): Observable<Utilisateur[]> {
@@ -356,16 +368,6 @@ export class UserService {
   }
   getAllAgentBySuperviseur(id: number): Observable<agent_by_superviseur[]> {
     return this.http.get<agent_by_superviseur[]>(`/api/v1/agent_by_superviseur/${id}`);
-  }
-  affecte_agent_to_superviseur(form_data: {
-    id_SUPERVISEUR: number;
-    id_AGENT: number;
-  }): Observable<message> {
-    return this.http.post<message>(
-      `/api/v1/agent_by_superviseur/add`,
-
-      form_data
-    );
   }
   addCommentaire(formdata: { message: string; id_Fiche: number }): Observable<message> {
     return this.http.post<message>(`/api/v1/commentaire/add`, formdata);

@@ -1,0 +1,4 @@
+
+# Secrets et archives d images (out117+)
+.env.preprod
+*.tar.gz

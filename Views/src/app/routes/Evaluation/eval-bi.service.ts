@@ -9,6 +9,17 @@ export interface Arborescence {
   point_depart_libelle: string;
   grille?: string;
   site?: string;
+  /** ACTIF ou ARCHIVE (out104). */
+  etat?: 'ACTIF' | 'ARCHIVE';
+  dateCreation?: string | null;
+  dateArchivage?: string | null;
+  nb_options?: number;
+  nb_en_attente?: number;
+  nb_evaluations?: number;
+  /** Une évaluation y fait référence ou une proposition attend : supprimer = archiver. */
+  utilisee?: boolean;
+  /** Grille et site modifiables (aucune option). */
+  couple_modifiable?: boolean;
 }
 
 export interface BiOption {
@@ -60,8 +71,9 @@ export class EvalBiService {
   private readonly http = inject(HttpClient);
 
   // Arborescence (admin)
-  getArborescences(params?: { id_grille?: number; id_site?: number }): Observable<Arborescence[]> {
+  getArborescences(params?: { id_grille?: number; id_site?: number; etat?: 'ACTIF' | 'ARCHIVE' | 'TOUS' }): Observable<Arborescence[]> {
     const qs = new URLSearchParams();
+    if (params?.etat) qs.set('etat', params.etat);
     if (params?.id_grille) qs.set('id_grille', String(params.id_grille));
     if (params?.id_site) qs.set('id_site', String(params.id_site));
     const s = qs.toString() ? `?${qs}` : '';
@@ -69,6 +81,17 @@ export class EvalBiService {
   }
   addArborescence(body: { id_grille: number; id_site: number; point_depart_libelle: string }) {
     return this.http.post<{ id: number }>(`/api/v1/eval/bi/arborescence`, body);
+  }
+  /** Point de départ toujours ; grille et site tant que l'arborescence n'a aucune option. */
+  updateArborescence(id: number, body: { id_grille?: number; id_site?: number; point_depart_libelle: string }) {
+    return this.http.put<{ message: string; inchange?: boolean }>(`/api/v1/eval/bi/arborescence/${id}`, body);
+  }
+  /** Supprime, ou archive si l'arborescence est utilisée ({ archivee: true }). */
+  deleteArborescence(id: number) {
+    return this.http.delete<{ message: string; archivee?: boolean; supprimee?: boolean }>(`/api/v1/eval/bi/arborescence/${id}`);
+  }
+  restaurerArborescence(id: number) {
+    return this.http.put<{ message: string }>(`/api/v1/eval/bi/arborescence/${id}/restaurer`, {});
   }
   getArbreOptions(id: number): Observable<BiOption[]> {
     return this.http.get<BiOption[]>(`/api/v1/eval/bi/arborescence/${id}/options`);

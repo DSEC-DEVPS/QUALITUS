@@ -18,8 +18,54 @@
     <app-chargement />
   } @else if (quiz) {
 
-    <!-- Quiz déjà tenté, en attente d'autorisation de retest du superviseur -->
+    <!-- Quiz déjà tenté : nouvel essai seulement sur retest accordé (si le quiz en prévoit) -->
     @if (bloque && !resultat) {
+      @if (quiz.dernier_passage; as dp) {
+        <!-- Résultat du dernier passage (« Voir » depuis Quiz terminés) : réussite / échec -->
+        <mat-card class="m-b-16 resultat" [class.ok]="dp.reussi" [class.ko]="!dp.reussi">
+          <mat-card-content>
+            <div class="d-flex align-items-center flex-wrap" style="gap: 16px">
+              <mat-icon class="big">{{ dp.reussi ? 'check_circle' : (dp.statut === 'TEMPS_ECOULE' ? 'timer_off' : 'cancel') }}</mat-icon>
+              <div class="flex-grow-1">
+                <div class="h5 m-0">
+                  {{ dp.reussi ? 'Quiz réussi' : dp.statut === 'TEMPS_ECOULE' ? 'Quiz non réussi · temps écoulé' : 'Quiz non réussi' }}
+                </div>
+                <div class="text-muted">
+                  Score {{ dp.score ?? 0 }} %
+                  @if (dp.nb_points_total != null) { · {{ dp.nb_points | points }} / {{ dp.nb_points_total | points }} points }
+                  · essai n°{{ dp.num_essai }}
+                  @if (dp.date) { · le {{ dp.date | date: 'dd/MM/yyyy à HH:mm' }} }
+                </div>
+                @if (dp.statut === 'TEMPS_ECOULE') {
+                  <div class="text-muted m-t-8">Le temps imparti était écoulé : le passage a été clôturé sans vos réponses.</div>
+                }
+                @if (!dp.reussi) {
+                  <div class="text-muted m-t-8">
+                    @if (!quiz.retest_auto) {
+                      Ce quiz ne prévoit pas de retest : seul votre essai compte.
+                    } @else if (dp.num_essai - 1 >= (quiz.nb_retest_max || 1)) {
+                      Nombre maximum de retests atteint pour ce quiz.
+                    } @else {
+                      Un retest pourra vous être accordé par le responsable du quiz.
+                    }
+                  </div>
+                }
+              </div>
+              <app-score-seuil [score]="+(dp.score ?? 0)" [seuil]="+quiz.note_passage" comparateur=">="
+                               [reussite]="!!dp.reussi" />
+            </div>
+
+            <ng-container *ngTemplateOutlet="contenusARevoir; context: { echec: !dp.reussi, prochain: retestPossible(dp.num_essai) }" />
+
+            <div class="m-t-8">
+              <button mat-stroked-button (click)="mesScores()">
+                <mat-icon>history</mat-icon> Mes scores
+              </button>
+              <button mat-button (click)="retourListe()">Retour à la liste</button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      } @else {
       <mat-card class="m-b-16 bloque">
         <mat-card-content class="d-flex align-items-center" style="gap: 12px">
           <mat-icon class="big">lock</mat-icon>
@@ -34,19 +80,27 @@
             } @else {
               <div class="h6 m-0">Retest non disponible</div>
               <div class="text-muted">
-                Vous avez déjà passé ce quiz. Vous pourrez le refaire uniquement
-                lorsque votre superviseur aura autorisé un retest.
+                @if (!quiz.retest_auto) {
+                  Vous avez déjà passé ce quiz. Il ne prévoit pas de retest : seul votre essai compte.
+                } @else if ((quiz.nb_essais || 1) - 1 >= (quiz.nb_retest_max || 1)) {
+                  Vous avez déjà passé ce quiz et atteint le nombre maximum de retests prévu.
+                } @else {
+                  Vous avez déjà passé ce quiz. Vous pourrez le refaire uniquement si un
+                  retest vous est accordé par le responsable du quiz.
+                }
               </div>
             }
           </div>
         </mat-card-content>
         <mat-card-content>
+          <ng-container *ngTemplateOutlet="contenusARevoir; context: { echec: true }" />
           <button mat-stroked-button (click)="mesScores()">
             <mat-icon>history</mat-icon> Mes scores
           </button>
           <button mat-button (click)="retourListe()">Retour à la liste</button>
         </mat-card-content>
       </mat-card>
+      }
     } @else {
 
       <!-- Bandeau résultat (après soumission) : réussite / échec -->
@@ -59,18 +113,26 @@
                 <div class="h5 m-0">{{ resultat.reussi ? 'Quiz réussi !' : 'Quiz non réussi' }}</div>
                 <div class="text-muted">
                   {{ resultat.nb_bonnes }} bonne{{ resultat.nb_bonnes > 1 ? 's' : '' }} réponse{{ resultat.nb_bonnes > 1 ? 's' : '' }} sur {{ resultat.nb_total }}
-                  @if (resultat.nb_points_total != null) { · {{ resultat.nb_points }} / {{ resultat.nb_points_total }} points }
+                  @if (resultat.nb_points_total != null) { · {{ resultat.nb_points | points }} / {{ resultat.nb_points_total | points }} points }
                   · essai n°{{ resultat.num_essai }}
                 </div>
                 @if (!resultat.reussi) {
                   <div class="text-muted m-t-8">
-                    En cas de besoin, votre superviseur pourra vous autoriser un retest.
+                    @if (quiz.retest_auto && resultat.num_essai - 1 < (quiz.nb_retest_max || 1)) {
+                      Un retest pourra vous être accordé par le responsable du quiz.
+                    } @else if (quiz.retest_auto) {
+                      Nombre maximum de retests atteint pour ce quiz.
+                    } @else {
+                      Ce quiz ne prévoit pas de retest.
+                    }
                   </div>
                 }
               </div>
               <app-score-seuil [score]="+resultat.score" [seuil]="+resultat.note_passage" comparateur=">="
                                [reussite]="!!resultat.reussi" />
             </div>
+
+            <ng-container *ngTemplateOutlet="contenusARevoir; context: { echec: !resultat.reussi, prochain: retestPossible(resultat.num_essai) }" />
 
             <div class="m-t-8">
               <button mat-stroked-button (click)="mesScores()">
@@ -82,8 +144,76 @@
         </mat-card>
       }
 
+      <!-- Écran d'accueil : lecture des fiches puis démarrage volontaire -->
+      @if (!resultat && mode === 'accueil') {
+        <mat-card class="m-b-16 accueil">
+          <mat-card-content>
+            @if (quiz.description) {
+              <p class="accueil-description">{{ quiz.description }}</p>
+            }
+            <div class="accueil-infos">
+              <span><mat-icon>help_outline</mat-icon>{{ totalQuestions }} question{{ totalQuestions > 1 ? 's' : '' }}</span>
+              <span><mat-icon>flag</mat-icon>Seuil de réussite {{ quiz.note_passage }} %</span>
+              <span><mat-icon>timer</mat-icon>{{ quiz.duree ? quiz.duree + ' min' : 'Sans limite de temps' }}</span>
+              <span><mat-icon>replay</mat-icon>
+                {{ quiz.deja_tente ? 'Retest autorisé · essai n°' + ((quiz.nb_essais || 0) + 1) : 'Premier essai' }}
+              </span>
+            </div>
+
+            @if (quiz.contenus?.length) {
+              <div class="contenus accueil-fiches">
+                <div class="contenus-titre">
+                  <mat-icon>menu_book</mat-icon>
+                  @if (nbContenusActifs) {
+                    Fiche{{ nbContenusActifs > 1 ? 's' : '' }} à lire avant de commencer
+                  } @else {
+                    Fiche{{ quiz.contenus!.length > 1 ? 's' : '' }} associée{{ quiz.contenus!.length > 1 ? 's' : '' }} à ce quiz
+                  }
+                </div>
+                @if (nbContenusActifs) {
+                  <p class="accueil-aide">Prenez le temps de {{ nbContenusActifs > 1 ? 'les' : 'la' }} lire : le chronomètre ne démarre qu'au clic sur « Commencer le quiz ».</p>
+                }
+                <div class="contenus-liens">
+                  @for (f of quiz.contenus; track f.id) {
+                    <ng-container *ngTemplateOutlet="ficheLien; context: { $implicit: f }" />
+                  }
+                </div>
+              </div>
+            }
+
+            <div class="accueil-depart">
+              <div class="accueil-depart-texte">
+                @if (quiz.duree) {
+                  <mat-icon>timer</mat-icon>
+                  <span>Vous disposerez de <strong>{{ quiz.duree }} min</strong> à partir du clic sur « Commencer ».
+                    Le temps continue de s'écouler si vous quittez la page.</span>
+                } @else {
+                  <mat-icon>play_circle_outline</mat-icon>
+                  <span>Répondez à toutes les questions puis soumettez le quiz.</span>
+                }
+              </div>
+              <button mat-flat-button class="btn-commencer" [disabled]="demarrage" (click)="commencer()">
+                <mat-icon>play_arrow</mat-icon> Commencer le quiz
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
+
+      <!-- Quiz arrivé à échéance, passage commencé avant : délai de grâce -->
+      @if (!resultat && quiz.fin_grace) {
+        <div class="bandeau-grace" role="status">
+          <mat-icon>schedule</mat-icon>
+          <span>
+            Ce quiz est arrivé à sa date de fermeture. Vous l'aviez commencé avant :
+            soumettez vos réponses avant <strong>{{ quiz.fin_grace | date: 'HH:mm' }}</strong>
+            @if (!estAujourdhui(quiz.fin_grace)) { le {{ quiz.fin_grace | date: 'dd/MM/yyyy' }} }.
+          </span>
+        </div>
+      }
+
       <!-- Questions (uniquement avant soumission ; aucune correction affichée) -->
-      @if (!resultat) {
+      @if (!resultat && mode === 'passage') {
         <!-- Barre figée : chrono + progression -->
         <div class="barre-chrono">
           <div class="progression">
@@ -146,3 +276,37 @@
     }
   }
 </div>
+
+<!-- Fiches liées au quiz (actives et accessibles) : affichées après la soumission
+     ou en attente de retest, jamais pendant le passage. -->
+<ng-template #contenusARevoir let-echec="echec" let-prochain="prochain">
+  @if (quiz?.contenus?.length) {
+    <div class="contenus" [class.contenus--echec]="echec">
+      <div class="contenus-titre">
+        <mat-icon>{{ echec ? 'menu_book' : 'library_books' }}</mat-icon>
+        {{ echec ? (prochain === false ? 'Revoir le contenu associé à ce quiz' : 'Revoir le contenu avant votre prochain essai') : 'Contenu associé à ce quiz' }}
+      </div>
+      <div class="contenus-liens">
+        @for (f of quiz!.contenus; track f.id) {
+          <ng-container *ngTemplateOutlet="ficheLien; context: { $implicit: f }" />
+        }
+      </div>
+    </div>
+  }
+</ng-template>
+
+<!-- Fiche liée : lien si active ; archivée : affichée avec la mention, non consultable -->
+<ng-template #ficheLien let-f>
+  @if (f.ETAT === 'ARCHIVE') {
+    <span class="contenu-lien contenu-archive" matTooltip="Fiche archivée : elle n'est plus consultable">
+      <mat-icon>inventory_2</mat-icon>
+      <span>{{ f.titre }}</span>
+      <span class="mention-archive">Archivée</span>
+    </span>
+  } @else {
+    <a mat-stroked-button class="contenu-lien" [routerLink]="['/lecture-fiche', f.id]">
+      <mat-icon>description</mat-icon>
+      <span>{{ f.titre }}</span>
+    </a>
+  }
+</ng-template>

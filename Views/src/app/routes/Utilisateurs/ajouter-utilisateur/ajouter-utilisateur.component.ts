@@ -70,54 +70,35 @@ export class AjouterUtilisateurComponent implements OnInit {
       // id_Grille (legacy b_grille) déprécié — la grille d'évaluation est id_EvalGrille
       id_EvalGrille: [null],
     });
-    this.userService.getAllFonction().subscribe({
-      next: fonctions => {
-        this.table_fonction = fonctions;
+    // Listes limitées au périmètre : son site (sauf administrateur / site à vision
+    // globale), sans la fonction Administrateur pour un non-administrateur.
+    this.userService.getReferentielsCreation().subscribe({
+      next: r => {
+        this.table_fonction = r.fonctions || [];
+        this.table_site = r.sites || [];
+        this.table_programme = r.programmes || [];
+        this.table_eval_grille = r.grilles || [];
+        if (this.table_site.length === 1) this.snapForm.get('id_Site')?.setValue(this.table_site[0].id);
       },
-      error: error => {
-        console.log(error);
-      },
-    });
-    this.userService.getAllProgramme().subscribe({
-      next: programmes => {
-        this.table_programme = programmes;
-      },
-      error: error => {
-        console.log(error);
-      },
-    });
-    this.userService.getAllSite().subscribe({
-      next: sites => {
-        this.table_site = sites;
-      },
-      error: error => {
-        console.log(error);
-      },
-    });
-    this.userService.getEvalGrillesActives().subscribe({
-      next: g => {
-        this.table_eval_grille = g || [];
-      },
-      error: error => {
-        console.log(error);
-      },
+      error: e => this.toastSrv.error(e?.error?.message || 'Impossible de charger les listes du formulaire.'),
     });
   }
 
   handleOnSumit() {
     this.isSubmitting = true;
-    console.log(this.snapForm.value);
     this.userService
       .addUser(this.snapForm.value)
       .pipe()
       .subscribe({
-        error: () => {
-          this.toastSrv.error('Addresse mail ou login existe déjà');
+        error: e => {
+          this.toastSrv.error(e?.error?.message || 'La création du compte a échoué.');
           this.isSubmitting = false;
         },
         next: () => {
-          this.toastSrv.success('Utilisateur a été cré avec succes');
+          this.toastSrv.success('Le compte a bien été créé.');
+          const site = this.table_site.length === 1 ? this.table_site[0].id : null;
           this.snapForm.reset();
+          if (site) this.snapForm.get('id_Site')?.setValue(site);
           this.isSubmitting = false;
           //window.location.reload();
           /*this.router.navigateByUrl('Utilisateurs/Liste', { skipLocationChange: true }).then(() => {

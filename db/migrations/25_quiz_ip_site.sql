@@ -13,6 +13,32 @@
 -- Rejouable sans effet de bord.
 USE QUALITUS;
 
+-- 0) Tables de diffusion des quiz (participants désignés, utilisateurs autorisés).
+--    Présentes dans db/init.sql mais créées par aucune migration : la prod (relevé
+--    du 24/11/2026) ne les a pas, et l'étape 3.2 ci-dessous en a besoin.
+--    Créées seulement si absentes (même définition que db/init.sql).
+CREATE TABLE IF NOT EXISTS B_QZ_PARTICIPANT (
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+  id_Quiz        INT NOT NULL,
+  id_UTILISATEUR INT NOT NULL,
+  id_Site        INT NULL,
+  notifie        TINYINT(1) DEFAULT 0,
+  dateDiffusion  DATETIME NULL,
+  id_diffusePar  INT NULL,
+  UNIQUE KEY uq_qz_participant (id_Quiz, id_UTILISATEUR),
+  CONSTRAINT fk_qz_part_quiz FOREIGN KEY (id_Quiz) REFERENCES B_QZ_QUIZ(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS B_QZ_AUTORISE (
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+  id_Quiz        INT NOT NULL,
+  id_UTILISATEUR INT NOT NULL,
+  id_auteur      INT NULL,
+  dateCreation   DATETIME NULL,
+  UNIQUE KEY uq_qz_autorise (id_Quiz, id_UTILISATEUR),
+  CONSTRAINT fk_qz_autorise_quiz FOREIGN KEY (id_Quiz) REFERENCES B_QZ_QUIZ(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- 1) Colonne id_Site (ajoutée seulement si absente)
 SET @existe := (SELECT COUNT(*) FROM information_schema.COLUMNS
                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'b_qz_ip_autorisee' AND COLUMN_NAME = 'id_Site');

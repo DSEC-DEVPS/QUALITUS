@@ -1,4 +1,5 @@
 import { HttpClient } from '@angular/common/http';
+import { PageServeur, paramsPage } from '@shared/utils/pagination-serveur';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { toYMD } from '@shared/date-utils';
@@ -37,6 +38,15 @@ export class CalibrageService {
     return this.http.get<any>(`${this.base}/contexte`);
   }
 
+  /** Une page des sessions (recherche appliquée par le serveur). */
+  getSessionsPage(f: FiltresSession, q: string, page: { page: number; taille: number }): Observable<PageServeur<CalSessionListe>> {
+    const params: Record<string, string> = {};
+    if (f.id_site) params['id_site'] = String(f.id_site);
+    if (f.date_debut) params['date_debut'] = toYMD(f.date_debut) || '';
+    if (f.date_fin) params['date_fin'] = toYMD(f.date_fin) || '';
+    if (f.statut) params['statut'] = f.statut;
+    return this.http.get<PageServeur<CalSessionListe>>(`${this.base}/session/all`, { params: paramsPage({ ...params, q }, page) });
+  }
   getSessions(f: FiltresSession = {}): Observable<CalSessionListe[]> {
     const params: any = {};
     if (f.id_site) params.id_site = f.id_site;

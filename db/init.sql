@@ -89,7 +89,8 @@ CREATE TABLE IF NOT EXISTS B_MOTIF_MA_VOIX_COMPTE (
 
 CREATE TABLE IF NOT EXISTS B_MA_VOIX_COMPTE (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  id_UTILISATEUR INT,
+  id_UTILISATEUR INT,   -- NULL : messages anonymes (seul le site est conservé)
+  id_Site INT NULL,     -- site de l'auteur à l'envoi (53_ma_voix_site.sql)
   motif_ma_voix_compte VARCHAR(100),
   message TEXT,
   dateCreation DATETIME,
@@ -185,8 +186,8 @@ CREATE TABLE IF NOT EXISTS B_QZ_QUIZ (
   description TEXT,
   id_Fiche INT NULL,
   note_passage INT DEFAULT 70,
-  retest_auto TINYINT(1) DEFAULT 1,
-  nb_retest_max INT DEFAULT 1,
+  retest_auto TINYINT(1) DEFAULT 0,   -- retest possible (opt-in, 52_quiz_retest_maitrise.sql)
+  nb_retest_max INT DEFAULT 1,       -- nombre maximum de retests par agent
   duree INT NULL,
   date_fermeture DATETIME NULL,
   acces VARCHAR(20) DEFAULT 'PRIVATE',
@@ -223,7 +224,8 @@ CREATE TABLE IF NOT EXISTS B_R_SUPERVISEUR_AGENT (
   id_AGENT INT,
   dateCreation DATETIME,
   FOREIGN KEY(id_SUPERVISEUR) REFERENCES B_UTILISATEUR(id),
-  FOREIGN KEY(id_AGENT) REFERENCES B_UTILISATEUR(id)
+  FOREIGN KEY(id_AGENT) REFERENCES B_UTILISATEUR(id),
+  INDEX ix_superviseur_agent (id_SUPERVISEUR, id_AGENT)
 );
 
 CREATE TABLE IF NOT EXISTS B_NOTIFICATION (
@@ -505,7 +507,7 @@ CREATE TABLE IF NOT EXISTS B_QZ_QUESTION (
   id_Quiz INT NOT NULL,
   type VARCHAR(20) DEFAULT 'VRAI_FAUX',   -- extensible : QCM, MULTIPLE...
   libelle TEXT NOT NULL,
-  points INT NOT NULL DEFAULT 5,          -- barème de la question (27_quiz_points.sql)
+  points DECIMAL(5,2) NOT NULL DEFAULT 5, -- barème de la question, 2 décimales (27, 58)
   ordre INT DEFAULT 0,
   dateCreation DATETIME,
   FOREIGN KEY (id_Quiz) REFERENCES B_QZ_QUIZ(id) ON DELETE CASCADE
@@ -529,8 +531,8 @@ CREATE TABLE IF NOT EXISTS B_QZ_TENTATIVE (
   score DECIMAL(5,2) DEFAULT 0,     -- pourcentage de bonnes reponses
   nb_bonnes INT DEFAULT 0,
   nb_total INT DEFAULT 0,
-  nb_points INT NULL,               -- points obtenus (27_quiz_points.sql)
-  nb_points_total INT NULL,         -- points du quiz au moment du calcul
+  nb_points DECIMAL(6,2) NULL,      -- points obtenus (27, 58 : décimaux)
+  nb_points_total DECIMAL(6,2) NULL, -- points du quiz au moment du calcul
   reussi TINYINT(1) DEFAULT 0,
   num_essai INT DEFAULT 1,          -- 1 = premiere tentative, 2 = 1er retest...
   statut VARCHAR(20),               -- REUSSI | ECHEC_RETEST | ECHEC_FINAL
@@ -765,6 +767,19 @@ CREATE TABLE IF NOT EXISTS B_QZ_RETEST (
   FOREIGN KEY (id_Quiz) REFERENCES B_QZ_QUIZ(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- Échec classé « retest non autorisé » (52_quiz_retest_maitrise.sql) : une ligne par tentative.
+CREATE TABLE IF NOT EXISTS B_QZ_RETEST_REFUS (
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+  id_Quiz        INT NOT NULL,
+  id_UTILISATEUR INT NOT NULL,
+  id_Tentative   INT NOT NULL,
+  refuse_par     INT NULL,
+  date_refus     DATETIME NOT NULL,
+  UNIQUE KEY uq_qz_retest_refus_tentative (id_Tentative),
+  KEY idx_qz_retest_refus_quiz_user (id_Quiz, id_UTILISATEUR),
+  CONSTRAINT fk_qz_retest_refus_quiz FOREIGN KEY (id_Quiz) REFERENCES B_QZ_QUIZ(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Source: 16_quiz_ip.sql
 CREATE TABLE IF NOT EXISTS B_QZ_IP_AUTORISEE (
   id           INT AUTO_INCREMENT PRIMARY KEY,
@@ -825,6 +840,19 @@ CREATE TABLE IF NOT EXISTS B_QZ_PARTICIPANT (
   id_diffusePar  INT NULL,
   UNIQUE KEY uq_qz_participant (id_Quiz, id_UTILISATEUR),
   CONSTRAINT fk_qz_part_quiz FOREIGN KEY (id_Quiz) REFERENCES B_QZ_QUIZ(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Quiz privé : déverrouillage par code PIN mémorisé par participant (51_quiz_pin_valide.sql).
+-- code_pin = code au moment de la validation : s'il change, le PIN est redemandé.
+CREATE TABLE IF NOT EXISTS B_QZ_PIN_VALIDE (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  id_Quiz         INT NOT NULL,
+  id_UTILISATEUR  INT NOT NULL,
+  code_pin        VARCHAR(20) NOT NULL,
+  date_validation DATETIME NOT NULL,
+  UNIQUE KEY uq_qz_pin_valide (id_Quiz, id_UTILISATEUR),
+  KEY idx_qz_pin_valide_user (id_UTILISATEUR),
+  CONSTRAINT fk_qz_pin_valide_quiz FOREIGN KEY (id_Quiz) REFERENCES B_QZ_QUIZ(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Utilisateurs explicitement AUTORISÉS à ouvrir un quiz d'un site invité
@@ -919,7 +947,8 @@ CREATE TABLE IF NOT EXISTS B_SD_PASSATION (
   termine        TINYINT(1) NOT NULL DEFAULT 0,
   CONSTRAINT fk_sd_pass_sondage FOREIGN KEY (id_Sondage)
     REFERENCES B_SD_SONDAGE(id) ON DELETE CASCADE,
-  INDEX ix_sd_passation_sondage_utilisateur (id_Sondage, id_UTILISATEUR, termine)
+  INDEX ix_sd_passation_sondage_utilisateur (id_Sondage, id_UTILISATEUR, termine),
+  INDEX ix_sd_pass_sondage_termine (id_Sondage, termine)   -- 56_sondage_index_rapport.sql
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Source: 21_sondage_passation.sql
@@ -932,7 +961,9 @@ CREATE TABLE IF NOT EXISTS B_SD_REPONSE (
   valeur_num   INT NULL,                     -- pour curseur
   ordre        INT NULL,                     -- pour classement (rang)
   CONSTRAINT fk_sd_rep_pass FOREIGN KEY (id_Passation)
-    REFERENCES B_SD_PASSATION(id) ON DELETE CASCADE
+    REFERENCES B_SD_PASSATION(id) ON DELETE CASCADE,
+  INDEX ix_sd_rep_pass_question (id_Passation, id_Question, id_Option),   -- 56_sondage_index_rapport.sql
+  INDEX ix_sd_rep_question_option (id_Question, id_Option)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Source: 22_sondage_cible.sql
@@ -1114,7 +1145,11 @@ CREATE TABLE IF NOT EXISTS b_evaluation (
   FOREIGN KEY (id_contexte) REFERENCES b_eval_ref_contexte(id),
   FOREIGN KEY (id_type_evaluation) REFERENCES b_eval_ref_type_evaluation(id),
   FOREIGN KEY (id_evaluation_parente) REFERENCES b_evaluation(id),
-  INDEX ix_evaluation_date_site (date_evaluation, id_site)
+  INDEX ix_evaluation_date_site (date_evaluation, id_site),
+  INDEX ix_evaluation_evaluateur (id_evaluateur, date_creation),
+  INDEX ix_evaluation_agent (id_agent, statut),
+  INDEX ix_evaluation_site_creation (id_site, date_creation),
+  INDEX ix_evaluation_creation (date_creation)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS b_evaluation_categorie (
@@ -1139,6 +1174,7 @@ CREATE TABLE IF NOT EXISTS b_evaluation_erreur (
 CREATE TABLE IF NOT EXISTS b_eval_bi_arborescence (
   id INT AUTO_INCREMENT PRIMARY KEY, id_grille INT NOT NULL, id_site INT NOT NULL,
   point_depart_libelle VARCHAR(200) NOT NULL, dateCreation DATETIME DEFAULT NULL,
+  etat VARCHAR(10) NOT NULL DEFAULT 'ACTIF', dateArchivage DATETIME NULL, dateModification DATETIME NULL, -- 55_bi_arborescence_archivage.sql
   UNIQUE (id_grille, id_site),
   FOREIGN KEY (id_grille) REFERENCES b_eval_grille(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -1716,3 +1752,16 @@ INSERT IGNORE INTO b_role_permission (id_role, id_permission)
 INSERT IGNORE INTO b_role_permission (id_role, id_permission)
   SELECT r.id, p.id FROM b_role r CROSS JOIN b_permission p
    WHERE (r.code = 'R_SUP' AND p.code = 'tableau_de_bord.evaluations') OR (r.code = 'R_ADMI' AND p.code LIKE 'tableau\_de\_bord.%');
+-- Sections « Suivi du coaching » / « Suivi des plans d'actions » (54_tableau_de_bord_suivi_actions.sql) :
+-- rôles qui ont la section Évaluations, et l'administrateur.
+INSERT IGNORE INTO b_permission (module, action, code, libelle) VALUES
+  ('TABLEAU_DE_BORD','COACHING','tableau_de_bord.coaching','Tableau de bord — section Suivi du coaching'),
+  ('TABLEAU_DE_BORD','PLANS_ACTIONS','tableau_de_bord.plans_actions','Tableau de bord — section Suivi des plans d''actions');
+INSERT IGNORE INTO b_role_permission (id_role, id_permission)
+  SELECT DISTINCT rp.id_role, pn.id
+    FROM b_role_permission rp
+    JOIN b_permission pe ON pe.id = rp.id_permission AND pe.code = 'tableau_de_bord.evaluations'
+    JOIN b_permission pn ON pn.code IN ('tableau_de_bord.coaching', 'tableau_de_bord.plans_actions');
+INSERT IGNORE INTO b_role_permission (id_role, id_permission)
+  SELECT r.id, p.id FROM b_role r CROSS JOIN b_permission p
+   WHERE r.code = 'R_ADMI' AND p.code IN ('tableau_de_bord.coaching', 'tableau_de_bord.plans_actions');

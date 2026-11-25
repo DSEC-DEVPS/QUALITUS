@@ -13,6 +13,7 @@
 // =====================================================================
 const db = require("../config/db");
 const { habilitationSite, compteGerable, estFonctionAdmin } = require("../utils/perimetreComptes");
+const { notifierFichesPourUtilisateur, sansEchec } = require("../utils/notifFichesCiblees");
 
 const STATUTS = ["ACTIF", "INACTIF"];
 const entier = (v) => (/^\d+$/.test(String(v ?? "")) ? Number(v) : null);
@@ -186,6 +187,14 @@ const modifierCompte = async (req, res) => {
     await conn.query(`DELETE FROM B_R_SUPERVISEUR_AGENT WHERE id_AGENT = ?`, [id]);
     if (idSup) {
       await conn.query(`INSERT INTO B_R_SUPERVISEUR_AGENT (id_SUPERVISEUR, id_AGENT, dateCreation) VALUES (?, ?, NOW())`, [idSup, id]);
+    }
+    // Fiches actives qui le ciblent désormais : changement de site / fonction
+    // (fiches qui ciblaient déjà l'ancien profil ignorées) ou réactivation (toutes).
+    const etaitActif = String(actuel.status || "ACTIF").toUpperCase() === "ACTIF";
+    const profilChange = idSite !== Number(actuel.id_Site) || idFonction !== Number(actuel.id_Fonction);
+    if (statut === "ACTIF" && (!etaitActif || profilChange)) {
+      await sansEchec("modification de compte", () =>
+        notifierFichesPourUtilisateur(conn, id, etaitActif ? { id_Site: actuel.id_Site, id_Fonction: actuel.id_Fonction } : null));
     }
     await conn.commit();
     return res.status(200).json({ message: `Le compte ${champs.nom_utilisateur} a été mis à jour.` });

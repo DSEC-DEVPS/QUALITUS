@@ -16,6 +16,7 @@
 //         permission(["reporting.lire","chargement.verifier"])
 // =====================================================================
 const db = require("../config/db");
+const { cachePermissionsMs } = require("../config/parametres");
 
 let cacheMode = null, cacheModeAt = 0;
 const getMode = async () => {
@@ -30,32 +31,85 @@ const getMode = async () => {
   return cacheMode;
 };
 
-// Permissions effectives (Set de codes "module.action") pour un utilisateur
-const permissionsEffectives = async (userId) => {
-  const [[u]] = await db.query(
-    `SELECT f.Role_Associe AS role
+// Permissions effectives (Set de codes "module.action") pour un utilisateur.
+// Une seule requête (rôle + permissions du rôle + dérogations) au lieu de trois.
+const chargerPermissions = async (userId) => {
+  const [rows] = await db.query(
+    `SELECT 1 AS etape, f.Role_Associe AS code, NULL AS sens
        FROM b_utilisateur u LEFT JOIN b_fonction f ON u.id_Fonction=f.id
-      WHERE u.id=?`, [userId]
-  );
-  const role = u ? u.role : null;
-  const set = new Set();
-  if (role) {
-    const [rows] = await db.query(
-      `SELECT p.code FROM b_role r
-         JOIN b_role_permission rp ON rp.id_role=r.id
-         JOIN b_permission p ON p.id=rp.id_permission
-        WHERE r.code=? AND p.etat='ACTIF'`, [role]
-    );
-    rows.forEach((x) => set.add(x.code));
-  }
-  const [comp] = await db.query(
-    `SELECT p.code, up.sens FROM b_utilisateur_permission up
+      WHERE u.id=?
+     UNION ALL
+     SELECT 2, p.code, NULL
+       FROM b_utilisateur u
+       JOIN b_fonction f ON f.id=u.id_Fonction
+       JOIN b_role r ON r.code=f.Role_Associe
+       JOIN b_role_permission rp ON rp.id_role=r.id
+       JOIN b_permission p ON p.id=rp.id_permission
+      WHERE u.id=? AND p.etat='ACTIF'
+     UNION ALL
+     SELECT 3, p.code, up.sens
+       FROM b_utilisateur_permission up
        JOIN b_permission p ON p.id=up.id_permission
       WHERE up.id_utilisateur=?
-        AND (up.date_fin IS NULL OR up.date_fin >= CURDATE())`, [userId] // dérogation expirée : ignorée
+        AND (up.date_fin IS NULL OR up.date_fin >= CURDATE())`, // dérogation expirée : ignorée
+    [userId, userId, userId]
   );
-  comp.forEach((x) => (x.sens === "DENY" ? set.delete(x.code) : set.add(x.code)));
+  let role = null;
+  const set = new Set();
+  rows.sort((a, b) => a.etape - b.etape).forEach((x) => {
+    if (x.etape === 1) role = x.code || null;
+    else if (x.etape === 2) set.add(x.code);
+    else if (x.sens === "DENY") set.delete(x.code);
+    else set.add(x.code);
+  });
   return { role, set };
+};
+
+// Cache en mémoire (CACHE_PERMISSIONS_MS, 10 s par défaut) : chaque appel à l'API
+// relisait les permissions en base, souvent plusieurs fois par requête. Le cache
+// est vidé dès qu'un utilisateur, une fonction, un compte ou une habilitation est
+// modifié par l'API (voir viderCachePermissionsApresModif) ; une modification faite
+// directement en base est prise en compte au plus tard après ce délai.
+const cache = new Map(); // userId -> { expire, promesse }
+let generation = 0;
+const viderLocal = () => { generation++; cache.clear(); cacheMode = null; };
+// Plusieurs processus (WEB_CONCURRENCY > 1, demarrer.js) : le vidage est relayé aux autres.
+const viderCachePermissions = () => {
+  viderLocal();
+  if (typeof process.send === "function") {
+    try { process.send({ type: "qualitus:vider-permissions" }); } catch { /* processus seul */ }
+  }
+};
+if (typeof process.send === "function") {
+  process.on("message", (msg) => { if (msg && msg.type === "qualitus:vider-permissions") viderLocal(); });
+}
+
+const permissionsEffectives = async (userId) => {
+  if (!cachePermissionsMs) return chargerPermissions(userId);
+  const cle = String(userId);
+  const maintenant = Date.now();
+  let e = cache.get(cle);
+  if (!e || e.expire <= maintenant) {
+    const gen = generation;
+    e = { expire: maintenant + cachePermissionsMs, promesse: chargerPermissions(userId) };
+    cache.set(cle, e);
+    e.promesse.catch(() => { if (cache.get(cle) === e) cache.delete(cle); });
+    // un vidage pendant la lecture : ne pas garder une valeur peut-être périmée
+    e.promesse.then(() => { if (gen !== generation && cache.get(cle) === e) cache.delete(cle); }, () => {});
+    if (cache.size > 5000) { for (const [k, v] of cache) if (v.expire <= maintenant) cache.delete(k); }
+  }
+  const { role, set } = await e.promesse;
+  return { role, set: new Set(set) }; // copie : l'appelant peut la modifier sans toucher au cache
+};
+
+// Écritures qui changent les droits : utilisateurs (fonction, création, suppression),
+// fonctions (rôle associé), comptes (Jauge), habilitations (rôles, dérogations).
+const ROUTES_DROITS = /^\/api\/v1\/(utilisateur|update_utilisateur|comptes|fonction|fonction_update|habilitations)(\/|$|\?)/;
+const viderCachePermissionsApresModif = (req, res, next) => {
+  if (req.method !== "GET" && req.method !== "OPTIONS" && ROUTES_DROITS.test(req.originalUrl)) {
+    res.on("finish", () => { if (res.statusCode < 400) viderCachePermissions(); });
+  }
+  next();
 };
 
 const permission = (module, action) => async (req, res, next) => {
@@ -104,4 +158,4 @@ const exigerHabilitationGestion = async (req, res, next) => {
   }
 };
 
-module.exports = { permission, permissionsEffectives, exigerHabilitationGestion };
+module.exports = { permission, permissionsEffectives, exigerHabilitationGestion, viderCachePermissions, viderCachePermissionsApresModif };

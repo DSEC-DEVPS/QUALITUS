@@ -75,6 +75,10 @@ export class ListeProgrammeComponent implements OnInit, AfterViewInit {
   readonly dialog = inject(MatDialog);
   constructor(private userService: UserService) {}
   ngOnInit(): void {
+    this.charger();
+  }
+  /** (Re)charge la liste : à l'ouverture et après un ajout / une modification. */
+  charger(): void {
     this.chargement = true;
     this.userService.getAllProgramme().pipe(finalize(() => (this.chargement = false))).subscribe(user => {
       this.downloadData = user;
@@ -92,7 +96,7 @@ export class ListeProgrammeComponent implements OnInit, AfterViewInit {
       width: '520px',
       maxWidth: '95vw',
       panelClass: 'dlg-ref',
-    });
+    }).afterClosed().subscribe(() => this.charger());
   }
 
   applyFilter(event: Event) {
@@ -129,6 +133,7 @@ export class ListeProgrammeComponent implements OnInit, AfterViewInit {
             this.userService.deleteProgramme(id).subscribe({
               next: resultat => {
                 this.toastSrv.success(resultat.message);
+                this.charger();
               },
               error: error => {
                 console.log(error);
@@ -152,7 +157,7 @@ export class ListeProgrammeComponent implements OnInit, AfterViewInit {
       width: '520px',
       maxWidth: '95vw',
       panelClass: 'dlg-ref',
-    });
+    }).afterClosed().subscribe(() => this.charger());
   }
 
   download() {

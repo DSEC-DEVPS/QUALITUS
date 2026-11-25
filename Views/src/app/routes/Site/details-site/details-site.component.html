@@ -1,80 +1,31 @@
-<div class="container pt-3">
-  <div class="row">
-    <div class="col-1"><button mat-button (click)="goBack()">Retour</button></div>
-  </div>
-  <div class="row">
-    <div class="col-md-5 col-sm-12 left p-3">
-      <div class="row justify-content-center pt-md-4">
-        <div class="col-12 profile m-0">
-          <img [src]="imageUrl" class="image_profile" alt="profile" />
+<div class="rf-page">
+  <button mat-stroked-button color="primary" class="rf-retour" (click)="goBack()">
+    <mat-icon>arrow_back</mat-icon> Retour
+  </button>
+
+  @if (chargement) {
+    <app-chargement />
+  } @else if (!infos) {
+    <div class="rf-carte rf-vide">Site introuvable.</div>
+  } @else {
+    <div class="rf-carte rf-entete">
+      <div class="rf-icone"><mat-icon>location_on</mat-icon></div>
+      <div class="rf-infos">
+        <div class="rf-type">Site</div>
+        <h1 class="rf-nom">{{ infos.nom }}</h1>
+        <div class="rf-meta">
+          <span class="rf-etat" [class.inactif]="infos.Etat && infos.Etat !== 'ACTIF'">{{ infos.Etat === 'ACTIF' || !infos.Etat ? 'Actif' : infos.Etat }}</span>
+          @if (infos.dateCreation) { <span>Créé le {{ infos.dateCreation.split('-').reverse().join('/') }}</span> }
         </div>
-        <div class="col-12 details_profile mt-3 pt-3">
-          <div class="row d-block">
-            <div class="col-6">
-              <ul class="p-0">
-                <li class="mb-2">
-                  <span class="title">Nom :</span>
-                  <span class="sub_title"> {{ DetailsSite.infos_site[0].nom }}</span>
-                </li>
-                <li class="mb-2">
-                  <span class="title">Etat :</span
-                  ><span class="sub_title"> {{ infos_site[0].Etat }}</span>
-                </li>
-                <li class="mb-2">
-                  <span class="title">Date Création :</span
-                  ><span class="sub_title"> {{ DetailsSite.infos_site[0].dateCreation }}</span>
-                </li>
-              </ul>
-            </div>
-            <div class="col-12">
-              <h6>Description</h6>
-              <p>{{ DetailsSite.infos_site[0].description }}</p>
-            </div>
-          </div>
-        </div>
+        @if (infos.description) {
+          <p class="rf-description">{{ infos.description }}</p>
+        }
       </div>
     </div>
-    <div class="col-md-7 col-sm-12 right">
-      <div class="mat-elevation-z8">
-        @if (chargement) { <app-chargement /> }
-        <table [style.display]="chargement ? 'none' : null" mat-table [dataSource]="dataSource">
-          <!-- Position Column -->
-          <ng-container matColumnDef="nom">
-            <th mat-header-cell *matHeaderCellDef>Nom</th>
-            <td mat-cell *matCellDef="let element">{{ element.nom }}</td>
-          </ng-container>
 
-          <!-- Name Column -->
-          <ng-container matColumnDef="prenom">
-            <th mat-header-cell *matHeaderCellDef>Prénom</th>
-            <td mat-cell *matCellDef="let element">
-              {{ element.prenom }}
-            </td>
-          </ng-container>
-          <!-- Name Column -->
-          <ng-container matColumnDef="fonction">
-            <th mat-header-cell *matHeaderCellDef>Fonction</th>
-            <td mat-cell *matCellDef="let element">{{ element.fonction }}</td>
-          </ng-container>
-          <!-- Weight Column -->
-          <ng-container matColumnDef="login">
-            <th mat-header-cell *matHeaderCellDef>Login</th>
-            <td mat-cell *matCellDef="let element">
-              {{ element.login }}
-            </td>
-          </ng-container>
-
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-        </table>
-
-        <mat-paginator
-          [pageSizeOptions]="[5, 10, 20]"
-          showFirstLastButtons
-          aria-label="Select page of periodic elements"
-        >
-        </mat-paginator>
-      </div>
+    <div class="rf-carte">
+      <h2 class="rf-titre">Utilisateurs du site</h2>
+      <app-membres-referentiel [membres]="membres" contexte="site" [nomReferentiel]="infos.nom" />
     </div>
-  </div>
+  }
 </div>

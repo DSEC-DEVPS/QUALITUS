@@ -89,11 +89,13 @@
             }
           </mat-panel-title>
         </mat-expansion-panel-header>
-        <input class="nr-recherche" type="search" placeholder="Rechercher (nom, identifiant, site…)" [(ngModel)]="rechercheNR" />
+        <!-- Contenu créé à l'ouverture du panneau (liste potentiellement longue) -->
+        <ng-template matExpansionPanelContent>
+        <input class="nr-recherche" type="search" placeholder="Rechercher (nom, identifiant, site…)" [(ngModel)]="rechercheNR" (ngModelChange)="nbNR = PAS_NR" />
         <table class="nr-table">
           <thead><tr><th>Nom</th><th>Identifiant</th><th>Site</th><th>Fonction</th><th>Email</th><th>Envoi</th></tr></thead>
           <tbody>
-            @for (n of nonRepondantsFiltres; track n.id) {
+            @for (n of nonRepondantsFiltres.slice(0, nbNR); track n.id) {
               <tr>
                 <td>{{ n.prenom }} {{ n.nom }}</td>
                 <td>{{ n.nom_utilisateur || '—' }}</td>
@@ -107,6 +109,12 @@
             }
           </tbody>
         </table>
+        @if (nonRepondantsFiltres.length > nbNR) {
+          <button mat-button class="plus" (click)="nbNR = nbNR + PAS_NR">
+            Afficher {{ min(PAS_NR, nonRepondantsFiltres.length - nbNR) }} de plus ({{ nbNR }} sur {{ nonRepondantsFiltres.length }})
+          </button>
+        }
+        </ng-template>
       </mat-expansion-panel>
     }
 
@@ -177,10 +185,16 @@
               @case ('OUVERTE') {
                 @if (q(question).nb) {
                   <ul class="ouvertes">
-                    @for (t of q(question).reponses; track $index) {
+                    @for (t of q(question).reponses.slice(0, nbOuvertes(question.id)); track $index) {
                       <li>{{ t }}</li>
                     }
                   </ul>
+                  @if (q(question).reponses.length > nbOuvertes(question.id)) {
+                    <button mat-button class="plus" (click)="plusOuvertes(question.id)">
+                      Afficher {{ min(PAS_OUVERTES, q(question).reponses.length - nbOuvertes(question.id)) }} de plus
+                      ({{ nbOuvertes(question.id) }} sur {{ q(question).reponses.length }})
+                    </button>
+                  }
                 } @else {
                   <p class="text-muted">Aucune réponse.</p>
                 }

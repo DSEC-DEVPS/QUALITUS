@@ -24,7 +24,9 @@ import {
   QuestionSondageDialogComponent,
   QuestionDialogData,
 } from '../question-dialog/question-sondage-dialog.component';
-import { finalize } from 'rxjs';
+import { Observable, finalize } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ConfirmationService } from '@shared/services/confirmation.service';
 import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 interface PageGroupe {
@@ -58,6 +60,7 @@ export class EditeurSondageComponent implements OnInit {
   private readonly srv = inject(SondageService);
   private readonly dialog = inject(MatDialog);
   private readonly toast = inject(ToastrService);
+  private readonly confirmation = inject(ConfirmationService);
 
   langues = LANGUES;
   statuts = STATUTS;
@@ -186,6 +189,39 @@ export class EditeurSondageComponent implements OnInit {
     this.toast.success(msg);
     this.charger();
   }
+
+  /**
+   * Modification de question. Sondage déjà répondu et modification qui change les
+   * réponses attendues (ajout / suppression de question ou d'option, type) : le serveur
+   * demande confirmation (409) ; on explique l'enjeu, puis on renvoie en confirmant
+   * (remise à zéro : réponses supprimées, cibles internes ré-interrogées).
+   */
+  private executer(appel: (confirmer: boolean) => Observable<{ message: string; reinitialise?: boolean }>) {
+    appel(false).subscribe({
+      next: r => this.ok(r.message),
+      error: async (e: HttpErrorResponse) => {
+        if (e?.status !== 409 || e.error?.code !== 'CONFIRMATION_REQUISE') {
+          this.ko();
+          return;
+        }
+        const nb = Number(e.error.nb_reponses) || 0;
+        const ok = await this.confirmation.confirmer({
+          titre: 'Remettre le sondage à zéro ?',
+          message:
+            (nb > 1 ? `Les ${nb} réponses déjà reçues seront supprimées` : 'La réponse déjà reçue sera supprimée') +
+            ' et les participants devront répondre à nouveau.',
+          type: 'danger',
+          oui: 'Remettre à zéro',
+          non: 'Annuler',
+        });
+        if (!ok) {
+          this.charger();
+          return;
+        }
+        appel(true).subscribe({ next: r => this.ok(r.message), error: () => this.ko() });
+      },
+    });
+  }
   private ko() {
     this.toast.error("Une erreur s'est produite");
   }
@@ -204,9 +240,7 @@ export class EditeurSondageComponent implements OnInit {
       .afterClosed()
       .subscribe((r: QuestionSondage | undefined) => {
         if (r) {
-          this.srv
-            .addQuestion({ ...r, id_Sondage: this.sondageId! })
-            .subscribe({ next: () => this.ok('Question ajoutée'), error: () => this.ko() });
+          this.executer(c => this.srv.addQuestion({ ...r, id_Sondage: this.sondageId! }, c));
         }
       });
   }
@@ -222,15 +256,20 @@ export class EditeurSondageComponent implements OnInit {
       .afterClosed()
       .subscribe((r: QuestionSondage | undefined) => {
         if (r && q.id) {
-          this.srv
-            .updateQuestion(q.id, r)
-            .subscribe({ next: () => this.ok('Question modifiée'), error: () => this.ko() });
+          const id = q.id;
+          this.executer(c => this.srv.updateQuestion(id, r, c));
         }
       });
   }
 
   supprimerQuestion(q: QuestionSondage) {
     if (!q.id) {
+      return;
+    }
+    // Sondage déjà répondu : la fenêtre de remise à zéro (plus explicite) remplace la confirmation simple.
+    if (this.sondage?.nb_reponses) {
+      const id = q.id;
+      this.executer(c => this.srv.deleteQuestion(id, c));
       return;
     }
     const box = new ConfirmBoxInitializer();
@@ -245,9 +284,7 @@ export class EditeurSondageComponent implements OnInit {
     box.setButtonLabels('OUI', 'NON');
     box.openConfirmBox$().subscribe(resp => {
       if (resp.success) {
-        this.srv
-          .deleteQuestion(q.id!)
-          .subscribe({ next: () => this.ok('Question supprimée'), error: () => this.ko() });
+        this.executer(c => this.srv.deleteQuestion(q.id!, c));
       }
     });
   }

@@ -3,13 +3,45 @@
     <mat-card-content>
       <div class="m-b-16 d-flex align-items-start justify-content-between flex-wrap" style="gap: 12px">
         <div>
-        <h5 class="m-0">Retests à autoriser</h5>
-        <p class="text-muted m-0">
-          Agents en échec sur leur dernière tentative. Autorisez un retest pour
-          permettre à l'agent de refaire le quiz.
-        </p>
+          <h5 class="m-0">Retests à autoriser</h5>
+          <p class="text-muted m-0">
+            Agents en échec au dernier passage d'un quiz qui autorise les retests, encore ouvert,
+            sans décision prise et sous le maximum de retests du quiz.
+          </p>
         </div>
         <app-filtre-periode [valeur]="periode" (periodeChange)="changerPeriode($event)" />
+      </div>
+
+      <div class="rt-synthese">
+        <span class="rt-total">
+          <strong>{{ nbADecider }}</strong> échec{{ nbADecider > 1 ? 's' : '' }} en attente de décision
+          @if (quizListe.length) {
+            sur {{ quizListe.length }} quiz
+          }
+        </span>
+      </div>
+
+      <div class="rt-filtres">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="rt-quiz">
+          <mat-label>Quiz</mat-label>
+          <mat-select [(ngModel)]="quizFiltre" (selectionChange)="appliquerFiltre()">
+            <mat-option [value]="null">Tous les quiz</mat-option>
+            @for (q of quizListe; track q.id) {
+              <mat-option [value]="q.id">{{ q.titre }} ({{ q.nb }})</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="rt-recherche">
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput placeholder="Rechercher un agent" [(ngModel)]="recherche" (ngModelChange)="appliquerFiltre()" autocomplete="off" />
+        </mat-form-field>
+        @if (quizSelectionne; as q) {
+          @if (q.nb) {
+            <button mat-stroked-button color="warn" class="rt-clore" (click)="refuserTout(q)">
+              <mat-icon>block</mat-icon> Clore les retests de ce quiz ({{ q.nb }})
+            </button>
+          }
+        }
       </div>
 
       <div style="overflow-x: auto">
@@ -30,7 +62,12 @@
           </ng-container>
           <ng-container matColumnDef="essai">
             <th mat-header-cell *matHeaderCellDef>Essai</th>
-            <td mat-cell *matCellDef="let e">n°{{ e.num_essai }}</td>
+            <td mat-cell *matCellDef="let e">
+              n°{{ e.num_essai }}
+              <br /><small class="text-muted rt-nowrap" matTooltip="Retests déjà passés / maximum autorisé par le quiz">
+                retests {{ retestsLabel(e) }}
+              </small>
+            </td>
           </ng-container>
           <ng-container matColumnDef="date">
             <th mat-header-cell *matHeaderCellDef>Date</th>
@@ -42,9 +79,15 @@
               @if (e.retest_en_attente > 0) {
                 <mat-chip-set><mat-chip>Retest autorisé</mat-chip></mat-chip-set>
               } @else {
-                <button mat-flat-button color="primary" (click)="autoriser(e)">
-                  <mat-icon>lock_open</mat-icon> Autoriser le retest
-                </button>
+                <div class="rt-actions">
+                  <button mat-flat-button color="primary" (click)="autoriser(e)" [disabled]="occupe(e)">
+                    <mat-icon>lock_open</mat-icon> Autoriser le retest
+                  </button>
+                  <button mat-stroked-button (click)="refuser(e)" [disabled]="occupe(e)"
+                          matTooltip="Classer l'échec comme définitif : il disparaît de cette liste">
+                    <mat-icon>block</mat-icon> Ne pas autoriser
+                  </button>
+                </div>
               }
             </td>
           </ng-container>
@@ -53,7 +96,13 @@
           <tr mat-row *matRowDef="let row; columns: colonnes"></tr>
           <tr class="mat-row" *matNoDataRow>
             <td class="mat-cell text-center p-16" [attr.colspan]="colonnes.length">
-              {{ periode.du || periode.au ? 'Aucun échec sur cette période.' : 'Aucun agent en échec à traiter.' }}
+              @if (dataSource.data.length) {
+                Aucun échec ne correspond aux filtres.
+              } @else if (periode.du || periode.au) {
+                Aucun échec sur cette période.
+              } @else {
+                Aucun agent en échec à traiter.
+              }
             </td>
           </tr>
         </table>

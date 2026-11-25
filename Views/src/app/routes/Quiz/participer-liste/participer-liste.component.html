@@ -4,7 +4,7 @@
     <mat-icon>quiz</mat-icon>
     <div>
       <div class="banner-titre">Quiz disponibles</div>
-      <div class="banner-sous">Les quiz qui vous ont été diffusés, ainsi que ceux accessibles avec un code PIN.</div>
+      <div class="banner-sous">Les quiz publics qui vous sont diffusés et les quiz privés déverrouillés par leur code PIN.</div>
     </div>
   </div>
 
@@ -13,13 +13,13 @@
     <div class="filtres-dates">
       <mat-form-field appearance="outline" class="date-field">
         <mat-label>Date début</mat-label>
-        <input matInput [matDatepicker]="pickerDebut" [(ngModel)]="dateDebut" readonly (click)="pickerDebut.open()" />
+        <input matInput [matDatepicker]="pickerDebut" [(ngModel)]="dateDebut" (dateChange)="filtreDates()" readonly (click)="pickerDebut.open()" />
         <mat-datepicker-toggle matSuffix [for]="pickerDebut" />
         <mat-datepicker #pickerDebut />
       </mat-form-field>
       <mat-form-field appearance="outline" class="date-field">
         <mat-label>Date fin</mat-label>
-        <input matInput [matDatepicker]="pickerFin" [(ngModel)]="dateFin" readonly (click)="pickerFin.open()" />
+        <input matInput [matDatepicker]="pickerFin" [(ngModel)]="dateFin" (dateChange)="filtreDates()" readonly (click)="pickerFin.open()" />
         <mat-datepicker-toggle matSuffix [for]="pickerFin" />
         <mat-datepicker #pickerFin />
       </mat-form-field>
@@ -98,6 +98,12 @@
               } @else {
                 <mat-chip class="chrono-chip">En cours</mat-chip>
               }
+              @if (q.fin_grace) {
+                <mat-chip class="grace-chip" matTooltip="Quiz arrivé à sa date de fermeture : votre passage commencé avant reste soumettable">
+                  <mat-icon matChipAvatar>schedule</mat-icon>
+                  Fermé · à soumettre avant {{ q.fin_grace | date: 'HH:mm' }}
+                </mat-chip>
+              }
             </mat-chip-set>
           </div>
         </div>
@@ -108,43 +114,157 @@
     }
   }
 
-  <!-- Liste des quiz disponibles -->
-  <h6 class="liste-titre">Liste des quiz publics disponibles</h6>
+  <!-- ===================== Quiz disponibles ===================== -->
+  <div class="section-entete">
+    <h6 class="liste-titre">Quiz disponibles <span class="compteur">{{ disponibles.length }}</span></h6>
+    <div class="section-filtres">
+      <mat-form-field appearance="outline" class="recherche" subscriptSizing="dynamic">
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput placeholder="Rechercher un quiz" [(ngModel)]="rechercheDispo" (ngModelChange)="filtreDispo()" autocomplete="off" />
+      </mat-form-field>
+      <mat-chip-listbox aria-label="Type de quiz" [(ngModel)]="typeDispo" (change)="filtreDispo()" hideSingleSelectionIndicator>
+        <mat-chip-option value="">Tous</mat-chip-option>
+        <mat-chip-option value="PUBLIC">Publics</mat-chip-option>
+        <mat-chip-option value="PRIVATE">Privés</mat-chip-option>
+      </mat-chip-listbox>
+    </div>
+  </div>
 
-  @if (publicsFiltres.length) {
-    @for (q of publicsFiltres; track q.id) {
-      <div class="quiz-row">
-        <div class="quiz-corps">
-          <div class="quiz-titre">{{ q.titre }}</div>
-          <div class="quiz-meta">
-            <mat-chip-set>
-              <mat-chip>{{ q.nb_questions }} question{{ q.nb_questions > 1 ? 's' : '' }}</mat-chip>
-              <mat-chip>Seuil {{ q.note_passage }} %</mat-chip>
-              @if (q.duree) { <mat-chip>{{ q.duree }} min</mat-chip> }
-              @if (enCours(q)) {
-                <mat-chip class="chrono-chip" [class.urgent]="tempsRestant(q) <= 60">
-                  <mat-icon matChipAvatar>timer</mat-icon>
-                  Temps restant : {{ tempsRestantLabel(q) }}
-                </mat-chip>
-              } @else if (q.nb_essais) {
-                <mat-chip class="deja">Déjà tenté</mat-chip>
-              }
-            </mat-chip-set>
-          </div>
-        </div>
-        <button mat-flat-button color="primary" (click)="ouvrir(q)">
-          <mat-icon>play_arrow</mat-icon>
-          {{ enCours(q) ? 'Reprendre le quiz' : 'Faire le quiz' }}
-        </button>
-      </div>
-    }
-  } @else {
-    <p class="text-muted p-16 text-center">
-      @if (publics.length) {
-        Aucun quiz ne correspond aux dates sélectionnées.
+  @for (q of disponiblesPage; track q.id) {
+    <ng-container *ngTemplateOutlet="ligneQuiz; context: { $implicit: q }" />
+  } @empty {
+    <p class="text-muted vide">
+      @if (!charge) {
+        Chargement…
+      } @else if (disponibles.length) {
+        Aucun quiz disponible ne correspond aux filtres.
       } @else {
-        Aucun quiz disponible pour votre site pour le moment.
+        Aucun quiz disponible pour le moment. Un quiz privé apparaît ici après la saisie de son code PIN.
       }
     </p>
   }
+  @if (disponiblesFiltres.length > TAILLES_PAGE[0]) {
+    <mat-paginator
+      class="pagination"
+      [length]="disponiblesFiltres.length"
+      [pageIndex]="pageDispo"
+      [pageSize]="tailleDispo"
+      [pageSizeOptions]="TAILLES_PAGE"
+      (page)="changerPageDispo($event)"
+    />
+  }
+
+  <!-- ===================== Quiz terminés ===================== -->
+  <div class="section-entete termines-entete">
+    <h6 class="liste-titre">
+      Quiz terminés <span class="compteur">{{ termines.length }}</span>
+      @if (termines.length) {
+        <span class="sous-compteur">
+          {{ nbReussis }} réussi{{ nbReussis > 1 ? 's' : '' }} · {{ nbEchecs }} en échec
+          @if (nbNonPasses) { · {{ nbNonPasses }} non passé{{ nbNonPasses > 1 ? 's' : '' }} }
+        </span>
+      }
+    </h6>
+    @if (termines.length) {
+      <div class="section-filtres">
+        <mat-form-field appearance="outline" class="recherche" subscriptSizing="dynamic">
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput placeholder="Rechercher un quiz terminé" [(ngModel)]="rechercheTermines" (ngModelChange)="filtreTermines()" autocomplete="off" />
+        </mat-form-field>
+        <mat-chip-listbox aria-label="Résultat" [(ngModel)]="resultatTermines" (change)="filtreTermines()" hideSingleSelectionIndicator>
+          <mat-chip-option value="">Tous</mat-chip-option>
+          <mat-chip-option value="REUSSI" class="f-reussi">Réussis</mat-chip-option>
+          <mat-chip-option value="ECHEC" class="f-echec">Échecs</mat-chip-option>
+          <mat-chip-option value="NON_PASSE">Non passés</mat-chip-option>
+        </mat-chip-listbox>
+        <mat-chip-listbox aria-label="Type de quiz" [(ngModel)]="typeTermines" (change)="filtreTermines()" hideSingleSelectionIndicator>
+          <mat-chip-option value="">Tous types</mat-chip-option>
+          <mat-chip-option value="PUBLIC">Publics</mat-chip-option>
+          <mat-chip-option value="PRIVATE">Privés</mat-chip-option>
+        </mat-chip-listbox>
+        @if (filtresTerminesActifs) {
+          <button mat-icon-button (click)="reinitFiltresTermines()" matTooltip="Réinitialiser les filtres">
+            <mat-icon>filter_alt_off</mat-icon>
+          </button>
+        }
+      </div>
+    }
+  </div>
+
+  @for (q of terminesPage; track q.id) {
+    <ng-container *ngTemplateOutlet="ligneQuiz; context: { $implicit: q }" />
+  } @empty {
+    <p class="text-muted vide">
+      @if (termines.length) {
+        Aucun quiz terminé ne correspond aux filtres.
+      } @else if (charge) {
+        Vous n'avez encore terminé aucun quiz.
+      }
+    </p>
+  }
+  @if (terminesFiltres.length > TAILLES_PAGE[0]) {
+    <mat-paginator
+      class="pagination"
+      [length]="terminesFiltres.length"
+      [pageIndex]="pageTermines"
+      [pageSize]="tailleTermines"
+      [pageSizeOptions]="TAILLES_PAGE"
+      (page)="changerPageTermines($event)"
+    />
+  }
+
+  <!-- Ligne de quiz (disponible ou terminé) -->
+  <ng-template #ligneQuiz let-q>
+    <div
+      class="quiz-row"
+      [class.termine]="q.etat === 'TERMINE' || q.etat === 'NON_PASSE'"
+      [class.reussi]="q.etat === 'TERMINE' && q.derniere_reussi"
+      [class.echec]="q.etat === 'TERMINE' && !q.derniere_reussi"
+      [class.non-passe]="q.etat === 'NON_PASSE'"
+      [class.retest]="q.etat === 'RETEST'"
+    >
+      <div class="quiz-corps">
+        <div class="quiz-titre">
+          @if (q.acces !== 'PUBLIC') {
+            <mat-icon class="cadenas" matTooltip="Quiz privé : code PIN déjà validé">lock_open</mat-icon>
+          }
+          {{ q.titre }}
+        </div>
+        <div class="quiz-meta">
+          <mat-chip-set>
+            <mat-chip class="etat-chip" [class]="'etat-' + (q.etat === 'TERMINE' ? (q.derniere_reussi ? 'REUSSI' : 'ECHEC') : q.etat)">
+              {{ etatLabel(q) }}
+            </mat-chip>
+            <mat-chip>{{ q.acces === 'PUBLIC' ? 'Public' : 'Privé' }}</mat-chip>
+            <mat-chip>{{ q.nb_questions }} question{{ q.nb_questions > 1 ? 's' : '' }}</mat-chip>
+            <mat-chip>Seuil {{ q.note_passage }} %</mat-chip>
+            @if (q.duree) { <mat-chip>{{ q.duree }} min</mat-chip> }
+            @if (scoreLabel(q)) { <mat-chip>Dernier score : {{ scoreLabel(q) }}</mat-chip> }
+            @if (q.etat === 'NON_PASSE') {
+              <mat-chip class="ferme">
+                {{ q.date_fermeture ? 'Fermé le ' + (q.date_fermeture | date: 'dd/MM/yyyy') : 'Quiz clôturé' }}
+              </mat-chip>
+            }
+            @if (q.etat === 'TERMINE') {
+              <mat-chip>{{ q.nb_essais }} essai{{ q.nb_essais > 1 ? 's' : '' }}</mat-chip>
+              @if (q.date_dernier_passage) { <mat-chip>Le {{ q.date_dernier_passage | date: 'dd/MM/yyyy' }}</mat-chip> }
+              @if (!q.peut_voir) { <mat-chip class="ferme">Quiz fermé</mat-chip> }
+            }
+          </mat-chip-set>
+        </div>
+      </div>
+      @if (q.etat === 'TERMINE' || q.etat === 'NON_PASSE') {
+        @if (q.peut_voir) {
+          <button mat-stroked-button (click)="ouvrir(q)" matTooltip="Résultat et fiches associées">
+            <mat-icon>visibility</mat-icon> Voir
+          </button>
+        }
+      } @else {
+        <button mat-flat-button color="primary" (click)="ouvrir(q)">
+          <mat-icon>{{ q.etat === 'RETEST' ? 'replay' : 'play_arrow' }}</mat-icon>
+          {{ q.etat === 'RETEST' ? 'Repasser' : 'Faire le quiz' }}
+        </button>
+      }
+    </div>
+  </ng-template>
 </div>

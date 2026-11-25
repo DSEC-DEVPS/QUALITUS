@@ -36,7 +36,7 @@ import {
   DisappearanceAnimation,
 } from '@costlydeveloper/ngx-awesome-popup';
 import { catchError, of, Subject, switchMap, takeUntil, tap } from 'rxjs';
-import { CommonModule, TitleCasePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatRadioModule } from '@angular/material/radio';
 import { Location } from '@angular/common';
@@ -46,6 +46,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTableModule } from '@angular/material/table';
 import { Z } from '@angular/cdk/keycodes';
 import { init } from 'pptx-preview';
+import { urlFichier, urlVisionneuseOffice } from '@shared/utils/url-fichier';
 registerAllModules();
 @Component({
   selector: 'app-lecture-fiche',
@@ -64,7 +65,6 @@ registerAllModules();
     CommonModule,
     MatCheckboxModule,
     MatRadioModule,
-    TitleCasePipe,
     MatCardModule,
     MatSelectModule,
     MatProgressSpinnerModule,
@@ -130,6 +130,12 @@ export class LectureFicheComponent implements OnInit {
   show_value_Quiz = false;
   show_div_value_sondage = false;
   show_value_utilite = false;
+  /** Retours affichés dans le panneau après une action (au lieu de le laisser vide). */
+  quizEnvoye = false;
+  /** Nombre de bonnes réponses au quiz envoyé (affiché dans le panneau). */
+  quizBonnes: number | null = null;
+  utiliteEnvoyee: number | null = null;
+  envoiCommentaire = false;
   show_div_value_commentaire = false;
   router_id!: number;
   user!: User;
@@ -246,7 +252,7 @@ export class LectureFicheComponent implements OnInit {
               .pipe(
                 switchMap((meta: any) => {
                   console.log('Metadata reçues:', meta);
-                  return this.userService.downloadFileByUrl(meta.url); // retourne Observable<Blob>
+                  return this.userService.downloadFileByUrl(urlFichier(meta.url)); // retourne Observable<Blob>
                 })
               )
               .subscribe({
@@ -400,26 +406,26 @@ export class LectureFicheComponent implements OnInit {
   selectedDocumentType(type: url) {
     switch (type.extention) {
       case '.pdf':
-        this.url = this.sanitizer.bypassSecurityTrustResourceUrl(type.url);
+        this.url = this.sanitizer.bypassSecurityTrustResourceUrl(urlFichier(type.url));
         break;
       case '.pptx':
         this.url = this.sanitizer.bypassSecurityTrustResourceUrl(
-          `https://view.officeapps.live.com/op/embed.aspx?src=${type.url}`
+          urlVisionneuseOffice(type.url)
         );
         break;
       case '.docx':
         this.url = this.sanitizer.bypassSecurityTrustResourceUrl(
-          `https://view.officeapps.live.com/op/embed.aspx?src=${type.url}`
+          urlVisionneuseOffice(type.url)
         );
         break;
       case '.xlsx':
         this.url = this.sanitizer.bypassSecurityTrustResourceUrl(
-          `https://view.officeapps.live.com/op/embed.aspx?src=${type.url}`
+          urlVisionneuseOffice(type.url)
         );
         break;
       default:
         this.url = this.sanitizer.bypassSecurityTrustResourceUrl(
-          `https://view.officeapps.live.com/op/embed.aspx?src=${type.url}`
+          urlVisionneuseOffice(type.url)
         );
     }
   }
@@ -432,17 +438,44 @@ export class LectureFicheComponent implements OnInit {
     }
   }
   addCommentaire() {
-    console.log(this.formGroum.value);
+    if (this.formGroum.invalid || this.envoiCommentaire) {
+      return;
+    }
+    this.envoiCommentaire = true;
     this.userService.addCommentaire(this.formGroum.value).subscribe({
       next: message => {
+        this.envoiCommentaire = false;
         this.toast.success(message.message);
-        this.formGroum.reset();
+        // On reste sur la fiche : le champ est vidé, l'identifiant de la fiche est conservé.
+        this.formGroum.reset({ message: null, id_Fiche: this.router_id });
       },
       error: error => {
+        this.envoiCommentaire = false;
         console.log(error);
         this.toast.error("Une erreur s'est produite ");
       },
     });
+  }
+
+  /** Libellé de question avec un seul « ? » final, qu'il ait été saisi ou non. */
+  question(libelle: string | null | undefined): string {
+    const texte = (libelle || '').trim();
+    return texte.endsWith('?') ? texte : `${texte} ?`;
+  }
+
+  /** Nombre de questions du quiz déjà cochées. */
+  get nbReponsesQuiz(): number {
+    const v = this.formGroup_Quiz?.value || {};
+    return [v.Reponse1, v.Reponse2].filter(r => r !== null && r !== undefined).length;
+  }
+
+  /** « 2026-11-21 14:34:29 » -> « 21/11/2026 ». */
+  dateCourte(valeur: string | null | undefined): string {
+    if (!valeur) {
+      return '';
+    }
+    const [a, m, j] = valeur.slice(0, 10).split('-');
+    return j && m && a ? `${j}/${m}/${a}` : '';
   }
   deleteSomething(message: string, type: string) {
     const newConfirmBox = new ConfirmBoxInitializer();
@@ -510,65 +543,54 @@ export class LectureFicheComponent implements OnInit {
       .subscribe();
   }
   response_quiz() {
-    if (
-      this.fiche?.Quiz[0].reponseQuestion === this.formGroup_Quiz.value.Reponse1 &&
-      this.fiche?.Quiz[1].reponseQuestion === this.formGroup_Quiz.value.Reponse2
-    ) {
-      this.resultat_Quiz = 1;
-      this.userService
-        .response_Quiz(this.router_id, { resultat_Quiz: this.resultat_Quiz })
-        .subscribe({
-          next: resultat => {
-            this.userService.showScoreNotification(100, 'Bravo, Vous avez réussi tous les quiz !');
-          },
-          error: error => {
-            this.userService.showScoreNotification(
-              0,
-              `Désolé, vous n'avez pas réussi tous les quiz. Votre superviseur vous en enverra d'autres.`
-            );
-            console.log(error);
-          },
-        });
-    } else if (
-      this.fiche?.Quiz[0].reponseQuestion === this.formGroup_Quiz.value.Reponse1 ||
-      this.fiche?.Quiz[1].reponseQuestion === this.formGroup_Quiz.value.Reponse2
-    ) {
-      this.resultat_Quiz = 0;
-      this.userService
-        .response_Quiz(this.router_id, { resultat_Quiz: this.resultat_Quiz })
-        .subscribe({
-          next: resultat => {
-            this.userService.showScoreNotification(
-              50,
-              `Désolé, vous n'avez pas réussi tous les quiz. Votre superviseur vous en enverra d'autres.`
-            );
-          },
-          error: error => {
-            console.log(error);
-          },
-        });
-    } else {
-      this.resultat_Quiz = 0;
-      this.userService
-        .response_Quiz(this.router_id, { resultat_Quiz: this.resultat_Quiz })
-        .subscribe({
-          next: resultat => {
-            this.userService.showScoreNotification(
-              0,
-              `Désolé, vous n'avez réussi aucun des quiz. Votre superviseur vous en enverra d'autres.`
-            );
-          },
-          error: error => {
-            console.log(error);
-          },
-        });
-    }
+    const quiz = this.fiche?.Quiz || [];
+    const reponses = [this.formGroup_Quiz.value.Reponse1, this.formGroup_Quiz.value.Reponse2];
+    const bonnes = quiz.slice(0, 2).filter((q, i) => q.reponseQuestion === reponses[i]).length;
+    // Le serveur n'enregistre que réussi (1) / non réussi (0) : inchangé.
+    this.resultat_Quiz = bonnes === 2 ? 1 : 0;
     this.show_value_Quiz = false;
+    this.quizEnvoye = true;
+    this.quizBonnes = bonnes;
+
+    this.userService.response_Quiz(this.router_id, { resultat_Quiz: this.resultat_Quiz }).subscribe({
+      next: () => {
+        const entrainement = 'Votre superviseur vous enverra un nouveau quiz pour vous entraîner.';
+        const legende = bonnes > 1 ? 'bonnes réponses' : 'bonne réponse';
+        if (bonnes === 2) {
+          this.userService.showScoreNotification(100, 'Vous avez répondu correctement à toutes les questions.', {
+            titre: 'Bravo !',
+            centre: '2/2',
+            legende,
+          });
+        } else if (bonnes === 1) {
+          this.userService.showScoreNotification(50, `Une réponse sur deux est correcte. ${entrainement}`, {
+            titre: 'Presque !',
+            centre: '1/2',
+            legende,
+          });
+        } else {
+          this.userService.showScoreNotification(0, `Aucune réponse correcte cette fois. ${entrainement}`, {
+            titre: 'Pas cette fois',
+            centre: '0/2',
+            legende,
+          });
+        }
+      },
+      error: error => {
+        console.log(error);
+        // Rien n'a été enregistré : on réaffiche le quiz pour permettre un nouvel envoi.
+        this.show_value_Quiz = true;
+        this.quizEnvoye = false;
+        this.quizBonnes = null;
+        this.toast.error("Vos réponses n'ont pas pu être enregistrées. Réessayez.");
+      },
+    });
   }
   reponse_utilite(id: number) {
     this.userService.reponse_utilite(this.router_id, { resultat_utilite: id }).subscribe({
       next: resultat => {
         this.show_value_utilite = false;
+        this.utiliteEnvoyee = id;
       },
       error: error => {
         console.log(error);

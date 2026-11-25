@@ -50,6 +50,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { init } from 'pptx-preview';
 import { userInfo } from 'os';
+import { urlFichier, urlVisionneuseOffice } from '@shared/utils/url-fichier';
 
 registerAllModules();
 @Component({
@@ -253,10 +254,16 @@ export class VerificationComponent implements OnInit {
           this.itemsFormArray_M_1.clear();
         }
         this.toast.success(resultat.message);
-        const message = resultat.score === 0
+        const score = Number(resultat.score) || 0;
+        const message = score === 0
           ? "Toutes les fiches de l'échantillon sont erronées."
-          : "des fiches de l'échantillon sont exactes.";
-        this.userService.showScoreNotification(resultat.score, message);
+          : score >= 100
+            ? "Toutes les fiches de l'échantillon sont exactes."
+            : 'Le résultat est enregistré dans le reporting des contrôles.';
+        this.userService.showScoreNotification(score, message, {
+          titre: score >= 100 ? 'Échantillon conforme' : 'Contrôle enregistré',
+          legende: 'fiches exactes',
+        });
       },
       error: error => this.toast.error(error.error?.message ?? 'Impossible de valider le contrôle.'),
     });
@@ -478,7 +485,7 @@ ngOnInit(): void {
                             .pipe(
                               switchMap((meta: any) => {
                                 console.log('Metadata reçues:', meta);
-                                return this.userService.downloadFileByUrl(meta.url); // retourne Observable<Blob>
+                                return this.userService.downloadFileByUrl(urlFichier(meta.url)); // retourne Observable<Blob>
                               })
                             )
                             .subscribe({
@@ -568,16 +575,16 @@ ngOnInit(): void {
   selectedDocumentType(type: url) {
     switch (type.extention) {
       case '.pdf':
-        this.url = this.sanitizer.bypassSecurityTrustResourceUrl(type.url);
+        this.url = this.sanitizer.bypassSecurityTrustResourceUrl(urlFichier(type.url));
         break;
       case '.xlsx':
         this.url = this.sanitizer.bypassSecurityTrustResourceUrl(
-          `https://view.officeapps.live.com/op/embed.aspx?src=${type.url}`
+          urlVisionneuseOffice(type.url)
         );
         break;
       default:
         this.url = this.sanitizer.bypassSecurityTrustResourceUrl(
-          `https://view.officeapps.live.com/op/embed.aspx?src=${type.url}`
+          urlVisionneuseOffice(type.url)
         );
     }
   }
@@ -833,7 +840,7 @@ export class LectureFicheComponent implements OnInit, AfterViewInit {
       .pipe(
         switchMap((meta: any) => {
           console.log('Metadata reçues:', meta);
-          return this.userService.downloadFileByUrl(meta.url);
+          return this.userService.downloadFileByUrl(urlFichier(meta.url));
         })
       )
       .subscribe({
@@ -971,16 +978,16 @@ export class LectureFicheComponent implements OnInit, AfterViewInit {
   selectedDocumentType(type: any): void {
     switch (type.extention) {
       case '.pdf':
-        this.url = this.sanitizer.bypassSecurityTrustResourceUrl(type.url);
+        this.url = this.sanitizer.bypassSecurityTrustResourceUrl(urlFichier(type.url));
         break;
       case '.xlsx':
         this.url = this.sanitizer.bypassSecurityTrustResourceUrl(
-          `https://view.officeapps.live.com/op/embed.aspx?src=${type.url}`
+          urlVisionneuseOffice(type.url)
         );
         break;
       default:
         this.url = this.sanitizer.bypassSecurityTrustResourceUrl(
-          `https://view.officeapps.live.com/op/embed.aspx?src=${type.url}`
+          urlVisionneuseOffice(type.url)
         );
     }
   }

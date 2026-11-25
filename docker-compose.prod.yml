@@ -2,9 +2,14 @@
 services:
   db:
     image: mysql:8
-    command: --lower-case-table-names=1
+    command:
+      - "--lower_case_table_names=1"
+      - "--max_connections=400"
+      - "--innodb_buffer_pool_size=4G"
+      - "--slow_query_log=1"
+      - "--long_query_time=1"
+      - "--slow_query_log_file=/var/lib/mysql/lent.log"    
     restart: always
-    command: ["--lower_case_table_names=1"]
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_DATABASE: QUALITUS
@@ -31,7 +36,13 @@ services:
   server:
     image: diack500/qualitus-backend-v2
     restart: always
+    command: ["./wait-for-it.sh", "db:3306", "--", "node", "server.js"]
     environment:
+      NODE_OPTIONS: "--unhandled-rejections=warn"
+            # Ajout du json contenant les variables d'environnement: journal limité aux erreurs et requêtes lentes, pool MySQL, secret des jetons
+      NODE_ENV: production
+      # Definitions du nombre de processus a demarrer en prod: 4 processus Node x 30 connexions = 120 connexions MySQL au plus
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-4}
       DB_HOST: db
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -50,6 +61,9 @@ services:
     restart: always
     ports:
       - "3333:80"
+    # Ajout du volume chargement afin qu'on servent les fiche depuis nginx, au lieu de passer par node à chaque fois
+    volumes:
+      - chargements:/app/chargements
     depends_on:
       - server
     networks:

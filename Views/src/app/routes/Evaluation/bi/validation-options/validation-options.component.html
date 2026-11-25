@@ -1,50 +1,115 @@
-<div class="validation">
-  <mat-card class="cal-panel"><mat-card-header class="cal-band"><span class="cal-band-title"><mat-icon>verified</mat-icon> Validation des options proposées</span></mat-card-header><mat-card-content>
+<div class="cal-page qx-liste validation">
+  <mat-card class="cal-panel">
+    <mat-card-header class="cal-band"><span class="cal-band-title"><mat-icon>verified</mat-icon> Validation des options proposées</span></mat-card-header>
+    <mat-card-content>
+      <div class="resume">
+        <span class="bloc-n"><strong>{{ options.length }}</strong> en attente</span>
+        <span class="bloc-n bi"><strong>{{ nbBi }}</strong> BI</span>
+        <span class="bloc-n co"><strong>{{ nbCoaching }}</strong> coaching</span>
+      </div>
 
-  
+      <div class="cal-filtres-row">
+        <mat-form-field appearance="outline"><mat-label>Source</mat-label>
+          <mat-select [(ngModel)]="source" (selectionChange)="appliquer()" name="src">
+            <mat-option value="">BI et coaching</mat-option>
+            <mat-option value="BI">BI</mat-option>
+            <mat-option value="COACHING">Coaching</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="large"><mat-label>Arborescence</mat-label>
+          <mat-select [(ngModel)]="contexte" (selectionChange)="appliquer()" name="ctx">
+            <mat-option value="">Toutes</mat-option>
+            @for (c of contextes; track c.cle) { <mat-option [value]="c.cle">{{ c.libelle }} ({{ c.n }})</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="large"><mat-label>Proposé par</mat-label>
+          <mat-select [(ngModel)]="idProposeur" (selectionChange)="appliquer()" name="prop">
+            <mat-option [value]="null">Tout le monde</mat-option>
+            @for (p of proposeurs; track p.id) { <mat-option [value]="p.id">{{ p.nom }} ({{ p.n }})</mat-option> }
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <div class="cal-filtres-row">
+        <mat-form-field appearance="outline"><mat-label>Proposée du</mat-label>
+          <input matInput [matDatepicker]="pd" [(ngModel)]="du" (dateChange)="appliquer()" name="du" /><mat-datepicker-toggle matSuffix [for]="pd"></mat-datepicker-toggle><mat-datepicker #pd></mat-datepicker>
+        </mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Au</mat-label>
+          <input matInput [matDatepicker]="pf" [(ngModel)]="au" (dateChange)="appliquer()" name="au" /><mat-datepicker-toggle matSuffix [for]="pf"></mat-datepicker-toggle><mat-datepicker #pf></mat-datepicker>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="recherche"><mat-label>Rechercher</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [(ngModel)]="recherche" (ngModelChange)="appliquer()" name="q" placeholder="Option, parent, agent, proposeur, n° d'évaluation" autocomplete="off" />
+        </mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Tri</mat-label>
+          <mat-select [(ngModel)]="tri" (selectionChange)="appliquer()" name="tri">
+            <mat-option value="ancien">Plus anciennes d'abord</mat-option>
+            <mat-option value="recent">Plus récentes d'abord</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <button mat-button (click)="reinitialiser()">Réinitialiser</button>
+      </div>
 
-  @if (chargement) {
-    <app-chargement />
-  } @else if (options.length === 0) {
-    <p class="vide">Aucune option en attente de validation.</p>
-  } @else {
-    @for (o of options; track k(o)) {
-      <mat-card class="opt">
-        <mat-card-content>
-          <div class="entete">
-            <div>
-              <span class="src" [class.bi]="o.source === 'BI'" [class.co]="o.source === 'COACHING'">{{ o.source === 'BI' ? 'BI' : 'Coaching' }}</span>
-              <strong>{{ o.libelle }}</strong>
-              <span class="meta">niveau {{ o.niveau }} @if (o.parent_libelle) { · sous « {{ o.parent_libelle }} » }</span>
-            </div>
-            <span class="contexte">{{ o.contexte }} · évaluation #{{ o.id_evaluation }}</span>
-          </div>
-          <p class="proposeur">Proposé par {{ o.proposeur }} le {{ o.dateCreation | date: 'dd/MM/yyyy' }}</p>
+      @if (selection.size) {
+        <div class="barre-selection">
+          <mat-icon>checklist</mat-icon>
+          <span><strong>{{ selection.size }}</strong> option{{ selection.size > 1 ? 's' : '' }} sélectionnée{{ selection.size > 1 ? 's' : '' }}</span>
+          <span class="espace"></span>
+          <button mat-flat-button color="primary" [disabled]="enCours" (click)="decisionGroupee('valider')"><mat-icon>done_all</mat-icon> Valider la sélection</button>
+          <button mat-stroked-button color="warn" [disabled]="enCours" (click)="decisionGroupee('rejeter')"><mat-icon>close</mat-icon> Rejeter la sélection</button>
+          <button mat-button (click)="selection.clear()">Désélectionner</button>
+        </div>
+      }
 
-          <div class="actions">
-            <mat-form-field appearance="outline" class="reform">
-              <mat-label>Reformulation (optionnelle)</mat-label>
-              <input matInput [(ngModel)]="reformulation[k(o)]" [name]="'ref' + k(o)" />
-            </mat-form-field>
-            <button mat-raised-button color="primary" (click)="valider(o)"><mat-icon>check</mat-icon> Valider</button>
-            @if (!rejetOuvert[k(o)]) {
-              <button mat-stroked-button color="warn" (click)="rejetOuvert[k(o)] = true"><mat-icon>close</mat-icon> Rejeter</button>
-            }
-          </div>
-
-          @if (rejetOuvert[k(o)]) {
-            <div class="rejet">
-              <mat-form-field appearance="outline" class="motif">
-                <mat-label>Motif de rejet</mat-label>
-                <input matInput [(ngModel)]="motifRejet[k(o)]" [name]="'mot' + k(o)" />
-              </mat-form-field>
-              <button mat-raised-button color="warn" (click)="rejeter(o)">Confirmer le rejet</button>
-              <button mat-button (click)="rejetOuvert[k(o)] = false">Annuler</button>
-            </div>
-          }
-        </mat-card-content>
-      </mat-card>
-    }
-  }
-</mat-card-content></mat-card>
+      @if (chargement && !options.length) { <app-chargement /> }
+      @else if (options.length === 0) { <p class="vide"><mat-icon>task_alt</mat-icon><br />Aucune option en attente de validation.</p> }
+      @else if (pag.length === 0) { <p class="vide">Aucune option ne correspond aux filtres.</p> }
+      @else {
+        <p class="compteur">{{ pag.length }} option{{ pag.length > 1 ? 's' : '' }}{{ pag.length !== options.length ? ' sur ' + options.length : '' }}</p>
+        <div class="table-cadre">
+          <table mat-table [dataSource]="pag.page" class="table">
+            <ng-container matColumnDef="select">
+              <th mat-header-cell *matHeaderCellDef class="col-select">
+                <mat-checkbox [checked]="toutesFiltreesCochees" [indeterminate]="quelquesCochees" (change)="basculerTout($event.checked)"
+                              matTooltip="Tout sélectionner (lignes filtrées)"></mat-checkbox>
+              </th>
+              <td mat-cell *matCellDef="let o" class="col-select"><mat-checkbox [checked]="selection.has(k(o))" (change)="basculer(o, $event.checked)"></mat-checkbox></td>
+            </ng-container>
+            <ng-container matColumnDef="source">
+              <th mat-header-cell *matHeaderCellDef>Source</th>
+              <td mat-cell *matCellDef="let o"><span class="src" [class.co]="o.source === 'COACHING'">{{ o.source === 'BI' ? 'BI' : 'Coaching' }}</span></td>
+            </ng-container>
+            <ng-container matColumnDef="option">
+              <th mat-header-cell *matHeaderCellDef>Option proposée</th>
+              <td mat-cell *matCellDef="let o"><span class="fort">{{ o.libelle }}</span>
+                <div class="discret">Niveau {{ o.niveau }}@if (o.parent_libelle) { · sous « {{ o.parent_libelle }} » }</div></td>
+            </ng-container>
+            <ng-container matColumnDef="contexte">
+              <th mat-header-cell *matHeaderCellDef>Arborescence</th>
+              <td mat-cell *matCellDef="let o">{{ o.contexte }}</td>
+            </ng-container>
+            <ng-container matColumnDef="evaluation">
+              <th mat-header-cell *matHeaderCellDef>Évaluation</th>
+              <td mat-cell *matCellDef="let o"><a class="lien" (click)="ouvrirEvaluation(o, $event)">#{{ o.id_evaluation }}</a>
+                @if (o.agent) { <div class="discret">{{ o.agent }}{{ o.date_appel ? ' · ' + (o.date_appel | date: 'dd/MM/yyyy') : '' }}</div> }</td>
+            </ng-container>
+            <ng-container matColumnDef="proposeur">
+              <th mat-header-cell *matHeaderCellDef>Proposé par</th>
+              <td mat-cell *matCellDef="let o">{{ o.proposeur || '—' }}<div class="discret">le {{ o.dateCreation | date: 'dd/MM/yyyy à HH:mm' }}</div></td>
+            </ng-container>
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef class="col-actions">Décision</th>
+              <td mat-cell *matCellDef="let o" class="col-actions">
+                <button mat-icon-button class="ok" matTooltip="Valider (reformulation possible)" [disabled]="enCours" (click)="decision(o, 'valider')"><mat-icon>check_circle</mat-icon></button>
+                <button mat-icon-button color="warn" matTooltip="Rejeter (motif obligatoire)" [disabled]="enCours" (click)="decision(o, 'rejeter')"><mat-icon>cancel</mat-icon></button>
+              </td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
+            <tr mat-row *matRowDef="let row; columns: colonnes" [class.coche]="selection.has(k(row))"></tr>
+          </table>
+        </div>
+        <mat-paginator [length]="pag.length" [pageIndex]="pag.pageIndex" [pageSize]="pag.pageSize"
+                       [pageSizeOptions]="pag.tailles" showFirstLastButtons (page)="pag.changer($event)" />
+      }
+    </mat-card-content>
+  </mat-card>
 </div>

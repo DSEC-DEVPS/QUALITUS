@@ -174,13 +174,16 @@ const setResolution = async (req, res) => {
     return res.status(400).json({ message: "Résolution invalide (OUI ou NON)." });
   }
   try {
-    const [[e]] = await db.query(`SELECT statut FROM b_evaluation WHERE id=?`, [id]);
+    const [[e]] = await db.query(`SELECT statut, resolution, synthese FROM b_evaluation WHERE id=?`, [id]);
     if (!e) return res.status(404).json({ message: "Évaluation introuvable." });
     if (e.statut === "TERMINE") return res.status(409).json({ message: "Évaluation terminée : non modifiable." });
-    await db.query(
-      `UPDATE b_evaluation SET resolution=?, synthese=? WHERE id=?`,
-      [resolution || null, synthese !== undefined ? synthese : null, id]
-    );
+    // out114 : rien n'est réécrit si rien ne change (espaces de début / fin ignorés).
+    const nouvRes = resolution || null;
+    const nouvSynth = synthese !== undefined ? (String(synthese ?? "").trim() || null) : null;
+    if (nouvRes === (e.resolution || null) && nouvSynth === (String(e.synthese ?? "").trim() || null)) {
+      return res.status(200).json({ message: "Aucune modification.", inchange: true });
+    }
+    await db.query(`UPDATE b_evaluation SET resolution=?, synthese=? WHERE id=?`, [nouvRes, nouvSynth, id]);
     return res.status(200).json({ message: "Enregistré." });
   } catch (err) { console.log(err); return res.status(500).json({ message: "Erreur." }); }
 };

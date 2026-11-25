@@ -6,8 +6,9 @@
   </div>
   <div class="col-md-1 justify-content-start text-start">
     <form [formGroup]="dateForm">
-      <mat-form-field appearance="outline" class="custom-datepicker">
-        <input matInput [matDatepicker]="picker" formControlName="selectedDate" />
+      <mat-form-field appearance="outline" class="custom-datepicker" floatLabel="always">
+        <mat-label>Jour des indicateurs</mat-label>
+        <input matInput [matDatepicker]="picker" formControlName="selectedDate" placeholder="jj/mm/aaaa" />
         <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
         <mat-datepicker #picker></mat-datepicker>
       </mat-form-field>
@@ -16,34 +17,34 @@
   <div class="row justify-content-between">
     <div class="col-md-2 card">
       <div class="numbers text-center">
-        <p class="card-category">Nombre de fiches lues</p>
+        <p class="card-category">Fiches lues ce jour</p>
         <h4 class="card-title">@if (chargementStats) { <mat-spinner class="spinner-carte" [diameter]="22" /> } @else { {{ nb_fiche_non_lu }} }</h4>
       </div>
     </div>
     <div class="col-md-2 card">
       <div class="numbers text-center">
-        <p class="card-category">nombre de sondage éffectués</p>
+        <p class="card-category">Sondages effectués ce jour</p>
         <h4 class="card-title">@if (chargementStats) { <mat-spinner class="spinner-carte" [diameter]="22" /> } @else { {{ nb_sondage_encours }} }</h4>
       </div>
     </div>
     <div class="col-md-2 card">
       <div class="numbers text-center">
-        <p class="card-category">nombre de quiz en échecs</p>
-        <h4 class="card-title">Par Période: @if (chargementStats) { <mat-spinner class="spinner-carte" [diameter]="18" /> } @else { {{ nb_quiz_echecs }} }</h4>
-        <h4 class="card-title">Total: @if (chargementStats) { <mat-spinner class="spinner-carte" [diameter]="18" /> } @else { {{ nb_quiz_total_echecs }} }</h4>
+        <p class="card-category">Quiz de fiche en échec</p>
+        <h4 class="card-title">Ce jour : @if (chargementStats) { <mat-spinner class="spinner-carte" [diameter]="18" /> } @else { {{ nb_quiz_echecs }} }</h4>
+        <h4 class="card-title">Total : @if (chargementStats) { <mat-spinner class="spinner-carte" [diameter]="18" /> } @else { {{ nb_quiz_total_echecs }} }</h4>
       </div>
     </div>
 
     <div class="col-md-2 card">
       <div class="numbers text-center">
-        <p class="card-category">nombre de quiz en retest</p>
-        <h4 class="card-title">Par Période: @if (chargementStats) { <mat-spinner class="spinner-carte" [diameter]="18" /> } @else { {{ nb_quiz_en_retest }} }</h4>
-        <h4 class="card-title">Total: @if (chargementStats) { <mat-spinner class="spinner-carte" [diameter]="18" /> } @else { {{ nb_quiz_total_en_retest }} }</h4>
+        <p class="card-category">Quiz de fiche en retest</p>
+        <h4 class="card-title">Ce jour : @if (chargementStats) { <mat-spinner class="spinner-carte" [diameter]="18" /> } @else { {{ nb_quiz_en_retest }} }</h4>
+        <h4 class="card-title">Total : @if (chargementStats) { <mat-spinner class="spinner-carte" [diameter]="18" /> } @else { {{ nb_quiz_total_en_retest }} }</h4>
       </div>
     </div>
     <div class="col-md-2 card">
       <div class="numbers text-center">
-        <p class="card-category">nombre de notification non lues</p>
+        <p class="card-category">Notifications non lues</p>
         <h4 class="card-title">@if (chargementStats) { <mat-spinner class="spinner-carte" [diameter]="22" /> } @else { {{ bn_notification_non_lues }} }</h4>
       </div>
     </div>
@@ -66,36 +67,39 @@
             <div class="col-6">
               <ul class="p-0">
                 <li class="mb-2">
-                  <span class="title">Nom :</span>
-                  <span class="sub_title"> {{ details_utilisateur?.nom | titlecase }}</span>
+                  <span class="title">Login :</span><span class="sub_title login"> {{ details_utilisateur?.nom_utilisateur || '—' }}</span>
                 </li>
                 <li class="mb-2">
-                  <span class="title">Prenom :</span
-                  ><span class="sub_title"> {{ details_utilisateur?.prenom | titlecase }}</span>
+                  <span class="title">Nom :</span><span class="sub_title"> {{ (details_utilisateur?.nom | titlecase) || '—' }}</span>
                 </li>
                 <li class="mb-2">
-                  <span class="title">Telephone :</span
-                  ><span class="sub_title"> {{ details_utilisateur?.telephone }}</span>
+                  <span class="title">Prénom :</span><span class="sub_title"> {{ (details_utilisateur?.prenom | titlecase) || '—' }}</span>
                 </li>
                 <li class="mb-2">
-                  <span class="title">email :</span
-                  ><span class="sub_title"> {{ details_utilisateur?.email }}</span>
+                  <span class="title">Téléphone :</span><span class="sub_title"> {{ (details_utilisateur?.telephone) || '—' }}</span>
+                </li>
+                <li class="mb-2">
+                  <span class="title">E-mail :</span><span class="sub_title"> {{ (details_utilisateur?.email) || '—' }}</span>
                 </li>
               </ul>
             </div>
             <div class="col-6">
               <ul class="p-0">
                 <li class="mb-2">
-                  <span class="title">Fonction :</span
-                  ><span class="sub_title"> {{ details_utilisateur?.Fonction | titlecase }}</span>
+                  <span class="title">Statut :</span><span class="sub_title">
+                    @if (details_utilisateur) {
+                      <span class="statut-agent" [class.inactif]="details_utilisateur.status !== 'ACTIF'">{{ details_utilisateur.status === 'ACTIF' ? 'Actif' : 'Inactif' }}</span>
+                    }
+                  </span>
                 </li>
                 <li class="mb-2">
-                  <span class="title">Site :</span
-                  ><span class="sub_title"> {{ details_utilisateur?.Site | titlecase }}</span>
+                  <span class="title">Fonction :</span><span class="sub_title"> {{ (details_utilisateur?.Fonction | titlecase) || '—' }}</span>
                 </li>
                 <li class="mb-2">
-                  <span class="title">Programme :</span
-                  ><span class="sub_title"> {{ details_utilisateur?.Programme | titlecase }}</span>
+                  <span class="title">Site :</span><span class="sub_title"> {{ (details_utilisateur?.Site | titlecase) || '—' }}</span>
+                </li>
+                <li class="mb-2">
+                  <span class="title">Programme :</span><span class="sub_title"> {{ (details_utilisateur?.Programme | titlecase) || '—' }}</span>
                 </li>
               </ul>
             </div>

@@ -4,6 +4,7 @@ import { ListeEvaluationsComponent } from './consultation/liste-evaluations/list
 import { MesEvaluationsComponent } from './mes-evaluations/mes-evaluations.component';
 import { MesAgentsEvalsComponent } from './supervision/mes-agents-evals.component';
 import { MesCoachingComponent } from './supervision/mes-coaching.component';
+import { SuiviPlansActionsComponent } from './supervision/suivi-plans-actions.component';
 import { RapportPoleComponent } from './rapport/rapport-pole/rapport-pole.component';
 import { AgentPoleDetailComponent } from './rapport/agent-pole-detail/agent-pole-detail.component';
 import { ContreListeComponent } from './contre/contre-liste/contre-liste.component';
@@ -28,6 +29,7 @@ export const routes: Routes = [
   { path: 'mes-evaluations', component: MesEvaluationsComponent, canMatch: [canMatchPermission('evaluation.lire')] },
   { path: 'mes-agents-evaluations', component: MesAgentsEvalsComponent, canMatch: [canMatchPermission('evaluation.coacher')] },
   { path: 'mes-coaching', component: MesCoachingComponent, canMatch: [canMatchPermission('evaluation.coacher')] },
+  { path: 'plans-actions', component: SuiviPlansActionsComponent, canMatch: [canMatchPermission('evaluation.lire')] },
   { path: 'grilles', component: ListeGrillesComponent, canMatch: [canMatchPermission('grille.lire')] },
   { path: 'grilles/editeur/:id', component: EditeurGrilleComponent, canMatch: [canMatchPermission('grille.modifier')] },
   { path: 'creation/unitaire', component: CreerEvaluationCahierComponent, canMatch: [canMatchPermission('evaluation.creer')] },

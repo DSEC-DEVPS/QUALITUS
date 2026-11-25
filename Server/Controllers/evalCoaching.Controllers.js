@@ -217,11 +217,15 @@ const getOptionsEnAttente = async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT o.id, o.niveau, o.libelle, o.id_coaching_origine, o.dateCreation,
-              co.id_evaluation, u.nom AS proposeur_nom, u.prenom AS proposeur_prenom, parent.libelle AS parent_libelle
+              co.id_evaluation, o.propose_par, u.nom AS proposeur_nom, u.prenom AS proposeur_prenom, parent.libelle AS parent_libelle,
+              ag.nom AS agent_nom, ag.prenom AS agent_prenom, ev.date_appel, s.nom AS site
        FROM b_eval_coaching_option o
        JOIN b_eval_coaching co ON o.id_coaching_origine=co.id
        LEFT JOIN b_utilisateur u ON o.propose_par=u.id
        LEFT JOIN b_eval_coaching_option parent ON o.id_parent=parent.id
+       LEFT JOIN b_evaluation ev ON ev.id=co.id_evaluation
+       LEFT JOIN b_utilisateur ag ON ag.id=ev.id_agent
+       LEFT JOIN b_site s ON s.id=ev.id_site
        WHERE o.etat='EN_ATTENTE' ORDER BY o.dateCreation DESC`
     );
     return res.status(200).json(rows);

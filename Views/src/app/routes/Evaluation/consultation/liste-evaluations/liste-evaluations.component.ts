@@ -18,8 +18,8 @@ import { PermissionsService } from '@core/authorization/permissions.service';
 import { CanDirective } from '@core/authorization/can.directive';
 
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatPaginatorModule } from '@angular/material/paginator';
-import { Pagination } from '@shared/utils/pagination';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { PaginationServeur, debutPeriodeParDefaut } from '@shared/utils/pagination-serveur';
 import { ConfirmationService } from '@shared/services/confirmation.service';
 import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 @Component({
@@ -39,14 +39,15 @@ export class ListeEvaluationsComponent implements OnInit {
   private readonly toastr = inject(ToastrService);
   private readonly perms = inject(PermissionsService);
 
-  readonly pag = new Pagination<EvaluationListe>();
-  get evaluations(): EvaluationListe[] { return this.pag.donnees; }
-  set evaluations(v: EvaluationListe[]) { this.pag.definir(v); }
+  /** Pagination côté serveur : seule la page affichée est chargée. */
+  readonly pag = new PaginationServeur<EvaluationListe>();
+  get evaluations(): EvaluationListe[] { return this.pag.page; }
   chargement = false;
   colonnes = ['select', 'type', 'agent', 'grille', 'date_appel', 'type_evaluation', 'statut', 'conclusion', 'actions'];
 
   contextes: RefItem[] = [];
-  filtres: FiltresEvaluation = {};
+  /** Par défaut : les 3 derniers mois (modifiable dans les filtres). */
+  filtres: FiltresEvaluation = { date_debut: debutPeriodeParDefaut() };
   afficherFiltres = false;
   selection = new Set<number>();
 
@@ -55,19 +56,29 @@ export class ListeEvaluationsComponent implements OnInit {
     this.service.getContextes().subscribe({ next: c => (this.contextes = c) });
   }
 
+  /** Nouveau filtre : sélection vidée, retour à la première page. */
+  filtrer(): void { this.selection.clear(); this.pag.premiere(); this.charger(); }
+
+  /** Charge la page courante ; la sélection est conservée d'une page à l'autre. */
   charger(): void {
     this.chargement = true;
-    this.selection.clear();
     const f: any = { ...this.filtres, portee: 'creees' };
     if (this.filtres.date_debut) f.date_debut = toYMD(this.filtres.date_debut);
     if (this.filtres.date_fin) f.date_fin = toYMD(this.filtres.date_fin);
-    this.service.getEvaluations(f).subscribe({
-      next: e => { this.evaluations = e; this.chargement = false; },
+    this.service.getEvaluationsPage(f, this.pag.params()).subscribe({
+      next: r => {
+        this.pag.recevoir(r);
+        // la dernière page a été vidée (suppression, désactivation) : page précédente
+        if (this.pag.pageVideApresRetrait) { this.pag.pageIndex--; this.charger(); return; }
+        this.chargement = false;
+      },
       error: () => { this.toastr.error('Impossible de charger les évaluations.'); this.chargement = false; },
     });
   }
 
-  reinitialiser(): void { this.filtres = {}; this.charger(); }
+  changerPage(e: PageEvent): void { this.pag.changer(e); this.charger(); }
+
+  reinitialiser(): void { this.filtres = { date_debut: debutPeriodeParDefaut() }; this.filtrer(); }
 
   ouvrir(e: EvaluationListe): void {
     this.router.navigate(['/mon-espace/evaluation/executer', e.id]);
@@ -95,7 +106,7 @@ export class ListeEvaluationsComponent implements OnInit {
   setActif(e: EvaluationListe, actif: boolean, ev: Event): void {
     ev.stopPropagation();
     this.service.setActif(e.id, actif).subscribe({
-      next: () => { this.toastr.success(actif ? 'Réactivée.' : 'Désactivée.'); this.charger(); },
+      next: () => { this.toastr.success(actif ? 'Réactivée.' : 'Désactivée.'); this.selection.delete(e.id); this.charger(); },
       error: err => this.toastr.error(err?.error?.message || 'Erreur.'),
     });
   }
@@ -107,7 +118,7 @@ export class ListeEvaluationsComponent implements OnInit {
       : 'Supprimer définitivement cette évaluation ? L\'agent évalué et son superviseur en seront informés.';
     if (!(await this.confirmation.confirmer({ titre: 'Supprimer l\'évaluation', message: texte, type: 'danger' }))) return;
     this.service.deleteEvaluation(e.id).subscribe({
-      next: () => { this.toastr.success('Supprimée.'); this.charger(); },
+      next: () => { this.toastr.success('Supprimée.'); this.selection.delete(e.id); this.charger(); },
       error: err => this.toastr.error(err?.error?.message || 'Suppression impossible.'),
     });
   }
@@ -115,7 +126,7 @@ export class ListeEvaluationsComponent implements OnInit {
   desactiverSelection(): void {
     if (this.selection.size === 0) return;
     this.service.desactiverMasse([...this.selection]).subscribe({
-      next: (r: any) => { this.toastr.success(r.message || 'Désactivées.'); this.charger(); },
+      next: (r: any) => { this.toastr.success(r.message || 'Désactivées.'); this.selection.clear(); this.charger(); },
       error: () => this.toastr.error('Erreur.'),
     });
   }

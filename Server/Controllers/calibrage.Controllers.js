@@ -5,6 +5,7 @@
 // Réutilise les grilles Actives du domaine Évaluation.
 // =====================================================================
 const db = require("../config/db");
+const { lirePage, decouper, correspondRecherche } = require("../utils/paginationMemoire");
 const { emit } = require("../utils/notify");
 const { permissionsEffectives } = require("../middlewares/permission");
 const { porteeSite } = require("../utils/siteVisionGlobale");
@@ -105,7 +106,9 @@ const getSessions = async (req, res) => {
   if (id_site) { where.push("s.id_site = ?"); args.push(id_site); }
   if (date_debut) { where.push("s.date_calibrage >= ?"); args.push(date_debut); }
   if (date_fin) { where.push("s.date_calibrage <= ?"); args.push(date_fin); }
-  if (statut) { where.push("s.statut = ?"); args.push(statut); }
+  // NON_FIGEE (défaut de l'écran pour l'organisateur, out113) : toutes sauf les sessions figées
+  if (statut === "NON_FIGEE") where.push("s.statut <> 'CLOTUREE'");
+  else if (statut) { where.push("s.statut = ?"); args.push(statut); }
   try {
     const [rows] = await db.query(
       `SELECT s.id, s.nom, s.date_calibrage, s.statut, s.visibilite, s.id_jauge, s.nombre_transactions,
@@ -123,7 +126,13 @@ const getSessions = async (req, res) => {
         ORDER BY s.date_calibrage DESC, s.id DESC`,
       [uid, ...args]
     );
-    return res.status(200).json(rows);
+    // out113 : ?page=&taille= -> recherche appliquée ici comme à l'écran (nom, grille, site,
+    // libellé du statut, jauge), puis une page seulement.
+    const pg = lirePage(req.query);
+    if (!pg) return res.status(200).json(rows);
+    const LIBELLES = { BROUILLON: "Brouillon", OUVERTE: "Ouverte", RESULTATS_EN_REVISION: "Résultats en révision", VALIDEE: "Validée", CLOTUREE: "Figée" };
+    const l = rows.filter((s) => correspondRecherche(req.query.q, [s.nom, s.grille, s.site, LIBELLES[s.statut] || s.statut, s.jauge]));
+    return res.status(200).json(decouper(l, pg));
   } catch (e) { console.log(e); return res.status(500).json({ message: "Erreur lors du chargement." }); }
 };
 

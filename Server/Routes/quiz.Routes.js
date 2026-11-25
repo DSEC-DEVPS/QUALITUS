@@ -15,6 +15,7 @@ const {
   getFichesRecentes,
   getQuizzesDisponibles,
   getQuizForTaking,
+  getQuizApercu,
   getQuizByPin,
   soumettreQuiz,
   getMesScores,
@@ -36,6 +37,8 @@ const {
   traiterDemandeIp,
   getQuizPublics,
   getQuizEnCours,
+  getMesQuiz,
+  refuserRetest,
   getSourcesQuestions,
   getQuestionsSource,
   reprendreQuestions,
@@ -80,7 +83,12 @@ router.get("/quiz/participer/disponibles", auth, permission("QUIZ","PARTICIPER")
 router.get("/quiz/participer/publics", auth, permission("QUIZ","PARTICIPER"), getQuizPublics);
 // Quiz en cours (privés et publics) : reprise sans code PIN tant qu'il reste du temps
 router.get("/quiz/participer/en-cours", auth, permission("QUIZ","PARTICIPER"), getQuizEnCours);
+// Écran Participer : quiz disponibles (publics + privés déverrouillés) et quiz terminés
+router.get("/quiz/participer/mes-quiz", auth, permission("QUIZ","PARTICIPER"), getMesQuiz);
 router.get("/quiz/pin/:pin", auth, permission("QUIZ","PARTICIPER"), getQuizByPin);
+// Écran d'accueil (sans questions, sans démarrage du chronomètre)
+router.get("/quiz/participer/:id/apercu", auth, permission("QUIZ","PARTICIPER"), getQuizApercu);
+// Démarrage (ou reprise) : questions + heure de début
 router.get("/quiz/participer/:id", auth, permission("QUIZ","PARTICIPER"), getQuizForTaking);
 router.post("/quiz/participer/:id/soumettre", auth, permission("QUIZ","PARTICIPER"), soumettreQuiz);
 router.get("/quiz/historique/mes-scores", auth, permission("QUIZ","PARTICIPER"), getMesScores);
@@ -95,6 +103,8 @@ router.get("/quiz/badges/mes", auth, permission("QUIZ","PARTICIPER"), getMesBadg
 /** Retest : site propriétaire (tous les participants) ou utilisateur autorisé (participants de son site) */
 router.get("/quiz/retest/echecs", auth, permission("QUIZ","LIRE"), getRetestEchecs);
 router.post("/quiz/retest/autoriser", auth, permission("QUIZ","MODIFIER"), autoriserRetest);
+// Classer un échec (ou tous les échecs d'un quiz) « retest non autorisé »
+router.post("/quiz/retest/refuser", auth, permission("QUIZ","MODIFIER"), refuserRetest);
 
 /** Phase 3 : rapports de difficulte */
 router.get("/quiz/rapports/difficulte", auth, permission("QUIZ","LIRE"), getRapportDifficulte);

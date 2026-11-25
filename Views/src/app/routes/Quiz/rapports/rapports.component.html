@@ -1,89 +1,192 @@
 <div class="container-fluid p-16">
-  <mat-card>
+  <mat-card class="rp-carte">
     <mat-card-content>
-      <div class="d-flex align-items-center justify-content-between flex-wrap m-b-8">
+      <!-- Titre + période + export -->
+      <div class="rp-entete">
         <div>
-          <h5 class="m-0">Rapports de difficulte</h5>
-          <p class="text-muted m-0">Quiz tries du plus difficile au plus facile (taux de reussite croissant).</p>
+          <h5 class="m-0">Rapports de difficulté</h5>
+          <p class="rp-sous-titre">Quiz triés du plus difficile au plus facile (taux de réussite croissant).</p>
         </div>
-        <div class="d-flex align-items-center flex-wrap" style="gap: 12px">
+        <div class="rp-actions">
           <app-filtre-periode [valeur]="periode" (periodeChange)="changerPeriode($event)" />
-        <button mat-flat-button color="primary" (click)="exporter()">
-          <mat-icon>download</mat-icon> Exporter Excel
-        </button>
+          <button mat-flat-button color="primary" (click)="exporter()">
+            <mat-icon>download</mat-icon> Exporter Excel
+          </button>
         </div>
       </div>
-      <p class="text-muted m-b-8 periode-info">
+      <p class="rp-periode">
         <mat-icon inline>event</mat-icon> Tentatives prises en compte : {{ libellePeriode }}
         @if (aDesLimites) {
-          — <mat-icon inline>info</mat-icon> pour les quiz « Limité à votre site », seuls les agents de votre site sont comptés.
+          · <mat-icon inline>info</mat-icon> pour les quiz « Limité à votre site », seuls les agents de votre site sont comptés.
         }
       </p>
 
       @if (!charge) {
         <app-chargement />
-      } @else if (!rapport.length) {
-        <p class="text-muted text-center p-16">
-          {{ periode.du || periode.au ? 'Aucun quiz n\'a de tentative sur cette période.' : 'Aucune donnee de quiz.' }}
+      } @else if (!nbQuiz) {
+        <p class="rp-vide">
+          {{ periode.du || periode.au ? "Aucun quiz n'a de tentative sur cette période." : 'Aucune donnée de quiz.' }}
         </p>
       } @else {
-        @for (r of rapportPage; track r.id) {
-          <mat-expansion-panel class="panneau-quiz" (opened)="ouvrir(r)" (closed)="fermer(r)" [expanded]="ouverts.has(r.id)">
-            <mat-expansion-panel-header class="entete-quiz" collapsedHeight="68px" expandedHeight="68px">
-              <mat-panel-title>
-                <strong>{{ r.titre }}</strong>
-                @if (r.limite_site === 1) {
-                  <span class="chip-site">Limité à votre site</span>
-                }
-              </mat-panel-title>
-              <mat-panel-description>
-                <span class="taux" [class]="classeTaux(r.taux_reussite)">
-                  {{ r.taux_reussite == null ? 'Aucune tentative' : 'Reussite ' + r.taux_reussite + '%' }}
-                </span>
-              </mat-panel-description>
-            </mat-expansion-panel-header>
+        <!-- Synthèse -->
+        <div class="rp-synthese">
+          <div class="rp-kpi">
+            <span class="rp-kpi-valeur">{{ nbAvecTentatives }}<small>/{{ nbQuiz }}</small></span>
+            <span class="rp-kpi-libelle">quiz avec tentative{{ nbAvecTentatives > 1 ? 's' : '' }}</span>
+          </div>
+          <div class="rp-kpi">
+            <span class="rp-kpi-valeur">{{ totalTentatives }}</span>
+            <span class="rp-kpi-libelle">tentative{{ totalTentatives > 1 ? 's' : '' }}</span>
+          </div>
+          <div class="rp-kpi">
+            <span class="rp-kpi-valeur">{{ totalReussites }}</span>
+            <span class="rp-kpi-libelle">réussite{{ totalReussites > 1 ? 's' : '' }}</span>
+          </div>
+          <div class="rp-kpi">
+            <span class="rp-kpi-valeur" [class]="'rp-kpi-valeur ' + classeTaux(tauxGlobal)">{{ pct(tauxGlobal) }}</span>
+            <span class="rp-kpi-libelle">taux de réussite global</span>
+          </div>
+          <div class="rp-kpi">
+            <span class="rp-kpi-valeur">{{ pct(scoreGlobal) }}</span>
+            <span class="rp-kpi-libelle">score moyen</span>
+          </div>
+          <div class="rp-kpi" matTooltip="Participants désignés ayant passé le quiz au moins une fois (état actuel, hors période)">
+            <span class="rp-kpi-valeur">{{ pct(tauxParticipationGlobal) }}</span>
+            <span class="rp-kpi-libelle">participation · {{ totalNonPasses }} non passé{{ totalNonPasses > 1 ? 's' : '' }}</span>
+          </div>
+        </div>
 
-            <div class="stats-ligne">
-              <span>Tentatives : <strong>{{ r.nb_tentatives }}</strong></span>
-              <span>Reussites : <strong>{{ r.nb_reussis }}</strong></span>
-              <span>Score moyen : <strong>{{ r.score_moyen ?? '—' }}%</strong></span>
-              @if (r.fiche_titre) {
-                <span>Contenu : <strong>{{ r.fiche_titre }}</strong></span>
-              }
-            </div>
-
-            <h6 class="m-t-8">Detail par question (taux d'echec)</h6>
-            @if (detailParQuiz[r.id]) {
-              @if (detailParQuiz[r.id].length) {
-                <table class="q-table">
-                  <thead>
-                    <tr><th>Question</th><th>Reponses</th><th>Echecs</th><th>Taux d'echec</th></tr>
-                  </thead>
-                  <tbody>
-                    @for (q of detailParQuiz[r.id]; track q.id) {
-                      <tr>
-                        <td>{{ q.libelle }}</td>
-                        <td>{{ q.nb_reponses }}</td>
-                        <td>{{ q.nb_echecs }}</td>
-                        <td>
-                          <span class="taux" [class]="classeTaux(100 - (q.taux_echec ?? 0))">
-                            {{ q.taux_echec == null ? '—' : q.taux_echec + '%' }}
-                          </span>
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              } @else {
-                <p class="text-muted">Aucune question.</p>
-              }
-            } @else {
-              <mat-progress-bar mode="indeterminate" />
+        <!-- Filtres -->
+        <div class="rp-filtres">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="rp-recherche">
+            <mat-icon matPrefix>search</mat-icon>
+            <mat-label>Rechercher un quiz ou une fiche</mat-label>
+            <input matInput [(ngModel)]="recherche" (ngModelChange)="filtreChange()" />
+            @if (recherche) {
+              <button matSuffix mat-icon-button aria-label="Effacer" (click)="recherche = ''; filtreChange()">
+                <mat-icon>close</mat-icon>
+              </button>
             }
-          </mat-expansion-panel>
-        }
-        <mat-paginator [length]="rapport.length" [pageIndex]="pageIndex" [pageSize]="pageSize"
-                       [pageSizeOptions]="[5, 10, 25]" showFirstLastButtons (page)="changerPage($event)" />
+          </mat-form-field>
+          <mat-slide-toggle [(ngModel)]="masquerSansTentative" (ngModelChange)="filtreChange()">
+            Masquer les quiz sans tentative
+          </mat-slide-toggle>
+        </div>
+
+        <!-- Tableau -->
+        <div class="rp-table-wrap">
+          <table class="rp-table">
+            <thead>
+              <tr>
+                <th class="col-rang" matTooltip="Rang de difficulté (1 = le plus difficile)">#</th>
+                <th>Quiz</th>
+                <th class="num">Tentatives</th>
+                <th class="num">Réussites</th>
+                <th class="num">Score moyen</th>
+                <th class="col-taux">Taux de réussite</th>
+                <th class="num col-participation" matTooltip="Participants ayant passé le quiz / désignés (état actuel, hors période)">Participation</th>
+                <th class="col-chevron"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of page; track r.id) {
+                <tr class="rp-ligne" [class.ouverte]="ouverts.has(r.id)" (click)="basculer(r)"
+                    tabindex="0" (keydown.enter)="basculer(r)" [attr.aria-expanded]="ouverts.has(r.id)">
+                  <td class="col-rang">{{ r.rang ?? '—' }}</td>
+                  <td class="col-quiz">
+                    <div class="rp-titre">
+                      {{ r.titre }}
+                      @if (r.limite_site === 1) {
+                        <span class="chip-site">Limité à votre site</span>
+                      }
+                      @if (r.statut === 'INACTIF' || r.Etat === 'CLOTURER') {
+                        <span class="chip-etat">{{ r.statut === 'INACTIF' ? 'Inactif' : 'Clôturé' }}</span>
+                      }
+                    </div>
+                    @if (r.fiches_liees?.length) {
+                      <div class="rp-fiches">
+                        @for (f of r.fiches_liees; track f.id) {
+                          @if (f.ETAT === 'ACTIF') {
+                            <a class="rp-fiche" [routerLink]="['/lecture-fiche', f.id]" (click)="$event.stopPropagation()"
+                               matTooltip="Ouvrir la fiche">
+                              <mat-icon>description</mat-icon><span>{{ f.titre }}</span>
+                            </a>
+                          } @else {
+                            <span class="rp-fiche rp-fiche--archivee" matTooltip="Fiche archivée">
+                              <mat-icon>inventory_2</mat-icon><span>{{ f.titre }}</span>
+                            </span>
+                          }
+                        }
+                      </div>
+                    }
+                  </td>
+                  <td class="num">{{ r.nb_tentatives }}</td>
+                  <td class="num">{{ r.nb_reussis }}</td>
+                  <td class="num">{{ pct(r.score_moyen) }}</td>
+                  <td class="col-taux">
+                    @if (r.taux_reussite == null) {
+                      <span class="rp-sans">Aucune tentative</span>
+                    } @else {
+                      <div class="rp-barre-ligne">
+                        <div class="rp-barre"><span [class]="classeTaux(r.taux_reussite)" [style.width.%]="r.taux_reussite"></span></div>
+                        <span class="rp-taux" [class]="'rp-taux ' + classeTaux(r.taux_reussite)">{{ pct(r.taux_reussite) }}</span>
+                      </div>
+                    }
+                  </td>
+                  <td class="num col-participation">
+                    @if (r.nb_designes) {
+                      <span class="rp-part">{{ r.nb_passes }}/{{ r.nb_designes }}</span>
+                      @if (r.nb_non_passes) {
+                        <small class="rp-non-passes">{{ r.nb_non_passes }} non passé{{ r.nb_non_passes > 1 ? 's' : '' }}</small>
+                      }
+                    } @else {
+                      <span class="rp-sans">—</span>
+                    }
+                  </td>
+                  <td class="col-chevron">
+                    <mat-icon>{{ ouverts.has(r.id) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                  </td>
+                </tr>
+
+                @if (ouverts.has(r.id)) {
+                  <tr class="rp-detail">
+                    <td colspan="8">
+                      <div class="rp-detail-titre">
+                        <mat-icon>bar_chart</mat-icon> Détail par question · de la plus ratée à la moins ratée
+                      </div>
+                      @if (detailParQuiz[r.id]) {
+                        @if (detailParQuiz[r.id].length) {
+                          <div class="rp-questions">
+                            @for (q of detailParQuiz[r.id]; track q.id) {
+                              <div class="rp-question">
+                                <span class="rp-num">Q{{ q.numero }}</span>
+                                <span class="rp-libelle">{{ q.libelle }}</span>
+                                <span class="rp-compte">{{ q.nb_echecs }} échec{{ q.nb_echecs > 1 ? 's' : '' }} / {{ q.nb_reponses }}</span>
+                                <div class="rp-barre-ligne rp-barre-echec">
+                                  <div class="rp-barre"><span [class]="classeEchec(q.taux_echec)" [style.width.%]="q.taux_echec ?? 0"></span></div>
+                                  <span class="rp-taux" [class]="'rp-taux ' + classeEchec(q.taux_echec)">{{ pct(q.taux_echec) }}</span>
+                                </div>
+                              </div>
+                            }
+                          </div>
+                          <p class="rp-legende">Taux d'échec : part des réponses fausses à la question sur la période.</p>
+                        } @else {
+                          <p class="rp-sans">Aucune question.</p>
+                        }
+                      } @else {
+                        <mat-progress-bar mode="indeterminate" />
+                      }
+                    </td>
+                  </tr>
+                }
+              } @empty {
+                <tr><td colspan="8" class="rp-vide">Aucun quiz ne correspond à la recherche.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <mat-paginator [length]="totalFiltres" [pageIndex]="pageIndex" [pageSize]="pageSize"
+                       [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons (page)="changerPage($event)" />
       }
     </mat-card-content>
   </mat-card>

@@ -5,11 +5,9 @@ const multer = require("./../middlewares/multer-config");
 const router = express.Router();
 const {
   getAllUtilisateur,
-  addUtilisateur,
   deleteUtilisateur,
   getOneUtilisateur,
   getMe,
-  sign_in,
   login,
   getAllSla,
   getSlaById,
@@ -70,7 +68,6 @@ const {
   addFonction,
   deleteFonction,
   getAllAgentBySuperviseur,
-  affecte_agent_to_superviseur,
   getDetailsUtilisateur,
   getAllArchiveByGestionnaire,
   restore_archive,
@@ -124,12 +121,12 @@ const {
   redOneNotifcation,
   createNotification,
 } = require("../Controllers/baseco.Controllers");
+const { creerUtilisateur, getReferentielsCreation, verifierImport, creerImport } = require("../Controllers/creationCompte.Controllers");
 
 // routes object
 
 // routes pour Authentification
 router.get("/user_info", auth, getMe);
-router.post("/sign_in", sign_in);
 router.post("/login", login);
 /*** fin de  routes pour Authentification  */
 
@@ -139,7 +136,12 @@ router.get("/utilisateur/all", auth, permission("UTILISATEUR","LIRE"), getAllUti
 router.get("/utilisateur/:id", auth, permission("UTILISATEUR","LIRE"), getOneUtilisateur);
 // utilisateur.lire, ou compte.gerer (« Détails » de Gérer les comptes, limité aux comptes du site)
 router.get("/utilisateur/details/:id", auth, permission(["utilisateur.lire","compte.gerer"]), getDetailsUtilisateur);
-router.post("/utilisateur/addUser", auth, permission("UTILISATEUR","CREER"), addUtilisateur);
+// Création de compte (l'ancienne route publique POST /sign_in est supprimée) : utilisateur.creer + périmètre de site, contrôlés dans le contrôleur.
+router.post("/utilisateur/addUser", auth, permission("UTILISATEUR","CREER"), creerUtilisateur);
+router.get("/utilisateur-creation/referentiels", auth, permission("UTILISATEUR","CREER"), getReferentielsCreation);
+// Import Excel de comptes (500 lignes au plus) : vérification puis création des lignes valides.
+router.post("/utilisateur-import/verifier", auth, permission("UTILISATEUR","CREER"), verifierImport);
+router.post("/utilisateur-import/creer", auth, permission("UTILISATEUR","CREER"), creerImport);
 router.delete("/utilisateur/delete/:id", auth, permission("UTILISATEUR","SUPPRIMER"), deleteUtilisateur);
 router.put("/update_utilisateur/:id", auth, permission("UTILISATEUR","MODIFIER"), update_utilisateur);
 router.put("/utilisateur/:id/eval-grille", auth, permission("UTILISATEUR","MODIFIER"), setEvalGrilleUtilisateur);
@@ -167,6 +169,7 @@ router.delete("/sous_categorie/delete/:id", auth, deleteSousCategorie);
 router.get("/categorie/all", auth, getAllCategorie);
 router.get(
   "/categorie_and_sous_categorie/all",
+  auth,
   getAllCategorieAndSousCategorie
 );
 router.get("/categorie_by_id/:id", auth, getOneCatgorie);
@@ -282,7 +285,8 @@ router.post(
 /** fin de routes pour les Grille */
 /** Routes pour les R_SUPERVISEUR_AGENT */
 router.get("/agent_by_superviseur/:id", auth, getAllAgentBySuperviseur);
-router.post("/agent_by_superviseur/add", auth, affecte_agent_to_superviseur);
+// (out123) POST /agent_by_superviseur/add supprimée : sans contrôle de droits ni de site,
+// et inutilisée. Rattachements : PUT /assigne_agent (Assignation) et Gérer les comptes.
 /** fin de routes pour les R_SUPERVISEUR_AGENT */
 /**Routes pour les Archive */
 router.get(
@@ -323,7 +327,7 @@ router.post("/export_ma_voix_compte", auth, export_ma_voix_compte);
 router.post("/reponse_utilite/:id", auth, reponse_utilite);
 router.post("/reponse_exactitude/:id", auth, reponse_exactitude);
 router.get("/export_dashboard/all", auth, permission("REPORTING","LIRE"), getAllDashboard);
-router.get("/export_statistique_par_site", getStatistique_par_site);
+router.get("/export_statistique_par_site", auth, getStatistique_par_site);
 router.get("/export_dashboard_amin/all", auth, permission("REPORTING","LIRE"), getAllDashboard_admin);
 /** fin d routes pour utilité et exactitude */
 router.get("/brouillons_controle", auth, permission("CHARGEMENT","VERIFIER"), getBrouillonsControle);

@@ -1,0 +1,75 @@
+QUALITUS PRÉ-PROD : MODE D'EMPLOI
+=================================
+
+But : faire tourner la version actuelle à côté de la prod, sur la même
+machine, en partant d'une base dont la STRUCTURE EST CELLE DE LA PROD
+(relevé mysqldump --no-data du 24/11/2026), puis appliquer les migrations
+21 à 58 exactement comme on le fera en prod.
+
+Prod relevée : MySQL 8.4.9, migrations 05 à 20 présentes, 21 et suivantes
+absentes, tables b_qz_participant et b_qz_autorise absentes (la migration 25
+les crée). La base de pré-prod ne contient aucune donnée de production :
+seulement les données de référence (rôles, permissions, référentiels,
+compte administrateur).
+
+                 prod    pré-prod
+  front          3333 -> 3334    http://<serveur>:3334
+  API            3000 -> 3001
+  MySQL          3308 -> 3309
+  Adminer        8000 -> 8001
+
+Tout ce qui est créé s'appelle qualitus-preprod-* (conteneurs) et
+qualitus-preprod_* (volumes, réseau) : la prod (qualitus-*) n'est pas touchée.
+
+0. VÉRIFIER QUE LES PORTS SONT LIBRES
+   ss -ltnp | grep -E ':(3334|3001|3309|8001) '
+   (aucune ligne = libres ; sinon changer le port dans docker-compose.preprod.yml)
+
+1. CONSTRUIRE LES IMAGES (poste de développement, version actuelle du code)
+   docker build -t diack500/qualitus-backend-v2:preprod  Server
+   docker build -t diack500/qualitus-frontend-v2:preprod Views
+   Serveur hors ligne : les transférer comme d'habitude
+   docker save diack500/qualitus-backend-v2:preprod diack500/qualitus-frontend-v2:preprod | gzip > qualitus-preprod.tar.gz
+   (copie sur le serveur, puis)  gunzip -c qualitus-preprod.tar.gz | sudo docker load
+   L'étiquette :preprod ne remplace pas les images de la prod.
+   L'image mysql:8 et adminer sont déjà présentes sur le serveur (celles de la prod).
+
+2. FICHIER D'ENVIRONNEMENT (dans le dossier du projet sur le serveur)
+   cp .env.preprod.exemple .env.preprod   puis remplir.
+   JWT_SECRET et mots de passe DIFFÉRENTS de la prod.
+   Sans --env-file .env.preprod, docker compose refuse de démarrer (voulu).
+
+3. DÉMARRER LA BASE SEULE
+   sudo docker compose -f docker-compose.preprod.yml --env-file .env.preprod up -d db
+   Attendre « healthy » (création + chargement de la base, environ 1 minute) :
+   sudo docker compose -f docker-compose.preprod.yml --env-file .env.preprod ps
+
+4. APPLIQUER LES MIGRATIONS 21 À 58
+   chmod +x db/preprod/appliquer_migrations.sh
+   sudo ./db/preprod/appliquer_migrations.sh 21 58
+   - affiche le niveau de la base avant et après (OUI / NON par migration) ;
+   - applique une migration à la fois, s'arrête à la première erreur et dit
+     comment reprendre ;
+   - garde tout dans db/preprod/journal_migrations_<date>.log (à me renvoyer
+     en cas d'erreur).
+   Le script force le client MySQL en utf8mb4 : sans cela les accents sont
+   enregistrés abîmés (« Ã© », « â€” »), problème déjà rencontré sur la prod.
+
+5. DÉMARRER L'API ET LE FRONT
+   sudo docker compose -f docker-compose.preprod.yml --env-file .env.preprod up -d
+   Ouvrir http://<serveur>:3334 ; compte administrateur : celui créé par
+   l'init d'origine (sidibe, même mot de passe initial que la prod à son
+   installation).
+
+ARRÊTER / RECOMMENCER
+   Arrêter :            sudo docker compose -f docker-compose.preprod.yml --env-file .env.preprod down
+   Tout effacer (base de pré-prod comprise) pour refaire le test depuis le début :
+                        sudo docker compose -f docker-compose.preprod.yml --env-file .env.preprod down -v
+   Toujours avec -f docker-compose.preprod.yml : la commande ne vise alors
+   que qualitus-preprod. Ne jamais lancer « down -v » sans -f dans ce dossier.
+
+LE JOUR DE LA PROD
+   La migration 25 crée les tables de diffusion des quiz (b_qz_participant,
+   b_qz_autorise), absentes de la prod : ne pas la sauter.
+   Même script, sur le conteneur de la prod, APRÈS une sauvegarde :
+   sudo CONTENEUR=qualitus-db-1 ./db/preprod/appliquer_migrations.sh 21 58

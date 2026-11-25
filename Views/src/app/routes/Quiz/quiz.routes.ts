@@ -35,6 +35,6 @@ export const routes: Routes = [
     canMatch: [canMatchPermission(['quiz.participer', 'quiz.lire'])],
   },
   { path: 'rapports', component: RapportsComponent, canMatch: [canMatchPermission('quiz.lire')] },
-  // Superviseur : autorisation des retests
+  // Autorisation des retests : créateur, utilisateurs de son site (quiz.modifier), invités (agents de leur site)
   { path: 'retests', component: RetestsComponent, canMatch: [canMatchPermission('quiz.modifier')] },
 ];

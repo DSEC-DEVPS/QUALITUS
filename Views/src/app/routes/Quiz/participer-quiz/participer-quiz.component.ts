@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -13,11 +14,12 @@ import { ToastrService } from 'ngx-toastr';
 import { QuizService } from '@shared/services/quiz.service';
 import { QuestionAPasser, QuizAPasser, ResultatSoumission } from '../interfaces';
 import { ChargementComponent } from '@shared/components/chargement/chargement.component';
+import { PointsPipe } from '../points.pipe';
 
 @Component({
   selector: 'app-participer-quiz',
   standalone: true,
-  imports: [ChargementComponent,
+  imports: [ChargementComponent, PointsPipe,
     FormsModule,
     MatCardModule,
     MatButtonModule,
@@ -27,6 +29,9 @@ import { ChargementComponent } from '@shared/components/chargement/chargement.co
     MatProgressBarModule,
     MatTooltipModule,
     ScoreSeuilComponent,
+    RouterLink,
+    NgTemplateOutlet,
+    DatePipe,
   ],
   templateUrl: './participer-quiz.component.html',
   styleUrl: './participer-quiz.component.scss',
@@ -44,6 +49,9 @@ export class ParticiperQuizComponent implements OnInit, OnDestroy {
   chargement = true;
   envoiEnCours = false;
   bloque = false; // deja tente + pas d'autorisation de retest
+  /** accueil : écran avant démarrage (fiches à lire) ; passage : questions + chronomètre. */
+  mode: 'accueil' | 'passage' = 'accueil';
+  demarrage = false;
 
   // Chrono (regle 1) + cloture automatique (regle 3)
   tempsRestant = 0; // secondes
@@ -52,6 +60,39 @@ export class ParticiperQuizComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.quizId = Number(this.route.snapshot.paramMap.get('id'));
+    this.ouvrir();
+  }
+
+  /**
+   * Écran d'accueil : le quiz n'est PAS démarré (pas de questions, pas de chronomètre).
+   * Passage déjà commencé (rechargement, reprise depuis « En cours ») : reprise directe.
+   */
+  ouvrir() {
+    this.chargement = true;
+    this.resultat = null;
+    this.arreterChrono();
+    this.quizSrv.getQuizApercu(this.quizId, this.route.snapshot.queryParamMap.get('pin')).subscribe({
+      next: a => {
+        if (a.peut_participer && a.session_en_cours) {
+          this.charger();
+          return;
+        }
+        this.quiz = a;
+        this.bloque = a.peut_participer === false;
+        this.mode = 'accueil';
+        this.chargement = false;
+      },
+      error: e => {
+        if (![403, 404, 500].includes(e?.status)) this.toast.error('Quiz introuvable');
+        this.chargement = false;
+      },
+    });
+  }
+
+  /** « Commencer le quiz » : charge les questions et lance le chronomètre. */
+  commencer() {
+    if (this.demarrage) return;
+    this.demarrage = true;
     this.charger();
   }
 
@@ -69,6 +110,8 @@ export class ParticiperQuizComponent implements OnInit, OnDestroy {
       next: q => {
         this.quiz = q;
         this.bloque = q.peut_participer === false;
+        this.mode = 'passage';
+        this.demarrage = false;
         this.chargement = false;
         // Chrono base sur l'heure de debut serveur : temps restant = duree - deja ecoule.
         // Resiste au rechargement (le serveur ne reinitialise pas le debut).
@@ -88,6 +131,7 @@ export class ParticiperQuizComponent implements OnInit, OnDestroy {
       error: e => {
         // 403 / 404 / 500 : la page d'erreur affiche déjà le motif (intercepteur).
         if (![403, 404, 500].includes(e?.status)) this.toast.error('Quiz introuvable');
+        this.demarrage = false;
         this.chargement = false;
       },
     });
@@ -114,6 +158,26 @@ export class ParticiperQuizComponent implements OnInit, OnDestroy {
       this.chronoId = null;
     }
   }
+  /** Fiches liées encore consultables (les archivées sont affichées sans lien). */
+  get nbContenusActifs(): number {
+    return (this.quiz?.contenus || []).filter(f => f.ETAT !== 'ARCHIVE').length;
+  }
+
+  /** Un nouvel essai reste-t-il envisageable (quiz avec retest, maximum non atteint) ? */
+  retestPossible(numEssai: number | null | undefined): boolean {
+    return !!this.quiz?.retest_auto && (numEssai || 1) - 1 < (this.quiz?.nb_retest_max || 1);
+  }
+
+  /** Date (ISO locale) du jour même ? (bandeau du délai de grâce). */
+  estAujourdhui(iso: string | null | undefined): boolean {
+    if (!iso) {
+      return true;
+    }
+    const d = new Date(iso);
+    const n = new Date();
+    return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
+  }
+
   get chronoLabel(): string {
     const m = Math.floor(this.tempsRestant / 60);
     const s = this.tempsRestant % 60;
@@ -134,7 +198,9 @@ export class ParticiperQuizComponent implements OnInit, OnDestroy {
     return (this.choix[q.id] || []).length > 0;
   }
   get totalQuestions(): number {
-    return this.quiz ? this.quiz.questions.length : 0;
+    if (!this.quiz) return 0;
+    // Écran d'accueil : les questions ne sont pas encore chargées.
+    return this.mode === 'accueil' ? this.quiz.nb_questions || 0 : this.quiz.questions.length;
   }
 
   estQCM(q: QuestionAPasser): boolean {

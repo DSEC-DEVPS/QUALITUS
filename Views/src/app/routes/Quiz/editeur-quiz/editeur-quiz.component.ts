@@ -1,7 +1,9 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
+import { PointsPipe } from '../points.pipe';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   FormBuilder,
+  FormControl,
   FormGroup,
   FormsModule,
   ReactiveFormsModule,
@@ -16,6 +18,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { MatDialog } from '@angular/material/dialog';
 import { ToastrService } from 'ngx-toastr';
 import {
@@ -42,15 +45,16 @@ import {
   ReprendreQuestionsDialogComponent,
   ReprendreQuestionsResult,
 } from '../question-dialog/reprendre-questions-dialog.component';
-import { finalize } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, finalize, map, of, startWith, switchMap } from 'rxjs';
 import { ConfirmationService } from '@shared/services/confirmation.service';
-import { BAREME_TOTAL, confirmerRepartition, proposerRepartition, totalPoints } from '../bareme';
+import { BAREME_TOTAL, choixAjoutBaremeAtteint, confirmerRepartition, garantirBareme, totalPoints } from '../bareme';
+import { firstValueFrom } from 'rxjs';
 import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 @Component({
   selector: 'app-editeur-quiz',
   standalone: true,
-  imports: [ChargementComponent,
+  imports: [PointsPipe, ChargementComponent,
     FormsModule,
     ReactiveFormsModule,
     MatCardModule,
@@ -62,6 +66,7 @@ import { ChargementComponent } from '@shared/components/chargement/chargement.co
     MatSlideToggleModule,
     MatTooltipModule,
     MatChipsModule,
+    MatAutocompleteModule,
   ],
   templateUrl: './editeur-quiz.component.html',
   styleUrl: './editeur-quiz.component.scss',
@@ -78,8 +83,14 @@ export class EditeurQuizComponent implements OnInit {
   quizId: number | null = null;
   quiz?: Quiz;
   questions: Question[] = [];
-  fiches: FicheRecente[] = [];
   form!: FormGroup;
+
+  /* Contenus associés : recherche serveur sur les fiches ACTIVES, choix en étiquettes. */
+  @ViewChild('saisieFiche') saisieFiche?: ElementRef<HTMLInputElement>;
+  readonly rechercheFiche = new FormControl<string | FicheRecente>('', { nonNullable: true });
+  resultatsFiches: FicheRecente[] = [];
+  fichesChoisies: FicheRecente[] = [];
+  rechercheFicheEnCours = false;
 
   ngOnInit(): void {
     this.form = this.fb.group({
@@ -91,6 +102,9 @@ export class EditeurQuizComponent implements OnInit {
       acces: ['PRIVATE'],
       alterner_questions: [0],
       autoriser_machines: [1],
+      // Retests : non par défaut (l'échec n'apparaît alors pas dans « Retests à autoriser »).
+      retest_auto: [0],
+      nb_retest_max: [1, [Validators.required, Validators.min(1), Validators.max(10)]],
       fiches: [[]],
       // État (OUVERT / CLOTURER) : site propriétaire et utilisateurs autorisés.
       Etat: ['OUVERT'],
@@ -98,10 +112,21 @@ export class EditeurQuizComponent implements OnInit {
       statut: ['ACTIF'],
     });
 
-    this.quizSrv.getFichesRecentes().subscribe({
-      next: f => (this.fiches = f),
-      error: () => {},
-    });
+    this.rechercheFiche.valueChanges
+      .pipe(
+        startWith(''),
+        map(v => (typeof v === 'string' ? v : '')),
+        debounceTime(250),
+        distinctUntilChanged(),
+        switchMap(q => {
+          this.rechercheFicheEnCours = true;
+          return this.quizSrv.getFichesRecentes(q).pipe(catchError(() => of([] as FicheRecente[])));
+        })
+      )
+      .subscribe(r => {
+        this.resultatsFiches = r;
+        this.rechercheFicheEnCours = false;
+      });
 
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
@@ -119,10 +144,6 @@ export class EditeurQuizComponent implements OnInit {
       next: q => {
         this.quiz = q;
         this.questions = q.questions || [];
-        if (this.proposerApresChargement) {
-          this.proposerApresChargement = false;
-          setTimeout(async () => { if (await proposerRepartition(this.confirmation, this.questions)) this.repartirPoints(false); });
-        }
         this.form.patchValue({
           titre: q.titre,
           type: q.type,
@@ -132,6 +153,8 @@ export class EditeurQuizComponent implements OnInit {
           acces: q.acces || 'PRIVATE',
           alterner_questions: q.alterner_questions ? 1 : 0,
           autoriser_machines: q.autoriser_machines ? 1 : 0,
+          retest_auto: q.retest_auto ? 1 : 0,
+          nb_retest_max: q.nb_retest_max || 1,
           fiches: q.fiches || [],
           Etat: q.Etat || 'OUVERT',
           statut: q.statut || 'ACTIF',
@@ -140,13 +163,59 @@ export class EditeurQuizComponent implements OnInit {
         // et l'état restent modifiables ; les champs désactivés ne sont pas envoyés.
         if (!this.coteProprietaire) {
           for (const champ of ['titre', 'type', 'note_passage', 'acces', 'alterner_questions',
-                               'autoriser_machines', 'fiches', 'statut']) {
+                               'autoriser_machines', 'retest_auto', 'nb_retest_max', 'fiches', 'statut']) {
             this.form.get(champ)?.disable({ emitEvent: false });
           }
+          this.rechercheFiche.disable({ emitEvent: false });
         }
+        this.chargerFichesChoisies(q.fiches || []);
       },
       error: () => this.toast.error('Quiz introuvable'),
     });
+  }
+
+  /** Étiquettes des fiches déjà liées (titre, état), dans l'ordre enregistré. */
+  private chargerFichesChoisies(ids: number[]) {
+    if (!ids.length) {
+      this.fichesChoisies = [];
+      return;
+    }
+    this.quizSrv.getFichesParIds(ids).subscribe({
+      next: l => (this.fichesChoisies = ids.map(id => l.find(f => f.id === id)).filter((f): f is FicheRecente => !!f)),
+      error: () => {},
+    });
+  }
+
+  estFicheChoisie(f: FicheRecente): boolean {
+    return this.fichesChoisies.some(x => x.id === f.id);
+  }
+
+  ajouterFiche(e: MatAutocompleteSelectedEvent) {
+    const f = e.option.value as FicheRecente;
+    if (f && !this.estFicheChoisie(f)) {
+      this.fichesChoisies = [...this.fichesChoisies, f];
+      this.majFiches();
+    }
+    if (this.saisieFiche) this.saisieFiche.nativeElement.value = '';
+    this.rechercheFiche.setValue('');
+  }
+
+  retirerFiche(f: FicheRecente) {
+    this.fichesChoisies = this.fichesChoisies.filter(x => x.id !== f.id);
+    this.majFiches();
+  }
+
+  private majFiches() {
+    const c = this.form.get('fiches');
+    c?.setValue(this.fichesChoisies.map(f => f.id));
+    c?.markAsDirty();
+  }
+
+  /** « 2026-11-21 » -> « 21/11/2026 ». */
+  dateCourte(v?: string | null): string {
+    if (!v) return '';
+    const [a, m, j] = v.slice(0, 10).split('-');
+    return j ? `${j}/${m}/${a}` : '';
   }
 
   /** Côté propriétaire (admin, créateur, site propriétaire) ; vrai en création. */
@@ -164,22 +233,51 @@ export class EditeurQuizComponent implements OnInit {
     const p: any = { ...v };
     if ('alterner_questions' in v) p.alterner_questions = v.alterner_questions ? 1 : 0;
     if ('autoriser_machines' in v) p.autoriser_machines = v.autoriser_machines ? 1 : 0;
+    if ('retest_auto' in v) p.retest_auto = v.retest_auto ? 1 : 0;
+    if ('nb_retest_max' in v) p.nb_retest_max = Number(v.nb_retest_max) || 1;
     if ('fiches' in v) p.fiches = v.fiches || [];
     return p;
   }
 
   enregistrerEntete() {
+    const nbRetest = this.form.get('nb_retest_max');
+    if (nbRetest?.invalid && nbRetest.enabled) {
+      if (!this.form.get('retest_auto')?.value) {
+        nbRetest.setValue(1); // champ masqué : valeur par défaut
+      } else {
+        this.toast.warning('Nombre maximum de retests : entre 1 et 10');
+        return;
+      }
+    }
     if (this.form.invalid) {
       this.toast.warning('Merci de renseigner au moins le titre');
       return;
     }
     if (this.quizId) {
-      this.quizSrv.update(this.quizId, this.payload()).subscribe({
+      void this.enregistrerEnteteExistant();
+    } else {
+      this.creerQuiz();
+    }
+  }
+
+  /** Activer ou rouvrir exige un barème à 100 : proposer de répartir avant (out114). */
+  private async enregistrerEnteteExistant() {
+    const p = this.payload();
+    const active = p.statut === 'ACTIF' && this.quiz?.statut !== 'ACTIF';
+    const rouvre = p.Etat === 'OUVERT' && this.quiz?.Etat !== 'OUVERT';
+    if ((active || rouvre) && !(await garantirBareme(this.confirmation, this.totalPoints, this.questions.length,
+        active ? 'activer' : 'ouvrir', () => this.repartirSansDemander()))) return;
+    {
+      this.quizSrv.update(this.quizId!, p).subscribe({
         next: () => this.toast.success('Quiz enregistré'),
         // Le message précis du serveur est affiché par l'intercepteur global.
         error: () => {},
       });
-    } else {
+    }
+  }
+
+  private creerQuiz() {
+    {
       this.quizSrv.add(this.payload()).subscribe({
         next: r => {
           this.toast.success('Quiz créé - ajoutez maintenant des questions');
@@ -227,8 +325,20 @@ export class EditeurQuizComponent implements OnInit {
 
   // ---------- Barème : 100 points répartis entre les questions ----------
   private readonly confirmation = inject(ConfirmationService);
-  /** Après un ajout (ou une reprise) de questions : proposer de répartir. */
-  private proposerApresChargement = false;
+  /**
+   * Répartition équitable sans confirmation (le choix vient d'être fait dans une boîte
+   * du barème) ; se résout à true quand elle est faite. out114.
+   */
+  private async repartirSansDemander(): Promise<boolean> {
+    try {
+      const r = await firstValueFrom(this.quizSrv.repartirPoints(this.quizId!));
+      this.ok(r.message);
+      return true;
+    } catch (err) {
+      this.koMessage(err);
+      return false;
+    }
+  }
   get totalPoints(): number { return totalPoints(this.questions); }
   get baremeConforme(): boolean { return this.totalPoints === BAREME_TOTAL; }
   private pointsAutres(sauf?: Question): number { return totalPoints(this.questions, sauf); }
@@ -255,6 +365,13 @@ export class EditeurQuizComponent implements OnInit {
       this.toast.warning(MSG_QUIZ_FERME);
       return;
     }
+    void this.ouvrirAjoutQuestion();
+  }
+
+  /** out114 : boîte du barème seulement si le barème est déjà atteint (100 points). */
+  private async ouvrirAjoutQuestion() {
+    const choix = await choixAjoutBaremeAtteint(this.confirmation, this.questions);
+    if (!choix) return;
     const data: QuestionDialogData = { mode: 'add', pointsAutres: this.pointsAutres() };
     this.dialog
       .open(QuestionDialogComponent, { width: 'calc(100% - 30px)', maxWidth: '640px', data })
@@ -265,7 +382,10 @@ export class EditeurQuizComponent implements OnInit {
         }
         this.quizSrv
           .addQuestion({ id_Quiz: this.quizId!, ...r })
-          .subscribe({ next: res => { this.proposerApresChargement = true; this.ok(res.message); }, error: err => this.koMessage(err) });
+          .subscribe({
+            next: async res => { if (choix === 'repartir') await this.repartirSansDemander(); else this.ok(res.message); },
+            error: err => this.koMessage(err),
+          });
       });
   }
 
@@ -331,6 +451,12 @@ export class EditeurQuizComponent implements OnInit {
       this.toast.warning(MSG_QUIZ_FERME);
       return;
     }
+    void this.ouvrirReprise();
+  }
+
+  private async ouvrirReprise() {
+    const choix = await choixAjoutBaremeAtteint(this.confirmation, this.questions);
+    if (!choix) return;
     this.dialog
       .open(ReprendreQuestionsDialogComponent, {
         width: 'calc(100% - 30px)',
@@ -345,7 +471,10 @@ export class EditeurQuizComponent implements OnInit {
         }
         this.quizSrv
           .reprendreQuestions(this.quizId!, r)
-          .subscribe({ next: res => { this.proposerApresChargement = true; this.ok(res.message); }, error: err => this.koMessage(err) });
+          .subscribe({
+            next: async res => { if (choix === 'repartir') await this.repartirSansDemander(); else this.ok(res.message); },
+            error: err => this.koMessage(err),
+          });
       });
   }
 

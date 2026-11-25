@@ -1,4 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { PointsPipe } from '../points.pipe';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -52,7 +53,8 @@ import { MatPaginatorModule } from '@angular/material/paginator';
 import { Pagination } from '@shared/utils/pagination';
 import { finalize } from 'rxjs';
 import { ConfirmationService } from '@shared/services/confirmation.service';
-import { BAREME_TOTAL, confirmerRepartition, proposerRepartition, totalPoints } from '../bareme';
+import { BAREME_TOTAL, choixAjoutBaremeAtteint, confirmerRepartition, garantirBareme, totalPoints } from '../bareme';
+import { firstValueFrom } from 'rxjs';
 import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 
 /**
@@ -62,7 +64,7 @@ import { ChargementComponent } from '@shared/components/chargement/chargement.co
 @Component({
   selector: 'app-detail-quiz',
   standalone: true,
-  imports: [ChargementComponent, MatPaginatorModule,
+  imports: [PointsPipe, ChargementComponent, MatPaginatorModule,
     DatePipe,
     FormsModule,
     MatCardModule,
@@ -160,10 +162,15 @@ export class DetailQuizComponent implements OnInit {
     return this.quiz?.cote_proprietaire === 1;
   }
 
-  /** Sites proposés dans la Diffusion : son seul site pour un utilisateur autorisé. */
+  /**
+   * Sites proposés dans la Diffusion (out114, règle du site à vision globale, fournie par
+   * le serveur) : tous pour l'administrateur et le site à vision globale ; sinon son site
+   * et le site à vision globale.
+   */
   get sitesDiffusion(): SiteOption[] {
-    if (this.coteProprietaire || this.quiz?.mon_site_id == null) return this.sitesOptions;
-    return this.sitesOptions.filter(s => Number(s.id) === Number(this.quiz?.mon_site_id));
+    const permis = this.quiz?.sites_diffusion;
+    if (!Array.isArray(permis)) return this.sitesOptions;
+    return this.sitesOptions.filter(s => permis.includes(Number(s.id)));
   }
 
   // Recherche dans la liste des participants (login, nom, prénom, site ; mot par mot)
@@ -172,10 +179,29 @@ export class DetailQuizComponent implements OnInit {
   set rechercheParticipant(v: string) { this._rechercheParticipant = v; this.majParticipantsDiffuses(); }
   readonly pagDiffuses = new Pagination<any>();
   majParticipantsDiffuses(): void { this.pagDiffuses.definir(this.participantsFiltres); }
+  /** Filtre par statut de passage (Réussi / Échec / En cours / Non passé). */
+  private _statutParticipant = '';
+  get statutParticipant(): string { return this._statutParticipant; }
+  set statutParticipant(v: string) { this._statutParticipant = v || ''; this.majParticipantsDiffuses(); }
+  readonly STATUTS_PASSAGE = [
+    { val: 'REUSSI', label: 'Réussi', pluriel: 'Réussis' },
+    { val: 'ECHEC', label: 'Échec', pluriel: 'Échecs' },
+    { val: 'EN_COURS', label: 'En cours', pluriel: 'En cours' },
+    { val: 'NON_PASSE', label: 'Non passé', pluriel: 'Non passés' },
+  ];
+  nbStatut(val: string): number {
+    return this.participantsDiffuses.filter(p => p.statut_passage === val).length;
+  }
+  libelleStatut(val: string): string {
+    return this.STATUTS_PASSAGE.find(s => s.val === val)?.label || '—';
+  }
   get participantsFiltres(): any[] {
     const mots = (this.rechercheParticipant || '').toLowerCase().split(/\s+/).filter(m => m);
-    if (!mots.length) return this.participantsDiffuses;
-    return this.participantsDiffuses.filter(p => {
+    const parStatut = this.statutParticipant
+      ? this.participantsDiffuses.filter(p => p.statut_passage === this.statutParticipant)
+      : this.participantsDiffuses;
+    if (!mots.length) return parStatut;
+    return parStatut.filter(p => {
       const texte = [p.nom_utilisateur, p.nom, p.prenom, p.site]
         .map(v => (v ?? '').toString().toLowerCase())
         .join(' ');
@@ -262,11 +288,15 @@ export class DetailQuizComponent implements OnInit {
     return this.selection.size;
   }
 
-  diffuser() {
+  async diffuser() {
     if (this.selection.size === 0) {
       this.toast.warning('Aucun participant retenu : la diffusion est refusée.');
       return;
     }
+    // out114 : barème ≠ 100 -> proposer de répartir avant de diffuser (côté propriétaire :
+    // seul lui peut modifier les questions ; sinon le serveur explique le refus).
+    if (this.coteProprietaire && !(await garantirBareme(this.confirmation, this.totalPoints, this.questions.length,
+        'diffuser', () => this.repartirSansDemander()))) return;
     this.diffusionEnCours = true;
     this.quizSrv.diffuser(this.quizId, [...this.selection]).subscribe({
       next: r => {
@@ -522,7 +552,17 @@ export class DetailQuizComponent implements OnInit {
 
   // ---------- Barème : 100 points répartis entre les questions ----------
   private readonly confirmation = inject(ConfirmationService);
-  private proposerApresChargement = false;
+  /** Répartition sans confirmation (choix fait dans une boîte du barème) — out114. */
+  private async repartirSansDemander(): Promise<boolean> {
+    try {
+      const r = await firstValueFrom(this.quizSrv.repartirPoints(this.quizId));
+      this.ok(r.message);
+      return true;
+    } catch (err) {
+      this.koMessage(err);
+      return false;
+    }
+  }
   async repartirPoints(demander = true): Promise<void> {
     if (!this.quizId || !this.questions.length) return;
     if (quizDejaPasse(this.quiz)) {
@@ -539,10 +579,6 @@ export class DetailQuizComponent implements OnInit {
       next: q => {
         this.quiz = q;
         this.questions = q.questions || [];
-        if (this.proposerApresChargement) {
-          this.proposerApresChargement = false;
-          setTimeout(async () => { if (await proposerRepartition(this.confirmation, this.questions)) this.repartirPoints(false); });
-        }
         // Utilisateur autorisé (site invité) : Diffusion limitée à son site
         // (liste « Site » réduite à son site, pré-sélectionné et non modifiable).
         if (!this.coteProprietaire && q.mon_site_id != null) {
@@ -660,6 +696,13 @@ export class DetailQuizComponent implements OnInit {
       this.toast.warning(MSG_QUIZ_FERME);
       return;
     }
+    void this.ouvrirAjoutQuestion();
+  }
+
+  /** out114 : boîte du barème seulement si le barème est déjà atteint (100 points). */
+  private async ouvrirAjoutQuestion() {
+    const choix = await choixAjoutBaremeAtteint(this.confirmation, this.questions);
+    if (!choix) return;
     const data: QuestionDialogData = { mode: 'add', pointsAutres: totalPoints(this.questions) };
     this.dialog
       .open(QuestionDialogComponent, { width: 'calc(100% - 30px)', maxWidth: '640px', data })
@@ -670,7 +713,10 @@ export class DetailQuizComponent implements OnInit {
         }
         this.quizSrv
           .addQuestion({ id_Quiz: this.quizId, ...r })
-          .subscribe({ next: res => { this.proposerApresChargement = true; this.ok(res.message); }, error: err => this.koMessage(err) });
+          .subscribe({
+            next: async res => { if (choix === 'repartir') await this.repartirSansDemander(); else this.ok(res.message); },
+            error: err => this.koMessage(err),
+          });
       });
   }
 

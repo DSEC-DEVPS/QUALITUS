@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -17,8 +17,8 @@ import { UserService } from '@shared/services/user.service';
 import { CanDirective } from '@core/authorization/can.directive';
 import { PermissionsService } from '@core/authorization/permissions.service';
 import { CalibrageService, CalSessionListe, FiltresSession } from '../calibrage.service';
-import { MatPaginatorModule } from '@angular/material/paginator';
-import { Pagination } from '@shared/utils/pagination';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { PaginationServeur } from '@shared/utils/pagination-serveur';
 import { ChargementComponent } from '@shared/components/chargement/chargement.component';
 import { correspondRecherche } from '@shared/utils/recherche';
 
@@ -33,7 +33,7 @@ import { correspondRecherche } from '@shared/utils/recherche';
   templateUrl: './liste-sessions.component.html',
   styleUrl: './liste-sessions.component.scss',
 })
-export class ListeSessionsComponent implements OnInit {
+export class ListeSessionsComponent implements OnInit, OnDestroy {
   private readonly service = inject(CalibrageService);
   private readonly userService = inject(UserService);
   private readonly toastr = inject(ToastrService);
@@ -44,17 +44,19 @@ export class ListeSessionsComponent implements OnInit {
   // seul le filtre par période est proposé.
   get peutOrganiser(): boolean { return this.perms.can('calibrage.organiser'); }
 
+  /** Par défaut, l'organisateur voit les sessions non figées (le participant : toutes). */
   filtres: FiltresSession = {};
-  readonly pag = new Pagination<CalSessionListe>();
-  get sessions(): CalSessionListe[] { return this.pag.donnees; }
-  set sessions(v: CalSessionListe[]) { this.pag.definir(v); }
-  // Liste renvoyée par le serveur (filtres Site / dates / Statut) ; la recherche
-  // texte filtre ensuite localement, sans nouvel appel.
-  toutes: CalSessionListe[] = [];
+  /** Pagination côté serveur (out113) : seule la page affichée est chargée. */
+  readonly pag = new PaginationServeur<CalSessionListe>();
+  get sessions(): CalSessionListe[] { return this.pag.page; }
+  /** Une recherche est en cours (message « aucune session ne correspond »). */
+  get avecRecherche(): boolean { return !!this.recherche.trim(); }
   recherche = '';
   sites: any[] = [];
   chargement = false;
   colonnes = ['nom', 'date', 'site', 'grille', 'statut', 'participants', 'actions'];
+  private minuterie: any = null;
+  private requete = 0;
 
   statuts = [
     { v: 'BROUILLON', l: 'Brouillon' },
@@ -66,23 +68,39 @@ export class ListeSessionsComponent implements OnInit {
 
   ngOnInit(): void {
     this.userService.getAllSite().subscribe({ next: s => (this.sites = s || []), error: () => {} });
+    this.filtres = this.filtresParDefaut();
     this.charger();
   }
+  ngOnDestroy(): void { clearTimeout(this.minuterie); }
+
+  private filtresParDefaut(): FiltresSession { return this.peutOrganiser ? { statut: 'NON_FIGEE' } : {}; }
+
+  /** Bouton « Appliquer » : première page. */
+  appliquer(): void { clearTimeout(this.minuterie); this.pag.premiere(); this.charger(); }
 
   charger(): void {
     this.chargement = true;
-    this.service.getSessions(this.filtres).subscribe({
-      next: s => { this.toutes = s || []; this.filtrer(); this.chargement = false; },
-      error: () => { this.toastr.error('Impossible de charger les sessions.'); this.chargement = false; },
+    const n = ++this.requete;
+    this.service.getSessionsPage(this.filtres, this.recherche.trim(), this.pag.params()).subscribe({
+      next: r => {
+        if (n !== this.requete) return;
+        this.pag.recevoir(r);
+        if (this.pag.pageVideApresRetrait) { this.pag.pageIndex--; this.charger(); return; }
+        this.chargement = false;
+      },
+      error: () => { if (n !== this.requete) return; this.toastr.error('Impossible de charger les sessions.'); this.chargement = false; },
     });
   }
 
+  /** Recherche (nom, grille, site, statut, jauge) : envoyée au serveur après une courte pause de frappe. */
   filtrer(): void {
-    this.sessions = this.toutes.filter(s =>
-      correspondRecherche(this.recherche, [s.nom, s.grille, s.site, this.libelleStatut(s.statut), s.jauge]));
+    clearTimeout(this.minuterie);
+    this.minuterie = setTimeout(() => this.appliquer(), 300);
   }
 
-  reinitialiser(): void { this.filtres = {}; this.recherche = ''; this.charger(); }
+  changerPage(e: PageEvent): void { this.pag.changer(e); this.charger(); }
+
+  reinitialiser(): void { this.filtres = this.filtresParDefaut(); this.recherche = ''; this.appliquer(); }
 
   libelleStatut(v: string): string { return this.statuts.find(s => s.v === v)?.l || v; }
 

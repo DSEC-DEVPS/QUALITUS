@@ -218,10 +218,12 @@
   color: var(--qx-rouge, #c62828);
 }
 
-/* Barre figée : progression + chrono (reste visible au défilement) */
+/* Barre figée : progression + chrono (reste visible au défilement).
+   Avec l'entête fixe de l'application (cas par défaut), la barre se colle SOUS
+   l'entête : à top 0 elle passait derrière lui et le minuteur disparaissait. */
 .barre-chrono {
   position: sticky;
-  top: 0;
+  top: 8px;
   z-index: 20;
   display: flex;
   align-items: center;
@@ -278,4 +280,155 @@
 }
 @keyframes pulse {
   50% { opacity: 0.55; }
+}
+
+:host-context(.matero-header-fixed) .barre-chrono {
+  top: calc(var(--mat-toolbar-standard-height, 64px) + 8px);
+}
+@media (max-width: 599.98px) {
+  :host-context(.matero-header-fixed) .barre-chrono {
+    top: calc(var(--mat-toolbar-mobile-height, 56px) + 6px);
+  }
+}
+
+/* Contenu à revoir (fiches liées au quiz) */
+.contenus {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--qx-bordure, rgba(0, 0, 0, 0.1));
+  background: var(--qx-surface-2, #f7f7f8);
+}
+.contenus--echec {
+  border-color: #ff7900;
+  background: var(--qx-orange-pale, #fff1e6);
+}
+.contenus-titre {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--qx-texte, #212529);
+}
+.contenus-titre mat-icon {
+  color: var(--qx-orange-texte, #b35400);
+}
+.contenus-liens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.contenu-lien {
+  max-width: 100%;
+  border-radius: 18px;
+}
+.contenu-lien span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 420px;
+}
+
+/* Écran d'accueil (avant démarrage) */
+.accueil-description {
+  margin: 0 0 12px;
+  color: var(--qx-texte-2, #4a4f55);
+  white-space: pre-line;
+}
+.accueil-infos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-bottom: 4px;
+  color: var(--qx-texte, #212529);
+  font-size: 0.9rem;
+}
+.accueil-infos span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.accueil-infos mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  color: var(--qx-orange-texte, #b35400);
+}
+.accueil-aide {
+  margin: -2px 0 10px;
+  font-size: 0.82rem;
+  color: var(--qx-texte-2, #5f6368);
+}
+.accueil-depart {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--qx-bordure, rgba(0, 0, 0, 0.08));
+}
+.accueil-depart-texte {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1 1 320px;
+  font-size: 0.88rem;
+  color: var(--qx-texte-2, #4a4f55);
+}
+.accueil-depart-texte mat-icon {
+  color: var(--qx-orange-texte, #b35400);
+  flex: 0 0 auto;
+}
+.btn-commencer.mat-mdc-unelevated-button {
+  border-radius: 20px;
+  padding: 0 22px;
+  height: 42px;
+  background-color: #ff7900;
+  color: #fff;
+}
+
+/* Délai de grâce : quiz arrivé à échéance, passage commencé avant */
+.bandeau-grace {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 152, 0, 0.45);
+  background: rgba(255, 152, 0, 0.1);
+  color: var(--qx-orange-texte, #8a4b00);
+}
+.bandeau-grace mat-icon {
+  flex: 0 0 auto;
+}
+:host-context(.theme-dark) .bandeau-grace {
+  color: #ffcc80;
+}
+
+/* Fiche archivée : visible, non consultable */
+.contenu-archive {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px dashed var(--qx-bordure, rgba(0, 0, 0, 0.2));
+  border-radius: 20px;
+  color: var(--qx-texte-2, #6b6b6b);
+  cursor: default;
+}
+.contenu-archive mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+.mention-archive {
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--qx-survol, rgba(0, 0, 0, 0.06));
+  font-size: 0.75rem;
+  font-weight: 600;
 }

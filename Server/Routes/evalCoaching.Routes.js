@@ -6,7 +6,7 @@
 const express = require("express");
 const auth = require("../middlewares/auth");
 const { permission } = require("../middlewares/permission");
-const { garderEvaluation, parCorpsEvaluation, parLignePlanAction, parCoaching } = require("../middlewares/accesEvaluation");
+const { garderEvaluation, exigerEchecTermine, parCorpsEvaluation, parLignePlanAction, parCoaching } = require("../middlewares/accesEvaluation");
 const co = require("../Controllers/evalCoaching.Controllers");
 
 const router = express.Router();
@@ -25,14 +25,14 @@ router.delete("/eval/coaching/option/:id", auth, permission("EVALUATION","PARAME
 router.get("/eval/coaching/options-enfants", auth, permission("EVALUATION","COACHER"), co.getOptionsEnfants);
 router.get("/eval/coaching/options-en-attente", auth, permission("EVALUATION","VALIDER"), co.getOptionsEnAttente);
 // Proposer une option pendant un coaching : evaluation.coacher + périmètre de l'évaluation coachée
-router.post("/eval/coaching/proposer", auth, permission("EVALUATION","COACHER"), garderEvaluation("agir", parCoaching), co.proposerOption);
+router.post("/eval/coaching/proposer", auth, permission("EVALUATION","COACHER"), garderEvaluation("agir", parCoaching), exigerEchecTermine(parCoaching), co.proposerOption);
 router.post("/eval/coaching/option/:id/valider", auth, permission("EVALUATION","VALIDER"), co.validerOption);
 router.post("/eval/coaching/option/:id/rejeter", auth, permission("EVALUATION","VALIDER"), co.rejeterOption);
 
 // Coaching par évaluation
 router.get("/eval/evaluation/:id/coaching", auth, permission("EVALUATION","LIRE"), garderEvaluation("voir"), co.getEvaluationCoaching);
 // Coaching : permission dédiée evaluation.coacher (32_permission_evaluation_coacher.sql)
-router.post("/eval/evaluation/:id/coaching", auth, permission("EVALUATION","COACHER"), garderEvaluation("agir"), co.saveCoaching);
-router.post("/eval/evaluation/:id/coaching/terminer", auth, permission("EVALUATION","COACHER"), garderEvaluation("agir"), co.terminerCoaching);
+router.post("/eval/evaluation/:id/coaching", auth, permission("EVALUATION","COACHER"), garderEvaluation("agir"), exigerEchecTermine(), co.saveCoaching);
+router.post("/eval/evaluation/:id/coaching/terminer", auth, permission("EVALUATION","COACHER"), garderEvaluation("agir"), exigerEchecTermine(), co.terminerCoaching);
 
 module.exports = router;

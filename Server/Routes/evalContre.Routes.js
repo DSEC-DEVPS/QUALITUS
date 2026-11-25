@@ -12,7 +12,9 @@ const router = express.Router();
 router.get("/eval/contre/contexte", auth, permission("CONTRE_EVALUATION",["CREER","VOIR_TOUS"]), ce.getContexteContre);
 router.get("/eval/contre/all", auth, permission("CONTRE_EVALUATION","LIRE"), ce.getAllContre);
 router.get("/eval/contre/mes", auth, permission("CONTRE_EVALUATION","LIRE"), ce.getMesContre);
-router.get("/eval/contre/evaluateurs/:idSite", auth, permission("CONTRE_EVALUATION","CREER"), ce.getEvaluateursBySite);
+router.get("/eval/contre/evaluateurs/:idSite", auth, permission("CONTRE_EVALUATION",["CREER","VOIR_TOUS"]), ce.getEvaluateursBySite);
+// Page « Contre-évaluation » : évaluations terminées du périmètre + état de leur contre-évaluation (out103)
+router.get("/eval/contre/a-contre-evaluer", auth, permission("CONTRE_EVALUATION",["CREER","VOIR_TOUS"]), ce.getEvaluationsAContreEvaluer);
 router.get("/eval/contre/evaluations/:idEvaluateur", auth, permission("CONTRE_EVALUATION","CREER"), ce.getEvaluationsByEvaluateur);
 router.post("/eval/contre/creer/:idEvaluation", auth, permission("CONTRE_EVALUATION","CREER"), ce.creerContre);
 router.get("/eval/contre/:id", auth, permission("CONTRE_EVALUATION","LIRE"), ce.getContre);

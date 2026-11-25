@@ -1,70 +1,14 @@
 // GET ALL UTILISATEUR
 const db = require("../config/db");
 const { habilitationSite, compteGerable, estFonctionAdmin } = require("../utils/perimetreComptes");
+const { notifierFichesPourUtilisateur, notifierNouveauxCiblesFiche, sansEchec } = require("../utils/notifFichesCiblees");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const { jwtSecret, jwtDuree } = require("../config/parametres");
 const path = require("path");
 const fs = require("fs");
 
 /**les controllers pour l'authentification */
-const sign_in = async (req, res, next) => {
-  const {
-    nom,
-    prenom,
-    nom_utilisateur,
-    genre,
-    email,
-    telephone,
-    ville,
-    adresse,
-    id_Fonction,
-    id_Site,
-    id_Programme,
-    id_EvalGrille,
-  } = req.body;
-  try {
-    const Query =
-      "SELECT * FROM B_UTILISATEUR WHERE email=? or nom_utilisateur=? ";
-    const resultat = await db.query(Query, [email, nom_utilisateur]);
-    if (resultat[0] <= 0) {
-      // Grille d'évaluation unique = b_eval_grille (colonne id_EvalGrille).
-      const Query = `INSERT INTO B_UTILISATEUR (nom,prenom,nom_utilisateur,genre,email,telephone,ville,adresse,password,default_password,id_Fonction,id_Site,id_Programme,id_EvalGrille,status,dateCreation) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
-      const statut = "ACTIF";
-      const dateCreation = new Date();
-      const password = nom_utilisateur + "Orange" + dateCreation.getFullYear();
-      const passwordHast = await bcrypt.hash(password, 10);
-      //const default_password = await bcrypt.hash(password, 10);
-      const resultat = await db.query(Query, [
-        nom,
-        prenom,
-        nom_utilisateur,
-        genre,
-        email,
-        telephone,
-        ville,
-        adresse,
-        passwordHast,
-        passwordHast,
-        id_Fonction,
-        id_Site,
-        id_Programme,
-        id_EvalGrille || null,
-        statut,
-        dateCreation,
-      ]);
-      return res
-        .status(201)
-        .json({ message: "Votre compte a été bien enregister" });
-    } else {
-      return res.status(400).json({
-        message: "L'addresse mail ou le nom d'utilisateur existent déjà!",
-      });
-    }
-  } catch (error) {
-    console.log(error);
-    throw error;
-  }
-};
 const login = async (req, res, next) => {
   const { nom_utilisateur, password } = req.body;
   if (!nom_utilisateur || !password) {
@@ -96,34 +40,29 @@ const login = async (req, res, next) => {
                   "Désolé votre compte est desactivé! Merci de contacter l'Administrateur.",
               });
             } else {
-              if (bcrypt.compare(password, resultat[0].password)) {
-                const nb_session_login = resultat[0].nb_session_login + 1;
-                await db.query(Query_update, [
-                  nb_session_login,
-                  nom_utilisateur,
-                ]);
-                const reponse = { userId: resultat[0].id };
-                const accesToken = jwt.sign(reponse, "DevpsDsec", {
-                  expiresIn: "8h",
-                });
-                delete resultat[0]["password"];
-                return res.status(200).json({
-                  access_token: accesToken,
-                  token_type: "bearer",
-                  nb_session: nb_session_login,
-                });
-              } else {
-                return res.status(400).json({
-                  message:
-                    "Une erreur s'est produite, veuillez réessayer plus tard",
-                });
-              }
+              // (le mot de passe vient d'être vérifié : la seconde comparaison bcrypt,
+              // qui coûtait autant de calcul que la première, est supprimée)
+              const nb_session_login = resultat[0].nb_session_login + 1;
+              await db.query(Query_update, [
+                nb_session_login,
+                nom_utilisateur,
+              ]);
+              const reponse = { userId: resultat[0].id };
+              const accesToken = jwt.sign(reponse, jwtSecret, {
+                expiresIn: jwtDuree,
+              });
+              delete resultat[0]["password"];
+              return res.status(200).json({
+                access_token: accesToken,
+                token_type: "bearer",
+                nb_session: nb_session_login,
+              });
             }
           }
         })
         .catch((error) => {
           console.log(error);
-          throw error;
+          if (!res.headersSent) res.status(500).json({ message: "Une erreur s'est produite, veuillez réessayer plus tard" });
         });
     }
   } catch (error) {
@@ -137,88 +76,28 @@ const getMe = async (req, res, next) => {
     return res.status(403).json({ message: "L'id de utilisateur est vide" });
   }
   try {
+    // Jointures externes : un compte sans programme, sans site ou sans fonction
+    // ne fait plus échouer la requête (erreur 500 au chargement de l'application).
     const Query = `SELECT UT.id,UT.nom,UT.prenom, UT.nom_utilisateur as name,UT.email,UT.telephone,UT.adresse,UT.ville,
     UT.genre,FCT.nom as fonction,pr.nom as programme,st.nom as site,FCT.Role_Associe as roles,
-     UT.dateCreation,FCT.Permissions_Associe as permissions  from 
-     B_UTILISATEUR UT INNER JOIN B_FONCTION FCT on UT.id_Fonction=FCT.id
-     INNER JOIN B_PROGRAMME pr on UT.id_Programme=pr.id
-     INNER JOIN B_SITE st on UT.id_Site=st.id
-     where UT.id=? 
+     UT.dateCreation,FCT.Permissions_Associe as permissions  from
+     B_UTILISATEUR UT LEFT JOIN B_FONCTION FCT on UT.id_Fonction=FCT.id
+     LEFT JOIN B_PROGRAMME pr on UT.id_Programme=pr.id
+     LEFT JOIN B_SITE st on UT.id_Site=st.id
+     where UT.id=?
   `;
     const [resultat] = await db.query(Query, [id]);
-    resultat[0].permissions = resultat[0]["permissions"].split(",");
+    if (!resultat.length) return res.status(404).json({ message: "Utilisateur introuvable." });
+    resultat[0].permissions = (resultat[0].permissions || "").split(",").filter(Boolean);
     return res.status(200).json(resultat[0]);
   } catch (error) {
     console.log(error);
-    throw error;
+    return res.status(500).json({ message: "Erreur lors du chargement du profil." });
   }
 };
 /** fin de controllers pour authentification */
 /** les controllers des utilisateurs */
-const addUtilisateur = async (req, res, next) => {
-  const {
-    nom,
-    prenom,
-    nom_utilisateur,
-    genre,
-    email,
-    telephone,
-    ville,
-    adresse,
-    id_Fonction,
-    id_Site,
-    id_Programme,
-    id_EvalGrille,
-  } = req.body;
-
-  if (
-    !nom ||
-    !prenom ||
-    !nom_utilisateur ||
-    !genre ||
-    !email ||
-    !telephone ||
-    !ville ||
-    !adresse ||
-    !id_Fonction ||
-    !id_Site ||
-    !id_Programme
-    // Grille d'évaluation = id_EvalGrille (b_eval_grille), non obligatoire.
-  ) {
-    return res
-      .status(403)
-      .json({ message: "Veuillez bien renseigner les paramètres." });
-  }
-  try {
-    const Query = `INSERT INTO B_UTILISATEUR (nom,prenom,nom_utilisateur,genre,email,telephone,ville,adresse,password,id_Fonction,id_Site,id_Programme,id_EvalGrille,status,dateCreation) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
-    const statut = "ACTIF";
-    const dateCreation = new Date();
-    const password = nom_utilisateur + "Orange" + dateCreation.getFullYear();
-    const passwordHast = await bcrypt.hash(password, 10);
-    const resutlat = await db.query(Query, [
-      nom,
-      prenom,
-      nom_utilisateur,
-      genre,
-      email,
-      telephone,
-      ville,
-      adresse,
-      passwordHast,
-      id_Fonction,
-      id_Site,
-      id_Programme,
-      id_EvalGrille || null,
-      statut,
-      dateCreation,
-    ]);
-    return res
-      .status(201)
-      .send({ message: "Le compte de l'utilisateur a été bien enregistrer" });
-  } catch (error) {
-    res.status(500).json({ message: "Error request" });
-  }
-};
+// Création d'un compte : Controllers/creationCompte.Controllers.js (POST /utilisateur/addUser).
 const getAllUtilisateur = async (req, res, next) => {
   const Query = `SELECT UT.id,UT.nom,UT.prenom,UT.nom_utilisateur,UT.email, UT.telephone,Ft.nom Fonction,St.nom Site,Pr.nom Programme,Gr.nom Grille,UT.status,UT.dateCreation from B_UTILISATEUR UT 
   left join B_FONCTION Ft on UT.id_Fonction=Ft.id
@@ -266,11 +145,12 @@ const getDetailsUtilisateur = async (req, res, next) => {
         return res.status(403).json({ message: "Accès refusé : cet utilisateur n'est pas dans votre périmètre." });
       }
     }
-    const Query = `SELECT UT.id, UT.nom,UT.prenom,UT.telephone,UT.email,FCT.nom as Fonction,st.nom as Site,pr.nom as Programme,
+    // LEFT JOIN : un compte sans fonction, site ou programme reste consultable.
+    const Query = `SELECT UT.id, UT.nom,UT.prenom,UT.nom_utilisateur,UT.status,UT.telephone,UT.email,FCT.nom as Fonction,st.nom as Site,pr.nom as Programme,
      UT.id_EvalGrille, egr.nom as EvalGrille from
-     B_UTILISATEUR UT INNER JOIN B_FONCTION FCT
+     B_UTILISATEUR UT LEFT JOIN B_FONCTION FCT
       on UT.id_Fonction=FCT.id
-      INNER JOIN B_SITE st on UT.id_Site=st.id INNER JOIN B_PROGRAMME pr on UT.id_Programme=pr.id
+      LEFT JOIN B_SITE st on UT.id_Site=st.id LEFT JOIN B_PROGRAMME pr on UT.id_Programme=pr.id
       LEFT JOIN b_eval_grille egr on UT.id_EvalGrille=egr.id
     where UT.id=?`;
     // Période facultative ?du=&au= (AAAA-MM-JJ, bornes incluses) : le nombre de
@@ -293,6 +173,7 @@ const getDetailsUtilisateur = async (req, res, next) => {
     const Query2 = `SELECT count(*) nb_consultation, fch.id,fch.titre,fch.url, UT.nom_utilisateur as Gestionnaire,max(ht.dateConsultation) as dateConsultation from B_HISTORIQUE ht INNER JOIN B_FICHE fch on ht.id_FICHE=fch.id INNER JOIN B_UTILISATEUR UT on fch.id_gestionnaire=UT.id where ht.id_UTILISATEUR=?${condPeriode} GROUP BY fch.id ORDER BY dateConsultation DESC`;
     const Query3 = `SELECT fch.id,fch.titre,ct.message,fch.url,UT.nom_utilisateur as Gestionnaire,ct.dateCommentaire  from B_COMMENTAIRE ct INNER JOIN B_FICHE fch on ct.id_FICHE=fch.id INNER JOIN  B_UTILISATEUR UT on fch.id_gestionnaire=UT.id where ct.id_UTILISATEUR=?`;
     const [result] = await db.query(Query, [id]);
+    if (!result.length) return res.status(404).json({ message: "Utilisateur introuvable." });
     const [result2] = await db.query(Query2, [id, ...paramsPeriode]);
     const [result3] = await db.query(Query3, [id]);
     result[0]["consultations"] = result2;
@@ -350,8 +231,13 @@ const update_utilisateur = async (req, res, next) => {
       .json({ message: "Merci de spécifier l'utilisateur à desactiver ." });
   }
   try {
+    const [[avant]] = await db.query(`SELECT status FROM B_UTILISATEUR WHERE id=?`, [id]);
     const Query = `UPDATE B_UTILISATEUR SET status=? where id=?`;
     const resultat = await db.query(Query, [ETAT, id]);
+    // Réactivation : fiches actives qui le ciblent et qu'il n'a jamais reçues.
+    if (avant && String(ETAT || "").toUpperCase() === "ACTIF" && String(avant.status || "ACTIF").toUpperCase() !== "ACTIF") {
+      await sansEchec("réactivation de compte", () => notifierFichesPourUtilisateur(db, id));
+    }
     return res
       .status(201)
       .json({ message: `L'utilisateur est ${ETAT} maintenant.` });
@@ -571,19 +457,21 @@ const getOneCatgorie = async (req, res, next) => {
 };
 const getAllCategorieAndSousCategorie = async (req, res, next) => {
   try {
-    const Query = `SELECT id,nom as Categorie from B_CATEGORIE`;
-    const QuerySousCategorie = `SELECT id,id_Categorie,nom from B_SOUS_CATEGORIE where id_Categorie=?`;
-    const [resultat] = await db.query(Query);
-    for (let i = 0; i < resultat.length; i++) {
-      const [resultatSousCat] = await db.query(QuerySousCategorie, [
-        resultat[i].id,
-      ]);
-      resultat[i]["Sous_Categorie"] = resultatSousCat;
+    // Deux requêtes au total (au lieu d'une par catégorie), même réponse qu'avant.
+    const [[resultat], [sousCategories]] = await Promise.all([
+      db.query(`SELECT id,nom as Categorie from B_CATEGORIE`),
+      db.query(`SELECT id,id_Categorie,nom from B_SOUS_CATEGORIE ORDER BY id`),
+    ]);
+    const parCategorie = new Map();
+    for (const sc of sousCategories) {
+      if (!parCategorie.has(sc.id_Categorie)) parCategorie.set(sc.id_Categorie, []);
+      parCategorie.get(sc.id_Categorie).push(sc);
     }
+    for (const c of resultat) c["Sous_Categorie"] = parCategorie.get(c.id) || [];
     return res.status(200).send(resultat);
   } catch (error) {
     console.log(error);
-    throw error;
+    return res.status(500).json({ message: "Erreur lors du chargement des catégories." });
   }
 };
 const deleteCategorie = async (req, res, next) => {
@@ -734,6 +622,16 @@ const getAllSite = async (req, res, next) => {
     res.status(500).json({ message: "Error request" });
   }
 };
+// Utilisateurs d'un site / d'un programme (pages de détail) : fonction, site, programme
+// et statut, y compris les comptes sans fonction (LEFT JOIN).
+const SQL_MEMBRES_REFERENTIEL = `SELECT BU.id, BU.nom, BU.prenom, BU.nom_utilisateur AS login,
+       COALESCE(BU.status, 'ACTIF') AS statut, DATE_FORMAT(BU.dateCreation, '%Y-%m-%d') AS dateCreation,
+       BF.nom AS fonction, ST.nom AS site, PG.nom AS programme
+  FROM B_UTILISATEUR BU
+  LEFT JOIN B_FONCTION BF ON BF.id = BU.id_Fonction
+  LEFT JOIN B_SITE ST ON ST.id = BU.id_Site
+  LEFT JOIN B_PROGRAMME PG ON PG.id = BU.id_Programme`;
+
 const getDeatilsSite = async (req, res, next) => {
   const id = req.params.id;
   if (!id) {
@@ -744,7 +642,7 @@ const getDeatilsSite = async (req, res, next) => {
   try {
     const resultat = {};
     const Query = `SELECT nom,Etat,DATE_FORMAT(dateCreation, '%Y-%m-%d') as dateCreation,description from B_SITE where id=?`;
-    const Query2 = `SELECT BU.nom,BU.prenom,BU.nom_utilisateur as login,BF.nom as fonction from B_UTILISATEUR BU INNER JOIN B_FONCTION BF on BU.id_Fonction=BF.id where BU.id_Site=?`;
+    const Query2 = `${SQL_MEMBRES_REFERENTIEL} WHERE BU.id_Site=? ORDER BY BU.nom, BU.prenom`;
     const resultat1 = await db.query(Query, [id]);
     const resultat2 = await db.query(Query2, [id]);
     resultat["infos_site"] = resultat1[0];
@@ -759,8 +657,10 @@ const getOneSite = async (req, res, next) => {
   const id = req.params.id;
   try {
     const Query = `SELECT id, nom,description from B_SITE where id=?`;
-    const resultat = await db.query(Query, [id]);
-    return res.status(200).send(resultat[0]);
+    // db.query renvoie [lignes, champs] : la fenêtre de modification attend le site lui-même.
+    const [lignes] = await db.query(Query, [id]);
+    if (!lignes.length) return res.status(404).json({ message: "Site introuvable." });
+    return res.status(200).send(lignes[0]);
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Error request" });
@@ -1390,8 +1290,9 @@ const getOneMotifMaVoixCompte = async (req, res, next) => {
   const { id } = req.params;
   try {
     const Query = `SELECT id,nomMotif from B_MOTIF_MA_VOIX_COMPTE WHERE id=?`;
-    const resultat = await db.query(Query, [id]);
-    return res.status(200).send(resultat[0]);
+    const [lignes] = await db.query(Query, [id]);
+    if (!lignes.length) return res.status(404).json({ message: "Motif introuvable." });
+    return res.status(200).send(lignes[0]);
   } catch (error) {
     res.status(500).json({ message: "Error request" });
   }
@@ -1425,27 +1326,29 @@ const deleteMotifMaVoixCompte = async (req, res, next) => {
 };
 /** fin de controllers motif de ma voix compte */
 
+// « Ma voix compte » est ANONYME : l'auteur n'est jamais enregistré (id_UTILISATEUR
+// reste NULL) et aucune donnée d'identité n'est exportée. Seul son SITE est conservé,
+// pour l'analyse et la prise en charge des remontées.
+const MA_VOIX_MESSAGE_MAX = 2000;
 const addMaVoixCompte = async (req, res, next) => {
-  const { motif_ma_voix_compte, message } = req.body;
-  const userId = req.auth.userId;
-  //console.log(req.body);
+  const { motif_ma_voix_compte } = req.body;
+  const message = String(req.body.message ?? "").trim();
   if (!motif_ma_voix_compte || !message) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner les paramètres" });
+    return res.status(400).json({ message: "Choisissez un motif et écrivez votre message." });
+  }
+  if (message.length > MA_VOIX_MESSAGE_MAX) {
+    return res.status(400).json({ message: `Votre message ne doit pas dépasser ${MA_VOIX_MESSAGE_MAX} caractères.` });
   }
   try {
-    const Query = `INSERT INTO B_MA_VOIX_COMPTE (id_UTILISATEUR,motif_ma_voix_compte,message,dateCreation) VALUES(?,?,?,?)`;
-    const dateCreation = new Date();
-    const resultat = await db.query(Query, [
-      userId,
-      motif_ma_voix_compte,
-      message,
-      dateCreation,
-    ]);
-    return res
-      .status(201)
-      .json({ message: "Vous venez de faire attendre votre voix" });
+    const [motif] = await db.query("SELECT id FROM B_MOTIF_MA_VOIX_COMPTE WHERE id=?", [motif_ma_voix_compte]);
+    if (!motif.length) return res.status(400).json({ message: "Ce motif n'existe plus." });
+    // Heure arrondie à l'heure pleine : l'horodatage précis ne doit pas permettre de
+    // recouper l'auteur avec les journaux de connexion.
+    const Query = `INSERT INTO B_MA_VOIX_COMPTE (id_UTILISATEUR,id_Site,motif_ma_voix_compte,message,dateCreation)
+                   VALUES(NULL,(SELECT u.id_Site FROM B_UTILISATEUR u WHERE u.id = ?),?,?,
+                          DATE_FORMAT(NOW(), '%Y-%m-%d %H:00:00'))`;
+    await db.query(Query, [req.auth.userId, motif_ma_voix_compte, message]);
+    return res.status(201).json({ message: "Votre message a bien été envoyé, de façon anonyme." });
   } catch (error) {
     res.status(500).json({ message: "Error request" });
   }
@@ -1456,11 +1359,13 @@ const getAllExport = async (req, res, next) => {
   try {
     let Query = "";
     if (dataType === "Ma voix compte") {
-      Query = `SELECT A.nomMotif as MOTIF_DU_MESSAGE,MVCP.message as MESSAGE, 
-      DATE_FORMAT(MVCP.dateCreation,'%Y-%m-%d %H:%i:%s') as DATE,UT.nom_utilisateur as LOGIN,st.nom as SITE,UT.nom as NOM ,UT.prenom as PRENOM  from B_MA_VOIX_COMPTE MVCP 
-     INNER JOIN B_MOTIF_MA_VOIX_COMPTE A on MVCP.motif_ma_voix_compte=A.id
-    LEFT join B_UTILISATEUR UT on MVCP.id_UTILISATEUR=UT.id
-    INNER JOIN B_SITE st on UT.id_Site=st.id 
+      // Anonyme : ni login, ni nom (même pour les messages antérieurs) ; site conservé
+      // pour l'analyse. Date au jour.
+      Query = `SELECT COALESCE(A.nomMotif, '(motif supprimé)') as MOTIF_DU_MESSAGE, MVCP.message as MESSAGE,
+      DATE_FORMAT(MVCP.dateCreation,'%Y-%m-%d') as DATE, st.nom as SITE
+      from B_MA_VOIX_COMPTE MVCP
+      LEFT JOIN B_MOTIF_MA_VOIX_COMPTE A on MVCP.motif_ma_voix_compte=A.id
+      LEFT JOIN B_SITE st on st.id=MVCP.id_Site
     where DATE_FORMAT(MVCP.dateCreation,'%Y-%m-%d')  between DATE_FORMAT(?,'%Y-%m-%d') and DATE_FORMAT(?,'%Y-%m-%d')
     `;
     } else {
@@ -2063,20 +1968,12 @@ const getAllDashboard_admin = async (req, res, next) => {
 };
 const getStatistique_par_site = async (req, res, next) => {
   try {
-    const Query_allSite = `SELECT id, nom from B_SITE`;
-    const Query2 = `SELECT COUNT(*) as nombre_utilisateur_sur_ce_site from B_UTILISATEUR where id_Site=?`;
-    const Query_taux_lecture_J = `SELECT COUNT(*) as nombre_chargement_lu_J from (SELECT id_FICHE,MIN(dateConsultation) as min_dateConsultation from B_HISTORIQUE GROUP BY id_FICHE)A INNER JOIN B_FICHE FCH on A.id_FICHE=FCH.id where  DATE_FORMAT(A.min_dateConsultation,'%Y-%m-%d')=DATE_FORMAT(FCH.dateEnregistrement,'%Y-%m-%d') ;`;
-    const [resultat1] = await db.query(Query_allSite);
-    resultat1.forEach(async (element) => {
-      //console.log(element);
-      /* const [resultat2] = await db.query(Query2,[element.id]);
-      element["nombre_utilisateur_sur_ce_site"]=resultat2[0].nombre_utilisateur_sur_ce_site
-    */
-    });
+    // (une boucle « forEach(async …) » vide, lancée sans attente, a été retirée)
+    const [resultat1] = await db.query(`SELECT id, nom from B_SITE`);
     return res.status(200).send(resultat1);
   } catch (error) {
     console.log(error);
-    throw error;
+    return res.status(500).json({ message: "Erreur lors du chargement des sites." });
   }
 };
 const faireSondage = async (req, res, next) => {};
@@ -2199,7 +2096,7 @@ const getDetailsProgramme = async (req, res, next) => {
   try {
     const resultat = {};
     const Query = `SELECT nom,Etat,DATE_FORMAT(dateCreation, '%Y-%m-%d') as dateCreation,description from B_PROGRAMME where id=?`;
-    const Query2 = `SELECT BU.nom,BU.prenom,BU.nom_utilisateur as login,BF.nom as programme from B_UTILISATEUR BU INNER JOIN B_PROGRAMME BF on BU.id_Programme=BF.id where BU.id_Programme=?`;
+    const Query2 = `${SQL_MEMBRES_REFERENTIEL} WHERE BU.id_Programme=? ORDER BY BU.nom, BU.prenom`;
     const resultat1 = await db.query(Query, [id]);
     const resultat2 = await db.query(Query2, [id]);
     resultat["infos_programme"] = resultat1[0];
@@ -2211,7 +2108,7 @@ const getDetailsProgramme = async (req, res, next) => {
   }
 };
 const getOneProgramme = async (req, res, next) => {
-  const id = req.params;
+  const { id } = req.params;
   if (!id) {
     return res
       .status(403)
@@ -2219,8 +2116,9 @@ const getOneProgramme = async (req, res, next) => {
   }
   try {
     const Query = `SELECT id, nom,description from B_PROGRAMME where id=?`;
-    const resultat = await db.query(Query, [id]);
-    return res.status(200).send(resultat[0]);
+    const [lignes] = await db.query(Query, [id]);
+    if (!lignes.length) return res.status(404).json({ message: "Programme introuvable." });
+    return res.status(200).send(lignes[0]);
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Error request" });
@@ -2689,24 +2587,28 @@ const addFiche = async (req, res, next) => {
 
     // 2) Notification pour les AUTRES profils ayant accès à la fiche
     // (mêmes site ET profil que les autorisations de la fiche), hors auteur.
-    const [destinataires] = await connection.query(
-      `SELECT id FROM B_UTILISATEUR
-         WHERE status='ACTIF' AND id <> ?
-           AND FIND_IN_SET(id_Site, ?) > 0
-           AND FIND_IN_SET(id_Fonction, ?) > 0`,
-      [userId, siteAutorisation, accesAutorisation]
-    );
-    for (const dest of destinataires) {
-      await connection.query(QyeryInsertNotification, [
+    // Une seule requête (INSERT … SELECT) au lieu d'une par destinataire : avec
+    // plusieurs centaines d'utilisateurs, la boucle gardait la transaction (et ses
+    // verrous sur B_FICHE) ouverte longtemps et provoquait des « Lock wait timeout ».
+    await connection.query(
+      `INSERT INTO B_NOTIFICATION (titre,message,type,dateReception,id_UTILISATEUR,id_FICHE,url)
+       SELECT ?, ?, ?, ?, U.id, ?, ?
+         FROM B_UTILISATEUR U
+        WHERE U.status='ACTIF' AND U.id <> ?
+          AND FIND_IN_SET(U.id_Site, ?) > 0
+          AND FIND_IN_SET(U.id_Fonction, ?) > 0`,
+      [
         titre_notification,
         `Une nouvelle fiche « ${titre} » est disponible`,
         type,
         dateEnregistrement,
-        dest.id,
         id_fiche,
         urlLecture,
-      ]);
-    }
+        userId,
+        siteAutorisation,
+        accesAutorisation,
+      ]
+    );
 
     if (quizList) {
       for (let i = 0; i < 4; i++) {
@@ -2813,7 +2715,7 @@ const getAllFicheByGestionnaire = async (req, res, next) => {
   try {
     const userId = req.auth && req.auth.userId;
     // Archivage automatique des fiches échues AVANT lecture (états à jour).
-    await Auto_archivage();
+    await Auto_archivage({ force: true });
     // Portée : l'utilisateur voit les chargements insérés par lui-même OU par
     // tout autre utilisateur du MÊME SITE ; l'admin voit tous les sites.
     const portee = await porteeSiteFiches(userId);
@@ -2860,7 +2762,13 @@ const getAllFicheByIDFiche = async (req, res, next) => {
 
   try {
     Auto_archivage();
-    const Query = `Select id,titre,url,extention,AccesUtilite,AccesQuiz,AccesCommentaire from B_FICHE where id=?`;
+    const Query = `SELECT FH.id, FH.titre, FH.url, FH.extention, FH.AccesUtilite, FH.AccesQuiz, FH.AccesCommentaire,
+      CT.nom AS Categorie, SCT.nom AS Sous_Categorie,
+      DATE_FORMAT(FH.dateDebut,'%Y-%m-%d %H:%i:%s') AS dateDebut, DATE_FORMAT(FH.dateFin,'%Y-%m-%d %H:%i:%s') AS dateFin
+      FROM B_FICHE FH
+      LEFT JOIN B_CATEGORIE CT ON CT.id = FH.id_Categorie
+      LEFT JOIN B_SOUS_CATEGORIE SCT ON SCT.id = FH.id_SousCategorie
+      WHERE FH.id=?`;
     const Query2 = `SELECT id,libelleQuestion,reponseQuestion,id_Fiche from B_QUIZ where id_Fiche=? LIMIT 2`;
     const Query3 = `INSERT INTO B_HISTORIQUE (dateConsultation,id_UTILISATEUR,id_FICHE) VALUES (?,?,?)`;
     const Query4 = `SELECT * from B_REPONSE_QUIZ where id_UTILISATEUR=? and id_FICHE=? `;
@@ -2898,16 +2806,22 @@ const getAllFicheByIDFiche = async (req, res, next) => {
     if (resultatNotif && resultatNotif.length > 0) {
       const id_NOTIFICATION = resultatNotif[0].id;
       const date = new Date();
-      await db.query(Query7, [
-        userId,
-        id_NOTIFICATION,
-        id,
-        "test",
-        userId,
-        1,
-        date,
-        date,
-      ]);
+      // Trace de lecture secondaire : si elle échoue (ex. verrou), la fiche doit
+      // quand même s'ouvrir.
+      try {
+        await db.query(Query7, [
+          userId,
+          id_NOTIFICATION,
+          id,
+          "test",
+          userId,
+          1,
+          date,
+          date,
+        ]);
+      } catch (e) {
+        console.error("getAllFicheByIDFiche trace lecture:", e && (e.sqlMessage || e.message));
+      }
     }
 
     // Ces colonnes peuvent être NULL en base
@@ -3096,6 +3010,10 @@ const getAllFicheByIdCategorieAndIdSousCategorie = async (req, res, next) => {
     throw error;
   }
 };
+const COLONNES_FICHE_MODIFIABLES = Object.fromEntries(
+  ["titre", "id_Sla", "dateReception", "dateDebut", "dateVisibilite", "dateFin", "id_Categorie", "id_SousCategorie",
+   "Niveau", "AccesSite", "AccesProfil", "AccesUtilite", "AccesQuiz", "AccesCommentaire"].map((c) => [c.toLowerCase(), c])
+);
 const updateFiche = async (req, res, next) => {
   const data = JSON.parse(req.body.data);
   //console.log(data);
@@ -3103,6 +3021,9 @@ const updateFiche = async (req, res, next) => {
   const { id } = req.params;
 
   try {
+    // Accès avant modification : sert à notifier les seuls NOUVEAUX ciblés.
+    const [[avant]] = await db.query(`SELECT AccesSite, AccesProfil FROM B_FICHE WHERE id=?`, [id]);
+    if (!avant) return res.status(404).json({ message: "Fiche introuvable." });
     if (req.file) {
       const extention = path.extname(req.file.filename);
       // const url = `${req.protocol}://${req.get("host")}/chargements/${
@@ -3146,12 +3067,16 @@ const updateFiche = async (req, res, next) => {
     delete data.Quiz2;
     delete data.Quiz3;
     delete data.Quiz4;
-    Object.entries(data).forEach(async ([key, value]) => {
-      if (value !== null && value !== undefined) {
-        const Query = `UPDATE B_FICHE set ${key}=? where id=?`;
-        await db.query(Query, [value, id]);
-      }
-    });
+    // Seules les colonnes modifiables du formulaire sont acceptées (le nom de
+    // colonne venait auparavant directement du corps de la requête), et les mises
+    // à jour sont attendues une à une avant de répondre.
+    for (const [key, value] of Object.entries(data)) {
+      const colonne = COLONNES_FICHE_MODIFIABLES[String(key).toLowerCase()];
+      if (!colonne || value === null || value === undefined) continue;
+      await db.query(`UPDATE B_FICHE set ${colonne}=? where id=?`, [value, id]);
+    }
+    // Accès élargis : les utilisateurs nouvellement ciblés reçoivent la fiche.
+    await sansEchec("élargissement des accès d'une fiche", () => notifierNouveauxCiblesFiche(db, id, avant));
     return res
       .status(201)
       .json({ message: "La modification a été bien effectuée." });
@@ -3299,7 +3224,20 @@ const deleteFiche = async (req, res, next) => {
  * archivage manuel). Les fiches sans date de fin (NULL) ne sont jamais archivées.
  * Ne lève jamais d'erreur : retourne le nombre de fiches archivées (0 si échec).
  */
-const Auto_archivage = async () => {
+// L'archivage automatique est déclenché par les listes de fiches (à chaque
+// chargement, pour chaque utilisateur). On le limite à une exécution par minute
+// et jamais deux en parallèle : chaque exécution verrouille les fiches expirées.
+const AUTO_ARCHIVAGE_INTERVALLE_MS = Number(process.env.AUTO_ARCHIVAGE_INTERVALLE_MS ?? 60000);
+let autoArchivageDernier = 0;
+let autoArchivageEnCours = false;
+// force : pages de gestion (Les chargements, Archives) qui doivent afficher des états à jour.
+const Auto_archivage = async ({ force = false } = {}) => {
+  const maintenant = Date.now();
+  if (autoArchivageEnCours || (!force && maintenant - autoArchivageDernier < AUTO_ARCHIVAGE_INTERVALLE_MS)) {
+    return 0;
+  }
+  autoArchivageEnCours = true;
+  autoArchivageDernier = maintenant;
   try {
     const Query = `UPDATE B_FICHE set ETAT=?,date_Archive=?,archive_par=?
                     where dateFin<=? AND (ETAT IS NULL OR ETAT<>?)`;
@@ -3311,6 +3249,8 @@ const Auto_archivage = async () => {
   } catch (error) {
     console.error("Auto_archivage error:", error && (error.sqlMessage || error.message));
     return 0;
+  } finally {
+    autoArchivageEnCours = false;
   }
 };
 const exportFiche = async (req, res, next) => {};
@@ -3379,7 +3319,7 @@ const getAllArchive = async (req, res, next) => {
   try {
     const userId = req.auth && req.auth.userId;
     // Archivage automatique des fiches échues AVANT lecture (états à jour).
-    await Auto_archivage();
+    await Auto_archivage({ force: true });
     // Portée : archives (ETAT='ARCHIVE', qu'elles soient automatiques ou
     // manuelles) des chargements insérés par l'utilisateur OU par tout autre
     // utilisateur du MÊME SITE ; l'admin voit tous les sites.
@@ -3459,30 +3399,6 @@ const getAllAgentB = async (req, res, next) => {
 };
 
 /** debut pour le controllers R_SUPERVISEUR_AGENT */
-const affecte_agent_to_superviseur = async (req, res, next) => {
-  const { id_SUPERVISEUR, id_AGENT } = req.body;
-  if (!id_AGENT || !id_SUPERVISEUR) {
-    return res
-      .status(403)
-      .json({ message: "Merci de bien renseigner tous les paramètres" });
-  }
-  try {
-    const Query =
-      "INSERT INTO B_R_SUPERVISEUR_AGENT (id_SUPERVISEUR,id_AGENT,dateCreation) VALUE (?,?,?)";
-    const dateCreation = new Date();
-    const result = await db.query(Query, [
-      id_SUPERVISEUR,
-      id_AGENT,
-      dateCreation,
-    ]);
-    return res
-      .status(201)
-      .json({ message: "Votre opératon a été effectuée avec succes." });
-  } catch (error) {
-    console.log(error);
-    throw error;
-  }
-};
 const getAllAgentBySuperviseur = async (req, res, next) => {
   const { id } = req.params;
   if (!id) {
@@ -3490,16 +3406,23 @@ const getAllAgentBySuperviseur = async (req, res, next) => {
       .status(403)
       .json({ message: "Merci de bien renseigner les paramètres" });
   }
+  // « Mes agents » : chacun ne consulte que SES agents (administrateur compris ;
+  // les rattachements se gèrent depuis Utilisateurs / Assignation).
+  if (Number(id) !== Number(req.auth && req.auth.userId)) {
+    return res.status(403).json({ message: "Vous ne pouvez consulter que vos propres agents." });
+  }
   try {
-    const Query = ` 
-    SELECT UT.id,UT.nom,UT.prenom,UT.email,UT.telephone,UT.adresse,FCT.nom as Fonction,
-     st.nom as Site,pr.nom as Programme,UT.status 
-     from
-     (select * from B_R_SUPERVISEUR_AGENT where id_SUPERVISEUR=? ) R_SA
-     INNER JOIN B_UTILISATEUR as UT on R_SA.id_AGENT=UT.id 
-     INNER JOIN B_FONCTION FCT on UT.id_Fonction=FCT.id
-     INNER JOIN B_SITE st on UT.id_SITE=st.id 
-     INNER JOIN B_PROGRAMME pr on UT.id_PROGRAMME=pr.id
+    // LEFT JOIN : un agent sans fonction, site ou programme n'est plus écarté.
+    const Query = `
+    SELECT DISTINCT UT.id,UT.nom,UT.prenom,UT.nom_utilisateur,UT.email,UT.telephone,UT.adresse,FCT.nom as Fonction,
+     st.nom as Site,pr.nom as Programme,UT.status
+     from B_R_SUPERVISEUR_AGENT R_SA
+     INNER JOIN B_UTILISATEUR as UT on R_SA.id_AGENT=UT.id
+     LEFT JOIN B_FONCTION FCT on UT.id_Fonction=FCT.id
+     LEFT JOIN B_SITE st on UT.id_SITE=st.id
+     LEFT JOIN B_PROGRAMME pr on UT.id_PROGRAMME=pr.id
+     WHERE R_SA.id_SUPERVISEUR=?
+     ORDER BY UT.nom, UT.prenom
     `;
     const [result] = await db.query(Query, [id]);
     return res.status(200).send(result);
@@ -3546,9 +3469,17 @@ const getAllAgentByRo = async (req, res, next) => {
 // habilitationSite / compteGerable : voir utils/perimetreComptes.js (périmètre
 // « Gérer les comptes » avec la règle du site à vision globale).
 
+// Assignation : agents et superviseurs du site de l'utilisateur (assignation.gerer) ;
+// l'administrateur voit et rattache ceux de TOUS les sites (out123).
+const estAdministrateur = async (userId) => {
+  const { permissionsEffectives } = require("../middlewares/permission");
+  const { role } = await permissionsEffectives(userId);
+  return role === "R_ADMI";
+};
 const getAllAgentByRo_Assignable = async (req, res, next) => {
   const userId = req.auth.userId;
   try {
+    const admin = await estAdministrateur(userId);
     const retour = [];
     const Query1 = `SELECT id_Site FROM B_UTILISATEUR where id=? `;
     const Query2 = `SELECT UT1.nom_utilisateur FROM B_UTILISATEUR UT1 INNER JOIN B_UTILISATEUR UT2 on UT1.id=UT2.id
@@ -3557,27 +3488,30 @@ const getAllAgentByRo_Assignable = async (req, res, next) => {
     LEFT JOIN B_SITE st on UT1.id_Site=st.ID
     LEFT  JOIN B_R_SUPERVISEUR_AGENT SA on UT1.id=SA.id_AGENT
     LEFT JOIN B_UTILISATEUR UT3 on SA.id_SUPERVISEUR=UT3.id
-    where UT1.id_Site=? and UT1.id!=? and FCT.nom!="Superviseur" and FCT.nom!="Gestionnaire Baseco" and FCT.nom!="administrateur"`;
+    where ${admin ? "1=1" : "UT1.id_Site=?"} and UT1.id!=? and FCT.nom!="Superviseur" and FCT.nom!="Gestionnaire Baseco" and FCT.nom!="administrateur"`;
     const [result1] = await db.query(Query1, [userId]);
-    const id_site = result1[0].id_Site;
+    const id_site = result1[0] ? result1[0].id_Site : null;
+    const paramsSite = admin ? [userId] : [id_site, userId];
     // ?details=1 : agents avec nom, fonction et superviseur actuel (écran Assignation).
     if (String(req.query.details || "") === "1") {
       const [rows] = await db.query(
         `SELECT UT1.id, UT1.nom_utilisateur AS login, UT1.nom, UT1.prenom, FCT.nom AS fonction,
+                UT1.id_Site AS id_site, ST.nom AS site,
                 MAX(UT3.id) AS id_superviseur,
                 MAX(TRIM(CONCAT(IFNULL(UT3.prenom,''),' ',IFNULL(UT3.nom,'')))) AS superviseur
            FROM B_UTILISATEUR UT1
            LEFT JOIN B_FONCTION FCT ON UT1.id_Fonction = FCT.id
+           LEFT JOIN B_SITE ST ON UT1.id_Site = ST.id
            LEFT JOIN B_R_SUPERVISEUR_AGENT SA ON UT1.id = SA.id_AGENT
            LEFT JOIN B_UTILISATEUR UT3 ON SA.id_SUPERVISEUR = UT3.id
-          WHERE UT1.id_Site = ? AND UT1.id != ?
+          WHERE ${admin ? "1=1" : "UT1.id_Site = ?"} AND UT1.id != ?
             AND FCT.nom != "Superviseur" AND FCT.nom != "Gestionnaire Baseco" AND FCT.nom != "administrateur"
-          GROUP BY UT1.id, UT1.nom_utilisateur, UT1.nom, UT1.prenom, FCT.nom
-          ORDER BY UT1.nom, UT1.prenom`, [id_site, userId]
+          GROUP BY UT1.id, UT1.nom_utilisateur, UT1.nom, UT1.prenom, FCT.nom, UT1.id_Site, ST.nom
+          ORDER BY UT1.nom, UT1.prenom`, paramsSite
       );
       return res.status(200).send(rows);
     }
-    const [result] = await db.query(Query2, [id_site, userId]);
+    const [result] = await db.query(Query2, paramsSite);
     for (let index = 0; index < result.length; index++) {
       retour[index] = result[index].nom_utilisateur;
     }
@@ -3591,14 +3525,19 @@ const getAllAgentByRo_Assignable = async (req, res, next) => {
 const getAllSuperviseurByRo = async (req, res, next) => {
   const userId = req.auth.userId;
   try {
-    // Nom, prénom et nombre d'agents rattachés (écran Assignation).
+    const admin = await estAdministrateur(userId);
+    // Nom, prénom, site et nombre d'agents rattachés (écran Assignation).
+    // Administrateur : superviseurs de tous les sites ; sinon : ceux de son site.
     const Qery_superviseur = `SELECT UT2.id, UT2.nom_utilisateur, UT2.nom, UT2.prenom,
-           (SELECT COUNT(*) FROM B_R_SUPERVISEUR_AGENT SA WHERE SA.id_SUPERVISEUR = UT2.id) AS nb_agents
-      from B_UTILISATEUR UT1 INNER JOIN B_UTILISATEUR UT2 on UT1.id_Site=UT2.id_Site
+           UT2.id_Site AS id_site, ST.nom AS site,
+           (SELECT COUNT(DISTINCT SA.id_AGENT) FROM B_R_SUPERVISEUR_AGENT SA WHERE SA.id_SUPERVISEUR = UT2.id) AS nb_agents
+      from B_UTILISATEUR UT2
     LEFT JOIN B_FONCTION FCT on UT2.id_Fonction=FCT.id
-    where UT1.id=? and UT2.id!=? and FCT.nom="Superviseur"
-    ORDER BY UT2.nom, UT2.prenom`;
-    const [resultat] = await db.query(Qery_superviseur, [userId, userId]);
+    LEFT JOIN B_SITE ST on UT2.id_Site=ST.id
+    where UT2.id!=? and FCT.nom="Superviseur"
+      ${admin ? "" : "and UT2.id_Site = (SELECT UT1.id_Site FROM B_UTILISATEUR UT1 WHERE UT1.id=?)"}
+    ORDER BY ST.nom, UT2.nom, UT2.prenom`;
+    const [resultat] = await db.query(Qery_superviseur, admin ? [userId] : [userId, userId]);
     return res.status(200).send(resultat);
   } catch (error) {
     console.log(error);
@@ -3698,22 +3637,26 @@ const assignation_agent = async (req, res, next) => {
     if (!moi) {
       return res.status(403).json({ message: "Accès refusé : habilitation manquante (assignation.gerer)." });
     }
+    // Administrateur : n'importe quel agent vers n'importe quel superviseur, tous
+    // sites confondus (les contrôles de nature restent : vrai superviseur, agents
+    // assignables). Les autres : leur site uniquement.
+    const admin = moi.role === "R_ADMI";
     const [[sup]] = await db.query(
       `SELECT UT.id FROM B_UTILISATEUR UT LEFT JOIN B_FONCTION FCT ON UT.id_Fonction = FCT.id
-        WHERE UT.id = ? AND UT.id_Site = ? AND FCT.nom = 'Superviseur'`,
-      [id_SUPERVISEUR, moi.id_Site]
+        WHERE UT.id = ? AND FCT.nom = 'Superviseur' ${admin ? "" : "AND UT.id_Site = ?"}`,
+      admin ? [id_SUPERVISEUR] : [id_SUPERVISEUR, moi.id_Site]
     );
     if (!sup) {
-      return res.status(403).json({ message: "Ce superviseur n'appartient pas à votre site." });
+      return res.status(403).json({ message: admin ? "Ce compte n'est pas un superviseur." : "Ce superviseur n'appartient pas à votre site." });
     }
     const [agentsSite] = await db.query(
       `SELECT UT.nom_utilisateur FROM B_UTILISATEUR UT LEFT JOIN B_FONCTION FCT ON UT.id_Fonction = FCT.id
-        WHERE UT.id_Site = ? AND UT.id != ? AND UT.nom_utilisateur IN (?)
+        WHERE ${admin ? "1=1" : "UT.id_Site = ?"} AND UT.id != ? AND UT.nom_utilisateur IN (?)
           AND FCT.nom NOT IN ('Superviseur','Gestionnaire Baseco','administrateur')`,
-      [moi.id_Site, moi.id, liste_agents]
+      admin ? [moi.id, liste_agents] : [moi.id_Site, moi.id, liste_agents]
     );
     if (agentsSite.length !== new Set(liste_agents).size) {
-      return res.status(403).json({ message: "Certains agents n'appartiennent pas à votre site." });
+      return res.status(403).json({ message: admin ? "Certains comptes ne peuvent pas être assignés (superviseur, gestionnaire Baseco, administrateur ou inconnu)." : "Certains agents n'appartiennent pas à votre site." });
     }
     const Query = `select * from B_R_SUPERVISEUR_AGENT RSA INNER JOIN B_UTILISATEUR UT on RSA.id_AGENT=UT.id where  UT.nom_utilisateur=?`;
     const Query_select_id_agent = `SELECT id from B_UTILISATEUR where nom_utilisateur=?`;
@@ -4330,11 +4273,9 @@ const addControle = traiterBrouillonControle(async (connection, brouillon, req, 
 
 /*** fin de contrôle  */
 module.exports = {
-  sign_in,
   login,
   getMe,
   getAllUtilisateur,
-  addUtilisateur,
   getOneUtilisateur,
   deleteUtilisateur,
   update_utilisateur,
@@ -4405,7 +4346,6 @@ module.exports = {
   exportFiche,
   getOneCatgorie,
   getDeatilsSite,
-  affecte_agent_to_superviseur,
   getAllAgentBySuperviseur,
   getDetailsUtilisateur,
   getAllArchiveByGestionnaire,

@@ -1,180 +1,174 @@
+// Fenêtre de résultat (quiz, contrôle) — couleurs : variables --qx-* du mode sombre, repli mode clair.
 
-.score-popup-content {
+.qx-score {
+  --qx-niveau: #2e7d32;
+  --qx-niveau-pale: #e8f5e9;
   position: relative;
+  overflow: hidden;
+  width: min(360px, 86vw);
+  padding: 28px 24px 22px;
   text-align: center;
-  padding: 24px;
-  min-width: 280px;
+  color: var(--qx-texte, #212529);
+  background-color: var(--qx-surface, #fff);
+  font-family: poppins, sans-serif;
+
+  &--reussi {
+    --qx-niveau: var(--qx-vert, #2e7d32);
+    --qx-niveau-pale: var(--qx-vert-pale, #e8f5e9);
+  }
+  &--moyen {
+    --qx-niveau: var(--qx-orange-texte, #b35400);
+    --qx-niveau-pale: var(--qx-orange-pale, #fff1e6);
+  }
+  &--echec {
+    --qx-niveau: var(--qx-rouge, #c62828);
+    --qx-niveau-pale: var(--qx-rouge-pale, #fdecea);
+  }
 }
-.score-notification-container {
+
+.qx-score__icone {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 10px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
-  position: relative;
-  text-align: center;
-  padding: 24px;
-  min-width: 280px;
-  background-color: var(--qx-surface, white);
-  border-radius: 8px;
-  padding: 12px;
-  z-index: 6;
-  box-shadow: 0 4px 12px #ff8e36;
-  overflow: hidden;
+  justify-content: center;
+  background-color: var(--qx-niveau-pale);
+  color: var(--qx-niveau);
+  animation: qx-rebond 650ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 
-  .avatar-container {
-    margin-right: 16px;
-
-    .avatar {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      background-color: var(--qx-surface-2, #f0f8ff);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-
-      img {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-      }
-    }
-  }
-
-  .content {
-    flex: 1;
-
-    .score {
-      font-size: 1.5rem;
-      font-weight: bold;
-      color: #5c6bc0;
-      margin-bottom: 4px;
-    }
-
-    .message {
-      font-size: 1rem;
-      color: var(--qx-texte, #424242);
-    }
+  mat-icon {
+    font-size: 34px;
+    width: 34px;
+    height: 34px;
   }
 }
-
-// Global style to add to your styles.scss
-::ng-deep .score-notification-panel {
-  max-width: 400px !important;
-  background-color: transparent !important;
-  box-shadow: none !important;
+.qx-score--reussi .qx-score__icone mat-icon {
+  animation: qx-tour 900ms ease-in-out 650ms both;
+}
+.qx-score--moyen .qx-score__icone mat-icon,
+.qx-score--echec .qx-score__icone mat-icon {
+  animation: qx-balance 900ms ease-in-out 650ms both;
 }
 
+.qx-score__titre {
+  margin: 0 0 14px;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--qx-texte, #212529);
+}
 
-// ============================================
-// STYLES DU POPUP COMPONENT
-// ============================================
-/*
-.score-popup-content {
+.qx-score__anneau {
   position: relative;
-  text-align: center;
-  padding: 24px;
-  min-width: 280px;
-  
-  .score-icon {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 16px;
-    
-    mat-icon {
-      font-size: 64px;
-      width: 64px;
-      height: 64px;
-      color: #ff8e36;
-      animation: bounceIn 0.5s ease-out;
-    }
-    
-    &.success mat-icon {
-      color: #50be87;
-    }
-    
-    &.warning mat-icon {
-      color: var(--qx-orange-texte, #ffd200);
-    }
+  width: 132px;
+  height: 132px;
+  margin: 0 auto 6px;
+
+  svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
   }
-  
-  .score-value {
-    font-size: 56px;
+  circle {
+    fill: none;
+    stroke-width: 10;
+  }
+}
+.qx-score__piste {
+  stroke: var(--qx-surface-3, #eceff1);
+}
+.qx-score__jauge {
+  stroke: var(--qx-niveau);
+  stroke-linecap: round;
+  stroke-dashoffset: var(--arrivee);
+  animation: qx-remplir 900ms ease-out 250ms both;
+}
+.qx-score__valeur {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.1;
+
+  strong {
+    font-size: 2rem;
     font-weight: 700;
-    color: #ff8e36;
-    margin: 16px 0;
-    text-shadow: 2px 2px 4px rgba(255, 142, 54, 0.2);
-    animation: scaleIn 0.4s ease-out 0.1s both;
-  }
-  
-  .score-message {
-    font-size: 18px;
-    color: var(--qx-texte, #333);
-    margin: 12px 0;
-    line-height: 1.6;
-    animation: fadeIn 0.5s ease-out 0.2s both;
+    color: var(--qx-niveau);
   }
 }
+.qx-score__legende {
+  margin-bottom: 14px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--qx-texte-2, #5f6368);
+}
 
-// Animations
-@keyframes bounceIn {
-  0% {
+.qx-score__message {
+  margin: 0 0 18px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--qx-texte-2, #4a4f55);
+}
+
+.qx-score__bouton.mat-mdc-unelevated-button {
+  min-width: 160px;
+  border-radius: 20px;
+  background-color: #ff7900;
+  color: #fff;
+}
+
+// Confettis (score parfait uniquement)
+.qx-score__confettis {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  span {
+    position: absolute;
+    top: -12px;
+    width: 8px;
+    height: 12px;
+    border-radius: 2px;
     opacity: 0;
-    transform: scale(0.3);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  70% {
-    transform: scale(0.9);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
+    animation-name: qx-confetti;
+    animation-timing-function: cubic-bezier(0.25, 0.6, 0.45, 1);
+    animation-fill-mode: forwards;
   }
 }
 
-@keyframes scaleIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.5);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
+@keyframes qx-rebond {
+  0% { transform: scale(0.3); opacity: 0; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes qx-tour {
+  from { transform: rotate(0); }
+  to { transform: rotate(360deg); }
+}
+@keyframes qx-balance {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-12deg); }
+  75% { transform: rotate(12deg); }
+}
+@keyframes qx-remplir {
+  from { stroke-dashoffset: var(--depart); }
+  to { stroke-dashoffset: var(--arrivee); }
+}
+@keyframes qx-confetti {
+  0% { transform: translateY(0) rotate(0); opacity: 1; }
+  100% { transform: translateY(420px) rotate(var(--rotation, 360deg)); opacity: 0; }
 }
 
-@keyframes fadeIn {
-  0% {
-    opacity: 0;
-    transform: translateY(10px);
+@media (prefers-reduced-motion: reduce) {
+  .qx-score__icone,
+  .qx-score__icone mat-icon,
+  .qx-score__jauge {
+    animation: none !important;
   }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-// Responsive
-@media (max-width: 768px) {
-  .score-popup-content {
-    padding: 20px;
-    min-width: 240px;
-    
-    .score-icon mat-icon {
-      font-size: 48px;
-      width: 48px;
-      height: 48px;
-    }
-    
-    .score-value {
-      font-size: 42px;
-    }
-    
-    .score-message {
-      font-size: 16px;
-    }
+  .qx-score__confettis {
+    display: none;
   }
 }
-  */

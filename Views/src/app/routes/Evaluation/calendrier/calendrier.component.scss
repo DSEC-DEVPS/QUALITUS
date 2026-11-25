@@ -1,12 +1,48 @@
 .calendrier {
-  padding: 16px;
-  mat-card { margin-bottom: 16px; }
-  .barre { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
-  .grille-mois { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
-  .mois {
-    padding: 12px; border: 1px solid var(--qx-bordure, #e0e0e0); border-radius: 8px; border-left: 4px solid var(--qx-bordure, #bdbdbd);
-    &.ouvert { border-left-color: #43a047; background: var(--qx-surface-2, #f1f8e9); }
-    .nom { font-weight: 600; margin-bottom: 6px; }
+  .barre { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; margin-bottom: 8px; }
+  .champ-site { width: 240px; }
+  .champ-politique { width: 360px; max-width: 100%; }
+
+  .entete-annee { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin: 14px 0 16px; }
+  .entete-annee .espace { flex: 1; }
+  .nav-annee { display: flex; align-items: center; gap: 2px; }
+  .champ-annee { width: 170px; }
+  .resume { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 14px; font-size: 13px; font-weight: 600; }
+  .pill mat-icon { font-size: 16px; width: 16px; height: 16px; }
+  .pill.ouvert { background: var(--qx-vert-pale, #e8f5e9); color: var(--qx-vert, #2e7d32); }
+  .pill.ferme { background: var(--qx-surface-2, #f1f3f5); color: var(--qx-texte-2, #555); }
+
+  .trimestres { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 16px; }
+  .trimestre {
+    border: 1px solid var(--qx-bordure, #ece7e1); border-radius: 12px; padding: 12px; background: var(--qx-surface, #fff);
+    h3 { margin: 0 0 10px; font-size: 13.5px; font-weight: 700; color: var(--qx-texte-2, #777); }
   }
-  .vide { color: var(--qx-texte-2, rgba(0, 0, 0, 0.6)); }
+  .mois-grille { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .mois {
+    display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 10px;
+    border: 1px solid var(--qx-bordure, #e6e1da); border-top: 4px solid var(--qx-texte-3, #c4c0ba);
+    background: var(--qx-surface-2, #f7f6f4); transition: box-shadow .15s, transform .15s;
+    &:hover { box-shadow: 0 3px 10px rgba(0, 0, 0, .07); transform: translateY(-1px); }
+    .haut { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-height: 22px; }
+    .nom { font-weight: 700; font-size: 15px; color: var(--qx-texte, #2b2b2b); }
+    .etat { display: flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 600; color: var(--qx-texte-2, #666); }
+    .etat mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    &.ouvert { border-top-color: var(--qx-vert, #2e7d32); background: var(--qx-vert-pale, #eef7ee); .etat { color: var(--qx-vert, #2e7d32); } }
+    &.passe:not(.courant) { opacity: .72; }
+    &.courant { box-shadow: 0 0 0 2px #ff8e36; }
+  }
+  .badge-courant { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 8px; background: #ff8e36; color: #fff; white-space: nowrap; }
+
+  .legende { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 14px; font-size: 13px; color: var(--qx-texte-2, #666); align-items: center; }
+  .legende span { display: inline-flex; align-items: center; gap: 6px; }
+  .carre { display: inline-block; width: 14px; height: 14px; border-radius: 4px; }
+  .carre.ouvert { background: var(--qx-vert, #2e7d32); }
+  .carre.ferme { background: var(--qx-texte-3, #c4c0ba); }
+  .carre.courant { border: 2px solid #ff8e36; }
+  .ro mat-icon { font-size: 16px; width: 16px; height: 16px; }
+}
+@media (max-width: 600px) {
+  .calendrier .trimestres { grid-template-columns: 1fr; }
+  .calendrier .mois-grille { grid-template-columns: repeat(2, 1fr); }
 }

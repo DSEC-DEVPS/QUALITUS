@@ -1,123 +1,81 @@
-.container {
-  background-color: var(--header-background-color);
-  height: 100vh;
+.rf-page {
+  padding: 16px;
 }
-.profile,
-.container {
-  background-color: var(--header-background-color);
-  height: 100%;
+.rf-retour {
+  margin-bottom: 12px;
 }
-.image_profile {
-  display: block;
-  margin: auto;
-  padding: 10px;
-  width: 130px;
-  height: 130px;
-  border: 2px solid #ff8e36;
+.rf-carte {
+  margin-bottom: 16px;
+  padding: 20px 22px;
+  border-radius: 14px;
+  border: 1px solid var(--qx-bordure, rgba(0, 0, 0, 0.08));
+  background: var(--qx-surface, #fff);
+}
+.rf-vide {
+  text-align: center;
+  color: var(--qx-texte-2, #6b6b6b);
+}
+.rf-entete {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+.rf-icone {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-}
-ul li {
-  list-style: none;
-}
-.title {
-  font-family: poppins, sans-serif;
-  font-size: small;
-  font-weight: bold;
-  color: var(--qx-texte, rgba(35, 34, 34, 0.808));
-}
-.sub_title {
-  font-family: poppins, sans-serif;
-  font-size: small;
-  font-weight: 400;
+  background: rgba(255, 142, 54, 0.14);
   color: #ff8e36;
 }
-.mat-tab-group {
-  margin-bottom: 48px;
+.rf-icone mat-icon {
+  font-size: 32px;
+  width: 32px;
+  height: 32px;
 }
-.left,
-.right {
-  background-color: var(--header-background-color);
-  height: 100%;
+.rf-type {
+  color: var(--qx-texte-2, #6b6b6b);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
-.left {
-  border: 1px solid #ff8e36;
-  border-radius: 5px;
+.rf-nom {
+  margin: 2px 0 6px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--qx-texte, #2b2b2b);
 }
-table,
-mat-paginator {
-  background-color: transparent;
+.rf-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  color: var(--qx-texte-2, #6b6b6b);
+  font-size: 0.9rem;
 }
-tr,
-td,
-th {
-  cursor: pointer;
+.rf-etat {
+  padding: 2px 10px;
+  border-radius: 10px;
+  background: var(--qx-vert-pale, rgba(46, 125, 50, 0.1));
+  color: var(--qx-vert, #2e7d32);
+  font-weight: 600;
+  font-size: 0.8rem;
 }
-td:hover {
-  color: #ff8e36;
+.rf-etat.inactif {
+  background: var(--qx-survol, rgba(0, 0, 0, 0.06));
+  color: var(--qx-texte-2, #6b6b6b);
 }
-mat-icon {
-  cursor: pointer;
+.rf-description {
+  margin: 10px 0 0;
+  max-width: 900px;
+  color: var(--qx-texte, #2b2b2b);
 }
-::ng-deep .mat-mdc-tab.mdc-tab.mdc-tab.mdc-tab--active {
-  background-color: #ff8e36;
-  font-weight: 900;
-}
-tr > th {
-  font-family: poppins, sans-serif;
-  font-size: 10px;
-}
-
-.mat-mdc-row,
-.mat-mdc-header-row {
-  height: 25px !important;
-  min-height: 25px !important;
-}
-
-.mat-mdc-cell,
-.mat-mdc-header-cell {
-  padding: 0 4px !important;
-}
-
-.mat-mdc-row:nth-child(odd) {
-  background-color: var(--qx-ligne-impaire, #ddd3c89a);
-}
-
-.mat-mdc-row:nth-child(even) {
-  background-color: var(--qx-ligne-paire, #c7dccc4e);
-}
-
-.mat-mdc-header-row {
-  background-color: var(--qx-surface-2, #f0f0f0) !important;
-}
-
-.mat-mdc-header-cell {
-  font-weight: bold !important;
-  color: var(--qx-texte, #333) !important;
-  font-size: 10px !important;
-}
-
-.mat-mdc-row:hover {
-  background-color: var(--qx-bleu-pale, #e8f0fe) !important;
-}
-/* Augmenter la hauteur des lignes */
-.mat-mdc-row {
-  height: 15px !important; /* Ajustez selon vos besoins */
-}
-
-.mat-mdc-header-row {
-  height: 20px !important; /* Pour les en-têtes */
-}
-
-/* Alternative: utiliser min-height pour plus de flexibilité */
-.mat-mdc-row {
-  min-height: 10px !important;
-}
-
-/* Pour ajuster le padding des cellules */
-.mat-mdc-cell,
-.mat-mdc-header-cell {
-  padding: 10px 20px !important; /* top/bottom left/right */
-}
-.mat-mdc-cell {
-  font-size: 10px !important; /* Ajustez selon vos besoins (défaut: 14px) */
+.rf-titre {
+  margin: 0 0 14px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--qx-texte, #2b2b2b);
 }

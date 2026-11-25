@@ -145,12 +145,24 @@ export class RapportSondageComponent implements OnInit {
 
   /** Recherche dans la liste des non-répondants. */
   rechercheNR = '';
+  /** Affichage progressif (out110) : listes longues (non-répondants, réponses ouvertes) par tranches. */
+  readonly PAS_NR = 50;
+  readonly PAS_OUVERTES = 20;
+  nbNR = this.PAS_NR;
+  private readonly ouvertesAffichees = new Map<number, number>();
+  nbOuvertes(idQuestion: number): number { return this.ouvertesAffichees.get(idQuestion) ?? this.PAS_OUVERTES; }
+  plusOuvertes(idQuestion: number): void { this.ouvertesAffichees.set(idQuestion, this.nbOuvertes(idQuestion) + 50); }
+  min(a: number, b: number): number { return Math.min(a, b); }
+  /** Filtre mémorisé : recalculé seulement quand la recherche ou le rapport change. */
+  private cacheNR: { cle: string; source: unknown; liste: NonRepondant[] } | null = null;
   get nonRepondantsFiltres(): NonRepondant[] {
     const l = this.rapport?.participation?.non_repondants || [];
     const q = this.rechercheNR.trim().toLowerCase();
-    if (!q) return l;
-    return l.filter(n => [n.nom, n.prenom, n.nom_utilisateur, n.site, n.fonction, n.email]
+    if (this.cacheNR && this.cacheNR.cle === q && this.cacheNR.source === l) return this.cacheNR.liste;
+    const liste = !q ? l : l.filter(n => [n.nom, n.prenom, n.nom_utilisateur, n.site, n.fonction, n.email]
       .some(v => (v || '').toLowerCase().includes(q)));
+    this.cacheNR = { cle: q, source: l, liste };
+    return liste;
   }
   /** Canal et date du dernier envoi (email / SMS), sinon « Dans l'application ». */
   envoi(n: NonRepondant): string {

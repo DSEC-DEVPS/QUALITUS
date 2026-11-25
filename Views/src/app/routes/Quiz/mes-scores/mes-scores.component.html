@@ -47,7 +47,7 @@
             <td mat-cell *matCellDef="let s">
               {{ s.score }}%
               @if (s.nb_points_total != null) {
-                ({{ s.nb_points }} / {{ s.nb_points_total }} points)
+                ({{ s.nb_points | points }} / {{ s.nb_points_total | points }} points)
               } @else {
                 ({{ s.nb_bonnes }}/{{ s.nb_total }})
               }
@@ -76,7 +76,7 @@
         </table>
         @if (pag.length) {
           <mat-paginator [length]="pag.length" [pageIndex]="pag.pageIndex" [pageSize]="pag.pageSize"
-                         [pageSizeOptions]="pag.tailles" showFirstLastButtons (page)="pag.changer($event)" />
+                         [pageSizeOptions]="pag.tailles" showFirstLastButtons (page)="changerPage($event)" />
         }
       </div>
     </mat-card-content>

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ViewChild } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { UserService } from '@shared/services/user.service';
@@ -6,7 +6,7 @@ import { motif_ma_voix_compte } from '@core';
 import { AjouterMotifComponent } from '../ajouter-motif/ajouter-motif.component';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
-import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import {
   AppearanceAnimation,
   ConfirmBoxInitializer,
@@ -33,11 +33,17 @@ export class MotifMaVoixCompteComponent implements OnInit {
   destroy$: Subject<boolean> = new Subject<boolean>();
   displayedColumns: string[] = ['id', 'nomMotif', 'dateCreation', 'actions'];
   tableau_motifs!: MatTableDataSource<motif_ma_voix_compte>;
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
   ngOnInit(): void {
+    this.charger();
+  }
+  /** (Re)charge la liste : à l'ouverture et après un ajout / une modification. */
+  charger(): void {
     this.chargement = true;
     this.userService.getAllMotifMaVoix().pipe(finalize(() => (this.chargement = false))).subscribe({
       next: data => {
         this.tableau_motifs = new MatTableDataSource(data);
+        this.tableau_motifs.paginator = this.paginator;
       },
       error: error => {
         console.error(error);
@@ -45,23 +51,17 @@ export class MotifMaVoixCompteComponent implements OnInit {
     });
   }
   openDialog(): void {
-    this.dialog.open(AjouterMotifComponent, {
-      height: 'calc(100% - 30px)',
-      width: 'calc(100% - 30px)',
-      maxWidth: '100%',
-      maxHeight: '100%',
-    });
+    this.dialog
+      .open(AjouterMotifComponent, { width: '520px', maxWidth: '95vw', panelClass: 'dlg-ref' })
+      .afterClosed()
+      .subscribe(() => this.charger());
   }
 
   openDialog_update(id: number): void {
-    // Logic to update the motif with the given ID
-    this.dialog.open(UpdateMotifVoixCompteComponent, {
-      data: { id: id },
-      height: 'calc(100% - 30px)',
-      width: 'calc(100% - 30px)',
-      maxWidth: '100%',
-      maxHeight: '100%',
-    });
+    this.dialog
+      .open(UpdateMotifVoixCompteComponent, { data: { id }, width: '520px', maxWidth: '95vw', panelClass: 'dlg-ref' })
+      .afterClosed()
+      .subscribe(() => this.charger());
   }
 
   delete_motif(id: number) {
@@ -87,6 +87,7 @@ export class MotifMaVoixCompteComponent implements OnInit {
             this.userService.deleteMotifMaVoixCompte(id).subscribe({
               next: resultat => {
                 this.toastSrv.success(resultat.message);
+                this.charger();
               },
               error: error => {
                 console.log(error);

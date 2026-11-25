@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, inject } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, SimpleChanges, inject } from '@angular/core';
 import { toYMD } from '@shared/date-utils';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -11,9 +11,10 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ToastrService } from 'ngx-toastr';
-import { EvalSuitesService, LignePlanAction } from '../../eval-suites.service';
-import { EvalAdminService, RefItem } from '../../eval-admin.service';
+import { EvalSuitesService, LignePlanAction, RE_STATUT_CLOS, UtilisateurAssignable } from '../../eval-suites.service';
+import { RefItem } from '../../eval-admin.service';
 
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { ConfirmationService } from '@shared/services/confirmation.service';
@@ -22,18 +23,17 @@ import { ChargementComponent } from '@shared/components/chargement/chargement.co
 @Component({
   selector: 'app-plan-action-section',
   standalone: true,
-  imports: [ChargementComponent, MatDatepickerModule,
+  imports: [ChargementComponent, MatDatepickerModule, MatTooltipModule,
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatAutocompleteModule, MatChipsModule, MatTableModule,
   ],
   templateUrl: './plan-action-section.component.html',
   styleUrl: './plan-action-section.component.scss',
 })
-export class PlanActionSectionComponent implements OnInit {
+export class PlanActionSectionComponent implements OnInit, OnChanges {
   chargement = true;
   private readonly confirmation = inject(ConfirmationService);
   private readonly service = inject(EvalSuitesService);
-  private readonly admin = inject(EvalAdminService);
   private readonly toastr = inject(ToastrService);
 
   @Input() idEvaluation!: number;
@@ -41,7 +41,10 @@ export class PlanActionSectionComponent implements OnInit {
 
   lignes: LignePlanAction[] = [];
   statuts: RefItem[] = [];
-  users: { id: number; nom: string; prenom: string }[] = [];
+  /** Porteurs / contributeurs proposables (son site + site à vision globale, ou tous les sites). */
+  users: UtilisateurAssignable[] = [];
+  /** Dernières valeurs enregistrées, par ligne : rien n'est envoyé sans changement réel. */
+  private readonly enregistre = new Map<number, { synthese: string; id_statut: number | null }>();
   colonnes = ['action', 'porteur', 'echeance', 'statut', 'synthese', 'kpi', 'actions'];
   get colonnesAff(): string[] {
     return this.lectureSeule ? this.colonnes.filter(c => c !== 'actions') : this.colonnes;
@@ -56,7 +59,21 @@ export class PlanActionSectionComponent implements OnInit {
 
   ngOnInit(): void {
     this.charger();
-    this.admin.getRef('statut').subscribe({ next: s => (this.statuts = s) });
+    this.service.getStatuts().subscribe({ next: s => (this.statuts = s as any) });
+    this.chargerUtilisateurs();
+  }
+
+  /**
+   * Porteurs / contributeurs proposables : seulement en saisie (la route demande
+   * evaluation.coacher). En lecture seule (ex. téléconseiller sur sa propre
+   * évaluation en échec) on ne l'appelle pas : un refus 403 sur un GET ouvrirait
+   * la page d'erreur et empêcherait d'ouvrir l'évaluation.
+   */
+  ngOnChanges(ch: SimpleChanges): void {
+    if (ch['lectureSeule'] && !ch['lectureSeule'].firstChange) this.chargerUtilisateurs();
+  }
+  private chargerUtilisateurs(): void {
+    if (this.lectureSeule || this.users.length) return;
     this.service.getUtilisateurs().subscribe({ next: u => (this.users = u || []) });
   }
 
@@ -67,22 +84,26 @@ export class PlanActionSectionComponent implements OnInit {
   charger(): void {
     this.chargement = true;
     this.service.getPlanAction(this.idEvaluation).pipe(finalize(() => (this.chargement = false))).subscribe({
-      next: l => (this.lignes = l),
+      next: l => {
+        this.lignes = l;
+        this.enregistre.clear();
+        for (const x of l) this.enregistre.set(x.id, { synthese: x.synthese || '', id_statut: x.id_statut ?? null });
+      },
       error: () => this.toastr.error('Impossible de charger le plan d’action.'),
     });
   }
 
   // --- Autocomplete utilisateurs (Porteur / Contributeurs) ---
-  usersFiltres(q: string): { id: number; nom: string; prenom: string }[] {
+  usersFiltres(q: string): UtilisateurAssignable[] {
     const t = (q || '').trim().toLowerCase();
-    const base = t ? this.users.filter(u => `${u.nom} ${u.prenom}`.toLowerCase().includes(t)) : this.users;
+    const base = t ? this.users.filter(u => `${u.nom} ${u.prenom} ${u.login || ''}`.toLowerCase().includes(t)) : this.users;
     return base.slice(0, 20);
   }
-  choisirPorteur(u: { id: number; nom: string; prenom: string }): void {
+  choisirPorteur(u: UtilisateurAssignable): void {
     this.nouvelle.id_porteur = u.id;
     this.porteurRecherche = `${u.nom} ${u.prenom}`;
   }
-  ajouterContributeur(u: { id: number; nom: string; prenom: string }): void {
+  ajouterContributeur(u: UtilisateurAssignable): void {
     if (!this.nouvelle.contributeurs.includes(u.id)) this.nouvelle.contributeurs.push(u.id);
     this.contribRecherche = '';
   }
@@ -106,19 +127,73 @@ export class PlanActionSectionComponent implements OnInit {
     return !!s && /r[ée]alis/i.test(s.libelle || '');
   }
 
-  changerStatut(l: LignePlanAction): void {
-    if (this.statutEstRealise(l) && !(l.synthese && l.synthese.trim())) {
-      this.toastr.warning('Renseignez la synthèse pour clore l’action (statut Réalisé).');
-    }
-    this.enregistrerLigne(l);
+  /** Comparaison sans tenir compte des espaces en trop (même règle que le serveur). */
+  private static cle(v: string | null | undefined): string {
+    return String(v ?? '').replace(/\s+/g, ' ').trim();
   }
 
-  enregistrerLigne(l: LignePlanAction): void {
-    this.service.updateLigne(l.id, {
-      action: l.action, id_porteur: l.id_porteur, date_debut: l.date_debut, date_attendue: l.date_attendue,
-      date_realisation: l.date_realisation, id_statut: l.id_statut, kpi: l.kpi, commentaire: l.commentaire,
-      synthese: l.synthese,
-    }).subscribe({ next: () => this.toastr.success('Mis à jour.'), error: () => this.toastr.error('Erreur.') });
+  /** Le statut choisi clôt l'action (Réalisé, Abandonné, Annulé…). */
+  statutClot(id: number | null | undefined): boolean {
+    const s = this.statuts.find(x => x.id === id);
+    return !!s && RE_STATUT_CLOS.test((s.libelle || '').trim());
+  }
+
+  /**
+   * Statut : envoyé seulement s'il change réellement. Clore l'action demande une
+   * synthèse enregistrée et une confirmation : une action close est figée.
+   */
+  async changerStatut(l: LignePlanAction): Promise<void> {
+    const avant = this.enregistre.get(l.id);
+    if (avant && (avant.id_statut ?? null) === (l.id_statut ?? null)) return;
+    const retablir = () => { if (avant) l.id_statut = avant.id_statut; };
+    if (this.statutClot(l.id_statut)) {
+      if (!PlanActionSectionComponent.cle(avant?.synthese)) {
+        this.toastr.warning('Renseignez et enregistrez d’abord la synthèse pour clore l’action.');
+        retablir();
+        return;
+      }
+      const ok = await this.confirmation.confirmer({
+        titre: 'Clore l\'action', type: 'attention', oui: 'Clore',
+        message: 'Une fois close, l\'action ne pourra plus être modifiée ni supprimée. Continuer ?',
+      });
+      if (!ok) { retablir(); return; }
+    }
+    this.envoyer(l, { id_statut: l.id_statut }, () => {
+      if (avant) avant.id_statut = l.id_statut ?? null;
+      if (this.statutClot(l.id_statut)) l.close = true;
+    }, retablir);
+  }
+
+  /**
+   * Synthèse (à la sortie du champ) : rien n'est envoyé si le texte n'a pas
+   * réellement changé ; une synthèse déjà saisie ne peut pas être vidée.
+   */
+  enregistrerSynthese(l: LignePlanAction): void {
+    const avant = this.enregistre.get(l.id) || { synthese: '', id_statut: l.id_statut ?? null };
+    const nouvelle = PlanActionSectionComponent.cle(l.synthese);
+    if (nouvelle === PlanActionSectionComponent.cle(avant.synthese)) {
+      l.synthese = avant.synthese;
+      return;
+    }
+    if (!nouvelle) {
+      l.synthese = avant.synthese;
+      this.toastr.warning('La synthèse ne peut pas être vide.');
+      return;
+    }
+    this.envoyer(l, { synthese: l.synthese }, r => {
+      const propre = r?.ligne?.synthese ?? (l.synthese || '').trim();
+      l.synthese = propre;
+      avant.synthese = propre;
+      this.enregistre.set(l.id, avant);
+    }, () => { l.synthese = avant.synthese; });
+  }
+
+  /** Envoie uniquement les champs modifiés ; le serveur ne fait rien s'ils sont identiques. */
+  private envoyer(l: LignePlanAction, champs: Record<string, any>, ok: (r: any) => void, ko: () => void): void {
+    this.service.updateLigne(l.id, champs).subscribe({
+      next: (r: any) => { ok(r); if (!r?.inchange) this.toastr.success('Mis à jour.'); },
+      error: err => { ko(); this.toastr.error(err?.error?.message || 'Erreur.'); },
+    });
   }
 
   async supprimer(l: LignePlanAction): Promise<void> {

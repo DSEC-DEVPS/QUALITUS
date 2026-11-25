@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { fmtPoints } from '../bareme';
 import {
   AppearanceAnimation,
   ButtonLayoutDisplay,
@@ -39,7 +40,7 @@ export function actionModification(avant: Question, apres: QuestionDialogResult)
         (o.est_correcte ? 1 : 0) === (apres.options[i].est_correcte ? 1 : 0)
     );
   if (!memes) return 'REPONSES';
-  if (Number(avant.points ?? 5) !== Number(apres.points)) return 'POINTS';
+  if (Math.round(Number(avant.points ?? 5) * 100) !== Math.round(Number(apres.points) * 100)) return 'POINTS';
   return null;
 }
 
@@ -105,7 +106,7 @@ export function scorePct(v: number | string | null | undefined): string {
 
 /** « 10 / 15 » (points obtenus / points du quiz), ou '—'. */
 export function pointsLabel(obtenus: number | null | undefined, total: number | null | undefined): string {
-  return obtenus == null || total == null ? '—' : `${obtenus} / ${total}`;
+  return obtenus == null || total == null ? '—' : `${fmtPoints(obtenus)} / ${fmtPoints(total)}`;
 }
 
 /** Export Excel de toutes les tentatives du quiz (avant une réinitialisation). */

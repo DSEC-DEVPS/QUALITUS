@@ -7,4 +7,5 @@ RUN mkdir -p /app/chargements
 COPY wait-for-it.sh ./
 RUN chmod +x wait-for-it.sh
 EXPOSE 3000
-CMD ["./wait-for-it.sh", "mysql:3306", "--", "npm", "run", "server"]
+# out113 : demarrer.js (WEB_CONCURRENCY processus ; 1 par défaut = comme avant)
+CMD ["./wait-for-it.sh", "db:3306", "--", "node", "demarrer.js"]

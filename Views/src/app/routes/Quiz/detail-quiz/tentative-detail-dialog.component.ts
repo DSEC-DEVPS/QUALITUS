@@ -1,4 +1,5 @@
 import { Component, Inject } from '@angular/core';
+import { PointsPipe } from '../points.pipe';
 import { DatePipe } from '@angular/common';
 import { MatDialogModule, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,7 +11,7 @@ import { TentativeDetail } from '../interfaces';
 @Component({
   selector: 'app-tentative-detail-dialog',
   standalone: true,
-  imports: [DatePipe, MatDialogModule, MatButtonModule, MatIconModule, MatChipsModule],
+  imports: [PointsPipe, DatePipe, MatDialogModule, MatButtonModule, MatIconModule, MatChipsModule],
   template: `
     <h2 mat-dialog-title>Détail de la tentative</h2>
     <mat-dialog-content>
@@ -25,7 +26,7 @@ import { TentativeDetail } from '../interfaces';
           </mat-chip>
           <mat-chip>Score : {{ data.score }}%</mat-chip>
           @if (data.nb_points_total != null) {
-            <mat-chip>Points : {{ data.nb_points }} / {{ data.nb_points_total }}</mat-chip>
+            <mat-chip>Points : {{ data.nb_points | points }} / {{ data.nb_points_total | points }}</mat-chip>
           }
           <mat-chip>Temps : {{ tempsLabel }}</mat-chip>
         </mat-chip-set>
@@ -44,7 +45,7 @@ import { TentativeDetail } from '../interfaces';
             </mat-icon>
             <span>{{ i + 1 }}. {{ r.libelle }}</span>
             @if (r.points != null) {
-              <span class="pts">{{ r.est_correcte ? r.points : 0 }} / {{ r.points }} pt(s)</span>
+              <span class="pts">{{ (r.est_correcte ? r.points : 0) | points }} / {{ r.points | points }} pt(s)</span>
             }
           </li>
         } @empty {

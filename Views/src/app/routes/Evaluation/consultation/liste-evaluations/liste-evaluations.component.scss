@@ -10,6 +10,7 @@
   .ligne { cursor: pointer; }
   .ligne:hover { background: var(--qx-survol, rgba(0, 0, 0, 0.03)); }
   .ligne.inactive { opacity: 0.5; }
+  .compteur { margin: 0 0 8px; font-size: 13px; color: var(--qx-texte-2, rgba(0, 0, 0, 0.6)); }
   .vide { color: var(--qx-texte-2, rgba(0, 0, 0, 0.6)); }
   .ico-sup { font-size: 16px; width: 16px; height: 16px; vertical-align: middle; color: #6a1b9a; }
   mat-chip.chip-succes { background: var(--qx-vert-pale, #c8e6c9); }

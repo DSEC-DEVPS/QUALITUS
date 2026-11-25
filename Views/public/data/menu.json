@@ -427,6 +427,18 @@
           }
         },
         {
+          "route": "plans-actions",
+          "name": "Suivi des plans d'actions",
+          "type": "link",
+          "icon": "assignment",
+          "module": "evaluation",
+          "permissions": {
+            "only": [
+              "evaluation.lire"
+            ]
+          }
+        },
+        {
           "route": "creation/masse",
           "name": "Création en masse",
           "type": "link",

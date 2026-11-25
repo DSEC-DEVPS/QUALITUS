@@ -20,7 +20,8 @@
   </div>
 </nav>
 
-<div class="container-fluid">
+@if (fiche) {
+<div class="container-fluid lf-page">
   <div class="row">
 
     <!-- ========================================================= -->
@@ -28,695 +29,316 @@
     <!-- ========================================================= -->
 
     <div [class]="col_div_iframe">
-      <div class="row mt-1">
-        @if (fiche!.extention === '.pdf') {
-          <div
-            class="row justify-content-between mt-3 align-items-center"
-            style="margin-bottom: -25px"
-          >
 
-            <!-- Bouton retour -->
-            <div class="col-md-4 col-sm-2">
-              <button
-                mat-raised-button
-                class="small-button"
-                (click)="back()"
-              >
-                Retour
+      <!-- Entête commune à tous les formats -->
+      <header class="lf-entete">
+        <button mat-stroked-button class="lf-retour" (click)="back()">
+          <mat-icon>arrow_back</mat-icon>
+          Retour
+        </button>
+
+        <div class="lf-titre-bloc">
+          <!-- Titre exact, tel que saisi (codes USSD, sigles…) -->
+          <h1 class="lf-titre" [title]="fiche.titre">{{ fiche.titre }}</h1>
+          @if (fiche.Categorie || fiche.dateDebut) {
+            <div class="lf-meta">
+              @if (fiche.Categorie) {
+                <span>
+                  <mat-icon>folder_open</mat-icon>
+                  {{ fiche.Categorie }}@if (fiche.Sous_Categorie) {<span class="lf-sep">›</span>{{ fiche.Sous_Categorie }}}
+                </span>
+              }
+              @if (fiche.dateDebut) {
+                <span>
+                  <mat-icon>event</mat-icon>
+                  @if (fiche.dateFin) {
+                    Du {{ dateCourte(fiche.dateDebut) }} au {{ dateCourte(fiche.dateFin) }}
+                  } @else {
+                    Depuis le {{ dateCourte(fiche.dateDebut) }}
+                  }
+                </span>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="lf-actions">
+          @if (user.roles === 'R_ADMI' || user.roles === 'R_GB') {
+            @if (fiche.extention === '.pptx') {
+              <button mat-icon-button matTooltip="Télécharger" (click)="downloadPptx()">
+                <mat-icon>download</mat-icon>
               </button>
-            </div>
-
-            <!-- Titre -->
-            <div
-              class="col-md-4 col-sm-2"
-              style="font-size: small"
+            }
+            <button mat-icon-button matTooltip="Modifier" (click)="update(fiche.id)">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button
+              mat-icon-button
+              matTooltip="Archiver"
+              (click)="deleteSomething('Êtes vous sûr de vouloir archiver cette fiche ?', 'archivage')"
             >
-              {{ fiche?.titre | titlecase }}
-            </div>
+              <mat-icon>archive</mat-icon>
+            </button>
+            <button
+              mat-icon-button
+              matTooltip="Supprimer"
+              (click)="deleteSomething('Êtes vous sûr de vouloir supprimer cette fiche ?', 'suppression')"
+            >
+              <mat-icon>delete_forever</mat-icon>
+            </button>
+          }
+        </div>
+      </header>
 
-            <!-- Actions -->
-            <div class="col-md-4 col-sm-2 text-end">
+      @if (fiche.extention === '.pdf') {
 
-              @if (user.roles === 'R_ADMI' || user.roles === 'R_GB') {
+        <!-- Lecteur PDF -->
+        <div class="embed-responsive lf-document">
+          <iframe
+            class="embed-responsive-item"
+            [title]="fiche.titre"
+            [src]="url"
+            allowfullscreen
+          ></iframe>
+        </div>
 
-                <!-- Modifier -->
-                <mat-icon
-                  style="color: #ff8e36; cursor: pointer"
-                  matTooltip="Modifier"
-                  matTooltipPosition="below"
-                  (click)="update(fiche!.id)"
-                >
-                  edit
-                </mat-icon>
+      } @else {
 
-                <!-- Archiver -->
-                <mat-icon
-                  style="
-                    color: #ff8e36;
-                    margin-left: 15px;
-                    cursor: pointer;
-                  "
-                  matTooltip="Archiver"
-                  matTooltipPosition="below"
-                  (click)="
-                    deleteSomething(
-                      'Êtes vous sûr de vouloir archiver cette fiche ?',
-                      'archivage'
-                    )
-                  "
-                >
-                  archive
-                </mat-icon>
+        <!-- =================================================== -->
+        <!-- EXCEL : téléchargé (pas d'aperçu) -->
+        <!-- =================================================== -->
 
-                <!-- Supprimer -->
-                <mat-icon
-                  style="
-                    color: #ff8e36;
-                    margin-left: 15px;
-                    cursor: pointer;
-                  "
-                  matTooltip="Supprimer"
-                  matTooltipPosition="below"
-                  (click)="
-                    deleteSomething(
-                      'Êtes vous sûr de vouloir supprimer cette fiche ?',
-                      'suppression'
-                    )
-                  "
-                >
-                  delete_forever
-                </mat-icon>
-
-              } @else {}
-
-            </div>
-          </div>
-
-          <!-- Lecteur PDF -->
-          <div class="embed-responsive embed-responsive-16by9">
-            <iframe
-              class="embed-responsive-item"
-              [src]="url"
-              allowfullscreen
-            ></iframe>
-          </div>
-
-        } @else {
-
-          <!-- =================================================== -->
-          <!-- EXCEL -->
-          <!-- =================================================== -->
-
-          <div
-            *ngIf="fiche?.extention === '.xlsx'"
-            class="excel-container"
-          >
-
-            <!-- Barre de contrôle Excel -->
-            <div class="controls-row">
-
-              <!-- Retour -->
-              <div>
-                <button
-                  mat-raised-button
-                  class="small-button"
-                  (click)="back()"
-                >
-                  Retour
-                </button>
-              </div>
-              <div style="font-size: small">
-                <span style="font-weight: bold">
-                  Titre:
-                </span>
-                {{ fiche?.titre | titlecase }}
-              </div>
-              <div class="actions d-flex align-items-center">
-
-                <div>
-
-                  @if (user.roles === 'R_ADMI' || user.roles === 'R_GB') {
-
-                    <!-- Modifier -->
-                    <mat-icon
-                      style="color: #ff8e36; cursor: pointer"
-                      matTooltip="Modifier"
-                      matTooltipPosition="above"
-                      (click)="update(fiche!.id)"
-                    >
-                      edit
-                    </mat-icon>
-
-                    <!-- Archiver -->
-                    <mat-icon
-                      style="
-                        color: #ff8e36;
-                        margin-left: 15px;
-                        cursor: pointer;
-                      "
-                      matTooltip="Archiver"
-                      matTooltipPosition="above"
-                      (click)="
-                        deleteSomething(
-                          'Êtes vous sûr de vouloir archiver cette fiche ?',
-                          'archivage'
-                        )
-                      "
-                    >
-                      archive
-                    </mat-icon>
-
-                    <!-- Supprimer -->
-                    <mat-icon
-                      style="
-                        color: #ff8e36;
-                        margin-left: 15px;
-                        cursor: pointer;
-                      "
-                      matTooltip="Supprimer"
-                      matTooltipPosition="above"
-                      (click)="
-                        deleteSomething(
-                          'Êtes vous sûr de vouloir supprimer cette fiche ?',
-                          'suppression'
-                        )
-                      "
-                    >
-                      delete_forever
-                    </mat-icon>
-
-                  } @else {}
-
+        <div *ngIf="fiche.extention === '.xlsx'" class="excel-container lf-document">
+          <div class="excel-viewer">
+            <div class="d-flex justify-content-center">
+              @if (excelLoading) {
+                <div class="text-center p-4">
+                  <mat-progress-spinner mode="indeterminate" diameter="40" style="margin: 0 auto"></mat-progress-spinner>
+                  <p class="lf-excel-texte">Téléchargement en cours...</p>
                 </div>
-              </div>
-            </div>
-
-            <!-- Tableau Excel -->
-            <div class="excel-viewer">
-              <div class="d-flex justify-content-center">
-                @if (excelLoading) {
-                  <div class="text-center p-4">
-                    <mat-progress-spinner
-                      mode="indeterminate"
-                      diameter="40"
-                      style="margin: 0 auto"
-                    ></mat-progress-spinner>
-                    <p style="font-size: medium; margin-top: 8px">Téléchargement en cours...</p>
-                  </div>
-                } @else if (excelDownloadStarted) {
-                  <div class="text-center p-4">
-                    <mat-icon style="color: var(--qx-vert, #4caf50)">check_circle</mat-icon>
-                    <p style="font-size: small">Le fichier a été téléchargé.</p>
-                    <button
-                      mat-raised-button
-                      (click)="confirmerTelechargementExcel()"
-                      style="width: auto"
-                    >
-                      Télécharger à nouveau
-                    </button>
-                  </div>
-                } @else if (excelCancelled) {
-                  <div class="text-center p-4">
-                    <p style="font-size: small">Téléchargement annulé.</p>
-                    <button
-                      mat-raised-button
-                      color="primary"
-                      (click)="confirmerTelechargementExcel()"
-                    >
-                      Télécharger
-                    </button>
-                  </div>
-                } @else if (excelCountdownActive) {
-                  <div class="text-center p-4">
-                    <mat-icon style="font-size: 48px; width: 48px; height: 48px; color: #ff8e36"
-                      >description</mat-icon
-                    >
-                    <p style="font-size: medium; margin-top: 12px">
-                      Téléchargement automatique dans
-                      <strong style="font-size: 18px; color: #ff8e36">{{ excelCountdown }}</strong>
-                      seconde{{ excelCountdown > 1 ? 's' : '' }}...
-                    </p>
-                    <div class="d-flex justify-content-center" style="gap: 12px">
-                      <button
-                        mat-raised-button
-                        color="primary"
-                        style="width: auto"
-                        (click)="confirmerTelechargementExcel()"
-                      >
-                        Télécharger maintenant
-                      </button>
-                      <button mat-raised-button (click)="annulerTelechargementExcel()">
-                        Annuler
-                      </button>
-                    </div>
-                  </div>
-                }
-              </div>
-            </div>
-          </div>
-
-          <!-- =================================================== -->
-          <!-- POWERPOINT -->
-          <!-- =================================================== -->
-
-          <div
-            *ngIf="fiche?.extention === '.pptx'"
-            class="excel-container"
-          >
-
-            <!-- Barre de contrôle PowerPoint -->
-            <div class="controls-row">
-
-              <!-- Retour -->
-              <div>
-                <button
-                  mat-raised-button
-                  class="small-button"
-                  (click)="back()"
-                >
-                  Retour
-                </button>
-              </div>
-
-              <!-- Titre -->
-              <div style="font-size: medium">
-                <span style="font-weight: bold">
-                  Titre:
-                </span>
-                {{ fiche?.titre | titlecase }}
-              </div>
-
-              <!-- Actions PowerPoint -->
-              <div class="actions d-flex align-items-center">
-
-                <div>
-
-                  @if (user.roles === 'R_ADMI' || user.roles === 'R_GB') {
-
-                    <!-- Modifier -->
-                    <mat-icon
-                      style="color: #ff8e36; cursor: pointer"
-                      matTooltip="Modifier"
-                      matTooltipPosition="above"
-                      (click)="update(fiche!.id)"
-                    >
-                      edit
-                    </mat-icon>
-
-                    <!-- Archiver -->
-                    <mat-icon
-                      style="
-                        color: #ff8e36;
-                        margin-left: 15px;
-                        cursor: pointer;
-                      "
-                      matTooltip="Archiver"
-                      matTooltipPosition="above"
-                      (click)="
-                        deleteSomething(
-                          'Êtes vous sûr de vouloir archiver cette fiche ?',
-                          'archivage'
-                        )
-                      "
-                    >
-                      archive
-                    </mat-icon>
-
-                    <!-- Supprimer -->
-                    <mat-icon
-                      style="
-                        color: #ff8e36;
-                        margin-left: 15px;
-                        cursor: pointer;
-                      "
-                      matTooltip="Supprimer"
-                      matTooltipPosition="above"
-                      (click)="
-                        deleteSomething(
-                          'Êtes vous sûr de vouloir supprimer cette fiche ?',
-                          'suppression'
-                        )
-                      "
-                    >
-                      delete_forever
-                    </mat-icon>
-
-                  } @else {}
-
+              } @else if (excelDownloadStarted) {
+                <div class="text-center p-4">
+                  <mat-icon class="lf-excel-icone lf-ok">check_circle</mat-icon>
+                  <p class="lf-excel-texte">Le fichier a été téléchargé.</p>
+                  <button mat-stroked-button (click)="confirmerTelechargementExcel()">
+                    Télécharger à nouveau
+                  </button>
                 </div>
-
-                <!-- Télécharger PowerPoint -->
-                @if (user.roles === 'R_ADMI' || user.roles === 'R_GB') {
-
-                  <button
-                    mat-raised-button
-                    color="primary"
-                    class="small-button"
-                    (click)="downloadPptx()"
-                  >
-                    <mat-icon>download</mat-icon>
+              } @else if (excelCancelled) {
+                <div class="text-center p-4">
+                  <p class="lf-excel-texte">Téléchargement annulé.</p>
+                  <button mat-flat-button class="lf-btn-principal" (click)="confirmerTelechargementExcel()">
                     Télécharger
                   </button>
-
-                }
-
-              </div>
-            </div>
-
-            <!-- ================================================= -->
-            <!-- CONTRÔLES DE ZOOM -->
-            <!-- ================================================= -->
-
-            <div
-              style="
-                display: flex;
-                gap: 8px;
-                align-items: center;
-                margin-bottom: 8px;
-              "
-            >
-
-              <!-- Zoom arrière -->
-              <mat-icon
-                (click)="zoomOut()"
-                style="
-                  color: #ff8e36;
-                  cursor: pointer;
-                  font-size: 25px;
-                "
-                matTooltip="Zoom arrière"
-              >
-                zoom_out
-              </mat-icon>
-
-              <!-- Reset -->
-              <button
-                (click)="resetZoom()"
-                title="Reset"
-                style="
-                  border-radius: 5%;
-                  border: none;
-                  font-size: medium;
-                  font-weight: normal;
-                "
-              >
-                100%
-              </button>
-
-              <!-- Zoom avant -->
-              <mat-icon
-                (click)="zoomIn()"
-                style="
-                  color: #ff8e36;
-                  cursor: pointer;
-                  font-size: 25px;
-                "
-                matTooltip="Zoom avant"
-              >
-                zoom_in
-              </mat-icon>
-
-              <!-- Pourcentage -->
-              <label
-                for="zoomSlider"
-                style="
-                  margin-left: 12px;
-                  font-size: medium;
-                "
-              >
-                Zoom:
-                {{ zoom * 100 | number: '1.0-0' }}%
-              </label>
-
-              <!-- Slider -->
-              <input
-                id="zoomSlider"
-                type="range"
-                min="{{ minZoom }}"
-                max="{{ maxZoom }}"
-                step="{{ zoomStep }}"
-                [value]="zoom"
-                (input)="onSlider($event)"
-                style="
-                  width: 160px;
-                  margin-left: 8px;
-                  color: #ff8e36;
-                "
-              />
-            </div>
-
-            <!-- ================================================= -->
-            <!-- VIEWPORT POWERPOINT -->
-            <!-- ================================================= -->
-
-            <div
-              #viewport
-              (wheel)="onWheel($event)"
-              style="
-                width: 100%;
-                height: 640px;
-                border: 1px solid var(--qx-bordure, #ccc);
-                overflow: auto;
-                position: relative;
-              "
-            >
-
-              <!-- Wrapper PowerPoint -->
-              <div
-                #pptxWrapper
-                id="pptx-wrapper"
-                [hidden]="fiche?.extention !== '.pptx'"
-                [style.transform]="'scale(' + zoom + ')'"
-                style="
-                  transform-origin: top left;
-                  width: 100%;
-                  height: 100%;
-                  will-change: transform;
-                "
-              ></div>
-
+                </div>
+              } @else if (excelCountdownActive) {
+                <div class="text-center p-4">
+                  <mat-icon class="lf-excel-icone">description</mat-icon>
+                  <p class="lf-excel-texte">
+                    Téléchargement automatique dans
+                    <strong class="lf-compte">{{ excelCountdown }}</strong>
+                    seconde{{ excelCountdown > 1 ? 's' : '' }}...
+                  </p>
+                  <div class="d-flex justify-content-center" style="gap: 12px">
+                    <button mat-flat-button class="lf-btn-principal" (click)="confirmerTelechargementExcel()">
+                      Télécharger maintenant
+                    </button>
+                    <button mat-stroked-button (click)="annulerTelechargementExcel()">
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              }
             </div>
           </div>
+        </div>
 
-        }
+        <!-- =================================================== -->
+        <!-- POWERPOINT : rendu local (pptx-preview) -->
+        <!-- =================================================== -->
 
-      </div>
+        <div *ngIf="fiche.extention === '.pptx'" class="excel-container lf-document">
+
+          <!-- Contrôles de zoom -->
+          <div class="lf-zoom">
+            <button mat-icon-button matTooltip="Zoom arrière" (click)="zoomOut()">
+              <mat-icon>zoom_out</mat-icon>
+            </button>
+            <button mat-stroked-button class="lf-zoom-reset" matTooltip="Revenir à 100 %" (click)="resetZoom()">
+              {{ zoom * 100 | number: '1.0-0' }} %
+            </button>
+            <button mat-icon-button matTooltip="Zoom avant" (click)="zoomIn()">
+              <mat-icon>zoom_in</mat-icon>
+            </button>
+            <input
+              id="zoomSlider"
+              type="range"
+              aria-label="Zoom"
+              min="{{ minZoom }}"
+              max="{{ maxZoom }}"
+              step="{{ zoomStep }}"
+              [value]="zoom"
+              (input)="onSlider($event)"
+            />
+          </div>
+
+          <!-- Viewport PowerPoint -->
+          <div #viewport class="lf-pptx-viewport" (wheel)="onWheel($event)">
+            <div
+              #pptxWrapper
+              id="pptx-wrapper"
+              [hidden]="fiche.extention !== '.pptx'"
+              [style.transform]="'scale(' + zoom + ')'"
+              style="transform-origin: top left; width: 100%; height: 100%; will-change: transform"
+            ></div>
+          </div>
+        </div>
+      }
     </div>
-    @if (fiche!.Utilite || show_value_Quiz || fiche!.Commentaire) {
-      <div class="col-md-3 col-sm-12 mt-md-5 mt-sm-1">
-        <mat-tab-group *ngIf="fiche!.Commentaire || fiche!.Utilite || fiche!.Quiz.length > 0">
-          <!-- Onglet Utilité -->
-          <mat-tab>
 
-            <ng-template mat-tab-label>
-              Sondages
-            </ng-template>
+    <!-- ========================================================= -->
+    <!-- PANNEAU DE DROITE : QUIZ, UTILITÉ, COMMENTAIRE -->
+    <!-- ========================================================= -->
 
-            <!-- Quiz -->
-            @if ((fiche?.Quiz?.length || 0) > 0) {
+    @if (fiche.Utilite || show_value_Quiz || fiche.Commentaire) {
+      <div class="col-md-3 col-sm-12 lf-panneau-col">
+        <aside class="lf-panneau">
+          <mat-tab-group mat-stretch-tabs="true" animationDuration="150ms">
 
-              <form [formGroup]="formGroup_Quiz">
+            @if (show_value_Quiz || quizEnvoye || show_div_value_sondage) {
+              <mat-tab>
+                <ng-template mat-tab-label>
+                  @if ((show_value_Quiz || quizEnvoye) && show_div_value_sondage) {
+                    Quiz & utilité
+                  } @else if (show_div_value_sondage) {
+                    Utilité
+                  } @else {
+                    Quiz
+                  }
+                </ng-template>
 
-                <div *ngIf="show_value_Quiz">
+                <div class="lf-onglet">
 
-                  <hr class="Quiz" />
+                  <!-- QUIZ -->
+                  @if (show_value_Quiz && (fiche.Quiz.length || 0) > 1) {
+                    <section class="lf-section">
+                      <div class="lf-section-titre">
+                        <mat-icon>quiz</mat-icon>
+                        Quiz
+                        <span class="lf-compteur">{{ nbReponsesQuiz }}/2 répondu{{ nbReponsesQuiz > 1 ? 's' : '' }}</span>
+                      </div>
 
-                  <!-- Question 1 -->
-                  <div>
+                      <form [formGroup]="formGroup_Quiz">
+                        <div class="lf-question">
+                          <p><span class="lf-num">1</span>{{ question(fiche.Quiz[0].libelleQuestion) }}</p>
+                          <mat-radio-group formControlName="Reponse1" class="lf-choix">
+                            <mat-radio-button value="1">Vrai</mat-radio-button>
+                            <mat-radio-button value="0">Faux</mat-radio-button>
+                          </mat-radio-group>
+                        </div>
 
-                    <p
-                      class="mt-3"
-                      style="
-                        font-family: poppins, sans-serif;
-                        font-size: small;
-                      "
-                    >
-                      {{ fiche!.Quiz[0].libelleQuestion }} ?
-                    </p>
+                        <div class="lf-question">
+                          <p><span class="lf-num">2</span>{{ question(fiche.Quiz[1].libelleQuestion) }}</p>
+                          <mat-radio-group formControlName="Reponse2" class="lf-choix">
+                            <mat-radio-button value="1">Vrai</mat-radio-button>
+                            <mat-radio-button value="0">Faux</mat-radio-button>
+                          </mat-radio-group>
+                        </div>
 
-                    <div class="d-flex">
-
-                      <mat-radio-group
-                        formControlName="Reponse1"
-                      >
-
-                        <mat-radio-button
-                          class="example-margin"
-                          style="font-size: small"
-                          value="1"
+                        <button
+                          mat-flat-button
+                          type="button"
+                          class="lf-btn-principal lf-plein"
+                          [disabled]="formGroup_Quiz.invalid"
+                          (click)="response_quiz()"
                         >
-                          VRAI
-                        </mat-radio-button>
+                          Valider mes réponses
+                        </button>
+                      </form>
+                    </section>
+                  } @else if (quizEnvoye) {
+                    <section class="lf-section lf-merci" [class.lf-merci--partiel]="quizBonnes !== null && quizBonnes < 2">
+                      <mat-icon>{{ quizBonnes === 2 ? 'emoji_events' : 'task_alt' }}</mat-icon>
+                      <span>
+                        Quiz envoyé
+                        @if (quizBonnes !== null) {
+                          : {{ quizBonnes }}/2 {{ quizBonnes > 1 ? 'bonnes réponses' : 'bonne réponse' }}
+                        }
+                      </span>
+                    </section>
+                  }
 
-                        <mat-radio-button
-                          class="example-margin"
-                          style="font-size: small"
-                          value="0"
-                        >
-                          FAUX
-                        </mat-radio-button>
-
-                      </mat-radio-group>
-
-                    </div>
-                  </div>
-
-                  <!-- Question 2 -->
-                  <div>
-
-                    <p
-                      class="mt-3"
-                      style="
-                        font-family: poppins, sans-serif;
-                        font-size: small;
-                      "
-                    >
-                      {{ fiche!.Quiz[1].libelleQuestion }} ?
-                    </p>
-
-                    <div class="d-flex">
-
-                      <mat-radio-group
-                        formControlName="Reponse2"
-                      >
-
-                        <mat-radio-button
-                          class="example-margin"
-                          style="font-size: small"
-                          value="1"
-                        >
-                          VRAI
-                        </mat-radio-button>
-
-                        <mat-radio-button
-                          class="example-margin"
-                          style="font-size: small"
-                          value="0"
-                        >
-                          FAUX
-                        </mat-radio-button>
-
-                      </mat-radio-group>
-
-                    </div>
-                  </div>
-
-                  <!-- Validation Quiz -->
-                  <div
-                    class="row text-center justify-content-center p-0 m-0"
-                  >
-
-                    <button
-                      mat-button
-                      [disabled]="formGroup_Quiz.invalid"
-                      class="text-center button_valide"
-                      (click)="response_quiz()"
-                    >
-                      Valider
-                    </button>
-
-                  </div>
-
+                  <!-- UTILITÉ -->
+                  @if (show_div_value_sondage) {
+                    @if (show_value_utilite) {
+                      <section class="lf-section">
+                        <div class="lf-section-titre">
+                          <mat-icon>thumbs_up_down</mat-icon>
+                          Utilité
+                        </div>
+                        <p class="lf-question-simple">Le contenu de cette fiche vous a-t-il été utile ?</p>
+                        <div class="lf-utilite">
+                          <button mat-stroked-button class="lf-oui" (click)="reponse_utilite(1)">
+                            <mat-icon>thumb_up</mat-icon>
+                            Oui
+                          </button>
+                          <button mat-stroked-button class="lf-non" (click)="reponse_utilite(0)">
+                            <mat-icon>thumb_down</mat-icon>
+                            Non
+                          </button>
+                        </div>
+                      </section>
+                    } @else if (utiliteEnvoyee !== null) {
+                      <section class="lf-section lf-merci">
+                        <mat-icon>task_alt</mat-icon>
+                        <span>Merci pour votre avis.</span>
+                      </section>
+                    }
+                  }
                 </div>
-
-              </form>
-
+              </mat-tab>
             }
 
-            <!-- ================================================= -->
-            <!-- UTILITÉ -->
-            <!-- ================================================= -->
+            <!-- COMMENTAIRE -->
+            @if (show_div_value_commentaire) {
+              <mat-tab>
+                <ng-template mat-tab-label>Commentaire</ng-template>
 
-            <div
-              class="mt-md-0"
-              *ngIf="show_div_value_sondage"
-            >
-
-              <div *ngIf="show_value_utilite">
-
-                <hr class="utilite" />
-
-                <span style="font-size: small">
-                  Le contenu est-il utile ?
-                </span>
-
-                <div
-                  class="d-flex justify-content-center m-0"
-                >
-
-                  <!-- OUI -->
-                  <button
-                    class="btn btn-success btn-sm btn_non"
-                    value="1"
-                    (click)="reponse_utilite(1)"
-                  >
-                    OUI
-                  </button>
-
-                  <!-- NON -->
-                  <button
-                    class="btn btn-danger btn-sm btn_non"
-                    value="0"
-                    (click)="reponse_utilite(0)"
-                  >
-                    NON
-                  </button>
-
+                <div class="lf-onglet">
+                  <section class="lf-section">
+                    <div class="lf-section-titre">
+                      <mat-icon>chat_bubble_outline</mat-icon>
+                      Laisser un commentaire
+                    </div>
+                    <p class="lf-aide">
+                      Une question ou une remarque sur cette fiche ? Votre commentaire est transmis au gestionnaire
+                      de la fiche et, le cas échéant, à votre superviseur.
+                    </p>
+                    <form [formGroup]="formGroum" (ngSubmit)="addCommentaire()">
+                      <textarea
+                        class="form-control commentaire-box"
+                        rows="5"
+                        placeholder="Votre commentaire..."
+                        formControlName="message"
+                      ></textarea>
+                      <button
+                        mat-flat-button
+                        type="submit"
+                        class="lf-btn-principal lf-plein"
+                        [disabled]="formGroum.invalid || envoiCommentaire"
+                      >
+                        <mat-icon>send</mat-icon>
+                        Envoyer
+                      </button>
+                    </form>
+                  </section>
                 </div>
-              </div>
-
-            </div>
-
-          </mat-tab>
-
-          <!-- ================================================= -->
-          <!-- ONGLET COMMENTAIRES -->
-          <!-- ================================================= -->
-
-          <mat-tab
-            *ngIf="show_div_value_commentaire"
-          >
-
-            <ng-template mat-tab-label>
-              Commentaires
-            </ng-template>
-
-            <div
-              class="mt-5 text-center"
-            >
-
-              <form
-                [formGroup]="formGroum"
-                action=""
-              >
-
-                <textarea
-                  class="form-control commentaire-box"
-                  rows="4"
-                  placeholder="Ajoutez un commentaire..."
-                  formControlName="message"
-                ></textarea>
-
-              </form>
-
-              <!-- Envoyer -->
-              <button
-                mat-raised-button
-                (click)="addCommentaire(); back()"
-                [disabled]="formGroum.invalid"
-              >
-                Envoyer
-              </button>
-
-            </div>
-
-          </mat-tab>
-
-        </mat-tab-group>
-
+              </mat-tab>
+            }
+          </mat-tab-group>
+        </aside>
       </div>
-
     }
-
   </div>
 </div>
+}

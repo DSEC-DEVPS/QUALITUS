@@ -43,7 +43,7 @@
           <div class="meta-row"><span class="k">Seuil de réussite</span><span class="v">{{ quiz?.note_passage }} %</span></div>
           <div class="meta-row"><span class="k">Nombre de participants{{ coteProprietaire ? '' : ' (votre site)' }}</span><span class="v">{{ quiz?.nb_participants ?? 0 }}</span></div>
           <div class="meta-row"><span class="k">Barème</span><span class="v" [class.bareme-ko]="totalPoints !== 100">
-            {{ totalPoints }} / 100 points
+            {{ totalPoints | points }} / 100 points
             @if (totalPoints !== 100) { <small>— à ajuster : le quiz n'est pas proposé aux participants</small> }
           </span></div>
         </div>
@@ -173,12 +173,27 @@
             <!-- Participants déjà diffusés -->
             <h3 class="m-t-16">
               Participants
-              @if (rechercheParticipant.trim()) {
+              @if (rechercheParticipant.trim() || statutParticipant) {
                 ({{ participantsFiltres.length }} / {{ participantsDiffuses.length }})
               } @else {
                 ({{ participantsDiffuses.length }})
               }
             </h3>
+            @if (participantsDiffuses.length) {
+              <p class="text-muted participation-resume">
+                {{ participantsDiffuses.length - nbStatut('NON_PASSE') - nbStatut('EN_COURS') }} ont passé le quiz
+                sur {{ participantsDiffuses.length }} ·
+                <strong>{{ nbStatut('NON_PASSE') }} non passé{{ nbStatut('NON_PASSE') > 1 ? 's' : '' }}</strong>
+                @if (nbStatut('EN_COURS')) { · {{ nbStatut('EN_COURS') }} en cours }
+              </p>
+              <mat-chip-listbox class="filtre-statut" aria-label="Statut de passage" [(ngModel)]="statutParticipant"
+                                hideSingleSelectionIndicator>
+                <mat-chip-option value="">Tous</mat-chip-option>
+                @for (s of STATUTS_PASSAGE; track s.val) {
+                  <mat-chip-option [value]="s.val">{{ s.pluriel }} ({{ nbStatut(s.val) }})</mat-chip-option>
+                }
+              </mat-chip-listbox>
+            }
             <mat-form-field appearance="outline" class="recherche-participants">
               <mat-label>Rechercher un participant</mat-label>
               <mat-icon matPrefix>search</mat-icon>
@@ -208,11 +223,20 @@
                   <th mat-header-cell *matHeaderCellDef>Diffusé le</th>
                   <td mat-cell *matCellDef="let p">{{ p.dateDiffusion }}</td>
                 </ng-container>
-                <tr mat-header-row *matHeaderRowDef="['login','nom','site','date']"></tr>
-                <tr mat-row *matRowDef="let row; columns: ['login','nom','site','date']"></tr>
+                <ng-container matColumnDef="statut">
+                  <th mat-header-cell *matHeaderCellDef>Statut</th>
+                  <td mat-cell *matCellDef="let p">
+                    <span class="statut-passage" [class]="'statut-passage sp-' + p.statut_passage">{{ libelleStatut(p.statut_passage) }}</span>
+                    @if (p.nb_essais > 0) {
+                      <small class="text-muted d-block">{{ p.dernier_score }} % · {{ p.nb_essais }} essai{{ p.nb_essais > 1 ? 's' : '' }}</small>
+                    }
+                  </td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="['login','nom','site','date','statut']"></tr>
+                <tr mat-row *matRowDef="let row; columns: ['login','nom','site','date','statut']"></tr>
                 <tr class="mat-row" *matNoDataRow>
-                  <td class="mat-cell text-center p-16" colspan="4">
-                    {{ rechercheParticipant.trim() ? 'Aucun participant ne correspond à la recherche.' : 'Aucun participant diffusé pour le moment.' }}
+                  <td class="mat-cell text-center p-16" colspan="5">
+                    {{ rechercheParticipant.trim() || statutParticipant ? 'Aucun participant ne correspond aux filtres.' : 'Aucun participant diffusé pour le moment.' }}
                   </td>
                 </tr>
               </table>
@@ -243,7 +267,7 @@
               </ng-container>
               <ng-container matColumnDef="point">
                 <th mat-header-cell *matHeaderCellDef>Points</th>
-                <td mat-cell *matCellDef="let q">{{ q.points ?? 5 }}</td>
+                <td mat-cell *matCellDef="let q">{{ q.points ?? 5 | points }}</td>
               </ng-container>
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef class="text-right">Action</th>
